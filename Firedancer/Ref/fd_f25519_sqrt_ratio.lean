@@ -1,0 +1,219 @@
+module
+
+public import SSA.Projects.RIR.Run.Tactic
+public import Firedancer.Common.Limbs
+public import Firedancer.Common.Tactics
+public import Firedancer.Common.StepCall
+public import Firedancer.Ref.Globals
+public import Firedancer.Ref.fd_f25519_sqr
+public import Firedancer.Ref.fd_f25519_mul
+public import Firedancer.Ref.fd_f25519_neg
+public import Firedancer.Ref.fd_f25519_eq
+public import Firedancer.Ref.fd_f25519_if
+public import Firedancer.Ref.fd_f25519_pow22523
+public import Firedancer.Ref.fd_f25519_abs
+public import Firedancer.Ref.Mlir.fd_f25519_sqrt_ratio
+
+namespace LeanMLIR.RIR.Firedancer.Ref
+
+/-! ## Specification -/
+
+@[expose] public section
+
+/-- What `fd_f25519_sqrt_ratio` computes: the limbs it stores at `r`, and the flag it returns. -/
+structure fd_f25519_sqrt_ratio.Result where
+  r : Fin 5 → BitVec 64
+  ret : BitVec 32
+
+/-- `r = (u v³) (u v⁷)^((p-5)/8)`, times `√-1` when `v r²` is `-u` or `-u √-1`, then `|r|`; the
+flag is `1` when `v r²` is `u` or `-u`. The `or`s in the program's operand order. -/
+def fd_f25519_sqrt_ratio.spec (u v : Fin 5 → BitVec 64) : fd_f25519_sqrt_ratio.Result :=
+  let v2 := fd_f25519_sqr.spec v
+  let v3 := fd_f25519_mul.spec v2 v
+  let uv3 := fd_f25519_mul.spec u v3
+  let v6 := fd_f25519_sqr.spec v3
+  let v7 := fd_f25519_mul.spec v6 v
+  let uv7 := fd_f25519_mul.spec u v7
+  let r := fd_f25519_pow22523.spec uv7
+  let r := fd_f25519_mul.spec r uv3
+  let check := fd_f25519_sqr.spec r
+  let check := fd_f25519_mul.spec check v
+  let u_neg := fd_f25519_neg.spec u
+  let u_neg_sqrtm1 := fd_f25519_mul.spec u_neg fd_f25519_sqrtm1.limbs
+  let correct_sign_sqrt := fd_f25519_eq.spec check u
+  let flipped_sign_sqrt := fd_f25519_eq.spec check u_neg
+  let flipped_sign_sqrt_i := fd_f25519_eq.spec check u_neg_sqrtm1
+  let r_prime := fd_f25519_mul.spec r fd_f25519_sqrtm1.limbs
+  let r := fd_f25519_if.spec (flipped_sign_sqrt_i ||| flipped_sign_sqrt) r_prime r
+  let r := fd_f25519_abs.spec r
+  ⟨r, flipped_sign_sqrt ||| correct_sign_sqrt⟩
+
+end
+
+/-! ## Proof -/
+
+section Proof
+
+/-- `limbs_fit x`: the slot `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset, which
+are dropped. -/
+local macro "limbs_fit " x:ident : tactic => do
+  let n := x.getId.toString
+  let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
+  let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
+  let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
+  `(tactic| (have $limbs :=MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
+
+/-! ### Staged for Common -/
+
+/-- Limbs stored into an erased block are lost, wherever the store sits below the erase. -/
+theorem MemoryState.eraseFrom_storeLimbs_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.storeLimbs p l).eraseFrom n = m.eraseFrom n := by
+  rw [MemoryState.eraseFrom_storeLimbs, MemoryState.storeLimbs_eraseFrom_of_le h]
+
+-- tried before `eraseFrom_storeLimbs`, which moves the erase below the store
+attribute [local mlir_erase high] MemoryState.eraseFrom_storeLimbs_of_le
+
+/-! ### The function -/
+
+/-- `fd_f25519_sqrt_ratio` stores `(spec u v).r` at `r` and returns `(spec u v).ret`; `u` and `v`
+are read after `r` is written, so `r` is in another block, while `u` may alias `v`.
+`fd_f25519_sqrtm1`, the ten temporaries and the callees' blocks are freed again: only the counter
+moves on, by 50 blocks. -/
+public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hr : s.mem.LimbsFit r) (hu : s.mem.LimbsFit u) (hv : s.mem.LimbsFit v) (hru : r.id ≠ u.id)
+    (hrv : r.id ≠ v.id) :
+    fd_f25519_sqrt_ratio.call (fd_f25519_sqrt_ratio.args (.value r) (.value u) (.value v)) s =
+      .value
+        (.cons (.value (fd_f25519_sqrt_ratio.spec (s.mem.readLimbs u) (s.mem.readLimbs v)).ret)
+            .nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 50⟩,
+            mem :=
+              s.mem.storeLimbs r
+                (fd_f25519_sqrt_ratio.spec (s.mem.readLimbs u) (s.mem.readLimbs v)).r }) := by
+  func_init
+  -- reads of `u` and `v` pass the frame's blocks: their facts about the chain's base `S₀`
+  have hu₀ : S₀.mem.LimbsFit u := hS ▸ hu
+  have hv₀ : S₀.mem.LimbsFit v := hS ▸ hv
+  block_init
+  step_pure
+  step_addressof fd_f25519_sqrtm1.value_eq with sqrtm1
+  -- the temporaries, in the C's order of declaration
+  step_alloca with v2
+  step_alloca with v3
+  step_alloca with uv3
+  step_alloca with v6
+  step_alloca with v7
+  step_alloca with uv7
+  step_alloca with check
+  step_alloca with u_neg
+  step_alloca with u_neg_sqrtm1
+  step_alloca with r_prime
+  have hsqrtm1_read := fd_f25519_sqrtm1.readLimbs hsqrtm1_fits hsqrtm1_off hread_sqrtm1
+  clear hread_sqrtm1
+  limbs_fit sqrtm1
+  limbs_fit v2
+  limbs_fit v3
+  limbs_fit uv3
+  limbs_fit v6
+  limbs_fit v7
+  limbs_fit uv7
+  limbs_fit check
+  limbs_fit u_neg
+  limbs_fit u_neg_sqrtm1
+  limbs_fit r_prime
+  -- `r` is first written after these temporaries are dead
+  clear hr_ne_v2 hr_ne_v3 hr_ne_v6 hr_ne_v7
+  -- fd_f25519_sqr( v2, v );
+  step_pure
+  step_call using fd_f25519_sqr.call_eq
+  name_limbs lv2
+  -- fd_f25519_mul( v3, v2, v );
+  step_pure
+  step_call using fd_f25519_mul.call_eq consuming hread_v2
+  name_limbs lv3
+  clear hv2_limbs
+  -- fd_f25519_mul( uv3, u, v3 );
+  step_pure
+  step_call using fd_f25519_mul.call_eq
+  name_limbs luv3
+  -- fd_f25519_sqr( v6, v3 );
+  step_pure
+  step_call using fd_f25519_sqr.call_eq consuming hread_v3
+  name_limbs lv6
+  clear hv3_limbs
+  -- fd_f25519_mul( v7, v6, v );
+  step_pure
+  step_call using fd_f25519_mul.call_eq consuming hread_v6
+  name_limbs lv7
+  clear hv6_limbs
+  -- fd_f25519_mul( uv7, u, v7 );
+  step_pure
+  step_call using fd_f25519_mul.call_eq consuming hread_v7
+  name_limbs luv7
+  clear hv7_limbs
+  -- fd_f25519_pow22523( r, uv7 );
+  step_call using fd_f25519_pow22523.call_eq consuming hread_uv7
+  name_limbs lr0
+  clear huv7_limbs hr_ne_uv7
+  -- fd_f25519_mul( r, r, uv3 );
+  step_call using fd_f25519_mul.call_eq consuming hread_uv3
+  name_limbs lr1
+  clear huv3_limbs hr_ne_uv3
+  -- fd_f25519_sqr( check, r );
+  step_pure
+  step_call using fd_f25519_sqr.call_eq
+  name_limbs lcheck0
+  -- fd_f25519_mul( check, check, v );
+  step_call using fd_f25519_mul.call_eq consuming hv
+  name_limbs lcheck1
+  clear hv₀ hrv hv_ne_sqrtm1 hv_ne_v2 hv_ne_v3 hv_ne_uv3 hv_ne_v6 hv_ne_v7 hv_ne_uv7 hv_ne_check
+    hv_ne_u_neg hv_ne_u_neg_sqrtm1 hv_ne_r_prime
+  -- fd_f25519_neg( u_neg, u );
+  step_pure
+  step_call using fd_f25519_neg.call_eq
+  name_limbs lu_neg
+  -- fd_f25519_mul( u_neg_sqrtm1, u_neg, fd_f25519_sqrtm1 );
+  step_pure
+  step_call using fd_f25519_mul.call_eq
+  name_limbs lu_neg_sqrtm1
+  -- int correct_sign_sqrt   = fd_f25519_eq( check, u );
+  step_call using fd_f25519_eq.call_eq with correct_sign_sqrt consuming hu
+  clear hu₀ hru hu_ne_sqrtm1 hu_ne_v2 hu_ne_v3 hu_ne_uv3 hu_ne_v6 hu_ne_v7 hu_ne_uv7 hu_ne_check
+    hu_ne_u_neg hu_ne_u_neg_sqrtm1 hu_ne_r_prime
+  -- int flipped_sign_sqrt   = fd_f25519_eq( check, u_neg );
+  step_call using fd_f25519_eq.call_eq with flipped_sign_sqrt consuming hread_u_neg
+  clear hu_neg_limbs hr_ne_u_neg
+  -- int flipped_sign_sqrt_i = fd_f25519_eq( check, u_neg_sqrtm1 );
+  step_call using fd_f25519_eq.call_eq with flipped_sign_sqrt_i consuming hread_u_neg_sqrtm1
+  clear hu_neg_sqrtm1_limbs hr_ne_u_neg_sqrtm1 hread_check hcheck_limbs hr_ne_check
+  -- the returned values unfold the limbs' names: fold them back
+  rw [← hlcheck0, ← hlcheck1] at hcorrect_sign_sqrt
+  rw [← hlcheck0, ← hlcheck1, ← hlu_neg] at hflipped_sign_sqrt
+  rw [← hlcheck0, ← hlcheck1, ← hlu_neg, ← hlu_neg_sqrtm1] at hflipped_sign_sqrt_i
+  -- fd_f25519_mul( r_prime, r, fd_f25519_sqrtm1 );
+  step_pure
+  step_call using fd_f25519_mul.call_eq consuming hsqrtm1_read
+  name_limbs lr_prime
+  clear hsqrtm1_limbs hr_ne_sqrtm1
+  -- fd_f25519_if( r, flipped_sign_sqrt|flipped_sign_sqrt_i, r_prime, r );
+  step_pure
+  step_call using fd_f25519_if.call_eq consuming hread_r_prime
+  name_limbs lr2
+  clear hr_prime_limbs hr_ne_r_prime
+  -- fd_f25519_abs( r, r );
+  step_call using fd_f25519_abs.call_eq
+  name_limbs lr3
+  -- return correct_sign_sqrt|flipped_sign_sqrt;
+  step_pure
+  iterate 10 step_pure
+  finish_block
+  clear_reads
+  subst hS
+  erase_frame
+  simp only [MemoryState.storeLimbs_storeLimbs_self]
+  subst_vars
+  rfl
+
+end Proof
+
+end LeanMLIR.RIR.Firedancer.Ref
