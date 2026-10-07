@@ -158,6 +158,46 @@ theorem Range.disjoint_coords {p : Pointer} {a b : Nat} (hp : p.offset.toNat + 1
 
 theorem Pointer.add_zero' (p : Pointer) : p.add (BitVec.ofNat 64 0) = p := by simp [Pointer.add]
 
+/-! ### Limb stores to disjoint ranges commute -/
+
+/-- Limb `k` of the field element at `q` lies inside its 320 bits. -/
+theorem Range.disjoint_limb {p q : Pointer} {k : Nat} (hq : q.offset.toNat + 32 < 2 ^ 64)
+    (hk : k ≤ 32) (h : (Range.of p w).Disjoint (Range.of q 320)) :
+    (Range.of (q.add (BitVec.ofNat 64 k)) 64).Disjoint (Range.of p w) := by
+  by_cases hid : q.id = p.id
+  · simp only [Range.Disjoint, Range.of, Pointer.add, Pointer.offsetInBits, BitVec.toNat_add,
+      BitVec.toNat_ofNat, hid, ne_eq, not_true_eq_false, false_or] at h ⊢
+    rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
+    omega
+  · exact Or.inl (by simpa [Range.of, Pointer.add] using hid)
+
+theorem MemoryState.storeAt_storeLimbs_comm {m : MemoryState} {p q : Pointer} {x : BitVec w}
+    (hq : q.offset.toNat + 32 < 2 ^ 64) (h : (Range.of p w).Disjoint (Range.of q 320)) :
+    (m.storeLimbs q l).storeAt p x = (m.storeAt p x).storeLimbs q l := by
+  have h0 : (Range.of q 64).Disjoint (Range.of p w) := by
+    simpa [Pointer.add_zero'] using Range.disjoint_limb (k := 0) hq (by omega) h
+  simp only [MemoryState.storeLimbs]
+  rw [storeAt_comm (Range.disjoint_limb (k := 32) hq (by omega) h),
+    storeAt_comm (Range.disjoint_limb (k := 24) hq (by omega) h),
+    storeAt_comm (Range.disjoint_limb (k := 16) hq (by omega) h),
+    storeAt_comm (Range.disjoint_limb (k := 8) hq (by omega) h), storeAt_comm h0]
+
+/-- Field elements stored in disjoint ranges: the stores commute. -/
+theorem MemoryState.storeLimbs_comm {m : MemoryState} {p q : Pointer}
+    (hp : p.offset.toNat + 32 < 2 ^ 64) (hq : q.offset.toNat + 32 < 2 ^ 64)
+    (h : (Range.of p 320).Disjoint (Range.of q 320)) :
+    (m.storeLimbs p a).storeLimbs q b = (m.storeLimbs q b).storeLimbs p a := by
+  have hd (k : Nat) (hk : k ≤ 32) :=
+    Range.disjoint_limb (p := p) (q := q) (k := k) (w := 320) hq hk h |>.symm
+  have h0 : (Range.of q 64).Disjoint (Range.of p 320) := by
+    simpa [Pointer.add_zero'] using Range.disjoint_limb (k := 0) hq (by omega) h
+  rw [MemoryState.storeLimbs.eq_1 (m.storeLimbs p a) q b]
+  rw [storeAt_storeLimbs_comm hp h0, storeAt_storeLimbs_comm hp (hd 8 (by omega)).symm,
+    storeAt_storeLimbs_comm hp (hd 16 (by omega)).symm,
+    storeAt_storeLimbs_comm hp (hd 24 (by omega)).symm,
+    storeAt_storeLimbs_comm hp (hd 32 (by omega)).symm]
+  rfl
+
 /-! The field elements of a point that fits, for the steps' side conditions. -/
 
 @[mlir_transport]
@@ -389,6 +429,49 @@ theorem MemoryState.storePoint_of_Y_Z {m : MemoryState} {p : Pointer} (h : m.Poi
   simp only [MemoryState.storePoint]
   rw [← hY, storeLimbs_readLimbs_self h.2.2.1.storeLimbs, ← hZ,
     storeLimbs_readLimbs_self h.2.2.2.2.storeLimbs]
+
+/-- A point store that keeps `T`: the `X`, `Y` and `Z` stores. -/
+theorem MemoryState.storePoint_of_T {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+    m.storePoint p ⟨X, Y, m.readLimbs (p.add 80#64), Z⟩ =
+      ((m.storeLimbs p X).storeLimbs (p.add 40#64) Y).storeLimbs (p.add 120#64) Z := by
+  have h' := h.storeLimbs (p := p) (l := X) |>.storeLimbs (p := p.add 40#64) (l := Y)
+  simp only [MemoryState.storePoint]
+  rw [← readLimbs_storeLimbs_coord_X (l := X) h (b := 80) (by omega) (by omega), ←
+    readLimbs_storeLimbs_coord (l := Y) (h.storeLimbs) (a := 40) (b := 80) (by omega) (by omega)
+      (by omega),
+    ← readLimbs_storeLimbs_coord (l := Z) h' (a := 120) (b := 80) (by omega) (by omega) (by omega),
+    storeLimbs_readLimbs_self h'.storeLimbs.2.2.2.1]
+
+/-- Stores to two coordinates of a point commute. -/
+theorem MemoryState.storeLimbs_comm_coord {m : MemoryState} {p : Pointer} {a b : Nat}
+    (hp : p.offset.toNat + 160 ≤ 2 ^ 64) (ha : a ≤ 120) (hb : b ≤ 120)
+    (hab : a + 40 ≤ b ∨ b + 40 ≤ a) :
+    (m.storeLimbs (p.add (BitVec.ofNat 64 a)) A).storeLimbs (p.add (BitVec.ofNat 64 b)) B =
+      (m.storeLimbs (p.add (BitVec.ofNat 64 b)) B).storeLimbs (p.add (BitVec.ofNat 64 a)) A :=
+  storeLimbs_comm (Pointer.coord_offset hp ha) (Pointer.coord_offset hp hb)
+    (Range.disjoint_coords hp ha hb hab)
+
+/-- `storeLimbs_comm_coord` for `X`, stored second. -/
+theorem MemoryState.storeLimbs_comm_coord_X {m : MemoryState} {p : Pointer} {a : Nat}
+    (hp : p.offset.toNat + 160 ≤ 2 ^ 64) (ha : a ≤ 120) (h40 : 40 ≤ a) :
+    (m.storeLimbs (p.add (BitVec.ofNat 64 a)) A).storeLimbs p B =
+      (m.storeLimbs p B).storeLimbs (p.add (BitVec.ofNat 64 a)) A :=
+  storeLimbs_comm (Pointer.coord_offset hp ha) (by omega) (Range.disjoint_coord_base hp ha h40)
+
+/-- A point stored as `T, Z, Y, X`. -/
+theorem MemoryState.storePoint_of_TZYX {m : MemoryState} {p : Pointer}
+    (hp : p.offset.toNat + 160 ≤ 2 ^ 64) :
+    (((m.storeLimbs (p.add 80#64) T).storeLimbs (p.add 120#64) Z).storeLimbs (p.add 40#64)
+            Y).storeLimbs
+        p X =
+      m.storePoint p ⟨X, Y, T, Z⟩ := by
+  rw [storeLimbs_comm_coord_X (a := 40) hp (by omega) (by omega),
+    storeLimbs_comm_coord_X (a := 120) hp (by omega) (by omega),
+    storeLimbs_comm_coord_X (a := 80) hp (by omega) (by omega),
+    storeLimbs_comm_coord (a := 120) (b := 40) hp (by omega) (by omega) (by omega),
+    storeLimbs_comm_coord (a := 80) (b := 40) hp (by omega) (by omega) (by omega),
+    storeLimbs_comm_coord (a := 80) (b := 120) hp (by omega) (by omega) (by omega)]
+  rfl
 
 end
 
