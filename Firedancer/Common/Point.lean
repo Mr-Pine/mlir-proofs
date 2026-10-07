@@ -313,17 +313,20 @@ theorem MemoryState.readLimbs_storePoint_T {m : MemoryState} {p : Pointer} (h : 
   simp only [MemoryState.storePoint]
   rw [readLimbs_storeLimbs_self h.2.2.2.1.storeLimbs.storeLimbs.storeLimbs]
 
+@[mlir_read]
 theorem MemoryState.readPoint_storePoint_self {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
     (m.storePoint p P).readPoint p = P := by
   simp only [MemoryState.readPoint, readLimbs_storePoint_X h, readLimbs_storePoint_Y h,
     readLimbs_storePoint_Z h, readLimbs_storePoint_T h]
 
+@[mlir_read]
 theorem MemoryState.readPoint_storePoint_of_id_ne {m : MemoryState} {p q : Pointer}
     (h : p.id ≠ q.id) : (m.storePoint p P).readPoint q = m.readPoint q := by
   have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
   simp only [MemoryState.readPoint, readLimbs_storePoint_of_id_ne h,
     readLimbs_storePoint_of_id_ne (h' _)]
 
+@[mlir_read]
 theorem MemoryState.readPoint_storeLimbs_of_id_ne {m : MemoryState} {p q : Pointer}
     (h : p.id ≠ q.id) : (m.storeLimbs p l).readPoint q = m.readPoint q := by
   have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
@@ -403,6 +406,25 @@ theorem GlobalState.WF.storePoint {s : GlobalState} (h : s.WF) :
     ({ s with mem := s.mem.storePoint p P } : GlobalState).WF :=
   GlobalState.WF_storePoint.mpr h
 
+/-- A point elsewhere is unaffected by `alloca`. -/
+@[mlir_frame, mlir_read]
+theorem MemoryState.readPoint_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
+    (s.alloca n).mem.readPoint p = s.mem.readPoint p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
+  simp only [MemoryState.readPoint, readLimbs_alloca hne, readLimbs_alloca (hne' _)]
+
+/-- A point fits in a memory before a point store when it fits after it. -/
+theorem MemoryState.PointFit.of_storePoint {m : MemoryState} (h : (m.storePoint p P).PointFit q) :
+    m.PointFit q :=
+  ⟨h.1, limbsFit_storePoint_iff.mp h.2.1, limbsFit_storePoint_iff.mp h.2.2.1,
+    limbsFit_storePoint_iff.mp h.2.2.2.1, limbsFit_storePoint_iff.mp h.2.2.2.2⟩
+
+/-- `WF.storePoint` for a state written as a constructor, which unifies first-order. -/
+@[mlir_transport]
+theorem GlobalState.WF.storePoint_mk {a : AllocState} {m : MemoryState}
+    (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.storePoint p P⟩ : GlobalState).WF :=
+  GlobalState.WF.storePoint (s := ⟨a, m⟩) h
+
 @[mlir_frame, mlir_erase]
 theorem MemoryState.eraseFrom_storePoint {m : MemoryState} :
     (m.storePoint p P).eraseFrom n = (m.eraseFrom n).storePoint p P := by
@@ -442,6 +464,16 @@ theorem MemoryState.storePoint_of_T {m : MemoryState} {p : Pointer} (h : m.Point
     ← readLimbs_storeLimbs_coord (l := Z) h' (a := 120) (b := 80) (by omega) (by omega) (by omega),
     storeLimbs_readLimbs_self h'.storeLimbs.2.2.2.1]
 
+/-- A point store that keeps `Z`: the `X`, `Y` and `T` stores. -/
+theorem MemoryState.storePoint_of_Z {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+    m.storePoint p ⟨X, Y, T, m.readLimbs (p.add 120#64)⟩ =
+      ((m.storeLimbs p X).storeLimbs (p.add 40#64) Y).storeLimbs (p.add 80#64) T := by
+  simp only [MemoryState.storePoint]
+  rw [← readLimbs_storeLimbs_coord_X (l := X) h (b := 120) (by omega) (by omega), ←
+    readLimbs_storeLimbs_coord (l := Y) h.storeLimbs (a := 40) (b := 120) (by omega) (by omega)
+      (by omega),
+    storeLimbs_readLimbs_self h.storeLimbs.storeLimbs.2.2.2.2]
+
 /-- Stores to two coordinates of a point commute. -/
 theorem MemoryState.storeLimbs_comm_coord {m : MemoryState} {p : Pointer} {a b : Nat}
     (hp : p.offset.toNat + 160 ≤ 2 ^ 64) (ha : a ≤ 120) (hb : b ≤ 120)
@@ -472,6 +504,75 @@ theorem MemoryState.storePoint_of_TZYX {m : MemoryState} {p : Pointer}
     storeLimbs_comm_coord (a := 80) (b := 40) hp (by omega) (by omega) (by omega),
     storeLimbs_comm_coord (a := 80) (b := 120) hp (by omega) (by omega) (by omega)]
   rfl
+
+/-- Stores in different blocks commute. -/
+theorem MemoryState.storeLimbs_comm_of_id_ne {m : MemoryState} {p q : Pointer} (h : p.id ≠ q.id) :
+    (m.storeLimbs p a).storeLimbs q b = (m.storeLimbs q b).storeLimbs p a := by
+  have hd {p' q' : Pointer} {v w : Nat} (h' : p'.id ≠ q'.id) :
+    (Range.of p' v).Disjoint (Range.of q' w) := Or.inl h'
+  simp only [MemoryState.storeLimbs]
+  simp only [MemoryState.storeAt_comm
+        (hd (p' := p.add _) (q' := q.add _) (by simpa [Pointer.add_id] using h)),
+    MemoryState.storeAt_comm (hd (p' := p) (q' := q.add _) (by simpa [Pointer.add_id] using h)),
+    MemoryState.storeAt_comm (hd (p' := p.add _) (q' := q) (by simpa [Pointer.add_id] using h)),
+    MemoryState.storeAt_comm (hd (p' := p) (q' := q) h)]
+
+/-- Points in different blocks: their stores commute. -/
+theorem MemoryState.storePoint_comm {m : MemoryState} {p q : Pointer} (h : p.id ≠ q.id) :
+    (m.storePoint p P).storePoint q Q = (m.storePoint q Q).storePoint p P := by
+  simp only [MemoryState.storePoint]
+  rw [storeLimbs_comm_of_id_ne (p := p.add 80#64) (q := q) (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 120#64) (q := q) (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 40#64) (q := q) (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p) (q := q) (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 80#64) (q := q.add 40#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 120#64) (q := q.add 40#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 40#64) (q := q.add 40#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p) (q := q.add 40#64) (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 80#64) (q := q.add 120#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 120#64) (q := q.add 120#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 40#64) (q := q.add 120#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p) (q := q.add 120#64) (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 80#64) (q := q.add 80#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 120#64) (q := q.add 80#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p.add 40#64) (q := q.add 80#64)
+      (by simpa [Pointer.add_id] using h),
+    storeLimbs_comm_of_id_ne (p := p) (q := q.add 80#64) (by simpa [Pointer.add_id] using h)]
+
+/-- A point stored twice at the same place: the second. -/
+theorem MemoryState.storePoint_storePoint_self {m : MemoryState} {p : Pointer}
+    (hp : p.offset.toNat + 160 ≤ 2 ^ 64) :
+    (m.storePoint p P).storePoint p Q = m.storePoint p Q := by
+  simp only [MemoryState.storePoint]
+  rw [storeLimbs_comm_coord_X (a := 80) hp (by omega) (by omega),
+    storeLimbs_comm_coord_X (a := 120) hp (by omega) (by omega),
+    storeLimbs_comm_coord_X (a := 40) hp (by omega) (by omega), storeLimbs_storeLimbs_self,
+    storeLimbs_comm_coord (a := 80) (b := 40) hp (by omega) (by omega) (by omega),
+    storeLimbs_comm_coord (a := 120) (b := 40) hp (by omega) (by omega) (by omega),
+    storeLimbs_storeLimbs_self,
+    storeLimbs_comm_coord (a := 80) (b := 120) hp (by omega) (by omega) (by omega),
+    storeLimbs_storeLimbs_self, storeLimbs_storeLimbs_self]
+
+/-- A point store into a block the erase removes: dropped before the erase moves inward, which would
+simplify the store's memory first. -/
+@[mlir_erase high]
+theorem MemoryState.eraseFrom_storePoint_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.storePoint p P).eraseFrom n = m.eraseFrom n := by
+  rw [eraseFrom_storePoint, storePoint_eraseFrom_of_le h]
+
+/-- `eraseFrom_storePoint_of_le` for limbs. -/
+@[mlir_erase high]
+theorem MemoryState.eraseFrom_storeLimbs_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.storeLimbs p l).eraseFrom n = m.eraseFrom n := by
+  rw [eraseFrom_storeLimbs, storeLimbs_eraseFrom_of_le h]
 
 end
 
