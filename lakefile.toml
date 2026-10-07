@@ -1,0 +1,14 @@
+name = "rir-firedancer"
+defaultTargets = ["Firedancer"]
+# Mathlib is built once, in the dependency's checkout: share its packages.
+packagesDir = "../lean-mlir-nightly-port/.lake/packages"
+
+# Firedancer's ed25519 verify (ref), lifted to the register-based IR and proved.
+[[require]]
+name = "SSA"
+path = "../lean-mlir-nightly-port"
+
+[[lean_lib]]
+name = "Firedancer"
+# every module, not just the root's imports
+globs = ["Firedancer.+"]

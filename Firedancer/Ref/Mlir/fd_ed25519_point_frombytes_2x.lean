@@ -1,0 +1,38 @@
+module
+
+-- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_point_frombytes_2x.mlir
+
+public import SSA.Projects.RIR.Semantics.Func
+public import SSA.Projects.RIR.Syntax.Elab
+public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
+
+meta import SSA.Projects.RIR.Semantics.Func
+meta import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
+
+namespace LeanMLIR.RIR.Firedancer.Ref
+
+@[expose] public section
+
+mlir_def fd_ed25519_point_frombytes_2x :=
+{
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr):
+    %0 = "llvm.mlir.constant"() <{value = 0 : i32}> : () -> i32
+    %1 = "llvm.mlir.constant"() <{value = -2 : i32}> : () -> i32
+    %2 = "llvm.mlir.constant"() <{value = -1 : i32}> : () -> i32
+    %3 = "llvm.mlir.zero"() : () -> !llvm.ptr
+    %4 = "llvm.call"(%arg0, %arg1) <{CConv = #llvm.cconv<ccc>, callee = @fd_ed25519_point_frombytes, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %5 = "llvm.icmp"(%4, %3) <{predicate = 0 : i64}> : (!llvm.ptr, !llvm.ptr) -> i1
+    "llvm.cond_br"(%5, %2)[^bb2, ^bb1] <{operandSegmentSizes = array<i32: 1, 1, 0>}> : (i1, i32) -> ()
+  ^bb1:  // pred: ^bb0
+    %6 = "llvm.call"(%arg2, %arg3) <{CConv = #llvm.cconv<ccc>, callee = @fd_ed25519_point_frombytes, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %7 = "llvm.icmp"(%6, %3) <{predicate = 0 : i64}> : (!llvm.ptr, !llvm.ptr) -> i1
+    %8 = "llvm.select"(%7, %1, %0) <{fastmathFlags = #llvm.fastmath<none>}> : (i1, i32, i32) -> i32
+    "llvm.br"(%8)[^bb2] : (i32) -> ()
+  ^bb2(%9: i32):  // 2 preds: ^bb0, ^bb1
+    "llvm.return"(%9) : (i32) -> ()
+}
+  with @fd_ed25519_point_frombytes := fd_ed25519_point_frombytes
+
+end
+
+end LeanMLIR.RIR.Firedancer.Ref

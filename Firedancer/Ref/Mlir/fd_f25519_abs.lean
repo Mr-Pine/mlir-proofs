@@ -1,0 +1,37 @@
+module
+
+-- build/native/gcc/mlir_canonicalized/ref/region/fd_f25519_abs.mlir
+
+public import SSA.Projects.RIR.Semantics.Func
+public import SSA.Projects.RIR.Syntax.Elab
+public import Firedancer.Ref.Mlir.fd_f25519_if
+public import Firedancer.Ref.Mlir.fd_f25519_neg
+public import Firedancer.Ref.Mlir.fd_f25519_sgn
+
+meta import SSA.Projects.RIR.Semantics.Func
+meta import Firedancer.Ref.Mlir.fd_f25519_if
+meta import Firedancer.Ref.Mlir.fd_f25519_neg
+meta import Firedancer.Ref.Mlir.fd_f25519_sgn
+
+namespace LeanMLIR.RIR.Firedancer.Ref
+
+@[expose] public section
+
+mlir_def fd_f25519_abs :=
+{
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+    %0 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+    %1 = "llvm.alloca"(%0) <{alignment = 16 : i64, elem_type = !llvm.array<1 x struct<"struct.fd_f25519", (array<5 x i64>)>>}> : (i32) -> !llvm.ptr
+    "llvm.intr.lifetime.start"(%1) <{size = 40 : i64}> : (!llvm.ptr) -> ()
+    %2 = "llvm.call"(%1, %arg1) <{CConv = #llvm.cconv<fastcc>, callee = @fd_f25519_neg, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %3 = "llvm.call"(%arg1) <{CConv = #llvm.cconv<fastcc>, callee = @fd_f25519_sgn, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i32
+    %4 = "llvm.call"(%arg0, %3, %1, %arg1) <{CConv = #llvm.cconv<fastcc>, callee = @fd_f25519_if, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    "llvm.intr.lifetime.end"(%1) <{size = 40 : i64}> : (!llvm.ptr) -> ()
+    "llvm.return"(%arg0) : (!llvm.ptr) -> ()
+}
+  with @fd_f25519_if := fd_f25519_if, @fd_f25519_neg := fd_f25519_neg,
+    @fd_f25519_sgn := fd_f25519_sgn
+
+end
+
+end LeanMLIR.RIR.Firedancer.Ref
