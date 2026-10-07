@@ -6,6 +6,8 @@ import SSA.Projects.RIR.Run.Tactic.Memory
 public meta import SSA.Projects.RIR.Run.Tactic.Util
 public meta import Lean.Elab.Tactic
 import Std.Data.ExtHashMap.Lemmas
+public import Mathlib.Tactic.FinCases
+public import Mathlib.Data.Fintype.Basic
 
 namespace LeanMLIR.RIR
 
@@ -67,8 +69,7 @@ private theorem insert_insert_self (m : Std.ExtHashMap BlockId MemoryBlock) (k :
 
 open Memory in
 /-- Storing limbs twice at the same place keeps the second: the limbs don't overlap. -/
-theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer}
-    (h : p.offset.toNat + 32 < 2 ^ 64) :
+theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer} :
     (m.storeLimbs p l).storeLimbs p l' = m.storeLimbs p l' := by
   cases hb : m[p.id]? with
   | none =>
@@ -81,11 +82,7 @@ theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer}
     rw [MemoryState.getElem?_eq] at hb
     simp [MemoryState.storeLimbs, MemoryState.storeAt, MemoryState.getElem?_eq, hb,
       insert_insert_self]
-    have o :
-      ∀ k : Nat, k ≤ 32 → (p.add (BitVec.ofNat 64 k)).offsetInBits = 8 * p.offset.toNat + 8 * k :=
-      fun k hk => Pointer.offsetInBits_add_limb h hk
-    simp only [o 8 (by decide), o 16 (by decide), o 24 (by decide), o 32 (by decide),
-      Pointer.offsetInBits]
+    simp only [Pointer.offsetInBits]
     congr 2
     apply BitVec.eq_of_getLsbD_eq
     intro i hi
@@ -97,8 +94,7 @@ theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer}
 theorem MemoryState.readLimbs_storeLimbs_of_id_ne {m : MemoryState} {p q : Pointer}
     (h : q.id ≠ p.id) : (m.storeLimbs q l).readLimbs p = m.readLimbs p := by
   funext i
-  unfold MemoryState.readLimbs
-  split <;> simp only [MemoryState.storeLimbs, Tactic.readThroughStore]
+  fin_cases i <;> simp only [MemoryState.readLimbs, MemoryState.storeLimbs, Tactic.readThroughStore]
 
 /-! ### Limbs and `alloca` frames -/
 
@@ -128,8 +124,9 @@ theorem MemoryState.limbsFit_allocaPtr {s : GlobalState} :
 theorem MemoryState.readLimbs_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
     (s.alloca n).mem.readLimbs p = s.mem.readLimbs p := by
   funext i
-  unfold MemoryState.readLimbs
-  split <;> simp only [MemoryState.readAt, Pointer.add_id, GlobalState.getElem?_alloca hne]
+  fin_cases i <;>
+    simp only [MemoryState.readLimbs, MemoryState.readAt, Pointer.add_id,
+      GlobalState.getElem?_alloca hne]
 
 /-- `storeLimbs` keeps every block and its length. -/
 @[simp]
@@ -150,8 +147,9 @@ theorem MemoryState.limbsFit_storeLimbs_iff {m : MemoryState} :
 theorem MemoryState.readLimbs_storeLimbs_self {m : MemoryState} (h : m.LimbsFit p) :
     (m.storeLimbs p l).readLimbs p = l := by
   funext i
-  unfold MemoryState.readLimbs
-  split <;> simp only [MemoryState.storeLimbs, Tactic.readThroughStore] <;> rfl
+  fin_cases i <;>
+    simp only [MemoryState.readLimbs, MemoryState.storeLimbs, Tactic.readThroughStore] <;>
+    rfl
 
 /-- Limbs stored in a fresh 40-byte `alloca` read back. -/
 @[mlir_frame]
@@ -223,9 +221,8 @@ theorem MemoryState.readLimbs_of_readAt {m : MemoryState} {x : BitVec 320} (hf :
   have hread (off : BitVec 64) (hoff : off.toNat ≤ 32) :=
     MemoryState.readAt_add_of_readAt (w := 64) hf (hov off hoff) (by omega) h
   funext i
-  unfold MemoryState.readLimbs
-  split
-  · simpa [Pointer.add] using hread 0#64 (by decide)
+  fin_cases i
+  · simpa [MemoryState.readLimbs, Pointer.add] using hread 0#64 (by decide)
   · exact hread 8#64 (by decide)
   · exact hread 16#64 (by decide)
   · exact hread 24#64 (by decide)
@@ -240,14 +237,11 @@ theorem MemoryState.readLimbs_of_readAt_flattenRaw {m : MemoryState} {v : Vector
     m.readLimbs p = fun i => v[i] := by
   rw [Ty.flatBits_eq] at h
   rw [MemoryState.readLimbs_of_readAt hf ho h]
-  funext ⟨i, hi⟩
-  match i, hi with
-  | 0, _ | 1, _ | 2, _ | 3, _ | 4,
-    _ =>
+  funext i
+  fin_cases i <;>
     simp (disch := decide) only [BitVec.extractLsb'_cast, Ty.extractLsb'_flattenRaw_array,
-      Ty.extractLsb'_flattenRaw_struct_singleton, Ty.extractLsb'_flattenRaw_bv]
+      Ty.extractLsb'_flattenRaw_struct_singleton, Ty.extractLsb'_flattenRaw_bv] <;>
     simp [Ty.stride, Ty.width, Ty.fieldsWidth, Ty.padding, Ty.align, Ty.fieldsAlign]
-    all_goals rfl
 
 /-- A new block keeps limbs that fit. -/
 @[mlir_transport]
@@ -265,8 +259,7 @@ theorem MemoryState.readLimbs_addBlock {s : GlobalState} {x : BitVec v} (hwf : s
     (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).readLimbs p = s.mem.readLimbs p := by
   obtain ⟨_, h0, h1, h2, h3, h4⟩ := h
   funext i
-  unfold MemoryState.readLimbs
-  split
+  fin_cases i
   · exact MemoryState.readAt_addBlock hwf h0
   · exact MemoryState.readAt_addBlock hwf h1
   · exact MemoryState.readAt_addBlock hwf h2

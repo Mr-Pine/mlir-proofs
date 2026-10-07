@@ -27,9 +27,7 @@ section Proof
 
 /-- Limb `i` at `p`, as a read at its byte offset. -/
 theorem fd_f25519_is_zero.readLimbs_eq {i : Fin 5} {M : MemoryState} :
-    M.readLimbs p i = M.readAt (p.add (8 * i)) 64 := by
-  simp [MemoryState.readLimbs]
-  split <;> simp
+    M.readLimbs p i = M.readAt (p.add (8 * i)) 64 := by fin_cases i <;> simp [MemoryState.readLimbs]
 
 /-- Limb 0 is zero's and limb `i` is not: not zero, and not `p`. -/
 theorem fd_f25519_is_zero.spec_of_ne_zero {S₀ : GlobalState} {x} {i : Fin 5}
@@ -140,11 +138,10 @@ public theorem fd_f25519_is_zero.call_eq (x : Pointer) (s : GlobalState) (hwf : 
     finish_block
     simp [spec, hS]
     intro i
-  · simp [MemoryState.readLimbs]
-    split <;> simp_all
-  · simp [MemoryState.readLimbs]
-    rw [hbr0, hbr1, hbr2, hbr3, hbr4]
-    split <;> decide
+  · fin_cases i <;> simp_all [MemoryState.readLimbs]
+  · intro _ k
+    fin_cases k <;> simp [MemoryState.readLimbs, hbr0, hbr1, hbr2, hbr3, hbr4, pLimbs]
+    rfl
 
 end Proof
 
