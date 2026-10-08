@@ -2,6 +2,9 @@ module
 
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
+public import Firedancer.Avx512.Common.QuadMem
+public import Firedancer.Common.Dsmb
+public import Firedancer.Common.Tactics
 public import Firedancer.Avx512.Globals
 public import Firedancer.Ref.fd_curve25519_scalar_wnaf
 public import Firedancer.Avx512.fd_ed25519_point_set_zero
@@ -10,6 +13,9 @@ public import Firedancer.Avx512.fd_ed25519_point_dbln
 public import Firedancer.Avx512.fd_ed25519_point_add_with_opts
 public import Firedancer.Avx512.fd_ed25519_point_sub_with_opts
 public import Firedancer.Avx512.fd_curve25519_into_precomputed
+public import Firedancer.Avx512.fd_ed25519_point_add_final_mul
+public import Firedancer.Avx512.fd_ed25519_point_add_final_mul_projective
+public import Firedancer.Avx512.fd_ed25519_point_set
 public import Firedancer.Avx512.Mlir.fd_ed25519_double_scalar_mul_base
 
 namespace LeanMLIR.RIR.Firedancer.Avx512
@@ -38,25 +44,26 @@ def aiTable (a2 ai0 : Quad) : Nat → Quad
 stops at, if any. -/
 def start (w1 w2 : Vector Int 256) : (i : Nat) → i < 256 → Option (Fin 256)
   | 0, _ => if w1[0] = 0 ∧ w2[0] = 0 then none else some 0
-  | i + 1, h =>
-    if w1[i + 1] = 0 ∧ w2[i + 1] = 0 then start w1 w2 i (by omega) else some ⟨i + 1, h⟩
+  | i + 1, h => if w1[i + 1] = 0 ∧ w2[i + 1] = 0 then start w1 w2 i (by omega) else some ⟨i + 1, h⟩
 
 /-- A digit's add, `if( d > 0 ) … else if( d < 0 ) …`: `r` a copy of `t`, then `t` as `r` plus or
 minus `tbl[|d| / 2]`; nothing at `d = 0`. -/
 def addDigit (tbl : Nat → Quad) (d : Int) (r t : Quad) : Quad × Quad :=
   if 0 < d then (t, fd_ed25519_point_add_with_opts.spec t (tbl (d / 2).toNat) 1#32)
-  else if d < 0 then (t, fd_ed25519_point_sub_with_opts.spec t (tbl (-d / 2).toNat) 1#32)
-  else (r, t)
+  else
+    if d < 0 then (t, fd_ed25519_point_sub_with_opts.spec t (tbl (-d / 2).toNat) 1#32) else (r, t)
 
-/-- An iteration's adds on `r`: `t = partial_dbl( r )`, `n1slide[i]`'s add from `ai`, then
-`n2slide[i]`'s from `tbl`; the new `r` and `t`. -/
+/-- `t = partial_dbl( r )`, then `n1slide[i]`'s add, `d`, from `ai`. -/
+def add1 (ai : Nat → Quad) (d : Int) (r : Quad) : Quad × Quad :=
+  addDigit ai d r (fd_ed25519_partial_dbl.spec r)
+
+/-- An iteration's adds on `r`: `add1`, then `n2slide[i]`'s add from `tbl`; the new `r` and `t`. -/
 def adds (ai tbl : Nat → Quad) (d1 d2 : Int) (r : Quad) : Quad × Quad :=
-  let rt := addDigit ai d1 r (fd_ed25519_partial_dbl.spec r)
+  let rt := add1 ai d1 r
   addDigit tbl d2 rt.1 rt.2
 
 /-- The main loop from `i` down to `0` on `r`; each iteration ends with `r` a copy of `t`. -/
-def ladder (ai tbl : Nat → Quad) (w1 w2 : Vector Int 256) :
-    (i : Nat) → i < 256 → Quad → Quad
+def ladder (ai tbl : Nat → Quad) (w1 w2 : Vector Int 256) : (i : Nat) → i < 256 → Quad → Quad
   | 0, _, r => (adds ai tbl w1[0] w2[0] r).2
   | i + 1, h, r => ladder ai tbl w1 w2 i (by omega) (adds ai tbl w1[i + 1] w2[i + 1] r).2
 
@@ -65,15 +72,1048 @@ the table `ai` of `A`'s, then the main loop from the first non-zero digit on the
 def spec (tbl : Nat → Quad) (n1 : BitVec 256) (A : Quad) (n2 : BitVec 256) : Quad :=
   let n1slide := fd_curve25519_scalar_wnaf.wnaf n1 4
   let n2slide := fd_curve25519_scalar_wnaf.wnaf n2 8
-  let ai :=
-    aiTable (fd_ed25519_point_dbln.spec A 1)
-      (fd_curve25519_into_precomputed.spec A)
+  let ai := aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A)
   match start n1slide n2slide 255 (by decide) with
   | some i => ladder ai tbl n1slide n2slide i i.isLt fd_ed25519_point_set_zero.spec
   | none => fd_ed25519_point_set_zero.spec
 
+/-- Blocks a digit's add allocates: `add_with_opts`'s fifteen, `sub_with_opts`'s sixteen. -/
+def digitBlocks (d : Int) : Nat :=
+  if 0 < d then 15 else if d < 0 then 16 else 0
+
+/-- Blocks the main loop's callees allocate from `i` down: `partial_dbl`'s six per iteration, and
+the adds'. -/
+def ladderBlocks (w1 w2 : Vector Int 256) : (i : Nat) → i < 256 → Nat
+  | 0, _ => 6 + digitBlocks w1[0] + digitBlocks w2[0]
+  | i + 1, h => 6 + digitBlocks w1[i + 1] + digitBlocks w2[i + 1] + ladderBlocks w1 w2 i (by omega)
+
+/-- The blocks the function allocates, its callees' included: 147 before the main loop. -/
+def blocks (n1 n2 : BitVec 256) : Nat :=
+  let n1slide := fd_curve25519_scalar_wnaf.wnaf n1 4
+  let n2slide := fd_curve25519_scalar_wnaf.wnaf n2 8
+  147 +
+    match start n1slide n2slide 255 (by decide) with
+    | some i => ladderBlocks n1slide n2slide i i.isLt
+    | none => 0
+
 end fd_ed25519_double_scalar_mul_base
 
 end
+
+/-! ## Proof -/
+
+section Proof
+
+/-- `SlidesAt` past a point store into another block. -/
+theorem _root_.LeanMLIR.RIR.Firedancer.SlidesAt.storeQuad {m : MemoryState} (h : SlidesAt m q w)
+    (hne : p.id ≠ q.id) : SlidesAt (m.storeQuad p P) q w := fun k hk =>
+  ⟨Fits.storeQuad (h k hk).1, by
+    rw [MemoryState.readAt_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hne)]
+    exact (h k hk).2⟩
+
+attribute [local mlir_transport] GlobalState.WF.add_blocks₂ SlidesAt.storeQuad
+
+namespace fd_ed25519_double_scalar_mul_base
+
+open Firedancer.Ref
+
+/-! ### Tables in memory -/
+
+/-- `n` points `f 0, …, f (n - 1)` at `p`, 192 bytes apart. -/
+def TableAt (m : MemoryState) (p : Pointer) (n : Nat) (f : Nat → Quad) : Prop :=
+  ∀ k < n,
+    m.QuadFit (p.add (BitVec.ofNat 64 (192 * k))) ∧
+      m.readQuad (p.add (BitVec.ofNat 64 (192 * k))) = f k
+
+/-- `TableAt` past a store into another block. -/
+theorem TableAt.storeQuad {m : MemoryState} (h : TableAt m q n f) (hne : p.id ≠ q.id) :
+    TableAt (m.storeQuad p P) q n f := fun k hk =>
+  ⟨(h k hk).1.storeQuad, by
+    rw [MemoryState.readQuad_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hne)]
+    exact (h k hk).2⟩
+
+/-- `n` points of a known read from `p`, 192 bytes apart. -/
+theorem TableAt.of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v} (hf : Fits m p v)
+    (h : m.readAt p v = x) (hp : p.offset.toNat + 192 * n < 2 ^ 64) (hv : 1536 * n = v) :
+    TableAt m p n fun k => quadAt x (1536 * k) := fun k hk =>
+  ⟨MemoryState.QuadFit.entry (hv ▸ hf) hp hk, by
+    rw [MemoryState.readQuad_add_of_readAt hf h (by omega) (by omega),
+      show 8 * (192 * k) = 1536 * k by omega]⟩
+
+/-- The entry block's registers that later blocks read. -/
+abbrev EntryRegs (tbl n1s n2s ai a2 tp : Pointer) (E : ⟪Γ⟫) : Prop :=
+  E ⊨ [%0 := 0#32, %1 := 1#32, %4 := 1#64, %5 := 18446744073709551615#64, %6 := 0#64, %7 := 8#64,
+    %8 := 255#32, %9 := 0#16, %10 := 4294967295#32, %11 := 1#16, %12 := tbl, %13 := n1s, %14 := n2s,
+    %15 := ai, %16 := a2, %17 := tp]
+
+/-- The registers the main loop reads, `i` aside. -/
+abbrev LoopRegs (tbl n1s n2s ai tp : Pointer) (E : ⟪Γ⟫) : Prop :=
+  E ⊨ [%1 := 1#32, %5 := 18446744073709551615#64, %6 := 0#64, %9 := 0#16, %11 := 1#16, %12 := tbl,
+    %13 := n1s, %14 := n2s, %15 := ai, %17 := tp]
+
+attribute [local mlir_transport] TableAt.storeQuad
+
+/-! ### The main loop -/
+
+/-- A point store at `t` after stores at `t` and `r`: the stores at `t` merge. -/
+theorem storeQuad_swap {m : MemoryState} {t r : Pointer} (ht : t.offset.toNat + 192 ≤ 2 ^ 64)
+    (htr : t.id ≠ r.id) :
+    ((m.storeQuad t X).storeQuad r Y).storeQuad t Z = (m.storeQuad t Z).storeQuad r Y := by
+  rw [MemoryState.storeQuad_comm htr.symm, MemoryState.storeQuad_storeQuad_self ht]
+
+/-- One main-loop iteration's stores at `t` and `r`, merged: the last of each. -/
+theorem storeQuad_canon {m : MemoryState} {t r : Pointer} (ht : t.offset.toNat + 192 ≤ 2 ^ 64)
+    (hr : r.offset.toNat + 192 ≤ 2 ^ 64) (htr : t.id ≠ r.id) :
+    ((((m.storeQuad t T₁).storeQuad r R₁).storeQuad t T₂).storeQuad r R₂).storeQuad r R₃ =
+      (m.storeQuad t T₂).storeQuad r R₃ := by
+  rw [MemoryState.storeQuad_storeQuad_self hr, storeQuad_swap ht htr,
+    MemoryState.storeQuad_storeQuad_self hr]
+
+/-- The main loop's objects: blocks apart and offsets that do not wrap. -/
+structure Layout (r tp n1s n2s ai tbl : Pointer) : Prop where
+  rt : r.id ≠ tp.id
+  r1 : r.id ≠ n1s.id
+  r2 : r.id ≠ n2s.id
+  ra : r.id ≠ ai.id
+  rb : r.id ≠ tbl.id
+  t1 : tp.id ≠ n1s.id
+  t2 : tp.id ≠ n2s.id
+  ta : tp.id ≠ ai.id
+  tb : tp.id ≠ tbl.id
+  n1o : n1s.offset.toNat + 512 < 2 ^ 64
+  n2o : n2s.offset.toNat + 512 < 2 ^ 64
+  aio : ai.offset.toNat + 192 * 8 < 2 ^ 64
+  tbo : tbl.offset.toNat + 192 * 128 < 2 ^ 64
+
+/-- What the main loop needs of a state: `r` and `t` fit, the slides and tables in place. -/
+structure LoopFacts (S : GlobalState) (r tp n1s n2s ai tbl : Pointer) (w1 w2 : Vector Int 256)
+    (AI B : Nat → Quad) : Prop where
+  wf : S.WF
+  fitR : S.mem.QuadFit r
+  fitT : S.mem.QuadFit tp
+  slides1 : SlidesAt S.mem n1s w1
+  slides2 : SlidesAt S.mem n2s w2
+  tblA : TableAt S.mem ai 8 AI
+  tblB : TableAt S.mem tbl 128 B
+
+/-- `LoopFacts` after `t` and `r` are stored, the counter advanced. -/
+theorem LoopFacts.store {S : GlobalState} (h : LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B)
+    (hL : Layout r tp n1s n2s ai tbl) (hn : S.alloc.nextFreeBlock ≤ n) :
+    LoopFacts ⟨⟨n⟩, (S.mem.storeQuad tp T).storeQuad r R⟩ r tp n1s n2s ai tbl w1 w2 AI B
+    where
+  wf := (GlobalState.WF.bump h.wf hn).storeQuad_mk.storeQuad_mk
+  fitR := h.fitR.storeQuad.storeQuad
+  fitT := h.fitT.storeQuad.storeQuad
+  slides1 := (h.slides1.storeQuad hL.t1).storeQuad hL.r1
+  slides2 := (h.slides2.storeQuad hL.t2).storeQuad hL.r2
+  tblA := (h.tblA.storeQuad hL.ta).storeQuad hL.ra
+  tblB := (h.tblB.storeQuad hL.tb).storeQuad hL.rb
+
+/-- `^bb8`, an iteration's start at `i`: `t = partial_dbl( r )`, then `n1slide[i]`'s add; on to
+`^bb12`. -/
+theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256) (AI : Nat → Quad)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
+    (hw : -15 ≤ w1[i] ∧ w1[i] ≤ 15) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
+    (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%41 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id) (hra : r.id ≠ ai.id)
+    (hta : tp.id ≠ ai.id) (htn : tp.id ≠ n1s.id) (hn1o : n1s.offset.toNat + 512 < 2 ^ 64)
+    (haio : ai.offset.toNat + 192 * 8 < 2 ^ 64) (hrv : S.mem.readQuad r = R)
+    (hn1s : SlidesAt S.mem n1s w1) (hai : TableAt S.mem ai 8 AI)
+    (hK :
+      ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+        E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+          LoopRegs tbl n1s n2s ai tp E' →
+          (E' ⊨ [%41 := BitVec.ofNat 64 i]) →
+          S' =
+            { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i]⟩,
+              mem := (S.mem.storeQuad tp (add1 AI w1[i] R).2).storeQuad r (add1 AI w1[i] R).1 } →
+          (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb12 S' >>= g) = K) :
+    (fd_ed25519_double_scalar_mul_base.runFrom E ^bb8 S >>= g) = K := by
+  obtain ⟨hf1, hl1⟩ := hn1s i hi
+  clear hn1s
+  dsimp only [LoopRegs] at hR
+  block_init
+  step_call using fd_ed25519_partial_dbl.call_eq
+  step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
+    show i * 2 = 2 * i by omega]
+  step_load with transparent d consuming hf1 hl1
+  step_pure
+  finish_block
+  case
+    isTrue =>
+    have hpos : 0 < w1[i] := by
+      rw [slt_zero_ofInt16 (by omega)] at hbr
+      simpa using hbr
+    obtain ⟨k, hk⟩ : ∃ k, (w1[i] / 2).toNat = k := ⟨_, rfl⟩
+    have hk8 : k < 8 := by omega
+    obtain ⟨hAf, hAr⟩ := hai k hk8
+    clear hai
+    block_init
+    step_call using fd_ed25519_point_add_final_mul.call_eq
+    step_pure
+    step_pure with idx
+    have hidx : idx.toNat = k := by rw [hidx, idx_pos (by omega), hk]
+    step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry haio hk8]
+    step_call using fd_ed25519_point_add_with_opts.call_eq
+    finish_block
+    refine hK E S hArgs (by env_reads) (by env_reads) ?_
+    rw [hS] at hr ⊢
+    rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
+      storeQuad_swap htp.1 hrt.symm]
+    simp only [add1, addDigit, hpos, ite_true, hk, digitBlocks]
+  case
+    isFalse =>
+    have hnpos : w1[i] ≤ 0 := by
+      rw [slt_zero_ofInt16 (by omega)] at hbr
+      simpa using hbr
+    block_init
+    step_pure
+    finish_block
+    case
+      isTrue =>
+      have hneg : w1[i] < 0 := by
+        rw [ofInt16_slt_zero (by omega)] at hbr
+        simpa using hbr
+      obtain ⟨k, hk⟩ : ∃ k, (-w1[i] / 2).toNat = k := ⟨_, rfl⟩
+      have hk8 : k < 8 := by omega
+      obtain ⟨hAf, hAr⟩ := hai k hk8
+      clear hai
+      block_init
+      step_call using fd_ed25519_point_add_final_mul.call_eq
+      step_pure
+      step_pure
+      step_pure with idx
+      have hidx : idx.toNat = k := by rw [hidx, idx_neg (by omega), hk]
+      step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry haio hk8]
+      step_call using fd_ed25519_point_sub_with_opts.call_eq
+      finish_block
+      refine hK E S hArgs (by env_reads) (by env_reads) ?_
+      rw [hS] at hr ⊢
+      rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
+        storeQuad_swap htp.1 hrt.symm]
+      simp only [add1, addDigit, hneg, show ¬0 < w1[i] by omega, ite_true, ite_false, hk,
+        digitBlocks]
+    case
+      isFalse =>
+      have h0 : w1[i] = 0 := by
+        rw [ofInt16_slt_zero (by omega)] at hbr
+        simp at hbr
+        omega
+      clear hai
+      refine hK E S hArgs (by env_reads) (by env_reads) ?_
+      simp only [add1, addDigit, h0, lt_irrefl, ite_false, digitBlocks, Nat.add_zero]
+      subst hS
+      exact congrArg _ (MemoryState.storeQuad_readQuad_self' hr hrv).symm
+
+/-- `^bb12`: `n2slide[i]`'s add; on to `^bb16`. -/
+theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 256) (B : Nat → Quad)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
+    (hw : -255 ≤ w2[i] ∧ w2[i] ≤ 255) (R T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
+    (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%41 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id) (hrb : r.id ≠ tbl.id)
+    (hn2o : n2s.offset.toNat + 512 < 2 ^ 64) (htbo : tbl.offset.toNat + 192 * 128 < 2 ^ 64)
+    (hrv : S.mem.readQuad r = R) (htv : S.mem.readQuad tp = T) (hn2s : SlidesAt S.mem n2s w2)
+    (htbl : TableAt S.mem tbl 128 B)
+    (hK :
+      ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+        E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+          LoopRegs tbl n1s n2s ai tp E' →
+          (E' ⊨ [%41 := BitVec.ofNat 64 i]) →
+          S' =
+            { alloc := ⟨S.alloc.nextFreeBlock + digitBlocks w2[i]⟩,
+              mem :=
+                (S.mem.storeQuad tp (addDigit B w2[i] R T).2).storeQuad r
+                  (addDigit B w2[i] R T).1 } →
+          (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb16 S' >>= g) = K) :
+    (fd_ed25519_double_scalar_mul_base.runFrom E ^bb12 S >>= g) = K := by
+  obtain ⟨hf2, hl2⟩ := hn2s i hi
+  clear hn2s
+  dsimp only [LoopRegs] at hR
+  block_init
+  step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
+    show i * 2 = 2 * i by omega]
+  step_load with transparent d consuming hf2 hl2
+  step_pure
+  finish_block
+  case
+    isTrue =>
+    have hpos : 0 < w2[i] := by
+      rw [slt_zero_ofInt16 (by omega)] at hbr
+      simpa using hbr
+    obtain ⟨k, hk⟩ : ∃ k, (w2[i] / 2).toNat = k := ⟨_, rfl⟩
+    have hk8 : k < 128 := by omega
+    obtain ⟨hBf, hBr⟩ := htbl k hk8
+    clear htbl
+    block_init
+    step_call using fd_ed25519_point_add_final_mul.call_eq
+    step_pure
+    step_pure with idx
+    have hidx : idx.toNat = k := by rw [hidx, idx_pos (by omega), hk]
+    step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry htbo hk8]
+    step_call using fd_ed25519_point_add_with_opts.call_eq
+    finish_block
+    refine hK E S hArgs (by env_reads) (by env_reads) ?_
+    rw [hS] at hr ⊢
+    rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
+      MemoryState.storeQuad_comm hrt]
+    simp only [addDigit, hpos, ite_true, hk, digitBlocks]
+  case
+    isFalse =>
+    have hnpos : w2[i] ≤ 0 := by
+      rw [slt_zero_ofInt16 (by omega)] at hbr
+      simpa using hbr
+    block_init
+    step_pure
+    finish_block
+    case
+      isTrue =>
+      have hneg : w2[i] < 0 := by
+        rw [ofInt16_slt_zero (by omega)] at hbr
+        simpa using hbr
+      obtain ⟨k, hk⟩ : ∃ k, (-w2[i] / 2).toNat = k := ⟨_, rfl⟩
+      have hk8 : k < 128 := by omega
+      obtain ⟨hBf, hBr⟩ := htbl k hk8
+      clear htbl
+      block_init
+      step_call using fd_ed25519_point_add_final_mul.call_eq
+      step_pure
+      step_pure
+      step_pure with idx
+      have hidx : idx.toNat = k := by rw [hidx, idx_neg (by omega), hk]
+      step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry htbo hk8]
+      step_call using fd_ed25519_point_sub_with_opts.call_eq
+      finish_block
+      refine hK E S hArgs (by env_reads) (by env_reads) ?_
+      rw [hS] at hr ⊢
+      rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
+        MemoryState.storeQuad_comm hrt]
+      simp only [addDigit, hneg, show ¬0 < w2[i] by omega, ite_true, ite_false, hk, digitBlocks]
+    case
+      isFalse =>
+      have h0 : w2[i] = 0 := by
+        rw [ofInt16_slt_zero (by omega)] at hbr
+        simp at hbr
+        omega
+      clear htbl
+      refine hK E S hArgs (by env_reads) (by env_reads) ?_
+      simp only [addDigit, h0, lt_irrefl, ite_false, digitBlocks, Nat.add_zero]
+      subst hS
+      rw [MemoryState.storeQuad_readQuad_self' htp htv, MemoryState.storeQuad_readQuad_self' hr hrv]
+
+/-- `^bb16`: `r` a copy of `t`; then out at `i == 0`, else around at `i - 1`. -/
+theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
+    (T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
+    (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%41 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id)
+    (htv : S.mem.readQuad tp = T)
+    (hexit :
+      i = 0 →
+        ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            S' = { S with mem := S.mem.storeQuad r T } →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S' >>= g) = K)
+    (hback :
+      ∀ j,
+        i = j + 1 →
+          ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+            E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+              LoopRegs tbl n1s n2s ai tp E' →
+              (E' ⊨ [%41 := BitVec.ofNat 64 j]) →
+              S' = { S with mem := S.mem.storeQuad r T } →
+              (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S' >>= g) = K) :
+    (fd_ed25519_double_scalar_mul_base.runFrom E ^bb16 S >>= g) = K := by
+  dsimp only [LoopRegs] at hR
+  block_init
+  step_pure
+  finish_block
+  case isTrue =>
+    have hi0 : i = 0 := eq_zero_of_ofNat64 (by omega) hbr
+    block_init
+    step_call using fd_ed25519_point_add_final_mul.call_eq
+    finish_block
+    exact hexit hi0 E S hArgs (by rw [hS])
+  case isFalse =>
+    have hi0 : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr fun h => hbr (by rw [h])
+    block_init
+    step_call using fd_ed25519_point_add_final_mul_projective.call_eq
+    step_pure [saddOverflow_neg_one64 hi0 (by omega), add_neg_one64 hi0 (by omega)]
+    step_pure [slt_ofNat64 hi0 (by omega)]
+    finish_block
+    refine hback (i - 1) (by omega) E S hArgs (by env_reads) (by env_reads) (by rw [hS])
+
+/-- An iteration of the main loop at `i`: `r` and `t` stored by the adds, then `r` a copy of `t`. -/
+theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+    (AI B : Nat → Quad) (hL : Layout r tp n1s n2s ai tbl)
+    (hw1 : ∀ k (hk : k < 256), (-15 : Int) ≤ w1[k] ∧ w1[k] ≤ 15)
+    (hw2 : ∀ k (hk : k < 256), (-255 : Int) ≤ w2[k] ∧ w2[k] ≤ 255)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
+    (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
+    (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%41 := BitVec.ofNat 64 i])
+    (hF : LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B) (hrv : S.mem.readQuad r = R)
+    (hexit :
+      i = 0 →
+        ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            S' =
+              { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i] + digitBlocks w2[i]⟩,
+                mem :=
+                  (S.mem.storeQuad tp (adds AI B w1[i] w2[i] R).2).storeQuad r
+                    (adds AI B w1[i] w2[i] R).2 } →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S' >>= g) = K)
+    (hback :
+      ∀ j,
+        i = j + 1 →
+          ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+            E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+              LoopRegs tbl n1s n2s ai tp E' →
+              (E' ⊨ [%41 := BitVec.ofNat 64 j]) →
+              S' =
+                { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i] + digitBlocks w2[i]⟩,
+                  mem :=
+                    (S.mem.storeQuad tp (adds AI B w1[i] w2[i] R).2).storeQuad r
+                      (adds AI B w1[i] w2[i] R).2 } →
+              (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S' >>= g) = K) :
+    (fd_ed25519_double_scalar_mul_base.runFrom E ^bb8 S >>= g) = K := by
+  refine
+    head_block r n1 a n2 tbl n1s n2s ai tp w1 AI g K i hi (hw1 i hi) R S E hArgs hR hRi hF.wf
+      hF.fitR hF.fitT hL.rt hL.ra hL.ta hL.t1 hL.n1o hL.aio hrv hF.slides1 hF.tblA
+      fun E₁ S₁ h₁ hR₁ hRi₁ hS₁ => ?_
+  have hF₁ :=
+    hS₁ ▸
+      hF.store (T := (add1 AI w1[i] R).2) (R := (add1 AI w1[i] R).1) hL (n :=
+        S.alloc.nextFreeBlock + 6 + digitBlocks w1[i]) (by omega)
+  have hrv₁ : S₁.mem.readQuad r = (add1 AI w1[i] R).1 := by
+    rw [hS₁]
+    exact MemoryState.readQuad_storeQuad_self hF.fitR.storeQuad
+  have htv₁ : S₁.mem.readQuad tp = (add1 AI w1[i] R).2 := by
+    rw [hS₁]
+    dsimp only
+    rw [MemoryState.readQuad_storeQuad_of_id_ne hL.rt]
+    exact MemoryState.readQuad_storeQuad_self hF.fitT
+  refine
+    digit2_block r n1 a n2 tbl n1s n2s ai tp w2 B g K i hi (hw2 i hi) _ _ S₁ E₁ h₁ hR₁ hRi₁ hF₁.wf
+      hF₁.fitR hF₁.fitT hL.rt hL.rb hL.n2o hL.tbo hrv₁ htv₁ hF₁.slides2 hF₁.tblB
+      fun E₂ S₂ h₂ hR₂ hRi₂ hS₂ => ?_
+  have hF₂ :=
+    hS₂ ▸
+      hF₁.store (T := (adds AI B w1[i] w2[i] R).2) (R := (adds AI B w1[i] w2[i] R).1) hL (n :=
+        S₁.alloc.nextFreeBlock + digitBlocks w2[i]) (by omega)
+  have htv₂ : S₂.mem.readQuad tp = (adds AI B w1[i] w2[i] R).2 := by
+    rw [hS₂]
+    dsimp only
+    rw [MemoryState.readQuad_storeQuad_of_id_ne hL.rt]
+    exact MemoryState.readQuad_storeQuad_self hF₁.fitT
+  refine
+      tail_block r n1 a n2 tbl n1s n2s ai tp g K i hi _ S₂ E₂ h₂ hR₂ hRi₂ hF₂.wf hF₂.fitR hF₂.fitT
+        hL.rt htv₂ (fun h0 E₃ S₃ h₃ hS₃ => hexit h0 E₃ S₃ h₃ (hS₃.trans ?_))
+        (fun j hj E₃ S₃ h₃ hR₃ hRi₃ hS₃ => hback j hj E₃ S₃ h₃ hR₃ hRi₃ (hS₃.trans ?_)) <;>
+    · subst hS₂ hS₁
+      dsimp only
+      rw [storeQuad_canon hF.fitT.1 hF.fitR.1 hL.rt.symm]
+      rfl
+
+/-- The main loop from `^bb8` at `i`: `r` the ladder from `i` down, `t` some point. -/
+theorem main_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+    (AI B : Nat → Quad) (hL : Layout r tp n1s n2s ai tbl)
+    (hw1 : ∀ k (hk : k < 256), (-15 : Int) ≤ w1[k] ∧ w1[k] ≤ 15)
+    (hw2 : ∀ k (hk : k < 256), (-255 : Int) ≤ w2[k] ∧ w2[k] ≤ 255)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) :
+    ∀ i (hi : i < 256) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫),
+      E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+        LoopRegs tbl n1s n2s ai tp E →
+        (E ⊨ [%41 := BitVec.ofNat 64 i]) →
+        LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B →
+        S.mem.readQuad r = R →
+        (∀ (E' : ⟪Γ⟫) (S' : GlobalState) (T' : Quad),
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            S' =
+              { alloc := ⟨S.alloc.nextFreeBlock + ladderBlocks w1 w2 i hi⟩,
+                mem := (S.mem.storeQuad tp T').storeQuad r (ladder AI B w1 w2 i hi R) } →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S' >>= g) = K) →
+        (fd_ed25519_double_scalar_mul_base.runFrom E ^bb8 S >>= g) = K := by
+  intro i
+  induction i with
+  | zero =>
+    intro hi R S E hArgs hR hRi hF hrv hK
+    exact
+      main_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 AI B hL hw1 hw2 g K 0 hi R S E hArgs hR hRi hF hrv
+        (fun _ E' S' h₁ hS' =>
+          hK E' S' (adds AI B w1[0] w2[0] R).2 h₁
+            (hS'.trans (by simp only [ladderBlocks, ladder, Nat.add_assoc])))
+        (fun j hj => absurd hj (by omega))
+  | succ j ih =>
+    intro hi R S E hArgs hR hRi hF hrv hK
+    refine
+      main_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 AI B hL hw1 hw2 g K (j + 1) hi R S E hArgs hR hRi
+        hF hrv (fun h => absurd h (by omega)) fun j' hj E' S' h₁ hR' hRi' hS' => ?_
+    obtain rfl : j = j' := by omega
+    have hF' :=
+      hS' ▸
+        hF.store (T := (adds AI B w1[j + 1] w2[j + 1] R).2) hL (n :=
+          S.alloc.nextFreeBlock + 6 + digitBlocks w1[j + 1] + digitBlocks w2[j + 1]) (by omega)
+    refine
+      ih (by omega) (adds AI B w1[j + 1] w2[j + 1] R).2 S' E' h₁ hR' hRi' hF' ?_
+        fun E'' S'' T'' h₂ hS'' => hK E'' S'' T'' h₂ (hS''.trans ?_)
+    · rw [hS']
+      exact MemoryState.readQuad_storeQuad_self hF.fitR.storeQuad
+    · subst hS'
+      dsimp only
+      rw [storeQuad_swap hF.fitT.1 hL.rt.symm, MemoryState.storeQuad_storeQuad_self hF.fitR.1]
+      simp only [ladderBlocks, ladder, Nat.add_assoc]
+
+/-! ### The zero-digit search -/
+
+/-- `^bb3`, the zero-digit search at `i`: on to the main loop at a non-zero digit, out after `0`,
+else around. -/
+theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+    (hn1o : n1s.offset.toNat + 512 < 2 ^ 64) (hn2o : n2s.offset.toNat + 512 < 2 ^ 64)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
+    (hd1 : (-15 : Int) ≤ w1[i] ∧ w1[i] ≤ 15) (hd2 : (-255 : Int) ≤ w2[i] ∧ w2[i] ≤ 255)
+    (S : GlobalState) (E : ⟪Γ⟫)
+    (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
+    (hR : LoopRegs tbl n1s n2s ai tp E)
+    (hR' : E ⊨ [%0 := 0#32, %10 := 4294967295#32, %29 := BitVec.ofNat 32 i])
+    (hn1s : SlidesAt S.mem n1s w1) (hn2s : SlidesAt S.mem n2s w2)
+    (hfound :
+      ¬(w1[i] = 0 ∧ w2[i] = 0) →
+        ∀ E' : ⟪Γ⟫,
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            LoopRegs tbl n1s n2s ai tp E' →
+            (E' ⊨ [%41 := BitVec.ofNat 64 i]) →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S >>= g) = K)
+    (hnone :
+      w1[i] = 0 ∧ w2[i] = 0 →
+        i = 0 →
+        ∀ E' : ⟪Γ⟫,
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S >>= g) = K)
+    (hback :
+      w1[i] = 0 ∧ w2[i] = 0 →
+        ∀ j,
+          i = j + 1 →
+            ∀ E' : ⟪Γ⟫,
+              E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+                LoopRegs tbl n1s n2s ai tp E' →
+                (E' ⊨ [%0 := 0#32, %10 := 4294967295#32, %29 := BitVec.ofNat 32 j]) →
+                (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb3 S >>= g) = K) :
+    (fd_ed25519_double_scalar_mul_base.runFrom E ^bb3 S >>= g) = K := by
+  obtain ⟨hf1, hl1⟩ := hn1s i hi
+  obtain ⟨hf2, hl2⟩ := hn2s i hi
+  clear hn1s hn2s
+  dsimp only [LoopRegs] at hR
+  block_init
+  step_pure [setWidth_ofNat32 (show i < 2 ^ 32 by omega)]
+  step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
+    show i * 2 = 2 * i by omega]
+  step_load consuming hf1 hl1
+  step_pure
+  finish_block
+  case isTrue =>
+    have h1 : w1[i] = 0 := (ofInt16_eq_zero (by omega)).1 hbr
+    block_init
+    step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
+      show i * 2 = 2 * i by omega]
+    step_load consuming hf2 hl2
+    step_pure
+    finish_block
+    case isTrue =>
+      have h2 : w2[i] = 0 := (ofInt16_eq_zero (by omega)).1 hbr
+      block_init
+      step_pure [saddOverflow_neg_one32 (show i < 2 ^ 31 by omega)]
+      step_pure
+      finish_block
+      case isTrue => step_loop using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
+      case isFalse =>
+        have hi0 : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr fun h => hbr (by rw [h])
+        subst hS
+        refine hback ⟨h1, h2⟩ (i - 1) (by omega) E hArgs (by env_reads) ?_
+        rw [← add_neg_one32 hi0 (by omega)]
+        env_reads
+    case isFalse =>
+      have h2 : ¬w2[i] = 0 := fun h => hbr ((ofInt16_eq_zero (by omega)).2 h)
+      block_init
+      step_pure [slt_neg_one32 (show i < 2 ^ 31 by omega)]
+      finish_block
+      block_init
+      step_pure [setWidth_ofNat32 (show i < 2 ^ 32 by omega)]
+      finish_block
+      subst hS
+      exact hfound (fun h => h2 h.2) E hArgs (by env_reads) (by env_reads)
+  case isFalse =>
+    have h1 : ¬w1[i] = 0 := fun h => hbr ((ofInt16_eq_zero (by omega)).2 h)
+    block_init
+    step_pure [slt_neg_one32 (show i < 2 ^ 31 by omega)]
+    finish_block
+    block_init
+    step_pure [setWidth_ofNat32 (show i < 2 ^ 32 by omega)]
+    finish_block
+    subst hS
+    exact hfound (fun h => h1 h.1) E hArgs (by env_reads) (by env_reads)
+
+/-- The zero-digit search from `^bb3` at `i`: the main loop from `start`, or out without one. -/
+theorem skip_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+    (hw1 : ∀ k (hk : k < 256), (-15 : Int) ≤ w1[k] ∧ w1[k] ≤ 15)
+    (hw2 : ∀ k (hk : k < 256), (-255 : Int) ≤ w2[k] ∧ w2[k] ≤ 255)
+    (hn1o : n1s.offset.toNat + 512 < 2 ^ 64) (hn2o : n2s.offset.toNat + 512 < 2 ^ 64)
+    (S : GlobalState) (hn1s : SlidesAt S.mem n1s w1) (hn2s : SlidesAt S.mem n2s w2)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) :
+    ∀ i (hi : i < 256) (E : ⟪Γ⟫),
+      E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+        LoopRegs tbl n1s n2s ai tp E →
+        (E ⊨ [%0 := 0#32, %10 := 4294967295#32, %29 := BitVec.ofNat 32 i]) →
+        (∀ j,
+          start w1 w2 i hi = some j →
+            ∀ E' : ⟪Γ⟫,
+              E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+                LoopRegs tbl n1s n2s ai tp E' →
+                (E' ⊨ [%41 := BitVec.ofNat 64 j.val]) →
+                (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S >>= g) = K) →
+        (start w1 w2 i hi = none →
+          ∀ E' : ⟪Γ⟫,
+            E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+              (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S >>= g) = K) →
+        (fd_ed25519_double_scalar_mul_base.runFrom E ^bb3 S >>= g) = K := by
+  intro i
+  induction i with
+  | zero =>
+    intro hi E hArgs hR hR' hfound hnone
+    refine
+      skip_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 hn1o hn2o g K 0 hi (hw1 0 hi) (hw2 0 hi) S E hArgs
+        hR hR' hn1s hn2s (fun h => hfound 0 (by simp [start, h]))
+        (fun h _ => hnone (by simp [start, h])) fun _ j hj => absurd hj (by omega)
+  | succ j ih =>
+    intro hi E hArgs hR hR' hfound hnone
+    refine
+      skip_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 hn1o hn2o g K (j + 1) hi (hw1 _ hi) (hw2 _ hi) S E
+        hArgs hR hR' hn1s hn2s (fun h => hfound ⟨j + 1, hi⟩ (by simp [start, h]))
+        (fun _ h => absurd h (by omega)) fun h j' hj E' h₁ h₂ h₃ => ?_
+    obtain rfl : j = j' := by omega
+    have hs : start w1 w2 (j + 1) hi = start w1 w2 j (by omega) := by simp [start, h]
+    exact
+      ih (by omega) E' h₁ h₂ h₃ (fun j'' h' => hfound j'' (hs.trans h')) fun h' =>
+        hnone (hs.trans h')
+
+/-! ### The table loop -/
+
+/-- One table-loop iteration's effect at `i`: `t = a2 + ai[i-1]`, then `ai[i]` from it; eighteen
+blocks. -/
+abbrev tableStep (tp ai : Pointer) (A2 P : Quad) (i : Nat) (S : GlobalState) : GlobalState :=
+  let t := fd_ed25519_point_add_with_opts.spec A2 P 1#32
+  { alloc := ⟨S.alloc.nextFreeBlock + 18⟩,
+    mem :=
+      (S.mem.storeQuad tp t).storeQuad (ai.add (BitVec.ofNat 64 (192 * i)))
+        (fd_curve25519_into_precomputed.spec t) }
+
+/-- `^bb2`, the table loop at `i`: `t = a2 + ai[i-1]`, `ai[i]` from it; then around or on to
+`^bb1`. -/
+theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi1 : 1 ≤ i)
+    (hi : i < 8) (S : GlobalState) (E : ⟪Γ⟫)
+    (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
+    (hR : EntryRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%21 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (ha2 : S.mem.QuadFit a2) (htp : S.mem.QuadFit tp)
+    (hP : S.mem.QuadFit (ai.add (BitVec.ofNat 64 (192 * (i - 1)))))
+    (hQ : S.mem.QuadFit (ai.add (BitVec.ofNat 64 (192 * i))))
+    (haio : ai.offset.toNat + 192 * 8 < 2 ^ 64) (htai : tp.id ≠ ai.id)
+    (ha2v : S.mem.readQuad a2 = A2)
+    (hPv : S.mem.readQuad (ai.add (BitVec.ofNat 64 (192 * (i - 1)))) = P)
+    (hexit :
+      i + 1 = 8 →
+        ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            EntryRegs tbl n1s n2s ai a2 tp E' →
+            S' = tableStep tp ai A2 P i S →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb1 S' >>= g) = K)
+    (hback :
+      i + 1 < 8 →
+        ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            EntryRegs tbl n1s n2s ai a2 tp E' →
+            (E' ⊨ [%21 := BitVec.ofNat 64 (i + 1)]) →
+            S' = tableStep tp ai A2 P i S →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb2 S' >>= g) = K) :
+    (fd_ed25519_double_scalar_mul_base.runFrom E ^bb2 S >>= g) = K := by
+  dsimp only [EntryRegs] at hR
+  block_init
+  step_pure [saddOverflow_neg_one64 hi1 (by omega), add_neg_one64 hi1 (by omega)]
+  step_pure [Nat.mod_eq_of_lt (show i - 1 < 2 ^ 64 by omega), Nat.mul_comm (i - 1) 192,
+    show 192 * (i - 1) < 2 ^ 64 by omega, gep_entry haio (show i - 1 < 8 by omega)]
+  step_call using fd_ed25519_point_add_with_opts.call_eq
+  step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), Nat.mul_comm i 192,
+    show 192 * i < 2 ^ 64 by omega, gep_entry haio hi]
+  step_call using fd_ed25519_point_add_final_mul.call_eq
+  step_call using fd_curve25519_into_precomputed.call_eq
+  step_pure [saddOverflow_one64 (show i + 1 < 2 ^ 63 by omega),
+    uaddOverflow_one64 (show i + 1 < 2 ^ 64 by omega), ← BitVec.ofNat_add]
+  step_pure
+  finish_block
+  case
+    isTrue =>
+    have h8 : i + 1 = 8 := by
+      have := congrArg BitVec.toNat hbr
+      simp only [BitVec.toNat_ofNat] at this
+      omega
+    refine hexit h8 E S hArgs (by env_reads) ?_
+    subst hS
+    rw [MemoryState.readQuad_storeQuad_self hQ.of_storeQuad.of_storeQuad,
+      MemoryState.storeQuad_storeQuad_self hQ.1]
+  case
+    isFalse =>
+    have h8 : i + 1 < 8 := by
+      by_contra h
+      exact hbr (by rw [show i + 1 = 8 by omega])
+    refine hback h8 E S hArgs (by env_reads) (by env_reads) ?_
+    subst hS
+    rw [MemoryState.readQuad_storeQuad_self hQ.of_storeQuad.of_storeQuad,
+      MemoryState.storeQuad_storeQuad_self hQ.1]
+
+/-- The table loop's objects: `t` and `ai` apart from what they must not touch. -/
+structure TableLayout (tp n1s n2s ai tbl a2 : Pointer) : Prop where
+  ta : tp.id ≠ ai.id
+  ta2 : tp.id ≠ a2.id
+  aa2 : ai.id ≠ a2.id
+  t1 : tp.id ≠ n1s.id
+  a1 : ai.id ≠ n1s.id
+  t2 : tp.id ≠ n2s.id
+  a2' : ai.id ≠ n2s.id
+  tb : tp.id ≠ tbl.id
+  ab : ai.id ≠ tbl.id
+  aio : ai.offset.toNat + 192 * 8 < 2 ^ 64
+
+/-- What the table loop needs of a state at `i`: `ai[0 … i-1]` in place, `a2` holding `A2`, and the
+main loop's other facts. -/
+structure TableFacts (S : GlobalState) (r tp n1s n2s ai tbl a2 : Pointer) (w1 w2 : Vector Int 256)
+    (AI B : Nat → Quad) (A2 : Quad) (i : Nat) : Prop where
+  wf : S.WF
+  fitR : S.mem.QuadFit r
+  fitT : S.mem.QuadFit tp
+  fitA2 : S.mem.QuadFit a2
+  fitAI : Fits S.mem ai (1536 * 8)
+  a2v : S.mem.readQuad a2 = A2
+  slides1 : SlidesAt S.mem n1s w1
+  slides2 : SlidesAt S.mem n2s w2
+  tblA : TableAt S.mem ai i AI
+  tblB : TableAt S.mem tbl 128 B
+
+/-- `TableFacts` after an iteration: entry `i` stored. -/
+theorem TableFacts.step {S : GlobalState}
+    (h : TableFacts S r tp n1s n2s ai tbl a2 w1 w2 (aiTable A2 AI0) B A2 i)
+    (hL : TableLayout tp n1s n2s ai tbl a2) (hi1 : 1 ≤ i) (hi : i < 8) :
+    TableFacts (tableStep tp ai A2 (aiTable A2 AI0 (i - 1)) i S) r tp n1s n2s ai tbl a2 w1 w2
+      (aiTable A2 AI0) B A2 (i + 1)
+    where
+  wf :=
+    (GlobalState.WF.bump h.wf (n := S.alloc.nextFreeBlock + 18)
+          (by omega)).storeQuad_mk |>.storeQuad_mk
+  fitR := h.fitR.storeQuad.storeQuad
+  fitT := h.fitT.storeQuad.storeQuad
+  fitA2 := h.fitA2.storeQuad.storeQuad
+  fitAI := Fits.storeQuad (Fits.storeQuad h.fitAI)
+  a2v := by
+    rw [MemoryState.readQuad_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hL.aa2),
+      MemoryState.readQuad_storeQuad_of_id_ne hL.ta2, h.a2v]
+  slides1 := (h.slides1.storeQuad hL.t1).storeQuad (by simpa [Pointer.add_id] using hL.a1)
+  slides2 := (h.slides2.storeQuad hL.t2).storeQuad (by simpa [Pointer.add_id] using hL.a2')
+  tblB := (h.tblB.storeQuad hL.tb).storeQuad (by simpa [Pointer.add_id] using hL.ab)
+  tblA := fun k hk => by
+    have hfit := MemoryState.QuadFit.entry h.fitAI hL.aio (show k < 8 by omega)
+    have := hL.aio
+    refine ⟨hfit.storeQuad.storeQuad, ?_⟩
+    rcases Nat.lt_or_ge k i with hki | hki
+    · rw [MemoryState.readQuad_storeQuad_apart (by omega) (by omega) (by omega),
+        MemoryState.readQuad_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hL.ta)]
+      exact (h.tblA k hki).2
+    · obtain rfl : k = i := by omega
+      rw [MemoryState.readQuad_storeQuad_self
+          (MemoryState.QuadFit.entry h.fitAI hL.aio hi).storeQuad]
+      obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
+      simp only [aiTable, Nat.add_sub_cancel]
+
+/-- The table loop's stores are in the frame. -/
+theorem eraseFrom_tableStep (hNa : N ≤ ai.id.id) (hNt : N ≤ tp.id.id) :
+    (tableStep tp ai A2 P i S).mem.eraseFrom N = S.mem.eraseFrom N := by
+  dsimp only
+  rw [MemoryState.eraseFrom_storeQuad_of_le (by simpa [Pointer.add_id] using hNa),
+    MemoryState.eraseFrom_storeQuad_of_le hNt]
+
+/-- The table loop from `^bb2` at `i`: `ai[i …]` stored; at `^bb1` the main loop's facts hold, and
+only the frame changed. -/
+theorem table_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int 256)
+    (A2 AI0 : Quad) (B : Nat → Quad) (N : Nat) (hL : TableLayout tp n1s n2s ai tbl a2)
+    (hNa : N ≤ ai.id.id) (hNt : N ≤ tp.id.id) (g : Vals [.ptr] × GlobalState → PoisonOr β)
+    (K : PoisonOr β) :
+    ∀ m i (S : GlobalState) (E : ⟪Γ⟫),
+      E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+        EntryRegs tbl n1s n2s ai a2 tp E →
+        (E ⊨ [%21 := BitVec.ofNat 64 i]) →
+        1 ≤ i →
+        i + m = 8 →
+        i < 8 →
+        TableFacts S r tp n1s n2s ai tbl a2 w1 w2 (aiTable A2 AI0) B A2 i →
+        (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+          E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            EntryRegs tbl n1s n2s ai a2 tp E' →
+            S'.alloc.nextFreeBlock = S.alloc.nextFreeBlock + 18 * m →
+            LoopFacts S' r tp n1s n2s ai tbl w1 w2 (aiTable A2 AI0) B →
+            S'.mem.eraseFrom N = S.mem.eraseFrom N →
+            (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb1 S' >>= g) = K) →
+        (fd_ed25519_double_scalar_mul_base.runFrom E ^bb2 S >>= g) = K := by
+  intro m
+  induction m with
+  | zero =>
+    intro i S E _ _ _ _ hm hi; omega
+  | succ m ih =>
+    intro i S E hArgs hR hRi hi1 hm hi hF hK
+    have hstep := hF.step (AI0 := AI0) hL hi1 hi
+    refine
+      table_iter r n1 a n2 tbl n1s n2s ai a2 tp A2 (aiTable A2 AI0 (i - 1)) g K i hi1 hi S E hArgs
+        hR hRi hF.wf hF.fitA2 hF.fitT (hF.tblA (i - 1) (by omega)).1
+        (MemoryState.QuadFit.entry hF.fitAI hL.aio hi) hL.aio hL.ta hF.a2v
+        (hF.tblA (i - 1) (by omega)).2 ?_ ?_
+    · intro h8 E' S' h₁ h₂ hS'
+      subst hS'
+      obtain rfl : m = 0 := by omega
+      rw [show i + 1 = 8 from h8] at hstep
+      exact
+        hK E' _ h₁ h₂ rfl
+          ⟨hstep.wf, hstep.fitR, hstep.fitT, hstep.slides1, hstep.slides2, hstep.tblA, hstep.tblB⟩
+          (eraseFrom_tableStep hNa hNt)
+    · intro h8 E' S' h₁ h₂ h₃ hS'
+      subst hS'
+      exact
+        ih (i + 1) _ E' h₁ h₂ h₃ (by omega) (by omega) h8 hstep
+          fun E'' S'' h₁' h₂' halloc hLF herase =>
+          hK E'' S'' h₁' h₂'
+            (by
+              rw [halloc]; dsimp only; omega)
+            hLF (herase.trans (eraseFrom_tableStep hNa hNt))
+
+/-! ### The function -/
+
+/-- `spec` without a non-zero digit: the neutral point. -/
+theorem spec_of_none {x1 x2 : BitVec 256}
+    (h :
+      start (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) 255
+          (by decide) =
+        none) :
+    spec tbl x1 A x2 = fd_ed25519_point_set_zero.spec := by
+  unfold spec
+  dsimp only
+  rw [h]
+
+/-- `blocks` without a non-zero digit. -/
+theorem blocks_of_none {x1 x2 : BitVec 256}
+    (h :
+      start (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) 255
+          (by decide) =
+        none) :
+    blocks x1 x2 = 147 := by
+  unfold blocks
+  dsimp only
+  rw [h]
+  rfl
+
+/-- `spec` from the first non-zero digit `j`: the main loop from `j`. -/
+theorem spec_of_some {x1 x2 : BitVec 256} {j : Fin 256}
+    (h :
+      start (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) 255
+          (by decide) =
+        some j) :
+    spec tbl x1 A x2 =
+      ladder (aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A)) tbl
+        (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) j j.isLt
+        fd_ed25519_point_set_zero.spec := by
+  unfold spec
+  dsimp only
+  rw [h]
+
+/-- `blocks` from the first non-zero digit `j`. -/
+theorem blocks_of_some {x1 x2 : BitVec 256} {j : Fin 256}
+    (h :
+      start (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) 255
+          (by decide) =
+        some j) :
+    blocks x1 x2 =
+      147 +
+        ladderBlocks (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) j
+          j.isLt := by
+  unfold blocks
+  dsimp only
+  rw [h]
+
+end fd_ed25519_double_scalar_mul_base
+
+attribute [local mlir_transport] fd_ed25519_double_scalar_mul_base.TableAt.storeQuad
+
+open fd_ed25519_double_scalar_mul_base Firedancer.Ref in
+/-- `fd_ed25519_double_scalar_mul_base` stores `spec` of the scalars at `n1`, `n2` and the point
+at `a` at `r` and returns `r`; `r` may be any of the inputs: they are read before it is written.
+The block counter advances by `blocks`. -/
+public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (s : GlobalState)
+    (hwf : s.WF) (hr : s.mem.QuadFit r) (hn1 : Fits s.mem n1 (8 * 32))
+    (hn1o : ¬n1.offset.uaddOverflow 32#64) (ha : s.mem.QuadFit a) (hn2 : Fits s.mem n2 (8 * 32))
+    (hn2o : ¬n2.offset.uaddOverflow 32#64) :
+    fd_ed25519_double_scalar_mul_base.call
+        (fd_ed25519_double_scalar_mul_base.args (.value r) (.value n1) (.value a) (.value n2)) s =
+      .value
+        (.cons (.value r) .nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + blocks (s.mem.readAt n1 256) (s.mem.readAt n2 256)⟩,
+            mem :=
+              s.mem.storeQuad r
+                (spec fd_ed25519_base_point_wnaf_table.point (s.mem.readAt n1 256)
+                  (s.mem.readQuad a) (s.mem.readAt n2 256)) }) := by
+  -- folded for `func_init`, whose frame-free check would unfold `blocks`
+  generalize hP :
+    spec fd_ed25519_base_point_wnaf_table.point (s.mem.readAt n1 256) (s.mem.readQuad a)
+      (s.mem.readAt n2 256) =
+    P
+  generalize hk : blocks (s.mem.readAt n1 256) (s.mem.readAt n2 256) = k
+  func_init
+  -- the inputs, named before the frame grows
+  obtain ⟨x1, hx1⟩ : ∃ x, S.mem.readAt n1 256 = x := ⟨_, rfl⟩
+  obtain ⟨A, hA⟩ : ∃ A, S.mem.readQuad a = A := ⟨_, rfl⟩
+  obtain ⟨x2, hx2⟩ : ∃ x, S.mem.readAt n2 256 = x := ⟨_, rfl⟩
+  rw [hx1, hA, hx2] at hP
+  rw [hx1, hx2] at hk
+  have hr₀ : S₀.mem.QuadFit r := hS ▸ hr
+  have hA₀ : S₀.mem.readQuad a = A := hS ▸ hA
+  clear hA
+  block_init
+  iterate 12 step_pure
+  step_addressof fd_ed25519_base_point_wnaf_table.value_eq with tbl
+  -- `a` past the table's block
+  have hA : S.mem.readQuad a = A := by
+    rw [hS,
+      MemoryState.readQuad_addBlock_of_id_ne
+        (by
+          rw [htbl] at ha_ne_tbl; exact ha_ne_tbl),
+      hA₀]
+  clear hA₀
+  -- short n1slide[256]; short n2slide[256]; fd_ed25519_point_t ai[8], a2[1], t[1];
+  step_alloca with n1s
+  step_alloca with n2s
+  step_alloca with ai
+  step_alloca with a2
+  step_alloca with tp
+  -- fd_curve25519_scalar_wnaf( n1slide, n1, WNAF_BIT_SZ );
+  -- fd_curve25519_scalar_wnaf( n2slide, n2, 8 );
+  step_pure
+  step_call using fd_curve25519_scalar_wnaf.call_eq
+  step_pure
+  step_call using fd_curve25519_scalar_wnaf.call_eq
+  iterate 3 step_pure
+  have hai_pt := MemoryState.QuadFit.of_fits (hai_fits.mono (by decide)) hai_off
+  have ha2_pt := MemoryState.QuadFit.of_fits ha2_fits ha2_off
+  have htp_pt := MemoryState.QuadFit.of_fits htp_fits htp_off
+  clear ha2_fits htp_fits
+  -- fd_ed25519_point_set( &ai[0], a ); fd_ed25519_point_dbln( a2, a, 1 );
+  -- fd_curve25519_into_precomputed( &ai[0] );
+  step_call using fd_ed25519_point_set.call_eq
+  have hai_A : S.mem.readQuad ai = A := by
+    have h := hai_pt
+    rw [hS] at h ⊢
+    exact MemoryState.readQuad_storeQuad_self h.of_storeQuad
+  step_call using fd_ed25519_point_dbln.call_eq consuming hA
+  step_call using fd_curve25519_into_precomputed.call_eq consuming hai_A
+  have hsl1 : SlidesAt S.mem n1s (fd_curve25519_scalar_wnaf.wnaf x1 4) :=
+    SlidesAt.of_readAt hn1s_fits
+      (by
+        rw [hn1s_off]; decide)
+      hread_n1s
+  have hsl2 : SlidesAt S.mem n2s (fd_curve25519_scalar_wnaf.wnaf x2 8) :=
+    SlidesAt.of_readAt hn2s_fits
+      (by
+        rw [hn2s_off]; decide)
+      hread_n2s
+  have htblB : TableAt S.mem tbl 128 fd_ed25519_base_point_wnaf_table.point :=
+    TableAt.of_readAt htbl_fits hread_tbl
+      (by
+        rw [htbl_off]; decide)
+      rfl
+  clear_reads
+  finish_block
+  have hTL : TableLayout tp n1s n2s ai tbl a2 :=
+    ⟨by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by
+      mem_fact, by mem_fact, by
+      rw [hai_off]; decide⟩
+  have hF :
+    TableFacts S r tp n1s n2s ai tbl a2 (fd_curve25519_scalar_wnaf.wnaf x1 4)
+      (fd_curve25519_scalar_wnaf.wnaf x2 8)
+      (aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A))
+      fd_ed25519_base_point_wnaf_table.point (fd_ed25519_point_dbln.spec A 1) 1 :=
+    ⟨hwf, hr, htp_pt, ha2_pt, hai_fits, hread_a2, hsl1, hsl2, fun k hk => by
+      obtain rfl : k = 0 := by omega
+      simpa [Pointer.add_zero_quad, aiTable] using And.intro hai_pt hread_ai, htblB⟩
+  clear hread_a2 hread_ai hsl1 hsl2 htblB
+  -- for( int i=1; i<WNAF_TBL_SZ; i++ ) { … }
+  refine
+    table_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ _ _ _ S₀.alloc.nextFreeBlock hTL (by slot_bound)
+      (by slot_bound) _ _ 7 1 S E hArgs (by env_reads) (by env_reads) (by decide) (by decide)
+      (by decide) hF fun E' S' h₁ h₂ halloc hLF herase => ?_
+  clear hF hwf hr htp_pt ha2_pt hai_pt hai_fits hn1 hn2 ha htbl_fits hn1s_fits hn2s_fits
+  obtain ⟨hwf, hr, htp_pt, hsl1, hsl2, htA, htB⟩ := hLF
+  dsimp only [EntryRegs] at h₂
+  -- fd_ed25519_point_set_zero( r );
+  block_init
+  step_call using fd_ed25519_point_set_zero.call_eq
+  finish_block
+  have hrz : S.mem.readQuad r = fd_ed25519_point_set_zero.spec := hread_r
+  clear_reads
+  have hL : Layout r tp n1s n2s ai tbl :=
+    ⟨hr_ne_tp, hr_ne_n1s, hr_ne_n2s, hr_ne_ai, hr_ne_tbl, by mem_fact, by mem_fact, by mem_fact, by
+      mem_fact, by
+      rw [hn1s_off]; decide, by
+      rw [hn2s_off]; decide, by
+      rw [hai_off]; decide, by
+      rw [htbl_off]; decide⟩
+  have hw1 := fun k hk => (fd_curve25519_scalar_wnaf.wnaf4_digits x1 k hk).2
+  have hw2 := fun k hk => (fd_curve25519_scalar_wnaf.wnaf8_digits x2 k hk).2
+  -- for( i=255; i>=0; i-- ) { if( n1slide[i] || n2slide[i] ) break; }
+  refine
+    skip_loop r n1 a n2 tbl n1s n2s ai tp _ _ hw1 hw2 hL.n1o hL.n2o S hsl1 hsl2 _ _ 255 (by decide)
+      E hArgs (by env_reads) (by env_reads) ?_ ?_
+  · -- the main loop from the first non-zero digit
+    intro j hj E₂ h₁ h₂ h₃
+    refine
+      main_loop r n1 a n2 tbl n1s n2s ai tp _ _ _ _ hL hw1 hw2 _ _ j.val j.isLt _ S E₂ h₁ h₂ h₃
+        ⟨hwf, hr, htp_pt, hsl1, hsl2, htA, htB⟩ hrz fun E₃ S₃ T' h₁' hS₃ => ?_
+    block_init
+    iterate 5 step_pure
+    finish_block
+    rw [← hk, ← hP, blocks_of_some hj, spec_of_some hj]
+    clear hwf hr htp_pt hsl1 hsl2 htA htB hrz hTL hL
+    subst hS₃
+    dsimp only
+    rw [MemoryState.eraseFrom_storeQuad,
+      MemoryState.eraseFrom_storeQuad_of_le (show S₀.alloc.nextFreeBlock ≤ tp.id.id by slot_bound)]
+    subst hS
+    dsimp only
+    rw [MemoryState.eraseFrom_storeQuad, herase, show S'.alloc = ⟨S'.alloc.nextFreeBlock⟩ from rfl,
+      halloc, MemoryState.storeQuad_storeQuad_self hr₀.1]
+    clear herase halloc
+    subst hS
+    erase_frame
+    simp only [GlobalState.alloca, Nat.add_assoc, Nat.reduceAdd, Nat.reduceMul]
+  · -- no non-zero digit: `r` is zero
+    intro hj E₂ h₁
+    block_init
+    iterate 5 step_pure
+    finish_block
+    rw [← hk, ← hP, blocks_of_none hj, spec_of_none hj]
+    subst hS
+    dsimp only
+    rw [MemoryState.eraseFrom_storeQuad, herase, show S'.alloc = ⟨S'.alloc.nextFreeBlock⟩ from rfl,
+      halloc]
+    clear hwf hr htp_pt hsl1 hsl2 htA htB hrz herase halloc hTL hL h₂ hArgs h₁
+    subst hS
+    erase_frame
+    simp only [GlobalState.alloca]
+
+end Proof
 
 end LeanMLIR.RIR.Firedancer.Avx512
