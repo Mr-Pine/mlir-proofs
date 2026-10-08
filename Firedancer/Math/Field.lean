@@ -264,15 +264,27 @@ theorem carry_val {C0 C1 C2 C3 C4 t1 t2 t3 t4 u0 u1 : ℕ} (ht1 : t1 = C1 + C0 /
         2 ^ 204 * e t4 -
       (t4 / 2 ^ 51 : ℕ) * two_pow_255
 
-/-- `carryCols` computes the columns' value, carried to tight limbs. -/
+/-- The carries keep a positive number positive: the top carry folds back as `19`, never `0`. -/
+theorem carry_pos {C0 C1 C2 C3 C4 t1 t2 t3 t4 u0 u1 : ℕ} (ht1 : t1 = C1 + C0 / 2 ^ 51)
+    (ht2 : t2 = C2 + t1 / 2 ^ 51) (ht3 : t3 = C3 + t2 / 2 ^ 51) (ht4 : t4 = C4 + t3 / 2 ^ 51)
+    (hu0 : u0 = t4 / 2 ^ 51 * 19 + C0 % 2 ^ 51) (hu1 : u1 = u0 / 2 ^ 51 + t1 % 2 ^ 51)
+    (hC : 0 < C0 + C1 * 2 ^ 51 + C2 * 2 ^ 102 + C3 * 2 ^ 153 + C4 * 2 ^ 204) :
+    0 < u0 % 2 ^ 51 + u1 % 2 ^ 51 * 2 ^ 51 + (u1 / 2 ^ 51 + t2 % 2 ^ 51) * 2 ^ 102 +
+      t3 % 2 ^ 51 * 2 ^ 153 + t4 % 2 ^ 51 * 2 ^ 204 := by
+  omega
+
+/-- `carryCols` computes the columns' value, carried to tight limbs, positive if the columns'
+number is. -/
 theorem carryCols_spec {c0 c1 c2 c3 c4 : BitVec 128} (h0 : c0.toNat ≤ 2 ^ 114)
     (h1 : c1.toNat ≤ 2 ^ 114) (h2 : c2.toNat ≤ 2 ^ 114) (h3 : c3.toNat ≤ 2 ^ 114)
     (h4 : c4.toNat ≤ 2 ^ 109) :
-    Limbs.val (carryCols c0 c1 c2 c3 c4) =
+    (Limbs.val (carryCols c0 c1 c2 c3 c4) =
         c0.toNat + c1.toNat * 2 ^ 51 + c2.toNat * 2 ^ 102 + c3.toNat * 2 ^ 153 +
           c4.toNat * 2 ^ 204 ∧
-      Limbs.Tight (carryCols c0 c1 c2 c3 c4) := by
-  rw [Limbs.val_eq, Limbs.tight_iff]
+      Limbs.Tight (carryCols c0 c1 c2 c3 c4)) ∧
+      (0 < c0.toNat + c1.toNat * 2 ^ 51 + c2.toNat * 2 ^ 102 + c3.toNat * 2 ^ 153 +
+          c4.toNat * 2 ^ 204 → 0 < Limbs.nat (carryCols c0 c1 c2 c3 c4)) := by
+  rw [Limbs.val_eq, Limbs.tight_iff, Limbs.nat]
   dsimp only [carryCols]
   generalize hr1 : c1 + (c0 >>> 51 &&& 18446744073709551615#128) = r1
   generalize hr2 : c2 + (r1 >>> 51 &&& 18446744073709551615#128) = r2
@@ -301,7 +313,8 @@ theorem carryCols_spec {c0 c1 c2 c3 c4 : BitVec 128} (h0 : c0.toNat ≤ 2 ^ 114)
   -- `toNat_and_mask` also matches the narrowed limbs: rewrite them first
   simp only [toNat_setWidth_mask]
   simp only [toNat_and_mask, ko2]
-  refine ⟨carry_val k1 k2 k3 k4 ku0 ku1, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
+  refine ⟨⟨carry_val k1 k2 k3 k4 ku0 ku1, ?_, ?_, ?_, ?_, ?_⟩, carry_pos k1 k2 k3 k4 ku0 ku1⟩ <;>
+    omega
 
 /-- `x` holds `n`, at most `M`. -/
 def ValLe (x : BitVec w) (n M : ℕ) : Prop :=
@@ -334,21 +347,23 @@ theorem ValLe.shl {x : BitVec w} (hx : ValLe x n M) (h : M * 2 ^ k < 2 ^ w) :
   have := Nat.mul_le_mul_right (2 ^ k) hn
   exact ⟨by rw [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq, Nat.mod_eq_of_lt (by omega)], this⟩
 
-/-- `carryCols_spec` over column sums known through `ValLe`. -/
-theorem carryCols_valLe {c0 c1 c2 c3 c4 : BitVec 128} (h0 : ValLe c0 n0 M0) (h1 : ValLe c1 n1 M1)
-    (h2 : ValLe c2 n2 M2) (h3 : ValLe c3 n3 M3) (h4 : ValLe c4 n4 M4)
+/-- `carryCols_spec` over column sums known through `ValLe`; `Q` makes their number positive. -/
+theorem carryCols_valLe {Q : Prop} {c0 c1 c2 c3 c4 : BitVec 128} (h0 : ValLe c0 n0 M0)
+    (h1 : ValLe c1 n1 M1) (h2 : ValLe c2 n2 M2) (h3 : ValLe c3 n3 M3) (h4 : ValLe c4 n4 M4)
     (hM : M0 ≤ 2 ^ 114 ∧ M1 ≤ 2 ^ 114 ∧ M2 ≤ 2 ^ 114 ∧ M3 ≤ 2 ^ 114 ∧ M4 ≤ 2 ^ 109)
-    (hv : (n0 : ZMod p) + n1 * 2 ^ 51 + n2 * 2 ^ 102 + n3 * 2 ^ 153 + n4 * 2 ^ 204 = v) :
-    Limbs.val (carryCols c0 c1 c2 c3 c4) = v ∧ Limbs.Tight (carryCols c0 c1 c2 c3 c4) := by
+    (hv : (n0 : ZMod p) + n1 * 2 ^ 51 + n2 * 2 ^ 102 + n3 * 2 ^ 153 + n4 * 2 ^ 204 = v)
+    (hQ : Q → 0 < n0 + n1 * 2 ^ 51 + n2 * 2 ^ 102 + n3 * 2 ^ 153 + n4 * 2 ^ 204) :
+    (Limbs.val (carryCols c0 c1 c2 c3 c4) = v ∧ Limbs.Tight (carryCols c0 c1 c2 c3 c4)) ∧
+      (Q → 0 < Limbs.nat (carryCols c0 c1 c2 c3 c4)) := by
   obtain ⟨rfl, h0⟩ := h0
   obtain ⟨rfl, h1⟩ := h1
   obtain ⟨rfl, h2⟩ := h2
   obtain ⟨rfl, h3⟩ := h3
   obtain ⟨rfl, h4⟩ := h4
-  obtain ⟨hv', ht⟩ :=
+  obtain ⟨⟨hv', ht⟩, hp⟩ :=
     carryCols_spec (c0 := c0) (c1 := c1) (c2 := c2) (c3 := c3) (c4 := c4) (by omega) (by omega)
       (by omega) (by omega) (by omega)
-  exact ⟨hv'.trans hv, ht⟩
+  exact ⟨⟨hv'.trans hv, ht⟩, hp ∘ hQ⟩
 
 /-- The 128-bit product of two 64-bit values. -/
 abbrev mulW (x y : BitVec 64) : BitVec 128 :=
@@ -392,11 +407,13 @@ theorem fiat_25519_carry_mul.spec_eq (a b : Fin 5 → BitVec 64) :
   funext i
   fin_cases i <;> rfl
 
-/-- `fiat_25519_carry_mul` multiplies loose field elements into a tight one. -/
-public theorem fiat_25519_carry_mul.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Loose a)
+/-- `fiat_25519_carry_mul` multiplies loose field elements into a tight one, of a positive number
+if both numbers are. -/
+theorem fiat_25519_carry_mul.spec_full {a b : Fin 5 → BitVec 64} (ha : Limbs.Loose a)
     (hb : Limbs.Loose b) :
-    Limbs.val (fiat_25519_carry_mul.spec a b) = Limbs.val a * Limbs.val b ∧
-      Limbs.Tight (fiat_25519_carry_mul.spec a b) := by
+    (Limbs.val (fiat_25519_carry_mul.spec a b) = Limbs.val a * Limbs.val b ∧
+      Limbs.Tight (fiat_25519_carry_mul.spec a b)) ∧
+      (0 < Limbs.nat a ∧ 0 < Limbs.nat b → 0 < Limbs.nat (fiat_25519_carry_mul.spec a b)) := by
   have hA i : ValLe (a i) (a i).toNat 0x18000000000000 := ⟨rfl, ha i⟩
   have hB i : ValLe (b i) (b i).toNat 0x18000000000000 := ⟨rfl, hb i⟩
   rw [fiat_25519_carry_mul.spec_eq]
@@ -423,6 +440,32 @@ public theorem fiat_25519_carry_mul.spec_val {a b : Fin 5 → BitVec 64} (ha : L
             (a3 * b4 + a4 * b3) * 2 ^ 102 +
             a4 * b4 * 2 ^ 153) *
         two_pow_255
+  · -- every product `a i * b j` is in some column
+    rintro ⟨pa, pb⟩
+    simp only [Limbs.nat, show (19 : BitVec 64).toNat = 19 from rfl] at pa pb ⊢
+    generalize (a 0).toNat = a0 at *
+    generalize (a 1).toNat = a1 at *
+    generalize (a 2).toNat = a2 at *
+    generalize (a 3).toNat = a3 at *
+    generalize (a 4).toNat = a4 at *
+    generalize (b 0).toNat = b0 at *
+    generalize (b 1).toNat = b1 at *
+    generalize (b 2).toNat = b2 at *
+    generalize (b 3).toNat = b3 at *
+    generalize (b 4).toNat = b4 at *
+    have := Nat.mul_pos (m := a0 + a1 + a2 + a3 + a4) (n := b0 + b1 + b2 + b3 + b4) (by omega)
+      (by omega)
+    ring_nf at this ⊢
+    refine Nat.lt_of_lt_of_le this ?_
+    clear pa pb this
+    omega
+
+/-- `fiat_25519_carry_mul` multiplies loose field elements into a tight one. -/
+public theorem fiat_25519_carry_mul.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Loose a)
+    (hb : Limbs.Loose b) :
+    Limbs.val (fiat_25519_carry_mul.spec a b) = Limbs.val a * Limbs.val b ∧
+      Limbs.Tight (fiat_25519_carry_mul.spec a b) :=
+  (fiat_25519_carry_mul.spec_full ha hb).1
 
 /-- `fiat_25519_carry_square.spec` is `carryCols` of the square's column sums. -/
 theorem fiat_25519_carry_square.spec_eq (a : Fin 5 → BitVec 64) :
@@ -435,10 +478,12 @@ theorem fiat_25519_carry_square.spec_eq (a : Fin 5 → BitVec 64) :
   funext i
   fin_cases i <;> rfl
 
-/-- `fiat_25519_carry_square` squares a loose field element into a tight one. -/
-public theorem fiat_25519_carry_square.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Loose a) :
-    Limbs.val (fiat_25519_carry_square.spec a) = Limbs.val a ^ 2 ∧
-      Limbs.Tight (fiat_25519_carry_square.spec a) := by
+/-- `fiat_25519_carry_square` squares a loose field element into a tight one, of a positive
+number if the input's is. -/
+theorem fiat_25519_carry_square.spec_full {a : Fin 5 → BitVec 64} (ha : Limbs.Loose a) :
+    (Limbs.val (fiat_25519_carry_square.spec a) = Limbs.val a ^ 2 ∧
+      Limbs.Tight (fiat_25519_carry_square.spec a)) ∧
+      (0 < Limbs.nat a → 0 < Limbs.nat (fiat_25519_carry_square.spec a)) := by
   have hA i : ValLe (a i) (a i).toNat 0x18000000000000 := ⟨rfl, ha i⟩
   rw [fiat_25519_carry_square.spec_eq]
   apply carryCols_valLe
@@ -458,16 +503,39 @@ public theorem fiat_25519_carry_square.spec_val {a : Fin 5 → BitVec 64} (ha : 
       -(2 * a1 * a4 + 2 * a2 * a3 + (2 * a2 * a4 + a3 ^ 2) * 2 ^ 51 + 2 * a3 * a4 * 2 ^ 102 +
             a4 ^ 2 * 2 ^ 153) *
         two_pow_255
+  · -- every product `a i * a j` is in some column
+    intro pa
+    simp only [Limbs.nat, show (19 : BitVec 64).toNat = 19 from rfl,
+      show (38 : BitVec 64).toNat = 38 from rfl] at pa ⊢
+    generalize (a 0).toNat = a0 at *
+    generalize (a 1).toNat = a1 at *
+    generalize (a 2).toNat = a2 at *
+    generalize (a 3).toNat = a3 at *
+    generalize (a 4).toNat = a4 at *
+    have := Nat.mul_pos (m := a0 + a1 + a2 + a3 + a4) (n := a0 + a1 + a2 + a3 + a4) (by omega)
+      (by omega)
+    ring_nf at this ⊢
+    refine Nat.lt_of_lt_of_le this ?_
+    clear pa this
+    omega
 
-/-- `fiat_25519_carry` keeps a loose field element's value, with tight limbs. -/
-public theorem fiat_25519_carry.spec_val {l : Fin 5 → BitVec 64} (hl : Limbs.Loose l) :
-    Limbs.val (fiat_25519_carry.spec l) = Limbs.val l ∧ Limbs.Tight (fiat_25519_carry.spec l) := by
+/-- `fiat_25519_carry_square` squares a loose field element into a tight one. -/
+public theorem fiat_25519_carry_square.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Loose a) :
+    Limbs.val (fiat_25519_carry_square.spec a) = Limbs.val a ^ 2 ∧
+      Limbs.Tight (fiat_25519_carry_square.spec a) :=
+  (fiat_25519_carry_square.spec_full ha).1
+
+/-- `fiat_25519_carry` keeps a loose field element's value, with tight limbs, and a positive
+number positive. -/
+theorem fiat_25519_carry.spec_full {l : Fin 5 → BitVec 64} (hl : Limbs.Loose l) :
+    (Limbs.val (fiat_25519_carry.spec l) = Limbs.val l ∧ Limbs.Tight (fiat_25519_carry.spec l)) ∧
+      (0 < Limbs.nat l → 0 < Limbs.nat (fiat_25519_carry.spec l)) := by
   have h0 := hl 0
   have h1 := hl 1
   have h2 := hl 2
   have h3 := hl 3
   have h4 := hl 4
-  rw [Limbs.val_eq, Limbs.val_eq l, Limbs.tight_iff]
+  rw [Limbs.val_eq, Limbs.val_eq l, Limbs.tight_iff, Limbs.nat, Limbs.nat]
   dsimp only [fiat_25519_carry.spec]
   generalize hx2 : l 0 >>> 51 + l 1 = x2
   generalize hx3 : x2 >>> 51 + l 2 = x3
@@ -493,7 +561,13 @@ public theorem fiat_25519_carry.spec_val {l : Fin 5 → BitVec 64} (hl : Limbs.L
     (x7 >>> 51 + (x3 &&& 2251799813685247#64)).toNat = x7.toNat / 2 ^ 51 + x3.toNat % 2 ^ 51 := by
     rw [BitVec.toNat_add, toNat_shift, toNat_and_mask]; omega
   simp only [toNat_and_mask, ko2]
-  refine ⟨carry_val k2 k3 k4 k5 k6 k7, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
+  refine ⟨⟨carry_val k2 k3 k4 k5 k6 k7, ?_, ?_, ?_, ?_, ?_⟩, carry_pos k2 k3 k4 k5 k6 k7⟩ <;>
+    omega
+
+/-- `fiat_25519_carry` keeps a loose field element's value, with tight limbs. -/
+public theorem fiat_25519_carry.spec_val {l : Fin 5 → BitVec 64} (hl : Limbs.Loose l) :
+    Limbs.val (fiat_25519_carry.spec l) = Limbs.val l ∧ Limbs.Tight (fiat_25519_carry.spec l) :=
+  (fiat_25519_carry.spec_full hl).1
 
 /-- `fiat_25519_add` adds limbwise into a loose field element, when no limb sum exceeds the loose
 bound. -/
@@ -515,6 +589,17 @@ public theorem fiat_25519_add.spec_le {x y : Fin 5 → BitVec 64}
     have := hk k
     omega
 
+/-- `fiat_25519_add` adds the limbs' numbers, when no limb sum exceeds the loose bound. -/
+theorem fiat_25519_add.spec_nat {x y : Fin 5 → BitVec 64}
+    (h : ∀ k, (x k).toNat + (y k).toNat ≤ 0x18000000000000) :
+    Limbs.nat (fiat_25519_add.spec x y) = Limbs.nat x + Limbs.nat y := by
+  have hk k : (fiat_25519_add.spec x y k).toNat = (y k).toNat + (x k).toNat := by
+    have := h k
+    rw [fiat_25519_add.spec, BitVec.toNat_add]
+    omega
+  simp only [Limbs.nat, hk]
+  ring
+
 /-- `fiat_25519_add` adds tight field elements into a loose one. -/
 public theorem fiat_25519_add.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
     (hy : Limbs.Tight y) :
@@ -522,23 +607,33 @@ public theorem fiat_25519_add.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.T
       Limbs.Loose (fiat_25519_add.spec x y) :=
   fiat_25519_add.spec_le fun k => by have := hx k; have := hy k; omega
 
-/-- `fiat_25519_sub` subtracts tight field elements into a loose one. -/
-public theorem fiat_25519_sub.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
+/-- `fiat_25519_sub` subtracts tight field elements into a loose one: the numbers' `x + 2p - y`. -/
+theorem fiat_25519_sub.spec_full {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
     (hy : Limbs.Under2p y) :
-    Limbs.val (fiat_25519_sub.spec x y) = Limbs.val x - Limbs.val y ∧
-      Limbs.Loose (fiat_25519_sub.spec x y) := by
+    (Limbs.val (fiat_25519_sub.spec x y) = Limbs.val x - Limbs.val y ∧
+      Limbs.Loose (fiat_25519_sub.spec x y)) ∧
+      Limbs.nat (fiat_25519_sub.spec x y) + Limbs.nat y = Limbs.nat x + 2 * p := by
   obtain ⟨g0, g1, g2, g3, g4⟩ := hy.bounds
   obtain ⟨e0, b0⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 0) 4503599627370458 rfl (hx 0) g0 (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 0) (x := x 0) (y := y 0)
+      4503599627370458 rfl (hx 0) g0 (by decide)
   obtain ⟨e1, b1⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 1) 4503599627370494 rfl (hx 1) g1 (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 1) (x := x 1) (y := y 1)
+      4503599627370494 rfl (hx 1) g1 (by decide)
   obtain ⟨e2, b2⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 2) 4503599627370494 rfl (hx 2) g2 (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 2) (x := x 2) (y := y 2)
+      4503599627370494 rfl (hx 2) g2 (by decide)
   obtain ⟨e3, b3⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 3) 4503599627370494 rfl (hx 3) g3 (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 3) (x := x 3) (y := y 3)
+      4503599627370494 rfl (hx 3) g3 (by decide)
   obtain ⟨e4, b4⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 4) 4503599627370494 rfl (hx 4) g4 (by decide)
-  refine ⟨?_, (Limbs.loose_iff _).2 ⟨b0, b1, b2, b3, b4⟩⟩
+    sub_limb (s := fiat_25519_sub.spec x y 4) (x := x 4) (y := y 4)
+      4503599627370494 rfl (hx 4) g4 (by decide)
+  refine ⟨⟨?_, (Limbs.loose_iff _).2 ⟨b0, b1, b2, b3, b4⟩⟩, ?_⟩
+  swap
+  · unfold Limbs.nat
+    change _ = _ + 2 * (2 ^ 255 - 19)
+    omega
   rw [Limbs.val_eq, Limbs.val_eq x, Limbs.val_eq y]
   replace e0 := congrArg (Nat.cast (R := ZMod p)) e0
   replace e1 := congrArg (Nat.cast (R := ZMod p)) e1
@@ -547,6 +642,13 @@ public theorem fiat_25519_sub.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.T
   replace e4 := congrArg (Nat.cast (R := ZMod p)) e4
   push_cast at e0 e1 e2 e3 e4
   linear_combination e0 + 2 ^ 51 * e1 + 2 ^ 102 * e2 + 2 ^ 153 * e3 + 2 ^ 204 * e4 + 2 * two_pow_255
+
+/-- `fiat_25519_sub` subtracts tight field elements into a loose one. -/
+public theorem fiat_25519_sub.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
+    (hy : Limbs.Under2p y) :
+    Limbs.val (fiat_25519_sub.spec x y) = Limbs.val x - Limbs.val y ∧
+      Limbs.Loose (fiat_25519_sub.spec x y) :=
+  (fiat_25519_sub.spec_full hx hy).1
 
 /-- `fiat_25519_opp` negates limbs at most `2p`'s, into such limbs: `2p` minus the number. -/
 public theorem fiat_25519_opp.spec_wide {x : Fin 5 → BitVec 64} (hx : Limbs.Under2p x) :
@@ -743,6 +845,17 @@ public theorem fd_f25519_sqr.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Loos
     Limbs.val (fd_f25519_sqr.spec a) = Limbs.val a ^ 2 ∧ Limbs.Tight (fd_f25519_sqr.spec a) :=
   fiat_25519_carry_square.spec_val ha
 
+/-- `fd_f25519_mul` of loose field elements of positive numbers has a positive number. -/
+public theorem fd_f25519_mul.spec_pos {a b : Fin 5 → BitVec 64} (ha : Limbs.Loose a)
+    (hb : Limbs.Loose b) (pa : 0 < Limbs.nat a) (pb : 0 < Limbs.nat b) :
+    0 < Limbs.nat (fd_f25519_mul.spec a b) :=
+  (fiat_25519_carry_mul.spec_full ha hb).2 ⟨pa, pb⟩
+
+/-- `fd_f25519_sqr` of a loose field element of a positive number has a positive number. -/
+public theorem fd_f25519_sqr.spec_pos {a : Fin 5 → BitVec 64} (ha : Limbs.Loose a)
+    (pa : 0 < Limbs.nat a) : 0 < Limbs.nat (fd_f25519_sqr.spec a) :=
+  (fiat_25519_carry_square.spec_full ha).2 pa
+
 /-- `fd_f25519_add` adds tight field elements into a tight one. -/
 public theorem fd_f25519_add.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
     (hb : Limbs.Tight b) :
@@ -752,6 +865,15 @@ public theorem fd_f25519_add.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Ti
   obtain ⟨hv', ht⟩ := fiat_25519_carry.spec_val hl
   exact ⟨hv'.trans hv, ht⟩
 
+/-- `fd_f25519_add` of tight field elements, one of a positive number, has a positive number. -/
+public theorem fd_f25519_add.spec_pos {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
+    (hb : Limbs.Tight b) (h : 0 < Limbs.nat a + Limbs.nat b) :
+    0 < Limbs.nat (fd_f25519_add.spec a b) := by
+  have hab k : (a k).toNat + (b k).toNat ≤ 0x18000000000000 := by
+    have := ha k; have := hb k; omega
+  refine (fiat_25519_carry.spec_full (fiat_25519_add.spec_le hab).2).2 ?_
+  rwa [fiat_25519_add.spec_nat hab]
+
 /-- `fd_f25519_sub` subtracts tight field elements into a tight one. -/
 public theorem fd_f25519_sub.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
     (hb : Limbs.Under2p b) :
@@ -760,6 +882,13 @@ public theorem fd_f25519_sub.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Ti
   obtain ⟨hv, hl⟩ := fiat_25519_sub.spec_val ha hb
   obtain ⟨hv', ht⟩ := fiat_25519_carry.spec_val hl
   exact ⟨hv'.trans hv, ht⟩
+
+/-- `fd_f25519_sub a b` has a positive number when `a + 2p - b`'s is: the carries keep it so. -/
+public theorem fd_f25519_sub.spec_pos {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
+    (hb : Limbs.Under2p b) (h : Limbs.nat b < Limbs.nat a + 2 * p) :
+    0 < Limbs.nat (fd_f25519_sub.spec a b) := by
+  obtain ⟨⟨-, hl⟩, hn⟩ := fiat_25519_sub.spec_full ha hb
+  exact (fiat_25519_carry.spec_full hl).2 (by omega)
 
 /-- `fd_f25519_neg` negates a tight field element into a loose one. -/
 public theorem fd_f25519_neg.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
@@ -826,21 +955,22 @@ public theorem fd_f25519_tobytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.
     (fd_f25519_tobytes.spec a).toNat = (Limbs.val a).val :=
   fiat_25519_to_bytes.spec_wide ha hN
 
-/-- `l` is loose with value `z ^ e`. -/
+/-- `l` is loose with value `z ^ e`, of a positive number if `z`'s is. -/
 def IsPow (l z : Fin 5 → BitVec 64) (e : ℕ) : Prop :=
-  Limbs.val l = Limbs.val z ^ e ∧ Limbs.Loose l
+  (Limbs.val l = Limbs.val z ^ e ∧ Limbs.Loose l) ∧ (0 < Limbs.nat z → 0 < Limbs.nat l)
 
 theorem IsPow.self {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) : IsPow z z 1 :=
-  ⟨(pow_one _).symm, hz⟩
+  ⟨⟨(pow_one _).symm, hz⟩, id⟩
 
 theorem IsPow.sqr (h : IsPow l z e) : IsPow (fd_f25519_sqr.spec l) z (e * 2) := by
-  obtain ⟨hv, ht⟩ := fd_f25519_sqr.spec_val h.2
-  exact ⟨by rw [hv, h.1, pow_mul], ht.loose⟩
+  obtain ⟨hv, ht⟩ := fd_f25519_sqr.spec_val h.1.2
+  exact ⟨⟨by rw [hv, h.1.1, pow_mul], ht.loose⟩, fun hz => fd_f25519_sqr.spec_pos h.1.2 (h.2 hz)⟩
 
 theorem IsPow.mul (h : IsPow l z e) (h' : IsPow m z f) :
     IsPow (fd_f25519_mul.spec l m) z (e + f) := by
-  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h.2 h'.2
-  exact ⟨by rw [hv, h.1, h'.1, pow_add], ht.loose⟩
+  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h.1.2 h'.1.2
+  exact ⟨⟨by rw [hv, h.1.1, h'.1.1, pow_add], ht.loose⟩,
+    fun hz => fd_f25519_mul.spec_pos h.1.2 h'.1.2 (h.2 hz) (h'.2 hz)⟩
 
 theorem IsPow.sqrN (h : IsPow l z e) : IsPow (fd_f25519_pow22523.sqrN n l) z (e * 2 ^ n) := by
   induction n generalizing l e with
@@ -850,15 +980,19 @@ theorem IsPow.sqrN (h : IsPow l z e) : IsPow (fd_f25519_pow22523.sqrN n l) z (e 
     exact ih h.sqr
 
 theorem IsPow.mul_tight (h : IsPow l z e) (h' : IsPow m z f) (hg : e + f = g) :
-    Limbs.val (fd_f25519_mul.spec l m) = Limbs.val z ^ g ∧
-      Limbs.Tight (fd_f25519_mul.spec l m) := by
-  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h.2 h'.2
-  exact ⟨by rw [hv, h.1, h'.1, ← pow_add, hg], ht⟩
+    (Limbs.val (fd_f25519_mul.spec l m) = Limbs.val z ^ g ∧
+      Limbs.Tight (fd_f25519_mul.spec l m)) ∧
+      (0 < Limbs.nat z → 0 < Limbs.nat (fd_f25519_mul.spec l m)) := by
+  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h.1.2 h'.1.2
+  exact ⟨⟨by rw [hv, h.1.1, h'.1.1, ← pow_add, hg], ht⟩,
+    fun hz => fd_f25519_mul.spec_pos h.1.2 h'.1.2 (h.2 hz) (h'.2 hz)⟩
 
-/-- `fd_f25519_pow22523` raises a loose field element to `(p - 5) / 8`, tight. -/
-public theorem fd_f25519_pow22523.spec_val {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) :
-    Limbs.val (fd_f25519_pow22523.spec z) = Limbs.val z ^ ((p - 5) / 8) ∧
-      Limbs.Tight (fd_f25519_pow22523.spec z) := by
+/-- `fd_f25519_pow22523` raises a loose field element to `(p - 5) / 8`, tight, of a positive
+number if the input's is. -/
+theorem fd_f25519_pow22523.spec_full {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) :
+    (Limbs.val (fd_f25519_pow22523.spec z) = Limbs.val z ^ ((p - 5) / 8) ∧
+      Limbs.Tight (fd_f25519_pow22523.spec z)) ∧
+      (0 < Limbs.nat z → 0 < Limbs.nat (fd_f25519_pow22523.spec z)) := by
   have h0 := IsPow.self hz
   have h1 := h0.sqr
   have h2 := h1.sqr
@@ -891,6 +1025,17 @@ public theorem fd_f25519_pow22523.spec_val {z : Fin 5 → BitVec 64} (hz : Limbs
   have h29 := h28.sqr
   have h30 := h29.sqr
   exact h30.mul_tight h0 (by norm_num)
+
+/-- `fd_f25519_pow22523` raises a loose field element to `(p - 5) / 8`, tight. -/
+public theorem fd_f25519_pow22523.spec_val {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) :
+    Limbs.val (fd_f25519_pow22523.spec z) = Limbs.val z ^ ((p - 5) / 8) ∧
+      Limbs.Tight (fd_f25519_pow22523.spec z) :=
+  (fd_f25519_pow22523.spec_full hz).1
+
+/-- `fd_f25519_pow22523` of a loose field element of a positive number has a positive number. -/
+public theorem fd_f25519_pow22523.spec_pos {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z)
+    (pz : 0 < Limbs.nat z) : 0 < Limbs.nat (fd_f25519_pow22523.spec z) :=
+  (fd_f25519_pow22523.spec_full hz).2 pz
 
 end Fd
 

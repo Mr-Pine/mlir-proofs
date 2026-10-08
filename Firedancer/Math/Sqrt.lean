@@ -41,6 +41,19 @@ public theorem fd_f25519_if.spec_ite {c : Prop} [Decidable c] (a0 a1 : Fin 5 →
   by_cases hc : c <;> fin_cases i <;>
     simp [hc, fd_f25519_if.spec, fiat_25519_selectznz.spec, fiat_25519_cmovznz_u64.spec]
 
+/-- `if` picks one of its inputs, whatever the flag. -/
+theorem fd_f25519_if.spec_or (c : BitVec 32) (a0 a1 : Fin 5 → BitVec 64) :
+    fd_f25519_if.spec c a0 a1 = a0 ∨ fd_f25519_if.spec c a0 a1 = a1 := by
+  by_cases h : c.setWidth 8 = 0#8
+  · right
+    funext i
+    fin_cases i <;>
+      simp [h, fd_f25519_if.spec, fiat_25519_selectznz.spec, fiat_25519_cmovznz_u64.spec]
+  · left
+    funext i
+    fin_cases i <;>
+      simp [h, fd_f25519_if.spec, fiat_25519_selectznz.spec, fiat_25519_cmovznz_u64.spec]
+
 end Flags
 
 /-! ## Square roots -/
@@ -60,12 +73,14 @@ public theorem fd_f25519_sqrtm1.val :
   simp [fd_f25519_sqrtm1.limbs]
   reduce_mod_char
 
-/-- `abs` on a tight value: `±a`, even, within `2p`'s limbs and below `2p`. -/
+/-- `abs` on a tight value: `±a`, even, within `2p`'s limbs and below `2p`, of a positive number
+if `a`'s is. -/
 public theorem fd_f25519_abs.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
     (Limbs.val (fd_f25519_abs.spec a) = Limbs.val a ∨
         Limbs.val (fd_f25519_abs.spec a) = -Limbs.val a) ∧
       (Limbs.val (fd_f25519_abs.spec a)).val % 2 = 0 ∧ Limbs.Under2p (fd_f25519_abs.spec a) ∧
-        Limbs.nat (fd_f25519_abs.spec a) < 2 * p := by
+        Limbs.nat (fd_f25519_abs.spec a) < 2 * p ∧
+          (0 < Limbs.nat a → 0 < Limbs.nat (fd_f25519_abs.spec a)) := by
   obtain ⟨vn, bn, nn⟩ := fd_f25519_neg.spec_wide ha.under2p
   have hs := fd_f25519_sgn.spec_val ha.under2p ha.nat_lt
   rcases Nat.mod_two_eq_zero_or_one (Limbs.val a).val with h | h
@@ -73,14 +88,15 @@ public theorem fd_f25519_abs.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tigh
       simp only [fd_f25519_abs.spec, hs, h]
       exact fd_f25519_if.spec_ite (c := False) _ _
     rw [this]
-    exact ⟨.inl rfl, h, ha.under2p, ha.nat_lt⟩
+    exact ⟨.inl rfl, h, ha.under2p, ha.nat_lt, id⟩
   · have : fd_f25519_abs.spec a = fd_f25519_neg.spec a := by
       simp only [fd_f25519_abs.spec, hs, h]
       exact fd_f25519_if.spec_ite (c := True) _ _
     rw [this, vn]
     have h0 : Limbs.val a ≠ 0 := by rintro h0; simp [h0] at h
     have hpos : 0 < Limbs.nat a := Nat.pos_of_ne_zero fun h' => h0 (by rw [Limbs.val_nat, h']; simp)
-    refine ⟨.inr rfl, ?_, bn, by omega⟩
+    have := ha.nat_lt
+    refine ⟨.inr rfl, ?_, bn, by omega, fun _ => by omega⟩
     rw [ZMod.neg_val, ite_eq_right h0]
     have := ZMod.val_lt (Limbs.val a)
     have hp : p % 2 = 1 := by norm_num
@@ -233,13 +249,46 @@ public theorem fd_f25519_sqrt_ratio.spec_val {u v : Fin 5 → BitVec 64} (hu : L
     split
     · exact ⟨rpb, by rw [rpv, sv]⟩
     · exact ⟨rb, rfl⟩
-  obtain ⟨habs, hpar, hb2, hn⟩ := fd_f25519_abs.spec_val hrr.1
+  obtain ⟨habs, hpar, hb2, hn, -⟩ := fd_f25519_abs.spec_val hrr.1
   obtain ⟨hsq, hnsq⟩ := alg
   refine ⟨fun h => ?_, fun h => ?_, hpar, hb2, hn⟩
   · obtain ⟨hf, hr⟩ := hsq h
     refine ⟨by simp [hf], ?_⟩
     rcases habs with e | e <;> rw [e, hrr.2] <;> linear_combination hr
   · simp [hnsq h]
+
+/-- `abs` of `if`'s pick of tight values of positive numbers has a positive number. -/
+theorem fd_f25519_abs_if_pos {r r' : Fin 5 → BitVec 64} (c : BitVec 32) (hr : Limbs.Tight r)
+    (pr : 0 < Limbs.nat r) (hr' : Limbs.Tight r') (pr' : 0 < Limbs.nat r') :
+    0 < Limbs.nat (fd_f25519_abs.spec (fd_f25519_if.spec c r' r)) := by
+  rcases fd_f25519_if.spec_or c r' r with h | h <;> rw [h]
+  exacts [(fd_f25519_abs.spec_val hr').2.2.2.2 pr', (fd_f25519_abs.spec_val hr).2.2.2.2 pr]
+
+/-- `sqrt_ratio` on tight `u` and `v` of positive numbers: `r`'s number is positive too, so a zero
+`r` has `p`'s limbs, never all zeros. -/
+public theorem fd_f25519_sqrt_ratio.spec_pos {u v : Fin 5 → BitVec 64} (hu : Limbs.Tight u)
+    (hv : Limbs.Tight v) (pu : 0 < Limbs.nat u) (pv : 0 < Limbs.nat v) :
+    0 < Limbs.nat (fd_f25519_sqrt_ratio.spec u v).r := by
+  obtain ⟨-, v2b⟩ := fd_f25519_sqr.spec_val hv.loose
+  have v2p := fd_f25519_sqr.spec_pos hv.loose pv
+  obtain ⟨-, v3b⟩ := fd_f25519_mul.spec_val v2b.loose hv.loose
+  have v3p := fd_f25519_mul.spec_pos v2b.loose hv.loose v2p pv
+  obtain ⟨-, uv3b⟩ := fd_f25519_mul.spec_val hu.loose v3b.loose
+  have uv3p := fd_f25519_mul.spec_pos hu.loose v3b.loose pu v3p
+  obtain ⟨-, v6b⟩ := fd_f25519_sqr.spec_val v3b.loose
+  have v6p := fd_f25519_sqr.spec_pos v3b.loose v3p
+  obtain ⟨-, v7b⟩ := fd_f25519_mul.spec_val v6b.loose hv.loose
+  have v7p := fd_f25519_mul.spec_pos v6b.loose hv.loose v6p pv
+  obtain ⟨-, uv7b⟩ := fd_f25519_mul.spec_val hu.loose v7b.loose
+  have uv7p := fd_f25519_mul.spec_pos hu.loose v7b.loose pu v7p
+  obtain ⟨-, pb⟩ := fd_f25519_pow22523.spec_val uv7b.loose
+  have pp := fd_f25519_pow22523.spec_pos uv7b.loose uv7p
+  obtain ⟨-, rb⟩ := fd_f25519_mul.spec_val pb.loose uv3b.loose
+  have rp := fd_f25519_mul.spec_pos pb.loose uv3b.loose pp uv3p
+  obtain ⟨-, sb⟩ := fd_f25519_sqrtm1.val
+  obtain ⟨-, rpb⟩ := fd_f25519_mul.spec_val rb.loose sb.loose
+  have rpp := fd_f25519_mul.spec_pos rb.loose sb.loose rp (by decide)
+  exact fd_f25519_abs_if_pos _ rb rp rpb rpp
 
 end Sqrt
 
