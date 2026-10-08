@@ -15,7 +15,7 @@ mlir_const_def Edwards25519_identityElement :=
 {
     %0 = "llvm.mlir.undef"() : () -> !llvm.struct<"Edwards25519", (struct<"Fe", (array<5 x i64>)>, struct<"Fe", (array<5 x i64>)>, struct<"Fe", (array<5 x i64>)>, struct<"Fe", (array<5 x i64>)>, i1, array<7 x i8>)>
     %1 = "llvm.mlir.constant"() <{value = dense<[1, 0, 0, 0, 0]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
-    %2 = "llvm.mlir.constant"() <{value = dense<0> : tensor<7xi8>}> : () -> !llvm.array<7 x i8>
+    %2 = "llvm.mlir.zero"() : () -> !llvm.array<7 x i8>
     %3 = "llvm.mlir.constant"() <{value = false}> : () -> i1
     %4 = "llvm.mlir.constant"() <{value = dense<0> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
     %5 = "llvm.mlir.undef"() : () -> !llvm.struct<"Fe", (array<5 x i64>)>

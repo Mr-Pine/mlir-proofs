@@ -13,7 +13,7 @@ namespace LeanMLIR.RIR.Zig
 
 mlir_const_def Edwards25519_fromBytes_invalid :=
 {
-    %0 = "llvm.mlir.constant"() <{value = dense<0> : tensor<6xi8>}> : () -> !llvm.array<6 x i8>
+    %0 = "llvm.mlir.zero"() : () -> !llvm.array<6 x i8>
     %1 = "llvm.mlir.constant"() <{value = 2 : i16}> : () -> i16
     %2 = "llvm.mlir.undef"() : () -> !llvm.struct<"Edwards25519", (struct<"Fe", (array<5 x i64>)>, struct<"Fe", (array<5 x i64>)>, struct<"Fe", (array<5 x i64>)>, struct<"Fe", (array<5 x i64>)>, i1, array<7 x i8>)>
     %3 = "llvm.mlir.undef"() : () -> !llvm.struct<"Fe", (array<5 x i64>)>

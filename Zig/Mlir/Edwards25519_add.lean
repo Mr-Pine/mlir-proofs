@@ -109,15 +109,15 @@ mlir_def Edwards25519_add :=
     %67 = "llvm.getelementptr"(%20) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
     %68 = "llvm.load"(%67) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
     %69 = "llvm.add"(%68, %66) <{overflowFlags = #llvm.overflow<nuw>}> : (i64, i64) -> i64
-    "llvm.store"(%49, %12) <{alias_scopes = [#alias_scope17], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%49, %12) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %70 = "llvm.getelementptr"(%12) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%54, %70) <{alias_scopes = [#alias_scope17], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%54, %70) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %71 = "llvm.getelementptr"(%12) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%59, %71) <{alias_scopes = [#alias_scope17], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%59, %71) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %72 = "llvm.getelementptr"(%12) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%64, %72) <{alias_scopes = [#alias_scope17], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%64, %72) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %73 = "llvm.getelementptr"(%12) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%69, %73) <{alias_scopes = [#alias_scope17], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%69, %73) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %74 = "llvm.load"(%15) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
     %75 = "llvm.add"(%74, %34) <{overflowFlags = #llvm.overflow<nuw>}> : (i64, i64) -> i64
     %76 = "llvm.getelementptr"(%15) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
@@ -132,15 +132,15 @@ mlir_def Edwards25519_add :=
     %85 = "llvm.getelementptr"(%15) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
     %86 = "llvm.load"(%85) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
     %87 = "llvm.add"(%86, %46) <{overflowFlags = #llvm.overflow<nuw>}> : (i64, i64) -> i64
-    "llvm.store"(%75, %11) <{alias_scopes = [#alias_scope18], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%75, %11) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %88 = "llvm.getelementptr"(%11) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%78, %88) <{alias_scopes = [#alias_scope18], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%78, %88) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %89 = "llvm.getelementptr"(%11) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%81, %89) <{alias_scopes = [#alias_scope18], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%81, %89) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %90 = "llvm.getelementptr"(%11) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%84, %90) <{alias_scopes = [#alias_scope18], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%84, %90) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %91 = "llvm.getelementptr"(%11) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%87, %91) <{alias_scopes = [#alias_scope18], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%87, %91) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     "llvm.call"(%10, %14, %15) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.sub, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     "llvm.call"(%9, %13, %10) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.mul, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     "llvm.intr.memcpy"(%arg0, %9, %2) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()

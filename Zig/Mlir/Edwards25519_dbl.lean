@@ -75,15 +75,15 @@ mlir_def Edwards25519_dbl :=
     %43 = "llvm.getelementptr"(%17) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
     %44 = "llvm.load"(%43) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
     %45 = "llvm.add"(%44, %42) <{overflowFlags = #llvm.overflow<nuw>}> : (i64, i64) -> i64
-    "llvm.store"(%25, %15) <{alias_scopes = [#alias_scope12], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%25, %15) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %46 = "llvm.getelementptr"(%15) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%30, %46) <{alias_scopes = [#alias_scope12], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%30, %46) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %47 = "llvm.getelementptr"(%15) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%35, %47) <{alias_scopes = [#alias_scope12], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%35, %47) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %48 = "llvm.getelementptr"(%15) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%40, %48) <{alias_scopes = [#alias_scope12], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%40, %48) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %49 = "llvm.getelementptr"(%15) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%45, %49) <{alias_scopes = [#alias_scope12], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%45, %49) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     "llvm.call"(%14, %16, %17) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.sub, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     "llvm.call"(%17, %18, %15) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.sub, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     %50 = "llvm.getelementptr"(%20) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 80>}> : (!llvm.ptr) -> !llvm.ptr

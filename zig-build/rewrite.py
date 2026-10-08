@@ -114,6 +114,8 @@ def rewrite(fn):
         if SCOPE.match(line):
             continue
         line = HINTS.sub('', line).replace('<{TailCallKind = #llvm.tailcallkind<none>, ', '<{')
+        line = re.sub(r'<\{(noalias_scopes|alias_scopes) = \[[^]]*\], ', '<{', line)
+        line = re.sub(r'<\{(noalias_scopes|alias_scopes) = \[[^]]*\], ', '<{', line)
         m = FREEZE.match(line)
         if m:
             subst[m.group(1)] = m.group(2)

@@ -13,9 +13,9 @@ namespace LeanMLIR.RIR.Zig
 
 mlir_const_def Sha512_iv :=
 {
-    %0 = "llvm.mlir.constant"() <{value = dense<0> : tensor<15xi8>}> : () -> !llvm.array<15 x i8>
+    %0 = "llvm.mlir.zero"() : () -> !llvm.array<15 x i8>
     %1 = "llvm.mlir.constant"() <{value = 0 : i8}> : () -> i8
-    %2 = "llvm.mlir.constant"() <{value = dense<0> : tensor<128xi8>}> : () -> !llvm.array<128 x i8>
+    %2 = "llvm.mlir.zero"() : () -> !llvm.array<128 x i8>
     %3 = "llvm.mlir.constant"() <{value = dense<[7640891576956012808, -4942790177534073029, 4354685564936845355, -6534734903238641935, 5840696475078001361, -7276294671716946913, 2270897969802886507, 6620516959819538809]> : tensor<8xi64>}> : () -> !llvm.array<8 x i64>
     %4 = "llvm.mlir.constant"() <{value = 0 : i128}> : () -> i128
     %5 = "llvm.mlir.undef"() : () -> !llvm.struct<"Sha512", (i128, array<8 x i64>, array<128 x i8>, i8, array<15 x i8>)>

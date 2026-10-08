@@ -121,15 +121,15 @@ mlir_def Edwards25519_fromBytes :=
     %76 = "llvm.load"(%75) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
     %77 = "llvm.lshr"(%76, %5) : (i64, i64) -> i64
     %78 = "llvm.and"(%77, %2) : (i64, i64) -> i64
-    "llvm.store"(%62, %60) <{alias_scopes = [#alias_scope7], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%62, %60) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %79 = "llvm.getelementptr"(%60) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%66, %79) <{alias_scopes = [#alias_scope7], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%66, %79) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %80 = "llvm.getelementptr"(%60) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%70, %80) <{alias_scopes = [#alias_scope7], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%70, %80) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %81 = "llvm.getelementptr"(%60) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%74, %81) <{alias_scopes = [#alias_scope7], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%74, %81) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     %82 = "llvm.getelementptr"(%60) <{elem_type = i8, inbounds, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%78, %82) <{alias_scopes = [#alias_scope7], alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+    "llvm.store"(%78, %82) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
     "llvm.intr.lifetime.end"(%44) <{size = 32 : i64}> : (!llvm.ptr) -> ()
     "llvm.call"(%59, %60) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.sq, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
     "llvm.call"(%58, %59, %7) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.mul, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
