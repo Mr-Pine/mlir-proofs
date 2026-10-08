@@ -1,7 +1,7 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Common.Limbs
+public import Common.Limbs
 public import Firedancer.Ref.fiat_25519_carry_mul
 public import Firedancer.Ref.Mlir.fd_f25519_mul
 

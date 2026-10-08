@@ -1,8 +1,8 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Common.Limbs
-public import Firedancer.Common.Tactics
+public import Common.Limbs
+public import Common.Tactics
 public import Firedancer.Ref.fd_f25519_neg
 public import Firedancer.Ref.fd_f25519_sgn
 public import Firedancer.Ref.fd_f25519_if

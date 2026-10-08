@@ -1,11 +1,11 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public meta import Firedancer.Common.Limbs
+public meta import Common.Limbs
 public meta import SSA.Projects.RIR.Run.Tactic.Util
 public meta import Lean.Elab.Tactic
 
-/-! Proof tactics shared by the Firedancer proofs. -/
+/-! Proof tactics over limb objects. -/
 
 namespace LeanMLIR.RIR
 

@@ -3,7 +3,7 @@ module
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Dsmb
-public import Firedancer.Common.Tactics
+public import Common.Tactics
 public import Firedancer.Ref.fd_curve25519_into_precomputed
 public import Firedancer.Ref.fd_curve25519_scalar_wnaf
 public import Firedancer.Ref.fd_ed25519_partial_dbl

@@ -1,6 +1,6 @@
 module
 
-public import Firedancer.Common.Limbs
+public import Common.Limbs
 import Std.Data.ExtHashMap.Lemmas
 import SSA.Projects.RIR.Run.Tactic.Memory
 

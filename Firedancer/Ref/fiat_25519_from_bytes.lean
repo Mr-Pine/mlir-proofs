@@ -3,8 +3,8 @@ module
 public import SSA.Projects.RIR.Run.Tactic
 public import Std.Tactic.BVDecide
 public meta import Std.Tactic.BVDecide.Reflect
-public import Firedancer.Common.Limbs
-public import Firedancer.Common.Tactics
+public import Common.Limbs
+public import Common.Tactics
 public import Firedancer.Ref.Mlir.fiat_25519_from_bytes
 
 namespace LeanMLIR.RIR.Firedancer.Ref

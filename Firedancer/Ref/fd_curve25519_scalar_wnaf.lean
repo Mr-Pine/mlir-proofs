@@ -1,7 +1,7 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Common.Tactics
+public import Common.Tactics
 public import Firedancer.Ref.fd_int_min
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_wnaf
 import Std.Data.ExtHashMap.Lemmas

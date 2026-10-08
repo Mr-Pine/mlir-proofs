@@ -2,7 +2,7 @@ module
 
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Common.Point
-public import Firedancer.Common.Tactics
+public import Common.Tactics
 public import Firedancer.Ref.fd_ed25519_point_frombytes
 public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes_2x
 

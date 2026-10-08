@@ -4,7 +4,7 @@ public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Common.QuadMem
 public import Firedancer.Common.Verify
-public import Firedancer.Common.Tactics
+public import Common.Tactics
 public import Firedancer.Avx512.Globals
 public import Firedancer.Ref.fd_curve25519_scalar_reduce
 public import Firedancer.Ref.fd_curve25519_scalar_validate

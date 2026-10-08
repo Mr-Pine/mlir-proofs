@@ -13,6 +13,11 @@ path = "../lean-mlir-nightly-port"
 name = "Ed25519"
 globs = ["Ed25519.+"]
 
+# Limb objects in RIR memory, and proof tactics over them.
+[[lean_lib]]
+name = "Common"
+globs = ["Common.+"]
+
 [[lean_lib]]
 name = "Firedancer"
 # every module, not just the root's imports
