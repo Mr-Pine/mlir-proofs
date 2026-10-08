@@ -37,6 +37,10 @@ def Fe.sq.spec (a : Fin 5 → BitVec 64) : Fin 5 → BitVec 64 :=
 
 end
 
+/-- `sq`'s limbs are below `2^52`. -/
+public theorem Fe.sq.spec_lt (a : Fin 5 → BitVec 64) : Fe.Lt (Fe.sq.spec a) (2 ^ 52) :=
+  Fe.carry128.spec_lt _
+
 /-! ## Proof -/
 
 section Proof

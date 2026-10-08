@@ -32,6 +32,29 @@ def Fe.sub.spec (a b : Fin 5 → BitVec 64) : Fin 5 → BitVec 64 :=
 
 end
 
+/-- `a - b` adds below `2^52` to `a`'s limbs, for `a`'s below `2^63`. -/
+public theorem Fe.sub.spec_lt {a b : Fin 5 → BitVec 64} {A : ℕ} (ha : Fe.Lt a A) (hA : A ≤ 2 ^ 63) :
+    Fe.Lt (Fe.sub.spec a b) (A + 2 ^ 52) := by
+  have key (x y : BitVec 64) (K : BitVec 64) (hK : K.toNat < 2 ^ 52) (hy : y.toNat ≤ K.toNat)
+    (hx : x.toNat < A) : (x + K - y).toNat < A + 2 ^ 52 := by
+    rw [BitVec.toNat_sub, BitVec.toNat_add]
+    have := x.isLt; have := y.isLt
+    rw [Nat.mod_eq_of_lt (a := x.toNat + K.toNat) (by omega)]
+    omega
+  have m (x : BitVec 64) : (x &&& Fe.mask).toNat ≤ 2251799813685247 := by
+    rw [BitVec.toNat_and]; exact Nat.and_le_right
+  have c (x y : BitVec 64) : ((x &&& Fe.mask) + 19#64 * (y >>> 51)).toNat ≤ 4503599627370458 := by
+    have h1 := m x
+    have h2 : (y >>> 51).toNat < 2 ^ 13 := by
+      rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]; have := y.isLt; omega
+    have : (19#64 * (y >>> 51)).toNat = 19 * (y >>> 51).toNat := by
+      rw [BitVec.toNat_mul]; have : (19#64).toNat = 19 := rfl; rw [this]; omega
+    rw [BitVec.toNat_add, this, Nat.mod_eq_of_lt (by omega)]; omega
+  intro i
+  fin_cases i <;> simp only [Fe.sub.spec]
+  · exact key _ _ _ (by decide) (c _ _) (ha 0)
+  all_goals exact key _ _ _ (by decide) ((m _).trans (by decide)) (ha _)
+
 /-! ## Proof -/
 
 section Proof

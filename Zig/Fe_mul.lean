@@ -32,6 +32,10 @@ def Fe.mul.spec (a b : Fin 5 → BitVec 64) : Fin 5 → BitVec 64 :=
 
 end
 
+/-- `mul`'s limbs are below `2^52`. -/
+public theorem Fe.mul.spec_lt (a b : Fin 5 → BitVec 64) : Fe.Lt (Fe.mul.spec a b) (2 ^ 52) :=
+  Fe.carry128.spec_lt _
+
 /-! ## Proof -/
 
 section Proof

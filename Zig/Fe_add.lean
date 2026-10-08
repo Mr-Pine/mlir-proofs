@@ -16,6 +16,16 @@ def Fe.add.spec (a b : Fin 5 → BitVec 64) : Fin 5 → BitVec 64
 
 end
 
+/-- A sum of limbs below `A` and `B`, `A + B ≤ 2^64`, is below `A + B`. -/
+public theorem Fe.add.spec_lt {a b : Fin 5 → BitVec 64} {A B : ℕ} (ha : Fe.Lt a A) (hb : Fe.Lt b B)
+    (h : A + B ≤ 2 ^ 64) : Fe.Lt (Fe.add.spec a b) (A + B) := by
+  intro i
+  have := ha i
+  have := hb i
+  simp only [Fe.add.spec, BitVec.toNat_add]
+  rw [Nat.mod_eq_of_lt (by omega)]
+  omega
+
 /-! ## Proof -/
 
 section Proof
