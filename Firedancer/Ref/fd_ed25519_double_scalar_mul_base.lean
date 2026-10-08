@@ -131,30 +131,6 @@ public theorem fd_ed25519_base_point_wnaf_table.value_eq (s : GlobalState) :
 
 section Staged
 
-/-- A read outside the block of a point store: the read before it. -/
-theorem MemoryState.readAt_storePoint_of_id_ne {m : MemoryState} {p q : Pointer}
-    (h : p.id ≠ q.id) : (m.storePoint p P).readAt q w = m.readAt q w := by
-  have h' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using h
-  have h40 := h' 40#64
-  have h80 := h' 80#64
-  have h120 := h' 120#64
-  simp only [MemoryState.storePoint, MemoryState.storeLimbs, Tactic.readThroughStore]
-
-/-- A point outside the block of a store: the point before it. -/
-theorem MemoryState.readPoint_storeAt_of_id_ne {m : MemoryState} {p q : Pointer} {x : BitVec w}
-    (h : p.id ≠ q.id) : (m.storeAt p x).readPoint q = m.readPoint q := by
-  have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
-  have h0 := h' 0
-  have h8 := h' 8#64
-  simp only [MemoryState.readPoint]
-  congr 1 <;> funext i <;> fin_cases i <;>
-    simp only [MemoryState.readLimbs, Pointer.add_add, Tactic.readThroughStore]
-
-/-- A point store keeps every block's size. -/
-theorem Fits.storePoint {m : MemoryState} (h : Fits m q w) : Fits (m.storePoint p P) q w := by
-  simp only [MemoryState.storePoint]
-  exact h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
-
 /-- Storing what a point holds changes nothing. -/
 theorem MemoryState.storePoint_readPoint_self {m : MemoryState} (h : m.PointFit p) :
     m.storePoint p (m.readPoint p) = m := by
@@ -393,9 +369,7 @@ end Staged
 
 section Proof
 
-attribute [local mlir_read] MemoryState.readAt_storePoint_of_id_ne
-  MemoryState.readPoint_storeAt_of_id_ne
-attribute [local mlir_transport] Fits.storePoint GlobalState.WF.add_blocks₂
+attribute [local mlir_transport] GlobalState.WF.add_blocks₂
 
 namespace fd_ed25519_double_scalar_mul_base
 

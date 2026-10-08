@@ -15,80 +15,6 @@ public import Firedancer.Ref.fd_f25519_neg
 public import Firedancer.Ref.fd_ed25519_point_from
 public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
 
-/-! ## Staged for Common -/
-
-namespace LeanMLIR.RIR
-
-@[expose] public section
-
-/-- The point `P?` stored at `p`, if there is one. -/
-def MemoryState.storePointOpt (m : MemoryState) (p : Pointer) : Option PointLimbs → MemoryState
-  | some P => m.storePoint p P
-  | none => m
-
-/-- A read outside the block of a limbs store: the read before it. -/
-theorem MemoryState.readAt_storeLimbs_of_id_ne {m : MemoryState} {p q : Pointer} (h : p.id ≠ q.id) :
-    (m.storeLimbs q l).readAt p w = m.readAt p w := by
-  simp only [MemoryState.storeLimbs, Tactic.readThroughStore]
-
-theorem MemoryState.storePointOpt_none {m : MemoryState} : m.storePointOpt p none = m :=
-  rfl
-
-theorem MemoryState.storePointOpt_some {m : MemoryState} :
-    m.storePointOpt p (some P) = m.storePoint p P :=
-  rfl
-
-/-- `storePointOpt` keeps every block and its length. -/
-theorem Fits.storePointOpt {m : MemoryState} (h : Fits m q w) :
-    Fits (m.storePointOpt p P?) q w := by
-  cases P?
-  · exact h
-  · simpa [MemoryState.storePointOpt_some, MemoryState.storePoint] using h
-
-theorem MemoryState.LimbsFit.storePointOpt {m : MemoryState} (h : m.LimbsFit q) :
-    (m.storePointOpt p P?).LimbsFit q := by
-  cases P?
-  · exact h
-  · exact h.storePoint
-
-theorem MemoryState.PointFit.storePointOpt {m : MemoryState} (h : m.PointFit q) :
-    (m.storePointOpt p P?).PointFit q := by
-  cases P?
-  · exact h
-  · exact h.storePoint
-
-theorem GlobalState.WF.storePointOpt_mk {a : AllocState} {m : MemoryState}
-    (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.storePointOpt p P?⟩ : GlobalState).WF := by
-  cases P?
-  · exact h
-  · exact GlobalState.WF.storePoint_mk h
-
-/-- A read outside the block of an optional point store: the read before it. -/
-theorem MemoryState.readAt_storePointOpt_of_id_ne {m : MemoryState} (h : q.id ≠ p.id) :
-    (m.storePointOpt p P?).readAt q w = m.readAt q w := by
-  cases P?
-  · rfl
-  · have h' (k : BitVec 64) : q.id ≠ (p.add k).id := by simpa [Pointer.add_id] using h
-    simp only [MemoryState.storePointOpt_some, MemoryState.storePoint,
-      MemoryState.readAt_storeLimbs_of_id_ne h, MemoryState.readAt_storeLimbs_of_id_ne (h' _)]
-
-/-- A point outside the block of an optional point store: the point before it. -/
-theorem MemoryState.readPoint_storePointOpt_of_id_ne {m : MemoryState} (h : q.id ≠ p.id) :
-    (m.storePointOpt p P?).readPoint q = m.readPoint q := by
-  cases P?
-  · rfl
-  · exact MemoryState.readPoint_storePoint_of_id_ne (Ne.symm h)
-
-theorem MemoryState.eraseFrom_storePointOpt {m : MemoryState} :
-    (m.storePointOpt p P?).eraseFrom n = (m.eraseFrom n).storePointOpt p P? := by
-  cases P?
-  · rfl
-  · exact MemoryState.eraseFrom_storePoint
-
-end
-
-end LeanMLIR.RIR
-
 namespace LeanMLIR.RIR.Firedancer.Ref
 
 /-! ## Specification -/
@@ -126,8 +52,6 @@ local macro "limbs_fit " x:ident : tactic => do
   let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
   `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
-
-attribute [local mlir_read] MemoryState.readAt_storeLimbs_of_id_ne
 
 /-- `fd_ed25519_point_frombytes` decodes the 32 bytes at `buf`: when `spec` is a point, it stores it
 at `r` and returns `r`, else it returns null and stores nothing. `buf` is read before `r` is

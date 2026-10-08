@@ -23,13 +23,6 @@ end
 
 section Proof
 
-attribute [local mlir_transport] Fits.storePointOpt MemoryState.LimbsFit.storePointOpt
-  MemoryState.PointFit.storePointOpt GlobalState.WF.storePointOpt_mk
-
-attribute [local mlir_read] MemoryState.readAt_storePointOpt_of_id_ne
-
-attribute [local mlir_erase] MemoryState.eraseFrom_storePointOpt
-
 /-- `fd_ed25519_point_frombytes_2x` decodes `buf1` into `r1` and, if that succeeds, `buf2` into
 `r2`, each as `fd_ed25519_point_frombytes` stores it, and returns `spec`. `buf2` is read after `r1`
 is written, so they are in different blocks. -/

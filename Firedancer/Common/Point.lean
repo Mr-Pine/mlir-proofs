@@ -2,6 +2,7 @@ module
 
 public import Firedancer.Common.Limbs
 import Std.Data.ExtHashMap.Lemmas
+import SSA.Projects.RIR.Run.Tactic.Memory
 
 /-! Points in memory: `fd_ed25519_point_t`'s field elements `X, Y, T, Z` at byte offsets 0, 40, 80,
 120, read and stored as a whole. -/
@@ -575,6 +576,107 @@ simplify the store's memory first. -/
 theorem MemoryState.eraseFrom_storePoint_of_le {m : MemoryState} (h : n ≤ p.id.id) :
     (m.storePoint p P).eraseFrom n = m.eraseFrom n := by
   rw [eraseFrom_storePoint, storePoint_eraseFrom_of_le h]
+
+/-! ### Other blocks and optional points -/
+
+/-- A read outside the block of a point store: the read before it. -/
+@[mlir_read]
+theorem MemoryState.readAt_storePoint_of_id_ne {m : MemoryState} {p q : Pointer} (h : p.id ≠ q.id) :
+    (m.storePoint p P).readAt q w = m.readAt q w := by
+  have h' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using h
+  have h40 := h' 40#64
+  have h80 := h' 80#64
+  have h120 := h' 120#64
+  simp only [MemoryState.storePoint, MemoryState.storeLimbs, Tactic.readThroughStore]
+
+/-- A point outside the block of a store: the point before it. -/
+@[mlir_read]
+theorem MemoryState.readPoint_storeAt_of_id_ne {m : MemoryState} {p q : Pointer} {x : BitVec w}
+    (h : p.id ≠ q.id) : (m.storeAt p x).readPoint q = m.readPoint q := by
+  have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
+  have h0 := h' 0
+  have h8 := h' 8#64
+  simp only [MemoryState.readPoint]
+  congr 1 <;> funext i <;> fin_cases i <;>
+    simp only [MemoryState.readLimbs, Pointer.add_add, Tactic.readThroughStore]
+
+/-- A point store keeps every block's size. -/
+@[mlir_transport]
+theorem Fits.storePoint {m : MemoryState} (h : Fits m q w) : Fits (m.storePoint p P) q w := by
+  simp only [MemoryState.storePoint]
+  exact h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+/-- The point `P?` stored at `p`, if there is one. -/
+def MemoryState.storePointOpt (m : MemoryState) (p : Pointer) : Option PointLimbs → MemoryState
+  | some P => m.storePoint p P
+  | none => m
+
+/-- A read outside the block of a limbs store: the read before it. -/
+@[mlir_read]
+theorem MemoryState.readAt_storeLimbs_of_id_ne {m : MemoryState} {p q : Pointer} (h : p.id ≠ q.id) :
+    (m.storeLimbs q l).readAt p w = m.readAt p w := by
+  simp only [MemoryState.storeLimbs, Tactic.readThroughStore]
+
+theorem MemoryState.storePointOpt_none {m : MemoryState} : m.storePointOpt p none = m :=
+  rfl
+
+theorem MemoryState.storePointOpt_some {m : MemoryState} :
+    m.storePointOpt p (some P) = m.storePoint p P :=
+  rfl
+
+/-- `storePointOpt` keeps every block and its length. -/
+@[mlir_transport]
+theorem Fits.storePointOpt {m : MemoryState} (h : Fits m q w) :
+    Fits (m.storePointOpt p P?) q w := by
+  cases P?
+  · exact h
+  · simpa [MemoryState.storePointOpt_some, MemoryState.storePoint] using h
+
+@[mlir_transport]
+theorem MemoryState.LimbsFit.storePointOpt {m : MemoryState} (h : m.LimbsFit q) :
+    (m.storePointOpt p P?).LimbsFit q := by
+  cases P?
+  · exact h
+  · exact h.storePoint
+
+@[mlir_transport]
+theorem MemoryState.PointFit.storePointOpt {m : MemoryState} (h : m.PointFit q) :
+    (m.storePointOpt p P?).PointFit q := by
+  cases P?
+  · exact h
+  · exact h.storePoint
+
+@[mlir_transport]
+theorem GlobalState.WF.storePointOpt_mk {a : AllocState} {m : MemoryState}
+    (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.storePointOpt p P?⟩ : GlobalState).WF := by
+  cases P?
+  · exact h
+  · exact GlobalState.WF.storePoint_mk h
+
+/-- A read outside the block of an optional point store: the read before it. -/
+@[mlir_read]
+theorem MemoryState.readAt_storePointOpt_of_id_ne {m : MemoryState} (h : q.id ≠ p.id) :
+    (m.storePointOpt p P?).readAt q w = m.readAt q w := by
+  cases P?
+  · rfl
+  · have h' (k : BitVec 64) : q.id ≠ (p.add k).id := by simpa [Pointer.add_id] using h
+    simp only [MemoryState.storePointOpt_some, MemoryState.storePoint,
+      MemoryState.readAt_storeLimbs_of_id_ne h, MemoryState.readAt_storeLimbs_of_id_ne (h' _)]
+
+/-- A point outside the block of an optional point store: the point before it. -/
+@[mlir_read]
+theorem MemoryState.readPoint_storePointOpt_of_id_ne {m : MemoryState} (h : q.id ≠ p.id) :
+    (m.storePointOpt p P?).readPoint q = m.readPoint q := by
+  cases P?
+  · rfl
+  · exact MemoryState.readPoint_storePoint_of_id_ne (Ne.symm h)
+
+@[mlir_erase]
+theorem MemoryState.eraseFrom_storePointOpt {m : MemoryState} :
+    (m.storePointOpt p P?).eraseFrom n = (m.eraseFrom n).storePointOpt p P? := by
+  cases P?
+  · rfl
+  · exact MemoryState.eraseFrom_storePoint
 
 end
 
