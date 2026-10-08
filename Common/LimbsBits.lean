@@ -20,7 +20,7 @@ def limbsBits (l : Fin 5 → BitVec 64) : BitVec 320 :=
 end
 
 /-- Bit `j` of the limbs' bits: bit `j % 64` of limb `j / 64`. -/
-theorem getLsbD_limbsBits (l : Fin 5 → BitVec 64) (j : Nat) :
+public theorem getLsbD_limbsBits (l : Fin 5 → BitVec 64) (j : Nat) :
     (limbsBits l).getLsbD j =
       if j < 64 then (l 0).getLsbD j
       else
