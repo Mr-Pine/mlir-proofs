@@ -198,6 +198,20 @@ public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → B
 /-- `-19`, as the code multiplies by it. -/
 public theorem neg19_eq : (18446744073709551597#64) = -19#64 := by decide
 
+/-- A masked limb is below `2^51`. -/
+public theorem mask_lt (x : BitVec 64) : (x &&& Fe.mask).toNat < 2 ^ 51 := by
+  have : (x &&& Fe.mask).toNat ≤ 2251799813685247 := by
+    rw [BitVec.toNat_and]; exact Nat.and_le_right
+  omega
+
+/-- A carry plus a masked limb is below `2^52`. -/
+public theorem shr_add_mask_lt (x y : BitVec 64) :
+    ((x >>> 51) + (y &&& Fe.mask)).toNat < 2 ^ 52 := by
+  have h1 := mask_lt y
+  have h2 : (x >>> 51).toNat < 2 ^ 13 := by
+    rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]; have := x.isLt; omega
+  rw [BitVec.toNat_add]; omega
+
 /-- A sum below `2^64` does not overflow. -/
 public theorem uaddOverflow_eq_false {x y : BitVec 64} (h : y.toNat + x.toNat < 2 ^ 64) :
     x.uaddOverflow y = false := by

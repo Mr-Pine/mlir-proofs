@@ -3,6 +3,7 @@ module
 public import SSA.Projects.RIR.Run.Tactic
 public import Zig.Fe
 public import Zig.Mlir.Fe_carry128
+import Mathlib.Tactic.NormNum
 
 namespace LeanMLIR.RIR.Zig
 
@@ -46,6 +47,16 @@ abbrev Fe.carry128.Pre (r : Fin 5 → BitVec 128) : Prop :=
     (r 2).toNat < 2 ^ 115 - 2 ^ 64 ∧ (r 3).toNat < 2 ^ 115 - 2 ^ 64 ∧ (r 4).toNat < 3 * 2 ^ 109
 
 end
+
+/-- `_carry128`'s limbs are below `2^52`, whatever its columns. -/
+public theorem Fe.carry128.spec_lt (r : Fin 5 → BitVec 128) :
+    Fe.Lt (Fe.carry128.spec r) (2 ^ 52) := by
+  intro i
+  fin_cases i <;> simp only [Fe.carry128.spec]
+  all_goals
+    first
+    | exact (mask_lt _).trans (by norm_num)
+    | exact shr_add_mask_lt _ _
 
 /-! ## Proof -/
 
