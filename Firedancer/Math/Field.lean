@@ -13,6 +13,7 @@ public import Firedancer.Ref.fd_f25519_sub_nr
 public import Firedancer.Ref.fd_f25519_tobytes
 public import Firedancer.Ref.fd_f25519_eq
 public import Firedancer.Ref.fd_f25519_sgn
+public import Firedancer.Ref.fd_f25519_frombytes
 import Mathlib.NumberTheory.LucasPrimality
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.LinearCombination
@@ -938,5 +939,33 @@ public theorem fd_f25519_sgn.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Unde
   omega
 
 end Compare
+
+/-! ## Decoding -/
+
+section Decode
+
+/-- `from_bytes`'s limb `i`: bits `51 i` to `51 i + 50` of `buf`. -/
+theorem fiat_25519_from_bytes.spec_limb (buf : BitVec 256) (i : Fin 5) :
+    fiat_25519_from_bytes.spec buf i =
+      (buf >>> (51 * i.val)).setWidth 64 &&& 2251799813685247#64 := by
+  fin_cases i <;> simp only [fiat_25519_from_bytes.spec] <;> bv_decide
+
+/-- `frombytes` reads `buf`'s low 255 bits, tight. -/
+public theorem fd_f25519_frombytes.spec_val (buf : BitVec 256) :
+    Limbs.val (fd_f25519_frombytes.spec buf) = ((buf.toNat % 2 ^ 255 : ℕ) : ZMod p) ∧
+      Limbs.Tight (fd_f25519_frombytes.spec buf) := by
+  have h (i : Fin 5) :
+      (fd_f25519_frombytes.spec buf i).toNat = buf.toNat / 2 ^ (51 * i.val) % 2 ^ 51 := by
+    rw [fd_f25519_frombytes.spec, fiat_25519_from_bytes.spec_limb, toNat_and_mask,
+      BitVec.toNat_setWidth, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+    exact Nat.mod_mod_of_dvd _ (by decide)
+  refine ⟨?_, fun i => by rw [h]; omega⟩
+  rw [Limbs.val_nat, Limbs.nat, h 0, h 1, h 2, h 3, h 4]
+  congr 1
+  simp only [Fin.isValue, Fin.coe_ofNat_eq_mod, Nat.reduceMod, Nat.reduceMul, Nat.reducePow,
+    mul_zero, pow_zero, Nat.div_one]
+  omega
+
+end Decode
 
 end LeanMLIR.RIR.Firedancer.Ref

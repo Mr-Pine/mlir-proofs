@@ -60,26 +60,27 @@ public theorem fd_f25519_sqrtm1.val :
   simp [fd_f25519_sqrtm1.limbs]
   reduce_mod_char
 
-/-- `abs` on a tight value: `±a`, even, within `2p`'s limbs. -/
+/-- `abs` on a tight value: `±a`, even, within `2p`'s limbs and below `2p`. -/
 public theorem fd_f25519_abs.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
     (Limbs.val (fd_f25519_abs.spec a) = Limbs.val a ∨
         Limbs.val (fd_f25519_abs.spec a) = -Limbs.val a) ∧
-      (Limbs.val (fd_f25519_abs.spec a)).val % 2 = 0 ∧ Limbs.Under2p (fd_f25519_abs.spec a) := by
-  obtain ⟨vn, -⟩ := fd_f25519_neg.spec_val ha
-  have bn := fd_f25519_neg.spec_under2p ha
+      (Limbs.val (fd_f25519_abs.spec a)).val % 2 = 0 ∧ Limbs.Under2p (fd_f25519_abs.spec a) ∧
+        Limbs.nat (fd_f25519_abs.spec a) < 2 * p := by
+  obtain ⟨vn, bn, nn⟩ := fd_f25519_neg.spec_wide ha.under2p
   have hs := fd_f25519_sgn.spec_val ha.under2p ha.nat_lt
   rcases Nat.mod_two_eq_zero_or_one (Limbs.val a).val with h | h
   · have : fd_f25519_abs.spec a = a := by
       simp only [fd_f25519_abs.spec, hs, h]
       exact fd_f25519_if.spec_ite (c := False) _ _
     rw [this]
-    exact ⟨.inl rfl, h, ha.under2p⟩
+    exact ⟨.inl rfl, h, ha.under2p, ha.nat_lt⟩
   · have : fd_f25519_abs.spec a = fd_f25519_neg.spec a := by
       simp only [fd_f25519_abs.spec, hs, h]
       exact fd_f25519_if.spec_ite (c := True) _ _
     rw [this, vn]
     have h0 : Limbs.val a ≠ 0 := by rintro h0; simp [h0] at h
-    refine ⟨.inr rfl, ?_, bn⟩
+    have hpos : 0 < Limbs.nat a := Nat.pos_of_ne_zero fun h' => h0 (by rw [Limbs.val_nat, h']; simp)
+    refine ⟨.inr rfl, ?_, bn, by omega⟩
     rw [ZMod.neg_val, ite_eq_right h0]
     have := ZMod.val_lt (Limbs.val a)
     have hp : p % 2 = 1 := by norm_num
@@ -186,14 +187,15 @@ theorem sqrt_ratio_alg {u v β : ZMod p} (hv : v ≠ 0)
       exact hne (by linear_combination hc')
 
 /-- `sqrt_ratio` on tight `u` and `v ≠ 0`: when `u / v` is a square, the flag is `1` and `r` a root
-of it, `v r² = u`; else the flag is `0`. `r` is even either way, within `2p`'s limbs. -/
+of it, `v r² = u`; else the flag is `0`. `r` is even either way, within `2p`'s limbs and below
+`2p`. -/
 public theorem fd_f25519_sqrt_ratio.spec_val {u v : Fin 5 → BitVec 64} (hu : Limbs.Tight u)
     (hv : Limbs.Tight v) (hv0 : Limbs.val v ≠ 0) :
     let R := fd_f25519_sqrt_ratio.spec u v
     (IsSquare (Limbs.val u / Limbs.val v) →
         R.ret = 1#32 ∧ Limbs.val v * Limbs.val R.r ^ 2 = Limbs.val u) ∧
       (¬IsSquare (Limbs.val u / Limbs.val v) → R.ret = 0#32) ∧
-      (Limbs.val R.r).val % 2 = 0 ∧ Limbs.Under2p R.r := by
+      (Limbs.val R.r).val % 2 = 0 ∧ Limbs.Under2p R.r ∧ Limbs.nat R.r < 2 * p := by
   obtain ⟨v2v, v2b⟩ := fd_f25519_sqr.spec_val hv.loose
   obtain ⟨v3v, v3b⟩ := fd_f25519_mul.spec_val v2b.loose hv.loose
   obtain ⟨uv3v, uv3b⟩ := fd_f25519_mul.spec_val hu.loose v3b.loose
@@ -231,9 +233,9 @@ public theorem fd_f25519_sqrt_ratio.spec_val {u v : Fin 5 → BitVec 64} (hu : L
     split
     · exact ⟨rpb, by rw [rpv, sv]⟩
     · exact ⟨rb, rfl⟩
-  obtain ⟨habs, hpar, hb2⟩ := fd_f25519_abs.spec_val hrr.1
+  obtain ⟨habs, hpar, hb2, hn⟩ := fd_f25519_abs.spec_val hrr.1
   obtain ⟨hsq, hnsq⟩ := alg
-  refine ⟨fun h => ?_, fun h => ?_, hpar, hb2⟩
+  refine ⟨fun h => ?_, fun h => ?_, hpar, hb2, hn⟩
   · obtain ⟨hf, hr⟩ := hsq h
     refine ⟨by simp [hf], ?_⟩
     rcases habs with e | e <;> rw [e, hrr.2] <;> linear_combination hr

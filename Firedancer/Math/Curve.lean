@@ -14,6 +14,7 @@ public import Firedancer.Ref.fd_ed25519_point_set_zero
 public import Firedancer.Ref.fd_curve25519_into_precomputed
 public import Firedancer.Ref.fd_ed25519_affine_is_small_order
 public import Firedancer.Ref.fd_ed25519_point_eq_z1
+public import Firedancer.Ref.fd_ed25519_point_frombytes
 import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.NumberTheory.LegendreSymbol.Basic
 import Mathlib.Tactic.FieldSimp
@@ -753,6 +754,152 @@ public theorem fd_ed25519_point_eq_z1.spec_val {A B : PointLimbs} (hA : A.Proj x
     fd_f25519_eq.spec_val bx hAX.under2p, vx, vy, hx, hy, mul_left_inj' hz]
   rw [ite_and_ite]
   exact if_congr and_comm rfl rfl
+
+/-- `d`, tight. -/
+theorem fd_f25519_d.val :
+    Limbs.val fd_f25519_d.limbs = Ed25519.d ∧ Limbs.Tight fd_f25519_d.limbs := by
+  refine ⟨?_, by rw [Limbs.tight_iff]; decide⟩
+  rw [Limbs.val_eq]
+  unfold Ed25519.d
+  simp [fd_f25519_d.limbs]
+  reduce_mod_char
+
+/-- `1`, tight. -/
+theorem fd_f25519_one.val : Limbs.val fd_f25519_one.limbs = 1 ∧ Limbs.Tight fd_f25519_one.limbs :=
+  ⟨by simp [Limbs.val_eq, fd_f25519_one.limbs], by rw [Limbs.tight_iff]; decide⟩
+
+/-- The sign `frombytes` expects: `buf`'s top bit. -/
+theorem fd_ed25519_point_frombytes.sign (buf : BitVec 256) :
+    (buf.extractLsb' 248 8 >>> 7).setWidth 32 = BitVec.ofNat 32 (buf.toNat / 2 ^ 255) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_setWidth, BitVec.toNat_ushiftRight, BitVec.extractLsb'_toNat,
+    Nat.shiftRight_eq_div_pow, BitVec.toNat_ofNat]
+  have := buf.isLt
+  omega
+
+/-- On the curve exactly when `(d y² + 1) x² = y² - 1`. -/
+theorem Ed25519.onCurve_iff :
+    Ed25519.OnCurve x y ↔ (y ^ 2 * Ed25519.d + 1) * x ^ 2 = y ^ 2 - 1 := by
+  unfold Ed25519.OnCurve
+  constructor <;> intro h <;> linear_combination -h
+
+/-- `frombytes`'s `u = y² - 1` and `v = d y² + 1` for `y` the bits `buf` holds, tight. -/
+theorem fd_ed25519_point_frombytes.uv (buf : BitVec 256) :
+    let y := fd_f25519_frombytes.spec buf
+    let u := fd_f25519_sqr.spec y
+    let v := fd_f25519_mul.spec u fd_f25519_d.limbs
+    let u := fd_f25519_sub.spec u fd_f25519_one.limbs
+    let v := fd_f25519_add.spec v fd_f25519_one.limbs
+    (Limbs.val u = Limbs.val y ^ 2 - 1 ∧ Limbs.Tight u) ∧
+      (Limbs.val v = Limbs.val y ^ 2 * Ed25519.d + 1 ∧ Limbs.Tight v) := by
+  obtain ⟨-, yb⟩ := fd_f25519_frombytes.spec_val buf
+  obtain ⟨vd, bd⟩ := fd_f25519_d.val
+  obtain ⟨v1, b1⟩ := fd_f25519_one.val
+  obtain ⟨uv, ub⟩ := fd_f25519_sqr.spec_val yb.loose
+  obtain ⟨vv, vb⟩ := fd_f25519_mul.spec_val ub.loose bd.loose
+  obtain ⟨uv', ub'⟩ := fd_f25519_sub.spec_val ub b1.under2p
+  obtain ⟨vv', vb'⟩ := fd_f25519_add.spec_val vb b1
+  exact ⟨⟨by rw [uv', uv, v1], ub'⟩, ⟨by rw [vv', vv, uv, vd, v1], vb'⟩⟩
+
+/-- `frombytes`'s `v = d y² + 1` is never zero. -/
+theorem fd_ed25519_point_frombytes.v_ne (buf : BitVec 256) :
+    Limbs.val (fd_f25519_add.spec (fd_f25519_mul.spec (fd_f25519_sqr.spec
+      (fd_f25519_frombytes.spec buf)) fd_f25519_d.limbs) fd_f25519_one.limbs) ≠ 0 := by
+  rw [(fd_ed25519_point_frombytes.uv buf).2.1]
+  intro h
+  exact Ed25519.one_add_ne 1 (Limbs.val (fd_f25519_frombytes.spec buf))
+    (by linear_combination h)
+
+/-- `frombytes` fails exactly when no point on the curve has the `y` that `buf`'s low 255 bits
+hold. -/
+public theorem fd_ed25519_point_frombytes.spec_eq_none_iff (buf : BitVec 256) :
+    fd_ed25519_point_frombytes.spec buf = none ↔
+      ∀ x, ¬Ed25519.OnCurve x ((buf.toNat % 2 ^ 255 : ℕ) : ZMod p) := by
+  obtain ⟨yv, -⟩ := fd_f25519_frombytes.spec_val buf
+  obtain ⟨⟨uv, ub⟩, ⟨vv, vb⟩⟩ := fd_ed25519_point_frombytes.uv buf
+  have hv0 := fd_ed25519_point_frombytes.v_ne buf
+  obtain ⟨hsq, hnsq, -⟩ := fd_f25519_sqrt_ratio.spec_val ub vb hv0
+  rw [← yv]
+  have key : IsSquare (Limbs.val (fd_f25519_sub.spec (fd_f25519_sqr.spec
+      (fd_f25519_frombytes.spec buf)) fd_f25519_one.limbs) / Limbs.val (fd_f25519_add.spec
+        (fd_f25519_mul.spec (fd_f25519_sqr.spec (fd_f25519_frombytes.spec buf)) fd_f25519_d.limbs)
+        fd_f25519_one.limbs)) ↔
+        ∃ x, Ed25519.OnCurve x (Limbs.val (fd_f25519_frombytes.spec buf)) := by
+    rw [vv] at hv0
+    rw [uv, vv]
+    simp only [Ed25519.onCurve_iff, IsSquare, div_eq_iff hv0]
+    constructor <;> rintro ⟨r, hr⟩ <;> exact ⟨r, by linear_combination -hr⟩
+  simp only [fd_ed25519_point_frombytes.spec]
+  split
+  · simp only [true_iff]
+    intro x hx
+    rename_i hret
+    exact absurd ((hsq (key.2 ⟨x, hx⟩)).1.symm.trans hret) (by decide)
+  · simp only [reduceCtorEq, false_iff, not_forall, not_not]
+    rename_i hret
+    by_contra h
+    exact hret (hnsq fun hs => h (key.1 hs))
+
+/-- A point `frombytes` decodes: `(x, y)` on the curve for `y` the bits `buf`'s low 255 bits hold,
+`x` of the parity of `buf`'s top bit unless zero, `Z = 1`. `X` is within `2p`'s limbs, and below
+`2p` unless `x` is zero; `Y`, `T`, `Z` are tight. -/
+public theorem fd_ed25519_point_frombytes.spec_some {buf : BitVec 256} {P : PointLimbs}
+    (h : fd_ed25519_point_frombytes.spec buf = some P) :
+    let y : ZMod p := ((buf.toNat % 2 ^ 255 : ℕ) : ZMod p)
+    ∃ x, P.Ext x y ∧ Ed25519.OnCurve x y ∧ (x = 0 ∨ x.val % 2 = buf.toNat / 2 ^ 255) ∧
+      Limbs.val P.Z = 1 ∧ Limbs.Under2p P.X ∧ (x ≠ 0 → Limbs.nat P.X < 2 * p) ∧
+      Limbs.Tight P.Y ∧ Limbs.Tight P.T ∧ Limbs.Tight P.Z := by
+  dsimp only
+  obtain ⟨yv, yb⟩ := fd_f25519_frombytes.spec_val buf
+  rw [← yv]
+  obtain ⟨⟨uv, ub⟩, ⟨vv, vb⟩⟩ := fd_ed25519_point_frombytes.uv buf
+  obtain ⟨hsq, hnsq, hpar, hb2, hn⟩ :=
+    fd_f25519_sqrt_ratio.spec_val ub vb (fd_ed25519_point_frombytes.v_ne buf)
+  obtain ⟨v1, b1⟩ := fd_f25519_one.val
+  simp only [fd_ed25519_point_frombytes.spec] at h
+  split at h
+  · contradiction
+  rename_i hret
+  have hs : IsSquare _ := by_contra fun hs => hret (hnsq hs)
+  obtain ⟨-, hroot⟩ := hsq hs
+  rw [uv, vv] at hroot
+  rw [fd_f25519_sgn.spec_val hb2 hn, hpar, fd_ed25519_point_frombytes.sign] at h
+  simp only [Option.some.injEq] at h
+  subst h
+  generalize fd_f25519_sqrt_ratio.spec _ _ = R at hroot hpar hb2 hn
+  have hc : Ed25519.OnCurve (Limbs.val R.r) (Limbs.val (fd_f25519_frombytes.spec buf)) := by
+    rw [Ed25519.onCurve_iff]
+    linear_combination hroot
+  -- `x` is `r`, or `-r` for the top bit set
+  have hext (X : Fin 5 → BitVec 64) (hX : Limbs.Under2p X) :
+      (PointLimbs.mk X (fd_f25519_frombytes.spec buf) (fd_f25519_mul.spec X
+        (fd_f25519_frombytes.spec buf)) fd_f25519_one.limbs).Ext (Limbs.val X)
+          (Limbs.val (fd_f25519_frombytes.spec buf)) ∧
+        Limbs.Tight (fd_f25519_mul.spec X (fd_f25519_frombytes.spec buf)) := by
+    obtain ⟨vt, bt⟩ := fd_f25519_mul.spec_val hX.loose yb.loose
+    refine ⟨⟨by simp [v1], by simp [v1], by simp [v1], ?_⟩, bt⟩
+    simp only [v1, vt, mul_one]
+  rcases (by have := buf.isLt; omega : buf.toNat / 2 ^ 255 = 0 ∨ buf.toNat / 2 ^ 255 = 1)
+    with hb | hb <;> rw [hb] at ⊢
+  · simp only [ite_true]
+    obtain ⟨he, bt⟩ := hext R.r hb2
+    exact ⟨_, he, hc, .inr hpar, v1, hb2, fun _ => hn, yb, bt, b1⟩
+  · simp only [show (0#32 = BitVec.ofNat 32 1) = False by decide, ite_false]
+    obtain ⟨vn, bn, nn⟩ := fd_f25519_neg.spec_wide hb2
+    obtain ⟨he, bt⟩ := hext _ bn
+    refine ⟨_, he, by rw [vn]; exact hc.neg, ?_, v1, bn, fun h0 => ?_, yb, bt, b1⟩
+    · rw [vn]
+      by_cases h0 : Limbs.val R.r = 0
+      · exact .inl (by simp [h0])
+      · right
+        rw [ZMod.neg_val, ite_eq_right h0]
+        have := ZMod.val_lt (Limbs.val R.r)
+        have hp : p % 2 = 1 := by norm_num
+        omega
+    · have : Limbs.val R.r ≠ 0 := fun h' => h0 (by rw [vn, h', neg_zero])
+      have hpos : 0 < Limbs.nat R.r :=
+        Nat.pos_of_ne_zero fun h' => this (by rw [Limbs.val_nat, h']; simp)
+      omega
 
 end Proof
 
