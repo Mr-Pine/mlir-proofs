@@ -173,7 +173,7 @@ theorem Ed25519.dbl_den₂ (hc : Ed25519.OnCurve x y) : 2 - y ^ 2 + x ^ 2 ≠ 0 
   exact this (by linear_combination hc + h)
 
 /-- Doubling stays on the curve. -/
-theorem Ed25519.dbl_onCurve (hc : Ed25519.OnCurve x y) :
+public theorem Ed25519.dbl_onCurve (hc : Ed25519.OnCurve x y) :
     Ed25519.OnCurve (Ed25519.dbl x y).1 (Ed25519.dbl x y).2 := by
   have d₁ := Ed25519.dbl_den₁ hc
   have d₂ := Ed25519.dbl_den₂ hc
@@ -229,14 +229,14 @@ theorem Ed25519.add_ne {x₁ y₁ x₂ y₂ ε : ZMod p} (h1 : Ed25519.OnCurve x
   simpa [h2] using h2y
 
 /-- `1 + d x₁ x₂ y₁ y₂ ≠ 0` on the curve. -/
-theorem Ed25519.add_den₁ {x₁ y₁ x₂ y₂ : ZMod p} (h1 : Ed25519.OnCurve x₁ y₁)
+public theorem Ed25519.add_den₁ {x₁ y₁ x₂ y₂ : ZMod p} (h1 : Ed25519.OnCurve x₁ y₁)
     (h2 : Ed25519.OnCurve x₂ y₂) : 1 + Ed25519.d * x₁ * x₂ * y₁ * y₂ ≠ 0 := by
   have := Ed25519.add_ne h1 h2 (ε := -1) (by ring)
   intro h
   exact this (by linear_combination h)
 
 /-- `1 - d x₁ x₂ y₁ y₂ ≠ 0` on the curve. -/
-theorem Ed25519.add_den₂ {x₁ y₁ x₂ y₂ : ZMod p} (h1 : Ed25519.OnCurve x₁ y₁)
+public theorem Ed25519.add_den₂ {x₁ y₁ x₂ y₂ : ZMod p} (h1 : Ed25519.OnCurve x₁ y₁)
     (h2 : Ed25519.OnCurve x₂ y₂) : 1 - Ed25519.d * x₁ * x₂ * y₁ * y₂ ≠ 0 := by
   have := Ed25519.add_ne h1 h2 (ε := 1) (by ring)
   intro h
@@ -272,7 +272,7 @@ theorem Ed25519.add_compl {x₁ y₁ X₁ Y₁ T₁ Z₁ x₂ y₂ X₂ Y₂ T�
     ring
 
 /-- Negation, `(-x, y)`, stays on the curve. -/
-theorem Ed25519.OnCurve.neg (h : Ed25519.OnCurve x y) : Ed25519.OnCurve (-x) y := by
+public theorem Ed25519.OnCurve.neg (h : Ed25519.OnCurve x y) : Ed25519.OnCurve (-x) y := by
   unfold Ed25519.OnCurve at *
   linear_combination h
 
@@ -664,7 +664,7 @@ public theorem fd_ed25519_point_sub_with_opts.spec_ext {A B : PointLimbs} {zOne 
   simpa [fd_ed25519_point_sub_with_opts.spec, fd_ed25519_point_sub_with_opts.last] using this
 
 /-- The neutral point is on the curve. -/
-theorem Ed25519.onCurve_zero : Ed25519.OnCurve 0 1 := by
+public theorem Ed25519.onCurve_zero : Ed25519.OnCurve 0 1 := by
   unfold Ed25519.OnCurve
   ring
 
