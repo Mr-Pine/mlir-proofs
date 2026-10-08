@@ -268,101 +268,6 @@ theorem GlobalState.WF.add_blocks₂ {s : GlobalState} (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + j + k⟩, s.mem⟩ : GlobalState).WF :=
   GlobalState.WF.bump h (by omega)
 
-/-! ### `fd_curve25519_scalar_wnaf`'s digits are bounded -/
-
-/-- Every digit of `t` in `[-m, m]`. -/
-def DigitsIn (m : Int) (t : Vector Int 256) : Prop :=
-  ∀ k (hk : k < 256), -m ≤ t[k] ∧ t[k] ≤ m
-
-theorem DigitsIn.set {t : Vector Int 256} (h : DigitsIn m t) (hj : j < 256)
-    (hv : -m ≤ v ∧ v ≤ m) : DigitsIn m (t.set j v hj) := fun k hk => by
-  rw [Vector.getElem_set]
-  split
-  · exact hv
-  · exact h k hk
-
-open fd_curve25519_scalar_wnaf in
-/-- The carry sets digits to `0` or `1`. -/
-theorem carryT_digitsIn {t : Vector Int 256} (hm : 1 ≤ m) (h : DigitsIn m t) :
-    DigitsIn m (carryT n t j).1 := by
-  induction n generalizing t j with
-  | zero => exact h
-  | succ n ih =>
-    simp only [carryT]
-    split
-    next hj =>
-      split
-      · exact h.set hj ⟨by omega, hm⟩
-      · exact ih (h.set hj ⟨by omega, by omega⟩)
-    · exact h
-
-open fd_curve25519_scalar_wnaf in
-/-- Absorbing keeps `ti` in `[-max, max]` and sets digits to `0` or `1`. -/
-theorem absorbT_digitsIn {t : Vector Int 256} {ti : Int} (hm : 1 ≤ m) (h : DigitsIn m t)
-    (hti : -m ≤ ti ∧ ti ≤ m) :
-    DigitsIn m (absorbT m i n t ti j).1 ∧ -m ≤ (absorbT m i n t ti j).2.1 ∧
-      (absorbT m i n t ti j).2.1 ≤ m := by
-  induction n generalizing t ti j with
-  | zero => exact ⟨h, hti⟩
-  | succ n ih =>
-    have hd : (0 : Int) ≤ 2 ^ min (j - i) 14 := Int.pow_nonneg (by decide)
-    simp only [absorbT]
-    split
-    next hj =>
-      split
-      · exact ih h hti
-      · split
-        · exact ⟨h, hti⟩
-        · split
-          · exact ih (h.set hj ⟨by omega, by omega⟩) ⟨by omega, by omega⟩
-          · split
-            · dsimp only
-              exact ⟨carryT_digitsIn hm (h.set hj ⟨by omega, by omega⟩), by omega, by omega⟩
-            · exact ⟨h, hti⟩
-    · exact ⟨h, hti⟩
-
-open fd_curve25519_scalar_wnaf in
-/-- The outer loop stores only absorbed `ti`s. -/
-theorem outerT_digitsIn {t : Vector Int 256} (hm : 1 ≤ m) (h : DigitsIn m t) :
-    DigitsIn m (outerT m n t i) := by
-  induction n generalizing t i with
-  | zero => exact h
-  | succ n ih =>
-    simp only [outerT]
-    split
-    next hi =>
-      have := absorbT_digitsIn (i := i) (n := 256) (j := i + 1) hm h ⟨by omega, hm⟩
-      exact ih (this.1.set hi this.2)
-    · exact h
-
-open fd_curve25519_scalar_wnaf in
-/-- The width-`bits` NAF's digits are in `[-(2^bits - 1), 2^bits - 1]`. -/
-theorem wnaf_digitsIn (x : BitVec 256) (hb : 1 ≤ bits) :
-    DigitsIn (2 ^ bits - 1) (wnaf x bits) := by
-  have hm : (1 : Int) ≤ 2 ^ bits - 1 := by
-    have : 2 ≤ 2 ^ bits := Nat.le_self_pow (by omega) 2
-    have : (2 : Int) ≤ 2 ^ bits := by exact_mod_cast this
-    omega
-  refine outerT_digitsIn hm fun k hk => ?_
-  simp only [unpackT, Vector.getElem_ofFn]
-  split <;> omega
-
-/-- `n1slide`'s digits are in `[-15, 15]`. -/
-theorem wnaf4_bounds (x : BitVec 256) :
-    ∀ k (hk : k < 256), (-15 : Int) ≤ (fd_curve25519_scalar_wnaf.wnaf x 4)[k] ∧
-      (fd_curve25519_scalar_wnaf.wnaf x 4)[k] ≤ 15 := by
-  have h := wnaf_digitsIn x (bits := 4) (by decide)
-  rw [show (2 : Int) ^ 4 - 1 = 15 by decide] at h
-  exact h
-
-/-- `n2slide`'s digits are in `[-255, 255]`. -/
-theorem wnaf8_bounds (x : BitVec 256) :
-    ∀ k (hk : k < 256), (-255 : Int) ≤ (fd_curve25519_scalar_wnaf.wnaf x 8)[k] ∧
-      (fd_curve25519_scalar_wnaf.wnaf x 8)[k] ≤ 255 := by
-  have h := wnaf_digitsIn x (bits := 8) (by decide)
-  rw [show (2 : Int) ^ 8 - 1 = 255 by decide] at h
-  exact h
-
 end Staged
 
 /-! ## Proof -/
@@ -1442,12 +1347,14 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     ⟨hr_ne_tp, hr_ne_n1s, hr_ne_n2s, hr_ne_ai, hr_ne_tbl, by mem_fact, by mem_fact, by mem_fact,
       by mem_fact, by rw [hn1s_off]; decide, by rw [hn2s_off]; decide, by rw [hai_off]; decide,
       by rw [htbl_off]; decide⟩
+  have hw1 := fun k hk => (fd_curve25519_scalar_wnaf.wnaf4_digits x1 k hk).2
+  have hw2 := fun k hk => (fd_curve25519_scalar_wnaf.wnaf8_digits x2 k hk).2
   -- for( i=255; i>=0; i-- ) { if( n1slide[i] || n2slide[i] ) break; }
-  refine skip_loop r n1 a n2 tbl n1s n2s ai tp _ _ (wnaf4_bounds x1) (wnaf8_bounds x2) hL.n1o hL.n2o
+  refine skip_loop r n1 a n2 tbl n1s n2s ai tp _ _ hw1 hw2 hL.n1o hL.n2o
     S hsl1 hsl2 _ _ 255 (by decide) E hArgs (by env_reads) (by env_reads) ?_ ?_
   · -- the main loop from the first non-zero digit
     intro j hj E₂ h₁ h₂ h₃
-    refine main_loop r n1 a n2 tbl n1s n2s ai tp _ _ _ _ hL (wnaf4_bounds x1) (wnaf8_bounds x2) _ _
+    refine main_loop r n1 a n2 tbl n1s n2s ai tp _ _ _ _ hL hw1 hw2 _ _
       j.val j.isLt _ S E₂ h₁ h₂ h₃ ⟨hwf, hr, htp_pt, hsl1, hsl2, htA, htB⟩ hrz
       fun E₃ S₃ T' h₁' hS₃ => ?_
     block_init

@@ -1341,4 +1341,110 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
 
 end Proof
 
+/-! ## Digits -/
+
+section Digits
+
+namespace fd_curve25519_scalar_wnaf
+
+/-- `d` is `0` or odd, in `[-max, max]`. -/
+@[expose] public def Digit (max d : Int) : Prop :=
+  (d = 0 ∨ d % 2 = 1) ∧ -max ≤ d ∧ d ≤ max
+
+/-- Every entry of `t` is a `Digit`. -/
+@[expose] public def Digits (max : Int) (t : Vector Int 256) : Prop :=
+  ∀ k (hk : k < 256), Digit max t[k]
+
+theorem Digits.set {max : Int} {t : Vector Int 256} (h : Digits max t) (hj : j < 256)
+    (hv : Digit max v) : Digits max (t.set j v hj) := fun k hk => by
+  rw [Vector.getElem_set]
+  split
+  · exact hv
+  · exact h k hk
+
+/-- The carry sets `0`s and a `1`. -/
+theorem carryT_digits {max : Int} {t : Vector Int 256} (hm : 1 ≤ max) (h : Digits max t) :
+    Digits max (carryT n t j).1 := by
+  induction n generalizing t j with
+  | zero => exact h
+  | succ n ih =>
+    simp only [carryT]
+    split
+    next hj =>
+      split
+      · exact h.set hj ⟨.inr rfl, by omega, hm⟩
+      · exact ih (h.set hj ⟨.inl rfl, by omega, by omega⟩)
+    · exact h
+
+/-- `2^k` is even for `k ≥ 1`. -/
+theorem two_pow_emod {k : Nat} (hk : 1 ≤ k) : (2 : Int) ^ k % 2 = 0 := by
+  obtain ⟨k, rfl⟩ : ∃ k', k = k' + 1 := ⟨k - 1, by omega⟩
+  rw [Int.pow_succ]
+  omega
+
+/-- Absorbing keeps `ti` odd in `[-max, max]` and sets `0`s and `1`s. -/
+theorem absorbT_digits {max : Int} {t : Vector Int 256} {ti : Int} (hm : 1 ≤ max) (hij : i < j)
+    (h : Digits max t) (hti : ti % 2 = 1 ∧ -max ≤ ti ∧ ti ≤ max) :
+    Digits max (absorbT max i n t ti j).1 ∧ (absorbT max i n t ti j).2.1 % 2 = 1 ∧
+      -max ≤ (absorbT max i n t ti j).2.1 ∧ (absorbT max i n t ti j).2.1 ≤ max := by
+  induction n generalizing t ti j with
+  | zero => exact ⟨h, hti⟩
+  | succ n ih =>
+    have hd : (0 : Int) ≤ 2 ^ min (j - i) 14 := Int.pow_nonneg (by decide)
+    have he := two_pow_emod (k := min (j - i) 14) (by omega)
+    simp only [absorbT]
+    split
+    next hj =>
+      split
+      · exact ih (by omega) h hti
+      · split
+        · exact ⟨h, hti⟩
+        · split
+          · exact ih (by omega) (h.set hj ⟨.inl rfl, by omega, by omega⟩)
+              ⟨by omega, by omega, by omega⟩
+          · split
+            · refine ⟨carryT_digits hm (h.set hj ⟨.inl rfl, by omega, by omega⟩), ?_, ?_, ?_⟩ <;>
+                dsimp only <;> omega
+            · exact ⟨h, hti⟩
+    · exact ⟨h, hti⟩
+
+/-- The outer loop stores only absorbed `ti`s. -/
+theorem outerT_digits {max : Int} {t : Vector Int 256} (hm : 1 ≤ max) (h : Digits max t) :
+    Digits max (outerT max n t i) := by
+  induction n generalizing t i with
+  | zero => exact h
+  | succ n ih =>
+    simp only [outerT]
+    split
+    next hi =>
+      have := absorbT_digits (i := i) (n := 256) (j := i + 1) (ti := 1) hm (by omega) h
+        ⟨rfl, by omega, hm⟩
+      exact ih (this.1.set hi ⟨.inr this.2.1, this.2.2⟩)
+    · exact h
+
+/-- Each digit of `wnaf x bits` is `0` or odd, in `[-(2^bits - 1), 2^bits - 1]`. -/
+public theorem wnaf_digits (x : BitVec 256) (hb : 1 ≤ bits) :
+    Digits (2 ^ bits - 1) (wnaf x bits) := by
+  have h2 : 2 ≤ 2 ^ bits := Nat.le_self_pow (by omega) 2
+  have hm : (1 : Int) ≤ 2 ^ bits - 1 := by
+    have : (2 : Int) ≤ 2 ^ bits := by exact_mod_cast h2
+    omega
+  refine outerT_digits hm fun k hk => ?_
+  simp only [unpackT, Vector.getElem_ofFn]
+  split
+  · exact ⟨.inr rfl, by omega, hm⟩
+  · exact ⟨.inl rfl, by omega, by omega⟩
+
+/-- `n1slide`'s digits: `0` or odd, in `[-15, 15]`. -/
+public theorem wnaf4_digits (x : BitVec 256) : Digits 15 (wnaf x 4) :=
+  wnaf_digits x (bits := 4) (by decide)
+
+/-- `n2slide`'s digits: `0` or odd, in `[-255, 255]`. -/
+public theorem wnaf8_digits (x : BitVec 256) : Digits 255 (wnaf x 8) :=
+  wnaf_digits x (bits := 8) (by decide)
+
+end fd_curve25519_scalar_wnaf
+
+end Digits
+
 end LeanMLIR.RIR.Firedancer.Ref

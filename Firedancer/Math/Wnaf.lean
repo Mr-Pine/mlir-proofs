@@ -225,96 +225,14 @@ end Sum
 
 section Digits
 
-/-- `d` is `0` or odd, in `[-max, max]`. -/
-def Digit (max d : Int) : Prop :=
-  (d = 0 ∨ Odd d) ∧ -max ≤ d ∧ d ≤ max
-
-/-- Every entry of `t` is a `Digit`. -/
-def Digits (max : Int) (t : Vector Int 256) : Prop :=
-  ∀ k (hk : k < 256), Digit max t[k]
-
-/-- Setting a `Digit` keeps `Digits`. -/
-theorem Digits.set {max : Int} {t : Vector Int 256} (h : Digits max t) (hj : j < 256)
-    (hv : Digit max v) : Digits max (t.set j v hj) := fun k hk => by
-  rw [Vector.getElem_set]; split
-  · exact hv
-  · exact h k hk
-
-/-- `0` is a `Digit`. -/
-theorem digit_zero {max : Int} (hm : 0 ≤ max) : Digit max 0 := ⟨.inl rfl, by omega, hm⟩
-
-/-- `1` is a `Digit`. -/
-theorem digit_one {max : Int} (hm : 1 ≤ max) : Digit max 1 := ⟨.inr odd_one, by omega, hm⟩
-
-/-- The carry sets `0`s and a `1`. -/
-theorem carryT_digits {max : Int} {t : Vector Int 256} (hm : 1 ≤ max) (h : Digits max t) :
-    Digits max (carryT n t j).1 := by
-  induction n generalizing t j with
-  | zero => exact h
-  | succ n ih =>
-    simp only [carryT]
-    split
-    next hj =>
-      split
-      · exact h.set hj (digit_one hm)
-      · exact ih (h.set hj (digit_zero (by omega)))
-    · exact h
-
-/-- Absorbing keeps `ti` odd in `[-max, max]` and sets `0`s and `1`s. -/
-theorem absorbT_digits {max : Int} {t : Vector Int 256} {ti : Int} (hm : 1 ≤ max) (hij : i < j)
-    (h : Digits max t) (hti : Odd ti ∧ -max ≤ ti ∧ ti ≤ max) :
-    Digits max (absorbT max i n t ti j).1 ∧ Odd (absorbT max i n t ti j).2.1 ∧
-      -max ≤ (absorbT max i n t ti j).2.1 ∧ (absorbT max i n t ti j).2.1 ≤ max := by
-  induction n generalizing t ti j with
-  | zero => exact ⟨h, hti⟩
-  | succ n ih =>
-    have hd : (0 : Int) ≤ 2 ^ min (j - i) 14 := pow_nonneg (by decide) _
-    have he : Even ((2 : Int) ^ min (j - i) 14) := even_two.pow_of_ne_zero (by omega)
-    simp only [absorbT]
-    split
-    next hj =>
-      split
-      · exact ih (by omega) h hti
-      · split
-        · exact ⟨h, hti⟩
-        · split
-          · exact ih (by omega) (h.set hj (digit_zero (by omega)))
-              ⟨hti.1.add_even he, by omega, by omega⟩
-          · split
-            · refine ⟨carryT_digits hm (h.set hj (digit_zero (by omega))),
-                hti.1.sub_even he, ?_, ?_⟩ <;> dsimp only <;> omega
-            · exact ⟨h, hti⟩
-    · exact ⟨h, hti⟩
-
-/-- The outer loop stores only absorbed `ti`s. -/
-theorem outerT_digits {max : Int} {t : Vector Int 256} (hm : 1 ≤ max) (h : Digits max t) :
-    Digits max (outerT max n t i) := by
-  induction n generalizing t i with
-  | zero => exact h
-  | succ n ih =>
-    simp only [outerT]
-    split
-    next hi =>
-      have := absorbT_digits (i := i) (n := 256) (j := i + 1) (ti := 1) hm (by omega) h
-        ⟨odd_one, by omega, hm⟩
-      exact ih (this.1.set hi ⟨.inr this.2.1, this.2.2⟩)
-    · exact h
-
 /-- Each digit of `wnaf x bits` is `0` or odd, with `|d| ≤ 2^bits - 1`. -/
 public theorem wnaf_digit (x : BitVec 256) (hb : 1 ≤ bits) (hk : k < 256) :
     ((wnaf x bits)[k] = 0 ∨ Odd (wnaf x bits)[k]) ∧ (wnaf x bits)[k].natAbs ≤ 2 ^ bits - 1 := by
-  have h2 : 2 ≤ 2 ^ bits := Nat.le_self_pow (by omega) 2
   have hc : (2 : Int) ^ bits = ((2 ^ bits : Nat) : Int) := by push_cast; rfl
-  have hm : (1 : Int) ≤ 2 ^ bits - 1 := by rw [hc]; omega
-  have hu : Digits (2 ^ bits - 1) (unpackT x) := fun k hk => by
-    simp only [unpackT, Vector.getElem_ofFn]
-    split
-    · exact digit_one hm
-    · exact digit_zero (by omega)
-  have hd : Digit ((2 : Int) ^ bits - 1) (wnaf x bits)[k] := outerT_digits hm hu k hk
-  rw [hc] at hd
-  generalize 2 ^ bits = M at hd ⊢
-  exact ⟨hd.1, by obtain ⟨_, h1, h2⟩ := hd; omega⟩
+  obtain ⟨hd, h1, h2⟩ := wnaf_digits x hb k hk
+  rw [hc] at h1 h2
+  generalize 2 ^ bits = M at h1 h2 ⊢
+  exact ⟨hd.imp_right Int.odd_iff.2, by omega⟩
 
 /-- `n ≤ 2^m - 1` halves below `2^(m-1)`. -/
 theorem div_two_lt (h : n ≤ 2 ^ m - 1) (hm : 1 ≤ m) : n / 2 < 2 ^ (m - 1) := by
