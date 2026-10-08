@@ -23,6 +23,15 @@ elab "clear_reads" : tactic =>
         g ← g.tryClear d.fvarId
     replaceMainGoal [g]
 
+/-- `limbs_fit x`: the slot `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset, which
+are dropped. -/
+macro "limbs_fit " x:ident : tactic => do
+  let n := x.getId.toString
+  let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
+  let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
+  let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
+  `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
+
 open Lean Elab Tactic Meta in
 /-- `name_limbs x`: the limbs the latest `storeLimbs` of the current state writes become `x`, with
 `hx : x = …`, in the state and the facts, so later states and reads mention `x` instead of the whole

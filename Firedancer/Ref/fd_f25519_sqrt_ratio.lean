@@ -53,15 +53,6 @@ end
 
 section Proof
 
-/-- `limbs_fit x`: the slot `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset, which
-are dropped. -/
-local macro "limbs_fit " x:ident : tactic => do
-  let n := x.getId.toString
-  let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
-  let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
-  let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
-  `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
-
 /-! ### The function -/
 
 /-- `fd_f25519_sqrt_ratio` stores `(spec u v).r` at `r` and returns `(spec u v).ret`; `u` and `v`

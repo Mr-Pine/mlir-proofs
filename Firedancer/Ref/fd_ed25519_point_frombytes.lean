@@ -44,15 +44,6 @@ end
 
 section Proof
 
-/-- `limbs_fit x`: the slot `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset, which
-are dropped. -/
-local macro "limbs_fit " x:ident : tactic => do
-  let n := x.getId.toString
-  let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
-  let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
-  let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
-  `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
-
 /-- `fd_ed25519_point_frombytes` decodes the 32 bytes at `buf`: when `spec` is a point, it stores it
 at `r` and returns `r`, else it returns null and stores nothing. `buf` is read before `r` is
 written, so `r` may alias it. The globals', temporaries' and callees' blocks are freed again: only
