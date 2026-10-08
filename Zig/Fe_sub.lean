@@ -118,6 +118,16 @@ public theorem Fe_sub.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
     simp only [Fe.sub.spec, MemoryState.readLimbs, Fe.mask, hc1, hc2, hc3, hc4, neg19_eq] <;>
     ring
 
+/-- `call_eq` on the limbs `A`, `B` read at `a`, `b`. -/
+public theorem Fe_sub.call_eq_of (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hb : s.mem.LimbsFit b)
+    (hA : s.mem.readLimbs a = A) (hB : s.mem.readLimbs b = B) (hA' : Fe.Lt A (2 ^ 63))
+    (hB' : Fe.Lt B (2 ^ 63)) :
+    Fe_sub.call (Fe_sub.args (.value out) (.value a) (.value b)) s =
+      .value (.nil, { s with mem := s.mem.storeLimbs out (Fe.sub.spec A B) }) := by
+  subst hA hB
+  exact Fe_sub.call_eq out a b s hwf hout ha hb hA' hB'
+
 end Proof
 
 end LeanMLIR.RIR.Zig

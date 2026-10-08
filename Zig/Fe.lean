@@ -68,6 +68,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.of_fits {m : MemoryState}
     exact Fits.add_of_le (hov _ (by decide)) (by decide) h
 
 /-- Limbs that fit, read after an `alloca`: as before it. -/
+@[mlir_read]
 public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_of_fit {s : GlobalState}
     {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) :
     (s.alloca n).mem.readLimbs p = s.mem.readLimbs p :=
@@ -124,10 +125,24 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_4 {m : MemorySt
 
 /-! ### Limb bounds carried across steps -/
 
+public theorem Fe.Lt.mono {l : Fin 5 → BitVec 64} {a b : ℕ} (h : Fe.Lt l a) (hab : a ≤ b) :
+    Fe.Lt l b := fun i => Nat.lt_of_lt_of_le (h i) hab
+
 @[mlir_transport]
 public theorem Fe.Lt.alloca {s : GlobalState} {p : Pointer} {c : ℕ} (hne : p.id ≠ s.allocaPtr.id)
     (h : Fe.Lt (s.mem.readLimbs p) c) : Fe.Lt ((s.alloca n).mem.readLimbs p) c := by
   rwa [MemoryState.readLimbs_alloca hne]
+
+@[mlir_mem, mlir_transport]
+public theorem _root_.LeanMLIR.RIR.MemoryState.LimbsFit.alloca_of_fit {s : GlobalState}
+    {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) : (s.alloca n).mem.LimbsFit p :=
+  h.alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1)
+
+@[mlir_transport]
+public theorem Fe.Lt.alloca_of_fit {s : GlobalState} {p : Pointer} {c : ℕ} (hwf : s.WF)
+    (hp : s.mem.LimbsFit p) (h : Fe.Lt (s.mem.readLimbs p) c) :
+    Fe.Lt ((s.alloca n).mem.readLimbs p) c :=
+  Fe.Lt.alloca (GlobalState.ne_allocaPtr_of_fits hwf hp.2.1) h
 
 @[mlir_transport]
 public theorem Fe.Lt.addBlock {s : GlobalState} {p : Pointer} {c : ℕ} {x : BitVec v} (hwf : s.WF)
@@ -194,6 +209,30 @@ public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → B
         (p.add 32#64) y4 := by
   subst h0 h1 h2 h3 h4
   rfl
+
+/-- Five limb stores at `p`, read back. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_stores {m : MemoryState} {p : Pointer}
+    (h : m.LimbsFit p) (x : Fin 5 → BitVec 64) :
+    (((((m.storeAt p (x 0)).storeAt (p.add 8#64) (x 1)).storeAt (p.add 16#64) (x 2)).storeAt
+                (p.add 24#64) (x 3)).storeAt
+            (p.add 32#64) (x 4)).readLimbs
+        p =
+      x := by
+  rw [← storeLimbs_of_eq rfl rfl rfl rfl rfl]
+  exact MemoryState.readLimbs_storeLimbs_self h
+
+/-- A `shl nuw` by one does not overflow below `2^63`. -/
+public theorem shl1_shr1 {x : BitVec 64} (h : x.toNat < 2 ^ 63) : x <<< 1 >>> 1 = x := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_ushiftRight, BitVec.toNat_shiftLeft, Nat.shiftLeft_eq,
+    Nat.shiftRight_eq_div_pow]
+  rw [Nat.mod_eq_of_lt (by omega)]; omega
+
+/-- `x <<< 1` doubles `x` below `2^63`. -/
+public theorem shl1_toNat {x : BitVec 64} (h : x.toNat < 2 ^ 63) :
+    (x <<< 1).toNat = 2 * x.toNat := by
+  simp only [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq]
+  rw [Nat.mod_eq_of_lt (by omega)]; omega
 
 /-- `-19`, as the code multiplies by it. -/
 public theorem neg19_eq : (18446744073709551597#64) = -19#64 := by decide

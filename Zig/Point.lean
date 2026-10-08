@@ -289,6 +289,11 @@ public theorem _root_.LeanMLIR.RIR.Pointer.field_offset {p : Pointer}
   rw [Nat.mod_eq_of_lt (by omega : a < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
   omega
 
+/-- Each coordinate's limbs are below `B`. -/
+@[expose]
+public def ZPt.Lt (P : ZPt) (B : ℕ) : Prop :=
+  Fe.Lt P.x B ∧ Fe.Lt P.y B ∧ Fe.Lt P.z B ∧ Fe.Lt P.t B
+
 /-! ### Fit across steps -/
 
 /-- The field element at byte offset `k` of a point that fits. -/
@@ -345,6 +350,13 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.alloca {s : GlobalState} {p
     (hwf : s.WF) (h : s.mem.PtFit p) : (s.alloca n).mem.PtFit p :=
   ⟨h.1, Fits.alloca hwf h.2⟩
 
+@[mlir_mem, mlir_transport]
+public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.addBlock {s : GlobalState} {p : Pointer}
+    {x : BitVec v} (hwf : s.WF) (h : s.mem.PtFit p) :
+    (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).PtFit p := by
+  rw [← GlobalState.alloca_storeAt_allocaPtr]
+  exact (h.alloca hwf).storeAt
+
 /-- A point that fits, read after an `alloca`: as before it. -/
 public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_alloca {s : GlobalState} {p : Pointer}
     (hwf : s.WF) (h : s.mem.PtFit p) : (s.alloca n).mem.readPt p = s.mem.readPt p := by
@@ -377,5 +389,15 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readRest_storeAt_of_id_ne {m : Me
   have h' : (Range.of q w).Disjoint (Range.of (p.add 160#64) 64) := by
     simp only [Range.Disjoint, Range.of, Pointer.add]; exact .inl h
   exact MemoryState.readAt_storeAt_disjoint h' x
+
+/-- A copy of `p` at `c`, `c` apart from `p`: both read the same point. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_copy {m : MemoryState} {p c : Pointer}
+    {v : BitVec 1344} (hp : (m.storeAt c v).PtFit p) (hc : (m.storeAt c v).PtFit c)
+    (hne : c.id ≠ p.id) (hv : m.readAt p 1344 = v) :
+    (m.storeAt c v).readPt c = (m.storeAt c v).readPt p := by
+  subst hv
+  have hp' : m.PtFit p := ⟨hp.1, Fits.storeAt_iff.mp hp.2⟩
+  have hc' : m.PtFit c := ⟨hc.1, Fits.storeAt_iff.mp hc.2⟩
+  rw [(MemoryState.readPt_storeAt_readAt hp' hc').1, MemoryState.readPt_storeAt_of_id_ne hne]
 
 end LeanMLIR.RIR.Zig
