@@ -2,6 +2,8 @@ module
 
 public import Common.Limbs
 import SSA.Projects.RIR.Run.Tactic.Memory
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Ring
 public import Mathlib.Data.BitVec
 import Std.Tactic.BVDecide
 
@@ -78,6 +80,43 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_alloca {s : Glob
   rw [MemoryState.readLimbs_alloca_of_fit hwf.alloca
       (MemoryState.LimbsFit.alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1) h),
     MemoryState.readLimbs_alloca_of_fit hwf h]
+
+/-- Limbs in another block are unaffected by a store. -/
+@[mlir_read]
+public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_storeAt_of_id_ne {m : MemoryState}
+    {p q : Pointer} {x : BitVec w} (h : q.id ≠ p.id) :
+    (m.storeAt q x).readLimbs p = m.readLimbs p := by
+  have hd (k : BitVec 64) : (Range.of q w).Disjoint (Range.of (p.add k) 64) := by
+    simp only [Range.Disjoint, Range.of, Pointer.add]
+    exact .inl h
+  funext i
+  fin_cases i <;> simp only [MemoryState.readLimbs]
+  · simpa [Pointer.add] using MemoryState.readAt_storeAt_disjoint (hd 0#64) x
+  all_goals exact MemoryState.readAt_storeAt_disjoint (hd _) x
+
+/-! ### Limb bounds carried across steps -/
+
+@[mlir_transport]
+public theorem Fe.Lt.alloca {s : GlobalState} {p : Pointer} {c : ℕ} (hne : p.id ≠ s.allocaPtr.id)
+    (h : Fe.Lt (s.mem.readLimbs p) c) : Fe.Lt ((s.alloca n).mem.readLimbs p) c := by
+  rwa [MemoryState.readLimbs_alloca hne]
+
+@[mlir_transport]
+public theorem Fe.Lt.addBlock {s : GlobalState} {p : Pointer} {c : ℕ} {x : BitVec v} (hwf : s.WF)
+    (hp : s.mem.LimbsFit p) (h : Fe.Lt (s.mem.readLimbs p) c) :
+    Fe.Lt ((s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).readLimbs p) c := by
+  rwa [MemoryState.readLimbs_addBlock hwf hp]
+
+@[mlir_transport]
+public theorem Fe.Lt.storeLimbs {m : MemoryState} {p q : Pointer} {c : ℕ} {l : Fin 5 → BitVec 64}
+    (hne : q.id ≠ p.id) (h : Fe.Lt (m.readLimbs p) c) :
+    Fe.Lt ((m.storeLimbs q l).readLimbs p) c := by
+  rwa [MemoryState.readLimbs_storeLimbs_of_id_ne hne]
+
+@[mlir_transport]
+public theorem Fe.Lt.storeAt {m : MemoryState} {p q : Pointer} {c : ℕ} {x : BitVec w}
+    (hne : q.id ≠ p.id) (h : Fe.Lt (m.readLimbs p) c) : Fe.Lt ((m.storeAt q x).readLimbs p) c := by
+  rwa [MemoryState.readLimbs_storeAt_of_id_ne hne]
 
 /-- Five columns stored at `p`, lowest first, read back. -/
 public theorem _root_.LeanMLIR.RIR.MemoryState.readWide_stores {m : MemoryState} {p : Pointer}
@@ -298,5 +337,90 @@ public theorem zmul19_lt {x y : BitVec 64} (hx : x.toNat < 2 ^ 54) (hy : y.toNat
   rw [BitVec.toNat_mul, toNat_zext_mul19, toNat_zext, Nat.mul_right_comm,
     Nat.mod_eq_of_lt (by omega)]
   omega
+
+/-- A zero-extended limb times a constant below `2^63` overflows neither way. -/
+public theorem zext_mulk_overflow (x : BitVec 64) {k : Nat} (hk : k < 2 ^ 63) :
+    (BitVec.setWidth 128 x).smulOverflow (BitVec.ofNat 128 k) = false ∧
+      (BitVec.setWidth 128 x).umulOverflow (BitVec.ofNat 128 k) = false := by
+  have hx := x.isLt
+  have hkn : (BitVec.ofNat 128 k).toNat = k := by
+    simp; omega
+  have hp : x.toNat * k < 2 ^ 127 := by
+    calc
+      x.toNat * k < 2 ^ 64 * 2 ^ 63 := Nat.mul_lt_mul'' hx hk
+      _ = 2 ^ 127 := by norm_num
+  constructor
+  · simp only [BitVec.smulOverflow, Bool.or_eq_false_iff, decide_eq_false_iff_not, Int.not_le,
+      Int.not_lt]
+    rw [BitVec.toInt_eq_toNat_of_lt
+        (by
+          rw [toNat_zext]; omega),
+      BitVec.toInt_eq_toNat_of_lt (by omega), toNat_zext, hkn]
+    constructor <;> push_cast <;> omega
+  · simp only [BitVec.umulOverflow, decide_eq_false_iff_not, Nat.not_le, toNat_zext, hkn]
+    omega
+
+/-- The same product, exactly. -/
+public theorem toNat_zext_mulk (x : BitVec 64) {k : Nat} (hk : k < 2 ^ 63) :
+    (BitVec.setWidth 128 x * BitVec.ofNat 128 k).toNat = x.toNat * k := by
+  have hx := x.isLt
+  have hkn : (BitVec.ofNat 128 k).toNat = k := by
+    simp; omega
+  have hp : x.toNat * k < 2 ^ 127 := by
+    calc
+      x.toNat * k < 2 ^ 64 * 2 ^ 63 := Nat.mul_lt_mul'' hx hk
+      _ = 2 ^ 127 := by norm_num
+  rw [BitVec.toNat_mul, toNat_zext, hkn]; omega
+
+/-- A product of limbs below `2^54` with a factor `k` is below `k · 2^108` and does not overflow. -/
+public theorem zmulk_lt {x y : BitVec 64} {k : Nat} (hk0 : 0 < k) (hk : k < 2 ^ 19)
+    (hx : x.toNat < 2 ^ 54) (hy : y.toNat < 2 ^ 54) :
+    (BitVec.setWidth 128 x * BitVec.ofNat 128 k * BitVec.setWidth 128 y).toNat < k * 2 ^ 108 ∧
+      (BitVec.setWidth 128 x * BitVec.ofNat 128 k).umulOverflow (BitVec.setWidth 128 y) =
+        false := by
+  have := Nat.mul_lt_mul'' hx hy
+  have hkk : k * (x.toNat * y.toNat) ≤ k * (2 ^ 54 * 2 ^ 54) :=
+    Nat.mul_le_mul_left _ (Nat.le_of_lt this)
+  have e : x.toNat * k * y.toNat = k * (x.toNat * y.toNat) := by ring
+  constructor
+  · rw [BitVec.toNat_mul, toNat_zext_mulk x (by omega), toNat_zext, Nat.mod_eq_of_lt (by omega)]
+    calc
+      x.toNat * k * y.toNat = k * (x.toNat * y.toNat) := e
+      _ < k * 2 ^ 108 := Nat.mul_lt_mul_of_pos_left (by omega) hk0
+  · simp only [BitVec.umulOverflow, decide_eq_false_iff_not, Nat.not_le, toNat_zext,
+      toNat_zext_mulk x (by omega : k < 2 ^ 63)]
+    omega
+
+/-- A zero-extended limb doubled by a shift. -/
+public theorem toNat_zext_shl1 (x : BitVec 64) :
+    (BitVec.setWidth 128 x <<< 1).toNat = 2 * x.toNat := by
+  have := x.isLt
+  rw [BitVec.toNat_shiftLeft, toNat_zext, Nat.shiftLeft_eq, Nat.mod_eq_of_lt (by omega)]
+  omega
+
+/-- A shift by one is a doubling. -/
+public theorem shl1_eq (x : BitVec 128) : x <<< 1 = 2#128 * x := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_shiftLeft, BitVec.toNat_mul, Nat.shiftLeft_eq]
+  have : (2#128).toNat = 2 := rfl
+  rw [this]; omega
+
+/-- Doubling a zero-extended limb by a shift loses no bit. -/
+public theorem zext_shl1 (x : BitVec 64) :
+    BitVec.setWidth 128 x <<< 1 >>> 1 = BitVec.setWidth 128 x ∧
+      (BitVec.setWidth 128 x <<< 1).sshiftRight 1 = BitVec.setWidth 128 x := by
+  constructor <;> bv_decide
+
+/-- A doubled product of limbs below `2^54` is below `2 · 2^108` and does not overflow. -/
+public theorem zshl_lt {x y : BitVec 64} (hx : x.toNat < 2 ^ 54) (hy : y.toNat < 2 ^ 54) :
+    ((BitVec.setWidth 128 x <<< 1) * BitVec.setWidth 128 y).toNat < 2 * 2 ^ 108 ∧
+      (BitVec.setWidth 128 x <<< 1).umulOverflow (BitVec.setWidth 128 y) = false := by
+  have := Nat.mul_lt_mul'' hx hy
+  constructor
+  · rw [BitVec.toNat_mul, toNat_zext_shl1, toNat_zext, Nat.mul_assoc, Nat.mod_eq_of_lt (by omega)]
+    omega
+  · simp only [BitVec.umulOverflow, decide_eq_false_iff_not, Nat.not_le, toNat_zext,
+      toNat_zext_shl1, Nat.mul_assoc]
+    omega
 
 end LeanMLIR.RIR.Zig
