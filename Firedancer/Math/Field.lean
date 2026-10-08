@@ -11,6 +11,8 @@ public import Firedancer.Ref.fd_f25519_sqr
 public import Firedancer.Ref.fd_f25519_sub
 public import Firedancer.Ref.fd_f25519_sub_nr
 public import Firedancer.Ref.fd_f25519_tobytes
+public import Firedancer.Ref.fd_f25519_eq
+public import Firedancer.Ref.fd_f25519_sgn
 import Mathlib.NumberTheory.LucasPrimality
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.LinearCombination
@@ -784,5 +786,90 @@ public theorem fd_f25519_pow22523.spec_val {z : Fin 5 → BitVec 64} (hz : Limbs
   exact h30.mul_tight h0 (by norm_num)
 
 end Fd
+
+/-! ## Comparisons -/
+
+section Compare
+
+/-- A tight value's natural number. -/
+theorem Limbs.val_natCast (l : Fin 5 → BitVec 64) :
+    Limbs.val l =
+      (((l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
+        (l 4).toNat * 2 ^ 204 : ℕ) : ZMod p) := by
+  rw [Limbs.val_eq]
+  push_cast
+  rfl
+
+/-- Five limbs agree when their naturals do. -/
+theorem Limbs.forall_eq_iff (l c : Fin 5 → BitVec 64) :
+    (∀ k, l k = c k) ↔
+      (l 0).toNat = (c 0).toNat ∧ (l 1).toNat = (c 1).toNat ∧ (l 2).toNat = (c 2).toNat ∧
+        (l 3).toNat = (c 3).toNat ∧ (l 4).toNat = (c 4).toNat := by
+  refine ⟨fun h => by simp [h], fun ⟨h0, h1, h2, h3, h4⟩ k => ?_⟩
+  fin_cases k <;> exact BitVec.eq_of_toNat_eq ‹_›
+
+/-- The bounded multiples of `p`: `0` and `p`'s digits. -/
+theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 0x8000000000000) (h1 : a1 ≤ 0x8000000000000)
+    (h2 : a2 ≤ 0x8000000000000) (h3 : a3 ≤ 0x8000000000000) (h4 : a4 ≤ 0x8000000000000) :
+    p ∣ a0 + a1 * 2 ^ 51 + a2 * 2 ^ 102 + a3 * 2 ^ 153 + a4 * 2 ^ 204 ↔
+      (a0 = 0 ∧ a1 = 0 ∧ a2 = 0 ∧ a3 = 0 ∧ a4 = 0) ∨
+        (a0 = 2251799813685229 ∧ a1 = 2251799813685247 ∧ a2 = 2251799813685247 ∧
+          a3 = 2251799813685247 ∧ a4 = 2251799813685247) := by
+  simp only [p, Nat.reducePow, Nat.reduceSub]
+  constructor
+  · rintro ⟨c, hc⟩
+    rcases (by omega : c = 0 ∨ c = 1) with rfl | rfl
+    · left
+      omega
+    · right
+      -- the digits one at a time, from the bottom
+      generalize hr3 : a3 + a4 * 2 ^ 51 = r3 at *
+      generalize hr2 : a2 + r3 * 2 ^ 51 = r2 at *
+      generalize hr1 : a1 + r2 * 2 ^ 51 = r1 at *
+      have : a0 + r1 * 2 ^ 51 =
+          57896044618658097711785492504343953926634992332820282019728792003956564819949 := by
+        subst hr1 hr2 hr3
+        omega
+      have : r1 = 25711008708143844408671393477458601640355247900524685364822015 := by omega
+      have : r2 = 11417981541647679048466287755595961091061972991 := by omega
+      have : r3 = 5070602400912917605986812821503 := by omega
+      omega
+  · rintro (⟨rfl, rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl, rfl⟩)
+    · exact ⟨0, rfl⟩
+    · exact ⟨1, rfl⟩
+
+/-- A tight zero is all zeros or `p`'s limbs. -/
+theorem Limbs.val_eq_zero_iff {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) :
+    Limbs.val l = 0 ↔ (∀ k, l k = 0) ∨ (∀ k, l k = fd_f25519_is_zero.pLimbs k) := by
+  rw [Limbs.tight_iff] at h
+  obtain ⟨h0, h1, h2, h3, h4⟩ := h
+  rw [Limbs.val_natCast, ZMod.natCast_eq_zero_iff, p_dvd_iff h0 h1 h2 h3 h4,
+    show (∀ k, l k = 0) ↔ _ from Limbs.forall_eq_iff l 0,
+    Limbs.forall_eq_iff l fd_f25519_is_zero.pLimbs]
+  rfl
+
+/-- `is_zero` on a tight value: `1` exactly at zero. -/
+public theorem fd_f25519_is_zero.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+    fd_f25519_is_zero.spec a = if Limbs.val a = 0 then 1#32 else 0#32 := by
+  simp only [fd_f25519_is_zero.spec, Limbs.val_eq_zero_iff ha]
+  rfl
+
+/-- `eq` on tight values: `1` exactly when they are equal. -/
+public theorem fd_f25519_eq.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
+    (hb : Limbs.Tight b) :
+    fd_f25519_eq.spec a b = if Limbs.val a = Limbs.val b then 1#32 else 0#32 := by
+  obtain ⟨v, t⟩ := fd_f25519_sub.spec_val ha hb
+  simp only [fd_f25519_eq.spec, fd_f25519_is_zero.spec_val t, v, sub_eq_zero]
+
+/-- `sgn` on a tight value: the parity of its canonical value. -/
+public theorem fd_f25519_sgn.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+    fd_f25519_sgn.spec a = BitVec.ofNat 32 ((Limbs.val a).val % 2) := by
+  have h := fd_f25519_tobytes.spec_val ha
+  apply BitVec.eq_of_toNat_eq
+  simp only [fd_f25519_sgn.spec, BitVec.toNat_and, BitVec.toNat_setWidth, BitVec.toNat_ofNat, h]
+  rw [Nat.and_one_is_mod]
+  omega
+
+end Compare
 
 end LeanMLIR.RIR.Firedancer.Ref
