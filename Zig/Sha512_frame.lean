@@ -10,7 +10,9 @@ namespace LeanMLIR.RIR.Zig
 open Sha512_update
 
 /-- `m` and `m'` hold the same blocks other than `b`. -/
-@[expose] public def SameOff (b : BlockId) (m m' : MemoryState) : Prop := ∀ k, k ≠ b → m[k]? = m'[k]?
+@[expose]
+public def SameOff (b : BlockId) (m m' : MemoryState) : Prop :=
+  ∀ k, k ≠ b → m[k]? = m'[k]?
 
 theorem SameOff.refl (b : BlockId) (m : MemoryState) : SameOff b m m := fun _ _ => rfl
 
@@ -19,7 +21,9 @@ theorem SameOff.trans {b : BlockId} {m m' m'' : MemoryState} (h : SameOff b m m'
 
 theorem SameOff.storeAt {b : BlockId} {m m' : MemoryState} {p : Pointer} {x : BitVec w}
     (hp : p.id = b) (h : SameOff b m m') : SameOff b (m.storeAt p x) m' := fun k hk => by
-  rw [MemoryState.getElem?_storeAt_ne (p := p) (q := ⟨k, 0⟩) (by rw [hp]; exact hk)]
+  rw [MemoryState.getElem?_storeAt_ne (p := p) (q := ⟨k, 0⟩)
+      (by
+        rw [hp]; exact hk)]
   exact h k hk
 
 theorem SameOff.storeWords {d : Pointer} {f : Nat → BitVec 64} :
@@ -32,24 +36,25 @@ theorem SameOff.roundState {d p : Pointer} {s : GlobalState} {m' : MemoryState}
   SameOff.storeWords 8 0 h
 
 theorem SameOff.blocksState {d b : Pointer} :
-    ∀ (off c : Nat) {s : GlobalState} {m' : MemoryState}, SameOff d.id s.mem m' →
-      SameOff d.id (blocksState d b off c s).mem m'
+    ∀ (off c : Nat) {s : GlobalState} {m' : MemoryState},
+      SameOff d.id s.mem m' → SameOff d.id (blocksState d b off c s).mem m'
   | _, 0, _, _, h => h
   | off, c + 1, _, _, h => SameOff.blocksState (off + 128) c (SameOff.roundState h)
 
 theorem SameOff.update {s : GlobalState} {d b : Pointer} {n : BitVec 64} :
     SameOff d.id (Sha512_update.post s d b n).mem s.mem := by
   have ht {m m' : MemoryState} {off : Nat} (h : SameOff d.id m m') :
-      SameOff d.id (tailMem m d b n off) m' :=
-    SameOff.storeAt rfl (SameOff.storeAt (by simp [Pointer.add])
-      (SameOff.storeAt (by simp [Pointer.add]) h))
+    SameOff d.id (tailMem m d b n off) m' :=
+    SameOff.storeAt rfl
+      (SameOff.storeAt (by simp [Pointer.add]) (SameOff.storeAt (by simp [Pointer.add]) h))
   unfold Sha512_update.post Sha512_update.fromState
   dsimp only
   split
   · refine ht (SameOff.blocksState _ _ ?_)
     unfold headState
-    exact SameOff.storeAt (by simp [Pointer.add])
-      (SameOff.roundState (SameOff.storeAt (by simp [Pointer.add]) (SameOff.refl _ _)))
+    exact
+      SameOff.storeAt (by simp [Pointer.add])
+        (SameOff.roundState (SameOff.storeAt (by simp [Pointer.add]) (SameOff.refl _ _)))
   · exact ht (SameOff.blocksState _ _ (SameOff.refl _ _))
 
 /-- Memories alike off a block at or past `N` erase alike from `N`. -/
@@ -61,7 +66,8 @@ public theorem SameOff.eraseFrom {b : BlockId} {m m' : MemoryState} (h : SameOff
   intro k
   simp only [Std.ExtHashMap.getElem?_filter']
   by_cases hk : k.id < N
-  · have hne : k ≠ b := fun e => by subst e; omega
+  · have hne : k ≠ b := fun e => by
+      subst e; omega
     have := h k hne
     simp only [MemoryState.getElem?_eq] at this
     rw [this]
@@ -90,8 +96,10 @@ public theorem post_alloc {s : GlobalState} {d b : Pointer} {n : BitVec 64}
   · rename_i h
     rw [blocksState_alloc]
     simp only [headState, roundState]
-    have : ((n.toNat - (128 - (Sha512Obj.bufLen s.mem d).toNat)) / 128) + 1 =
-        ((Sha512Obj.bufLen s.mem d).toNat + n.toNat) / 128 := by omega
+    have :
+      ((n.toNat - (128 - (Sha512Obj.bufLen s.mem d).toNat)) / 128) + 1 =
+        ((Sha512Obj.bufLen s.mem d).toNat + n.toNat) / 128 := by
+      omega
     omega
   · rename_i h
     rw [blocksState_alloc]
