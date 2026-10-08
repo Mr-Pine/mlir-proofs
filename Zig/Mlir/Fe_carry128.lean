@@ -1,6 +1,6 @@
 module
 
--- zig-build/out/mlir_canonicalized/region/Fe._carry128.mlir
+-- zig-build/out/mlir_canonicalized/region/Fe.carry128.mlir
 
 public import SSA.Projects.RIR.Semantics.Func
 public import SSA.Projects.RIR.Syntax.Elab
@@ -11,7 +11,7 @@ namespace LeanMLIR.RIR.Zig
 
 @[expose] public section
 
-mlir_def Fe__carry128 :=
+mlir_def Fe_carry128 :=
 {
   ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     %0 = "llvm.mlir.constant"() <{value = 2251799813685247 : i64}> : () -> i64

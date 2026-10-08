@@ -4,10 +4,10 @@ module
 
 public import SSA.Projects.RIR.Semantics.Func
 public import SSA.Projects.RIR.Syntax.Elab
-public import Zig.Mlir.Fe__carry128
+public import Zig.Mlir.Fe_carry128
 
 meta import SSA.Projects.RIR.Semantics.Func
-meta import Zig.Mlir.Fe__carry128
+meta import Zig.Mlir.Fe_carry128
 
 namespace LeanMLIR.RIR.Zig
 
@@ -78,12 +78,12 @@ mlir_def Fe_sq :=
     %54 = "llvm.add"(%52, %53) <{overflowFlags = #llvm.overflow<nuw>}> : (i128, i128) -> i128
     %55 = "llvm.add"(%54, %51) <{overflowFlags = #llvm.overflow<nuw>}> : (i128, i128) -> i128
     "llvm.store"(%55, %50) <{alignment = 16 : i64, ordering = 0 : i64}> : (i128, !llvm.ptr) -> ()
-    "llvm.call"(%6, %5) <{CConv = #llvm.cconv<fastcc>, callee = @Fe._carry128, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
+    "llvm.call"(%6, %5) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.carry128, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
     "llvm.intr.lifetime.end"(%5) <{size = 80 : i64}> : (!llvm.ptr) -> ()
     "llvm.intr.memcpy"(%arg0, %6, %4) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
     "llvm.return"() : () -> ()
 }
-  with @Fe._carry128 := Fe__carry128
+  with @Fe.carry128 := Fe_carry128
 
 end
 

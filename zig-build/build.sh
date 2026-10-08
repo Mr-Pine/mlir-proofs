@@ -16,7 +16,7 @@ mkdir -p out
   -femit-llvm-ir=out/verify.full.ll verify.zig
 # symbol names Lean can take: no module prefix, no type arguments, globals named
 sed -E \
-  -e 's/src\.(field|edwards25519|scalar)\.//g' \
+  -e 's/src\.(field|edwards25519|scalar)\.//g' -e 's/Fe\._carry128/Fe.carry128/g' \
   -e 's/"src\.sha2\.Sha2x64\([^)]*\)\.([a-z]+)"/Sha512.\1/g' \
   -e 's/"src\.sha2\.Sha2x64\([^)]*\)"/Sha512/g' \
   -e 's/@0\b/@scalar.field_order_s/g' -e 's/@1\b/@Fe.edwards25519d/g' \

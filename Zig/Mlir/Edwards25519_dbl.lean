@@ -4,15 +4,15 @@ module
 
 public import SSA.Projects.RIR.Semantics.Func
 public import SSA.Projects.RIR.Syntax.Elab
-public import Zig.Mlir.Fe__carry128
 public import Zig.Mlir.Fe_add
+public import Zig.Mlir.Fe_carry128
 public import Zig.Mlir.Fe_mul
 public import Zig.Mlir.Fe_sq
 public import Zig.Mlir.Fe_sub
 
 meta import SSA.Projects.RIR.Semantics.Func
-meta import Zig.Mlir.Fe__carry128
 meta import Zig.Mlir.Fe_add
+meta import Zig.Mlir.Fe_carry128
 meta import Zig.Mlir.Fe_mul
 meta import Zig.Mlir.Fe_sq
 meta import Zig.Mlir.Fe_sub
@@ -147,7 +147,7 @@ mlir_def Edwards25519_dbl :=
     "llvm.store"(%103, %88) <{alignment = 16 : i64, ordering = 0 : i64}> : (i128, !llvm.ptr) -> ()
     %104 = "llvm.shl"(%99, %3) <{overflowFlags = #llvm.overflow<nuw>}> : (i128, i128) -> i128
     "llvm.store"(%104, %94) <{alignment = 16 : i64, ordering = 0 : i64}> : (i128, !llvm.ptr) -> ()
-    "llvm.call"(%13, %7) <{CConv = #llvm.cconv<fastcc>, callee = @Fe._carry128, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
+    "llvm.call"(%13, %7) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.carry128, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
     "llvm.intr.lifetime.end"(%7) <{size = 80 : i64}> : (!llvm.ptr) -> ()
     "llvm.call"(%12, %13, %14) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.sub, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     "llvm.call"(%11, %17, %12) <{CConv = #llvm.cconv<fastcc>, callee = @Fe.mul, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
@@ -165,7 +165,7 @@ mlir_def Edwards25519_dbl :=
     "llvm.store"(%6, %108) <{alignment = 8 : i64, ordering = 0 : i64}> : (i1, !llvm.ptr) -> ()
     "llvm.return"() : () -> ()
 }
-  with @Fe._carry128 := Fe__carry128, @Fe.add := Fe_add, @Fe.mul := Fe_mul, @Fe.sq := Fe_sq,
+  with @Fe.add := Fe_add, @Fe.carry128 := Fe_carry128, @Fe.mul := Fe_mul, @Fe.sq := Fe_sq,
     @Fe.sub := Fe_sub
 
 end
