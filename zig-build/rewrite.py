@@ -14,8 +14,9 @@
     python3 rewrite.py <in.mlir> <out.mlir>
 
 With `--regions <dir>`, it instead turns each byte string constant in the extracted regions
-into the `dense<[…]>` array RIR reads, and each `undef` byte array (a global's struct padding)
-into zeros: a refinement, and the bytes the object file holds.
+into the `dense<[…]>` array RIR reads. In a global's initializer, each `undef` that is more than
+an `insertvalue` chain's base (struct padding, an error union's unused payload) becomes zeros: a
+refinement, and the bytes the object file holds.
 """
 import re, sys
 
@@ -26,7 +27,70 @@ VALUE = re.compile(r'%[A-Za-z_0-9.]+')
 HINTS = re.compile(r', (TailCallKind = #llvm\.tailcallkind<\w+>|memory_effects = #llvm\.memory_effects<[^>]*>'
                    r'|no_unwind|will_return|(noalias_scopes|alias_scopes) = \[[^]]*\])')
 
-UNDEF_BYTES = re.compile(r'"llvm\.mlir\.undef"\(\) : \(\) -> !llvm\.array<(\d+) x i8>')
+UNDEF = re.compile(r'^(\s*)(%[\w.]+) = "llvm\.mlir\.undef"\(\) : \(\) -> (.*)$')
+
+def parse_ty(s, i=0):
+    """An LLVM type at `s[i:]`, without `!llvm.`: `('int', w)`, `('array', n, t)` or
+    `('struct', name, members)`."""
+    s = s.replace('!llvm.', '')
+    if s.startswith('i', i):
+        m = re.match(r'i(\d+)', s[i:])
+        return ('int', int(m.group(1))), i + m.end()
+    if s.startswith('array<', i):
+        m = re.match(r'array<(\d+) x ', s[i:])
+        t, j = parse_ty(s, i + m.end())
+        return ('array', int(m.group(1)), t), j + 1
+    assert s.startswith('struct<', i), s[i:]
+    i += len('struct<')
+    name = None
+    if s[i] == '"':
+        j = s.index('"', i + 1)
+        name, i = s[i:j + 1], j + 3
+    assert s[i] == '('
+    i, ms = i + 1, []
+    while s[i] != ')':
+        t, i = parse_ty(s, i)
+        ms.append(t)
+        if s.startswith(', ', i):
+            i += 2
+    return ('struct', name, ms), i + 2
+
+def show_ty(t, top=True):
+    pre = '!llvm.' if top else ''
+    if t[0] == 'int':
+        return f'i{t[1]}'
+    if t[0] == 'array':
+        return f'{pre}array<{t[1]} x {show_ty(t[2], False)}>'
+    ms = ', '.join(show_ty(m, False) for m in t[2])
+    return f'{pre}struct<{t[1] + ", " if t[1] else ""}({ms})>'
+
+def zero_of(ind, dst, t):
+    """Lines defining `dst` as `t`'s zero: `llvm.mlir.zero` at integers and integer arrays,
+    `insertvalue`s of zeros elsewhere."""
+    if t[0] == 'int' or t[0] == 'array' and t[2][0] == 'int':
+        return [f'{ind}{dst} = "llvm.mlir.zero"() : () -> {show_ty(t)}\n']
+    ms = [t[2]] * t[1] if t[0] == 'array' else t[2]
+    out, cur = [f'{ind}{dst}.u = "llvm.mlir.undef"() : () -> {show_ty(t)}\n'], f'{dst}.u'
+    for k, m in enumerate(ms):
+        out += zero_of(ind, f'{dst}.m{k}', m)
+        nxt = dst if k == len(ms) - 1 else f'{dst}.i{k}'
+        out.append(f'{ind}{nxt} = "llvm.insertvalue"({cur}, {dst}.m{k}) <{{position = array<i64: {k}>}}> '
+                   f': ({show_ty(t)}, {show_ty(m)}) -> {show_ty(t)}\n')
+        cur = nxt
+    return out
+
+def zero_undefs(lines):
+    """A global's initializer with its `undef`s other than `insertvalue` bases as zeros."""
+    out = []
+    for l in lines:
+        m = UNDEF.match(l.rstrip('\n'))
+        x = m and re.escape(m.group(2))
+        if m and not all(re.search(r'"llvm\.insertvalue"\(' + x + ',', u) for u in lines
+                         if u is not l and re.search(x + r'(?![\w.])', u)):
+            out += zero_of(m.group(1), m.group(2), parse_ty(m.group(3))[0])
+        else:
+            out.append(l)
+    return renumber(out)
 STRING = re.compile(r'value = "((?:[^"\\]|\\.)*)"(\}> : \(\) -> !llvm\.array<(\d+) x i8>)')
 
 def dense(m):
@@ -93,7 +157,9 @@ if sys.argv[1] == '--regions':
     import glob
     for f in glob.glob(sys.argv[2] + '/*.mlir'):
         t = open(f).read()
-        u = UNDEF_BYTES.sub(lambda m: f'"llvm.mlir.constant"() <{{value = dense<0> : tensor<{m.group(1)}xi8>}}> : () -> !llvm.array<{m.group(1)} x i8>', STRING.sub(dense, t))
+        u = STRING.sub(dense, t)
+        if '^bb0' not in u:
+            u = ''.join(zero_undefs(u.splitlines(keepends=True)))
         if u != t:
             open(f, 'w').write(u)
     sys.exit()
