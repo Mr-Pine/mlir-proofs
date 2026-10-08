@@ -1,6 +1,7 @@
 module
 
 public import Firedancer.Math.Field
+public import Firedancer.Math.Sqrt
 public import Mathlib.Algebra.Field.ZMod
 public import Firedancer.Ref.fd_ed25519_partial_dbl
 public import Firedancer.Ref.fd_ed25519_point_add_final_mul
@@ -33,10 +34,6 @@ namespace Ed25519
 /-- The curve's `d = -121665 / 121666`. -/
 def d : ZMod p :=
   37095705934669439343138083508754565189542113879843219016388785533085940283555
-
-/-- `√-1`, the root `fd_f25519_sqrtm1` holds. -/
-def sqrtM1 : ZMod p :=
-  19681161376707505956807079304988542015446066515923890162744021073123829784752
 
 /-- `(x, y)` is on the curve. -/
 def OnCurve (x y : ZMod p) : Prop :=
@@ -110,10 +107,6 @@ end
 
 section Constant
 
-theorem Ed25519.sqrtM1_sq : Ed25519.sqrtM1 ^ 2 = -1 := by
-  unfold Ed25519.sqrtM1
-  reduce_mod_char
-
 theorem Ed25519.d_pow : Ed25519.d ^ (p / 2) = -1 := by
   unfold Ed25519.d
   reduce_mod_char
@@ -150,9 +143,9 @@ theorem Ed25519.one_add_ne (x y : ZMod p) : 1 + Ed25519.d * x ^ 2 * y ^ 2 ≠ 0 
   have h1 : Ed25519.d * x ^ 2 * y ^ 2 = -1 := by linear_combination h0
   have hxy := Ed25519.mul_ne_zero_of_d h1 (by simp)
   apply Ed25519.d_not_square
-  refine ⟨Ed25519.sqrtM1 / (x * y), ?_⟩
+  refine ⟨sqrtM1 / (x * y), ?_⟩
   rw [div_mul_div_comm, eq_div_iff (mul_ne_zero hxy hxy)]
-  linear_combination h1 - Ed25519.sqrtM1_sq
+  linear_combination h1 - sqrtM1_sq
 
 /-- `1 - d x² y² ≠ 0`: else `d = (1 / (x y))²`. -/
 theorem Ed25519.one_sub_ne (x y : ZMod p) : 1 - Ed25519.d * x ^ 2 * y ^ 2 ≠ 0 := by
@@ -227,8 +220,8 @@ theorem Ed25519.add_ne {x₁ y₁ x₂ y₂ ε : ZMod p} (h1 : Ed25519.OnCurve x
     have hden : x₁ * y₁ * (y₂ + j * x₂) ≠ 0 := mul_ne_zero hx₁y₁ hne
     rw [div_mul_div_comm, eq_div_iff (mul_ne_zero hden hden)]
     linear_combination -(Ed25519.add_square h1 h2 h hε hj)
-  have hi := hzero _ Ed25519.sqrtM1_sq
-  have hi' := hzero (-Ed25519.sqrtM1) (by rw [neg_sq]; exact Ed25519.sqrtM1_sq)
+  have hi := hzero _ sqrtM1_sq
+  have hi' := hzero (-sqrtM1) (by rw [neg_sq]; exact sqrtM1_sq)
   apply hy₂
   have h2y : 2 * y₂ = 0 := by linear_combination hi + hi'
   have h2 : (2 : ZMod p) ≠ 0 := by decide
@@ -429,7 +422,7 @@ public theorem fd_ed25519_partial_dbl.spec_compl (hP : P.Proj x y) (hc : Ed25519
   obtain ⟨v5, b5⟩ := fd_f25519_sqr.spec_val b1
   obtain ⟨v4', b4'⟩ := fd_f25519_add.spec_val b4 b4
   obtain ⟨vT, bT⟩ := fd_f25519_add.spec_val b2 b3
-  obtain ⟨vZ, bZ⟩ := fd_f25519_sub.spec_val b2 b3
+  obtain ⟨vZ, bZ⟩ := fd_f25519_sub.spec_val b2 b3.under2p
   obtain ⟨vY, bY⟩ := fd_f25519_add_nr.spec_val b4' bZ
   obtain ⟨vX, bX⟩ := fd_f25519_sub_nr.spec_val bT b5
   refine ⟨?_, bX, bY, bT, bZ⟩
@@ -721,14 +714,6 @@ public theorem _root_.LeanMLIR.RIR.PointLimbs.Operand.of_z_one {B : PointLimbs} 
   simp only [ite_true] at hz
   split_ifs <;> simp [← hz, hZ]
 
-theorem ite_or_ite {a b : Prop} [Decidable a] [Decidable b] :
-    ((if a then 1#32 else 0#32) ||| if b then 1#32 else 0#32) = if a ∨ b then 1#32 else 0#32 := by
-  by_cases a <;> by_cases b <;> simp [*]
-
-theorem ite_and_ite {a b : Prop} [Decidable a] [Decidable b] :
-    ((if a then 1#32 else 0#32) &&& if b then 1#32 else 0#32) = if a ∧ b then 1#32 else 0#32 := by
-  by_cases a <;> by_cases b <;> simp [*]
-
 /-- The order-8 `y`s' limbs: `y8` and `-y8`, tight. -/
 theorem fd_ed25519_order8_point_y.val :
     (Limbs.val fd_ed25519_order8_point_y0.limbs = Ed25519.y8 ∧
@@ -748,8 +733,9 @@ public theorem fd_ed25519_affine_is_small_order.spec_val (hX : Limbs.Tight P.X)
     fd_ed25519_affine_is_small_order.spec P =
       if Ed25519.SmallOrder (Limbs.val P.X) (Limbs.val P.Y) then 1#32 else 0#32 := by
   obtain ⟨⟨v0, b0⟩, ⟨v1, b1⟩⟩ := fd_ed25519_order8_point_y.val
-  rw [fd_ed25519_affine_is_small_order.spec, fd_f25519_is_zero.spec_val hY,
-    fd_f25519_is_zero.spec_val hX, fd_f25519_eq.spec_val hY b0, fd_f25519_eq.spec_val hY b1, v0, v1]
+  rw [fd_ed25519_affine_is_small_order.spec, fd_f25519_is_zero.spec_val hY.under2p hY.nat_lt,
+    fd_f25519_is_zero.spec_val hX.under2p hX.nat_lt, fd_f25519_eq.spec_val hY b0.under2p,
+    fd_f25519_eq.spec_val hY b1.under2p, v0, v1]
   simp only [ite_or_ite]
   exact if_congr (by rw [Ed25519.smallOrder_iff hc]; tauto) rfl rfl
 
@@ -763,8 +749,8 @@ public theorem fd_ed25519_point_eq_z1.spec_val {A B : PointLimbs} (hA : A.Proj x
   obtain ⟨hz, hx, hy⟩ := hA
   obtain ⟨vx, bx⟩ := fd_f25519_mul.spec_val hBX hAZ
   obtain ⟨vy, by'⟩ := fd_f25519_mul.spec_val hBY hAZ
-  simp only [fd_ed25519_point_eq_z1.spec, fd_f25519_eq.spec_val by' hAY,
-    fd_f25519_eq.spec_val bx hAX, vx, vy, hx, hy, mul_left_inj' hz]
+  simp only [fd_ed25519_point_eq_z1.spec, fd_f25519_eq.spec_val by' hAY.under2p,
+    fd_f25519_eq.spec_val bx hAX.under2p, vx, vy, hx, hy, mul_left_inj' hz]
   rw [ite_and_ite]
   exact if_congr and_comm rfl rfl
 

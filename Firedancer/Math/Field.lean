@@ -45,6 +45,15 @@ abbrev Limbs.Tight (l : Fin 5 → BitVec 64) : Prop :=
 abbrev Limbs.Loose (l : Fin 5 → BitVec 64) : Prop :=
   ∀ i, (l i).toNat ≤ 0x18000000000000
 
+/-- The limbs' natural number, before reduction mod `p`. -/
+def Limbs.nat (l : Fin 5 → BitVec 64) : ℕ :=
+  (l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
+    (l 4).toNat * 2 ^ 204
+
+/-- Limbs at most `2p`'s, `2^52 - 38` and `2^52 - 2`: what `fiat_25519_sub` may subtract. -/
+abbrev Limbs.Under2p (l : Fin 5 → BitVec 64) : Prop :=
+  ∀ i, (l i).toNat ≤ if i = 0 then 4503599627370458 else 4503599627370494
+
 end
 
 /-! ## Proof macros -/
@@ -93,6 +102,29 @@ public theorem Limbs.loose_iff (l : Fin 5 → BitVec 64) :
 
 public theorem Limbs.Tight.loose {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) : Limbs.Loose l :=
   fun i => (h i).trans (by decide)
+
+public theorem Limbs.Tight.under2p {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) : Limbs.Under2p l :=
+  fun i => (h i).trans (by split <;> decide)
+
+public theorem Limbs.val_nat (l : Fin 5 → BitVec 64) : Limbs.val l = (Limbs.nat l : ZMod p) := by
+  rw [Limbs.val_eq, Limbs.nat]
+  push_cast
+  rfl
+
+public theorem Limbs.Tight.nat_lt {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) :
+    Limbs.nat l < 2 * p := by
+  rw [Limbs.tight_iff] at h
+  unfold Limbs.nat
+  change _ < 2 * (2 ^ 255 - 19)
+  omega
+
+/-- The bounds `Under2p` gives each limb. -/
+theorem Limbs.Under2p.bounds {l : Fin 5 → BitVec 64} (h : Limbs.Under2p l) :
+    (l 0).toNat ≤ 4503599627370458 ∧ (l 1).toNat ≤ 4503599627370494 ∧
+      (l 2).toNat ≤ 4503599627370494 ∧ (l 3).toNat ≤ 4503599627370494 ∧
+        (l 4).toNat ≤ 4503599627370494 :=
+  ⟨by simpa using h 0, by simpa using h 1, by simpa using h 2, by simpa using h 3,
+    by simpa using h 4⟩
 
 public theorem two_pow_255 : (2 : ZMod p) ^ 255 = 19 := by
   have h : 2 ^ 255 = p + 19 := by norm_num
@@ -323,15 +355,14 @@ abbrev mulW (x y : BitVec 64) : BitVec 128 :=
 
 /-- A limb of `x + 2p - y`: no wrap for tight `x`, `y`, and the result is loose. -/
 theorem sub_limb {s x y : BitVec 64} (c : ℕ) (hs : s = x + BitVec.ofNat 64 c - y)
-    (hx : x.toNat ≤ 0x8000000000000) (hy : y.toNat ≤ 0x8000000000000)
-    (hc : 0x8000000000000 ≤ c ∧ c ≤ 0x10000000000000) :
+    (hx : x.toNat ≤ 0x8000000000000) (hy : y.toNat ≤ c) (hc : c ≤ 0x10000000000000) :
     s.toNat + y.toNat = x.toNat + c ∧ s.toNat ≤ 0x18000000000000 := by
   rw [hs, BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat]
   omega
 
-/-- A limb of `2p - x`: no wrap for tight `x`, and the result is loose. -/
+/-- A limb of `2p - x`: no wrap for `x` at most `2p`'s limb, and the result is loose. -/
 theorem opp_limb {s x : BitVec 64} (c : ℕ) (hs : s = BitVec.ofNat 64 c - x)
-    (hx : x.toNat ≤ 0x8000000000000) (hc : 0x8000000000000 ≤ c ∧ c ≤ 0x10000000000000) :
+    (hx : x.toNat ≤ c) (hc : c ≤ 0x10000000000000) :
     s.toNat + x.toNat = c ∧ s.toNat ≤ 0x18000000000000 := by
   rw [hs, BitVec.toNat_sub, BitVec.toNat_ofNat]
   omega
@@ -486,19 +517,20 @@ public theorem fiat_25519_add.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.T
 
 /-- `fiat_25519_sub` subtracts tight field elements into a loose one. -/
 public theorem fiat_25519_sub.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
-    (hy : Limbs.Tight y) :
+    (hy : Limbs.Under2p y) :
     Limbs.val (fiat_25519_sub.spec x y) = Limbs.val x - Limbs.val y ∧
       Limbs.Loose (fiat_25519_sub.spec x y) := by
+  obtain ⟨g0, g1, g2, g3, g4⟩ := hy.bounds
   obtain ⟨e0, b0⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 0) 4503599627370458 rfl (hx 0) (hy 0) (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 0) 4503599627370458 rfl (hx 0) g0 (by decide)
   obtain ⟨e1, b1⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 1) 4503599627370494 rfl (hx 1) (hy 1) (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 1) 4503599627370494 rfl (hx 1) g1 (by decide)
   obtain ⟨e2, b2⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 2) 4503599627370494 rfl (hx 2) (hy 2) (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 2) 4503599627370494 rfl (hx 2) g2 (by decide)
   obtain ⟨e3, b3⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 3) 4503599627370494 rfl (hx 3) (hy 3) (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 3) 4503599627370494 rfl (hx 3) g3 (by decide)
   obtain ⟨e4, b4⟩ :=
-    sub_limb (s := fiat_25519_sub.spec x y 4) 4503599627370494 rfl (hx 4) (hy 4) (by decide)
+    sub_limb (s := fiat_25519_sub.spec x y 4) 4503599627370494 rfl (hx 4) g4 (by decide)
   refine ⟨?_, (Limbs.loose_iff _).2 ⟨b0, b1, b2, b3, b4⟩⟩
   rw [Limbs.val_eq, Limbs.val_eq x, Limbs.val_eq y]
   replace e0 := congrArg (Nat.cast (R := ZMod p)) e0
@@ -509,27 +541,46 @@ public theorem fiat_25519_sub.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.T
   push_cast at e0 e1 e2 e3 e4
   linear_combination e0 + 2 ^ 51 * e1 + 2 ^ 102 * e2 + 2 ^ 153 * e3 + 2 ^ 204 * e4 + 2 * two_pow_255
 
+/-- `fiat_25519_opp` negates limbs at most `2p`'s, into such limbs: `2p` minus the number. -/
+public theorem fiat_25519_opp.spec_wide {x : Fin 5 → BitVec 64} (hx : Limbs.Under2p x) :
+    Limbs.val (fiat_25519_opp.spec x) = -Limbs.val x ∧ Limbs.Under2p (fiat_25519_opp.spec x) ∧
+      Limbs.nat (fiat_25519_opp.spec x) + Limbs.nat x = 2 * p := by
+  obtain ⟨h0, h1, h2, h3, h4⟩ := hx.bounds
+  obtain ⟨e0, -⟩ := opp_limb (s := fiat_25519_opp.spec x 0) (x := x 0) 4503599627370458 rfl h0
+    (by decide)
+  obtain ⟨e1, -⟩ := opp_limb (s := fiat_25519_opp.spec x 1) (x := x 1) 4503599627370494 rfl h1
+    (by decide)
+  obtain ⟨e2, -⟩ := opp_limb (s := fiat_25519_opp.spec x 2) (x := x 2) 4503599627370494 rfl h2
+    (by decide)
+  obtain ⟨e3, -⟩ := opp_limb (s := fiat_25519_opp.spec x 3) (x := x 3) 4503599627370494 rfl h3
+    (by decide)
+  obtain ⟨e4, -⟩ := opp_limb (s := fiat_25519_opp.spec x 4) (x := x 4) 4503599627370494 rfl h4
+    (by decide)
+  have hn : Limbs.nat (fiat_25519_opp.spec x) + Limbs.nat x = 2 * p := by
+    unfold Limbs.nat
+    change _ = 2 * (2 ^ 255 - 19)
+    omega
+  refine ⟨?_, fun i => ?_, hn⟩
+  · rw [Limbs.val_nat, Limbs.val_nat, eq_neg_iff_add_eq_zero, ← Nat.cast_add, hn]
+    simp
+  · fin_cases i <;>
+      simp only [Fin.zero_eta, Fin.isValue, Fin.mk_one, Fin.reduceFinMk, Fin.reduceEq, ite_true,
+        ite_false] <;>
+      omega
+
+public theorem Limbs.Under2p.loose {l : Fin 5 → BitVec 64} (h : Limbs.Under2p l) : Limbs.Loose l :=
+  fun i => (h i).trans (by split <;> decide)
+
 /-- `fiat_25519_opp` negates a tight field element into a loose one. -/
 public theorem fiat_25519_opp.spec_val {x : Fin 5 → BitVec 64} (hx : Limbs.Tight x) :
-    Limbs.val (fiat_25519_opp.spec x) = -Limbs.val x ∧ Limbs.Loose (fiat_25519_opp.spec x) := by
-  obtain ⟨e0, b0⟩ := opp_limb (s := fiat_25519_opp.spec x 0) 4503599627370458 rfl (hx 0) (by decide)
-  obtain ⟨e1, b1⟩ := opp_limb (s := fiat_25519_opp.spec x 1) 4503599627370494 rfl (hx 1) (by decide)
-  obtain ⟨e2, b2⟩ := opp_limb (s := fiat_25519_opp.spec x 2) 4503599627370494 rfl (hx 2) (by decide)
-  obtain ⟨e3, b3⟩ := opp_limb (s := fiat_25519_opp.spec x 3) 4503599627370494 rfl (hx 3) (by decide)
-  obtain ⟨e4, b4⟩ := opp_limb (s := fiat_25519_opp.spec x 4) 4503599627370494 rfl (hx 4) (by decide)
-  refine ⟨?_, (Limbs.loose_iff _).2 ⟨b0, b1, b2, b3, b4⟩⟩
-  rw [Limbs.val_eq, Limbs.val_eq x]
-  replace e0 := congrArg (Nat.cast (R := ZMod p)) e0
-  replace e1 := congrArg (Nat.cast (R := ZMod p)) e1
-  replace e2 := congrArg (Nat.cast (R := ZMod p)) e2
-  replace e3 := congrArg (Nat.cast (R := ZMod p)) e3
-  replace e4 := congrArg (Nat.cast (R := ZMod p)) e4
-  push_cast at e0 e1 e2 e3 e4
-  linear_combination e0 + 2 ^ 51 * e1 + 2 ^ 102 * e2 + 2 ^ 153 * e3 + 2 ^ 204 * e4 + 2 * two_pow_255
+    Limbs.val (fiat_25519_opp.spec x) = -Limbs.val x ∧ Limbs.Loose (fiat_25519_opp.spec x) :=
+  have h := fiat_25519_opp.spec_wide hx.under2p
+  ⟨h.1, h.2.1.loose⟩
 
 /-- A step of the borrow chain: `x - c - b` as a 51-bit digit `s.1` and the borrow `s.2`. -/
 theorem subborrow_step {b : BitVec 8} {x c : BitVec 64} {s : BitVec 64 × BitVec 8}
-    (h : fiat_25519_subborrowx_u51.spec b x c = s) (hb : b.toNat ≤ 1) (hx : x.toNat ≤ 2 ^ 51)
+    (h : fiat_25519_subborrowx_u51.spec b x c = s) (hb : b.toNat ≤ 1)
+    (hx : x.toNat < c.toNat + 2 ^ 51)
     (hc : 0 < c.toNat ∧ c.toNat < 2 ^ 51) :
     s.1.toNat + c.toNat + b.toNat = x.toNat + 2 ^ 51 * s.2.toNat ∧
       s.1.toNat < 2 ^ 51 ∧ s.2.toNat ≤ 1 := by
@@ -598,23 +649,30 @@ theorem pack_toNat {x12 x14 x16 x18 x20 : BitVec 64} (h12 : x12.toNat < 2 ^ 51)
   simp only [BitVec.toNat_add, BitVec.toNat_shiftLeft, BitVec.toNat_setWidth, Nat.shiftLeft_eq]
   omega
 
-/-- `fiat_25519_to_bytes` encodes a tight field element as its value's representative in
-`[0, p)` (`ZMod.val`). -/
-public theorem fiat_25519_to_bytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+/-- `fiat_25519_to_bytes` encodes limbs at most `2p`'s, of a number below `2p`, as their value's
+representative in `[0, p)` (`ZMod.val`). -/
+public theorem fiat_25519_to_bytes.spec_wide {a : Fin 5 → BitVec 64} (ha : Limbs.Under2p a)
+    (hN : Limbs.nat a < 2 * p) :
     (fiat_25519_to_bytes.spec a).toNat = (Limbs.val a).val := by
-  dsimp only [fiat_25519_to_bytes.spec]
-  generalize hs1 : fiat_25519_subborrowx_u51.spec 0 (a 0) 2251799813685229 = s1
-  obtain ⟨e1, r1, b1⟩ := subborrow_step hs1 (by decide) (ha 0) (by decide)
-  generalize hs2 : fiat_25519_subborrowx_u51.spec s1.2 (a 1) 2251799813685247 = s2
-  obtain ⟨e2, r2, b2⟩ := subborrow_step hs2 b1 (ha 1) (by decide)
-  generalize hs3 : fiat_25519_subborrowx_u51.spec s2.2 (a 2) 2251799813685247 = s3
-  obtain ⟨e3, r3, b3⟩ := subborrow_step hs3 b2 (ha 2) (by decide)
-  generalize hs4 : fiat_25519_subborrowx_u51.spec s3.2 (a 3) 2251799813685247 = s4
-  obtain ⟨e4, r4, b4⟩ := subborrow_step hs4 b3 (ha 3) (by decide)
-  generalize hs5 : fiat_25519_subborrowx_u51.spec s4.2 (a 4) 2251799813685247 = s5
-  obtain ⟨e5, r5, b5⟩ := subborrow_step hs5 b4 (ha 4) (by decide)
+  unfold Limbs.nat at hN
+  change _ < 2 * (2 ^ 255 - 19) at hN
+  revert hN
+  obtain ⟨h0, h1, h2, h3, h4⟩ := ha.bounds
+  clear ha
   have k0 : (2251799813685229 : BitVec 64).toNat = 2251799813685229 := rfl
   have k1 : (2251799813685247 : BitVec 64).toNat = 2251799813685247 := rfl
+  dsimp only [fiat_25519_to_bytes.spec]
+  generalize hs1 : fiat_25519_subborrowx_u51.spec 0 (a 0) 2251799813685229 = s1
+  obtain ⟨e1, r1, b1⟩ := subborrow_step hs1 (by decide) (by rw [k0]; omega) (by decide)
+  generalize hs2 : fiat_25519_subborrowx_u51.spec s1.2 (a 1) 2251799813685247 = s2
+  obtain ⟨e2, r2, b2⟩ := subborrow_step hs2 b1 (by rw [k1]; omega) (by decide)
+  generalize hs3 : fiat_25519_subborrowx_u51.spec s2.2 (a 2) 2251799813685247 = s3
+  obtain ⟨e3, r3, b3⟩ := subborrow_step hs3 b2 (by rw [k1]; omega) (by decide)
+  generalize hs4 : fiat_25519_subborrowx_u51.spec s3.2 (a 3) 2251799813685247 = s4
+  obtain ⟨e4, r4, b4⟩ := subborrow_step hs4 b3 (by rw [k1]; omega) (by decide)
+  generalize hs5 : fiat_25519_subborrowx_u51.spec s4.2 (a 4) 2251799813685247 = s5
+  obtain ⟨e5, r5, b5⟩ := subborrow_step hs5 b4 (by rw [k1]; omega) (by decide)
+  clear h0 h1 h2 h3 h4
   have k8 : (0 : BitVec 8).toNat = 0 := rfl
   have m0 := cmov_and b5 2251799813685229
   have m1 := cmov_and b5 2251799813685247
@@ -641,11 +699,7 @@ public theorem fiat_25519_to_bytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limb
       by
       rw [Limbs.val_eq]; push_cast; rfl,
     ZMod.val_natCast]
-  have := ha 0
-  have := ha 1
-  have := ha 2
-  have := ha 3
-  have := ha 4
+  intro hN
   refine
     sub_p_canon b5 (X :=
       s1.1.toNat + s2.1.toNat * 2 ^ 51 + s3.1.toNat * 2 ^ 102 + s4.1.toNat * 2 ^ 153 +
@@ -657,6 +711,12 @@ public theorem fiat_25519_to_bytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limb
         change _ + (2 ^ 255 - 19) = _; omega)
       (by
         change _ = _ + _ * (2 ^ 255 - 19); omega)
+
+/-- `fiat_25519_to_bytes` encodes a tight field element as its value's representative in
+`[0, p)` (`ZMod.val`). -/
+public theorem fiat_25519_to_bytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+    (fiat_25519_to_bytes.spec a).toNat = (Limbs.val a).val :=
+  fiat_25519_to_bytes.spec_wide ha.under2p ha.nat_lt
 
 end Fiat
 
@@ -687,7 +747,7 @@ public theorem fd_f25519_add.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Ti
 
 /-- `fd_f25519_sub` subtracts tight field elements into a tight one. -/
 public theorem fd_f25519_sub.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
-    (hb : Limbs.Tight b) :
+    (hb : Limbs.Under2p b) :
     Limbs.val (fd_f25519_sub.spec a b) = Limbs.val a - Limbs.val b ∧
       Limbs.Tight (fd_f25519_sub.spec a b) := by
   obtain ⟨hv, hl⟩ := fiat_25519_sub.spec_val ha hb
@@ -698,6 +758,17 @@ public theorem fd_f25519_sub.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Ti
 public theorem fd_f25519_neg.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
     Limbs.val (fd_f25519_neg.spec a) = -Limbs.val a ∧ Limbs.Loose (fd_f25519_neg.spec a) :=
   fiat_25519_opp.spec_val ha
+
+/-- `fd_f25519_neg` on limbs at most `2p`'s: `2p` minus the number, its limbs at most `2p`'s. -/
+public theorem fd_f25519_neg.spec_wide {a : Fin 5 → BitVec 64} (ha : Limbs.Under2p a) :
+    Limbs.val (fd_f25519_neg.spec a) = -Limbs.val a ∧ Limbs.Under2p (fd_f25519_neg.spec a) ∧
+      Limbs.nat (fd_f25519_neg.spec a) + Limbs.nat a = 2 * p :=
+  fiat_25519_opp.spec_wide ha
+
+/-- `fd_f25519_neg`'s limbs are at most `2p`'s. -/
+public theorem fd_f25519_neg.spec_under2p {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+    Limbs.Under2p (fd_f25519_neg.spec a) :=
+  (fiat_25519_opp.spec_wide ha.under2p).2.1
 
 /-- `fd_f25519_add_nr` adds tight field elements into a loose one. -/
 public theorem fd_f25519_add_nr.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
@@ -711,13 +782,14 @@ public theorem fd_f25519_sub_nr.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs
     (hb : Limbs.Tight b) :
     Limbs.val (fd_f25519_sub_nr.spec a b) = Limbs.val a - Limbs.val b ∧
       Limbs.Loose (fd_f25519_sub_nr.spec a b) :=
-  fiat_25519_sub.spec_val ha hb
+  fiat_25519_sub.spec_val ha hb.under2p
 
 /-- `fd_f25519_tobytes` encodes a tight field element as its value's representative in
 `[0, p)`. -/
-public theorem fd_f25519_tobytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+public theorem fd_f25519_tobytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Under2p a)
+    (hN : Limbs.nat a < 2 * p) :
     (fd_f25519_tobytes.spec a).toNat = (Limbs.val a).val :=
-  fiat_25519_to_bytes.spec_val ha
+  fiat_25519_to_bytes.spec_wide ha hN
 
 /-- `l` is loose with value `z ^ e`. -/
 def IsPow (l z : Fin 5 → BitVec 64) (e : ℕ) : Prop :=
@@ -791,15 +863,6 @@ end Fd
 
 section Compare
 
-/-- A tight value's natural number. -/
-theorem Limbs.val_natCast (l : Fin 5 → BitVec 64) :
-    Limbs.val l =
-      (((l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
-        (l 4).toNat * 2 ^ 204 : ℕ) : ZMod p) := by
-  rw [Limbs.val_eq]
-  push_cast
-  rfl
-
 /-- Five limbs agree when their naturals do. -/
 theorem Limbs.forall_eq_iff (l c : Fin 5 → BitVec 64) :
     (∀ k, l k = c k) ↔
@@ -809,13 +872,14 @@ theorem Limbs.forall_eq_iff (l c : Fin 5 → BitVec 64) :
   fin_cases k <;> exact BitVec.eq_of_toNat_eq ‹_›
 
 /-- The bounded multiples of `p`: `0` and `p`'s digits. -/
-theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 0x8000000000000) (h1 : a1 ≤ 0x8000000000000)
-    (h2 : a2 ≤ 0x8000000000000) (h3 : a3 ≤ 0x8000000000000) (h4 : a4 ≤ 0x8000000000000) :
+theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 4503599627370458) (h1 : a1 ≤ 4503599627370494)
+    (h2 : a2 ≤ 4503599627370494) (h3 : a3 ≤ 4503599627370494) (h4 : a4 ≤ 4503599627370494)
+    (hN : a0 + a1 * 2 ^ 51 + a2 * 2 ^ 102 + a3 * 2 ^ 153 + a4 * 2 ^ 204 < 2 * p) :
     p ∣ a0 + a1 * 2 ^ 51 + a2 * 2 ^ 102 + a3 * 2 ^ 153 + a4 * 2 ^ 204 ↔
       (a0 = 0 ∧ a1 = 0 ∧ a2 = 0 ∧ a3 = 0 ∧ a4 = 0) ∨
         (a0 = 2251799813685229 ∧ a1 = 2251799813685247 ∧ a2 = 2251799813685247 ∧
           a3 = 2251799813685247 ∧ a4 = 2251799813685247) := by
-  simp only [p, Nat.reducePow, Nat.reduceSub]
+  simp only [p, Nat.reducePow, Nat.reduceSub, Nat.reduceMul] at hN ⊢
   constructor
   · rintro ⟨c, hc⟩
     rcases (by omega : c = 0 ∨ c = 1) with rfl | rfl
@@ -838,33 +902,36 @@ theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 0x8000000000000) (h1 : a1 
     · exact ⟨0, rfl⟩
     · exact ⟨1, rfl⟩
 
-/-- A tight zero is all zeros or `p`'s limbs. -/
-theorem Limbs.val_eq_zero_iff {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) :
+/-- A zero below `2p`, its limbs at most `2p`'s, is all zeros or `p`'s limbs. -/
+theorem Limbs.val_eq_zero_iff {l : Fin 5 → BitVec 64} (h : Limbs.Under2p l)
+    (hN : Limbs.nat l < 2 * p) :
     Limbs.val l = 0 ↔ (∀ k, l k = 0) ∨ (∀ k, l k = fd_f25519_is_zero.pLimbs k) := by
-  rw [Limbs.tight_iff] at h
-  obtain ⟨h0, h1, h2, h3, h4⟩ := h
-  rw [Limbs.val_natCast, ZMod.natCast_eq_zero_iff, p_dvd_iff h0 h1 h2 h3 h4,
+  obtain ⟨h0, h1, h2, h3, h4⟩ := h.bounds
+  rw [Limbs.val_nat, ZMod.natCast_eq_zero_iff, Limbs.nat, p_dvd_iff h0 h1 h2 h3 h4 hN,
     show (∀ k, l k = 0) ↔ _ from Limbs.forall_eq_iff l 0,
     Limbs.forall_eq_iff l fd_f25519_is_zero.pLimbs]
   rfl
 
-/-- `is_zero` on a tight value: `1` exactly at zero. -/
-public theorem fd_f25519_is_zero.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+/-- `is_zero` on limbs at most `2p`'s, of a number below `2p`: `1` exactly at zero. -/
+public theorem fd_f25519_is_zero.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Under2p a)
+    (hN : Limbs.nat a < 2 * p) :
     fd_f25519_is_zero.spec a = if Limbs.val a = 0 then 1#32 else 0#32 := by
-  simp only [fd_f25519_is_zero.spec, Limbs.val_eq_zero_iff ha]
+  simp only [fd_f25519_is_zero.spec, Limbs.val_eq_zero_iff ha hN]
   rfl
 
 /-- `eq` on tight values: `1` exactly when they are equal. -/
 public theorem fd_f25519_eq.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
-    (hb : Limbs.Tight b) :
+    (hb : Limbs.Under2p b) :
     fd_f25519_eq.spec a b = if Limbs.val a = Limbs.val b then 1#32 else 0#32 := by
   obtain ⟨v, t⟩ := fd_f25519_sub.spec_val ha hb
-  simp only [fd_f25519_eq.spec, fd_f25519_is_zero.spec_val t, v, sub_eq_zero]
+  simp only [fd_f25519_eq.spec, fd_f25519_is_zero.spec_val t.under2p t.nat_lt, v,
+    sub_eq_zero]
 
 /-- `sgn` on a tight value: the parity of its canonical value. -/
-public theorem fd_f25519_sgn.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tight a) :
+public theorem fd_f25519_sgn.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Under2p a)
+    (hN : Limbs.nat a < 2 * p) :
     fd_f25519_sgn.spec a = BitVec.ofNat 32 ((Limbs.val a).val % 2) := by
-  have h := fd_f25519_tobytes.spec_val ha
+  have h := fd_f25519_tobytes.spec_val ha hN
   apply BitVec.eq_of_toNat_eq
   simp only [fd_f25519_sgn.spec, BitVec.toNat_and, BitVec.toNat_setWidth, BitVec.toNat_ofNat, h]
   rw [Nat.and_one_is_mod]
