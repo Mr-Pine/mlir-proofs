@@ -495,14 +495,14 @@ public theorem fiat_25519_carry.spec_val {l : Fin 5 → BitVec 64} (hl : Limbs.L
   simp only [toNat_and_mask, ko2]
   refine ⟨carry_val k2 k3 k4 k5 k6 k7, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
 
-/-- `fiat_25519_add` adds tight field elements into a loose one. -/
-public theorem fiat_25519_add.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
-    (hy : Limbs.Tight y) :
+/-- `fiat_25519_add` adds limbwise into a loose field element, when no limb sum exceeds the loose
+bound. -/
+public theorem fiat_25519_add.spec_le {x y : Fin 5 → BitVec 64}
+    (h : ∀ k, (x k).toNat + (y k).toNat ≤ 0x18000000000000) :
     Limbs.val (fiat_25519_add.spec x y) = Limbs.val x + Limbs.val y ∧
       Limbs.Loose (fiat_25519_add.spec x y) := by
   have hk k : (fiat_25519_add.spec x y k).toNat = (y k).toNat + (x k).toNat := by
-    have := hx k
-    have := hy k
+    have := h k
     rw [fiat_25519_add.spec, BitVec.toNat_add]
     omega
   refine ⟨?_, fun k => ?_⟩
@@ -511,10 +511,16 @@ public theorem fiat_25519_add.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.T
     rw [hk]
     push_cast
     ring
-  · have := hx k
-    have := hy k
+  · have := h k
     have := hk k
     omega
+
+/-- `fiat_25519_add` adds tight field elements into a loose one. -/
+public theorem fiat_25519_add.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
+    (hy : Limbs.Tight y) :
+    Limbs.val (fiat_25519_add.spec x y) = Limbs.val x + Limbs.val y ∧
+      Limbs.Loose (fiat_25519_add.spec x y) :=
+  fiat_25519_add.spec_le fun k => by have := hx k; have := hy k; omega
 
 /-- `fiat_25519_sub` subtracts tight field elements into a loose one. -/
 public theorem fiat_25519_sub.spec_val {x y : Fin 5 → BitVec 64} (hx : Limbs.Tight x)
@@ -778,12 +784,40 @@ public theorem fd_f25519_add_nr.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs
       Limbs.Loose (fd_f25519_add_nr.spec a b) :=
   fiat_25519_add.spec_val ha hb
 
+/-- `fd_f25519_add_nr` adds a tight field element and one within `2p`'s limbs into a loose one. -/
+public theorem fd_f25519_add_nr.spec_wide {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
+    (hb : Limbs.Under2p b) :
+    Limbs.val (fd_f25519_add_nr.spec a b) = Limbs.val a + Limbs.val b ∧
+      Limbs.Loose (fd_f25519_add_nr.spec a b) :=
+  fiat_25519_add.spec_le fun k => by
+    have := ha k
+    have := hb k
+    split at this <;> omega
+
+/-- `fd_f25519_add_nr` adds one within `2p`'s limbs and a tight field element into a loose one. -/
+public theorem fd_f25519_add_nr.spec_wide' {a b : Fin 5 → BitVec 64} (ha : Limbs.Under2p a)
+    (hb : Limbs.Tight b) :
+    Limbs.val (fd_f25519_add_nr.spec a b) = Limbs.val a + Limbs.val b ∧
+      Limbs.Loose (fd_f25519_add_nr.spec a b) :=
+  fiat_25519_add.spec_le fun k => by
+    have := hb k
+    have := ha k
+    split at this <;> omega
+
 /-- `fd_f25519_sub_nr` subtracts tight field elements into a loose one. -/
 public theorem fd_f25519_sub_nr.spec_val {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
     (hb : Limbs.Tight b) :
     Limbs.val (fd_f25519_sub_nr.spec a b) = Limbs.val a - Limbs.val b ∧
       Limbs.Loose (fd_f25519_sub_nr.spec a b) :=
   fiat_25519_sub.spec_val ha hb.under2p
+
+/-- `fd_f25519_sub_nr` subtracts one within `2p`'s limbs from a tight field element, into a loose
+one. -/
+public theorem fd_f25519_sub_nr.spec_wide {a b : Fin 5 → BitVec 64} (ha : Limbs.Tight a)
+    (hb : Limbs.Under2p b) :
+    Limbs.val (fd_f25519_sub_nr.spec a b) = Limbs.val a - Limbs.val b ∧
+      Limbs.Loose (fd_f25519_sub_nr.spec a b) :=
+  fiat_25519_sub.spec_val ha hb
 
 /-- `fd_f25519_tobytes` encodes a tight field element as its value's representative in
 `[0, p)`. -/

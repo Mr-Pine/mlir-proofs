@@ -411,12 +411,12 @@ variable {P : PointLimbs} {x y : ZMod p}
 /-- `partial_dbl` takes a projective `(x, y)` on the curve to `2 (x, y)` as a completed point; its
 `X` and `Y` loose, `T` and `Z` tight. -/
 public theorem fd_ed25519_partial_dbl.spec_compl (hP : P.Proj x y) (hc : Ed25519.OnCurve x y)
-    (hX : Limbs.Tight P.X) (hY : Limbs.Tight P.Y) (hZ : Limbs.Loose P.Z) :
+    (hX : Limbs.Under2p P.X) (hY : Limbs.Tight P.Y) (hZ : Limbs.Loose P.Z) :
     let D := fd_ed25519_partial_dbl.spec P
     D.Compl (Ed25519.dbl x y).1 (Ed25519.dbl x y).2 ∧ Limbs.Loose D.X ∧ Limbs.Loose D.Y ∧
       Limbs.Tight D.T ∧ Limbs.Tight D.Z := by
   obtain ⟨hz, hx, hy⟩ := hP
-  obtain ⟨v1, b1⟩ := fd_f25519_add_nr.spec_val hX hY
+  obtain ⟨v1, b1⟩ := fd_f25519_add_nr.spec_wide' hX hY
   obtain ⟨v2, b2⟩ := fd_f25519_sqr.spec_val hX.loose
   obtain ⟨v3, b3⟩ := fd_f25519_sqr.spec_val hY.loose
   obtain ⟨v4, b4⟩ := fd_f25519_sqr.spec_val hZ
@@ -491,13 +491,14 @@ theorem fd_ed25519_point_dbln.iter_compl :
   | j + 1, t, x, y, ht, hc, bX, bY, bT, bZ => by
     obtain ⟨hp, pX, pY, pZ⟩ :=
       fd_ed25519_point_add_final_mul_projective.spec_proj ht bX bY bT bZ 0
-    obtain ⟨hd, dX, dY, dT, dZ⟩ := fd_ed25519_partial_dbl.spec_compl hp hc pX pY pZ.loose
+    obtain ⟨hd, dX, dY, dT, dZ⟩ := fd_ed25519_partial_dbl.spec_compl hp hc pX.under2p pY pZ.loose
     exact fd_ed25519_point_dbln.iter_compl j hd (Ed25519.dbl_onCurve hc) dX dY dT.loose dZ.loose
 
 /-- `dbln` takes a projective `(x, y)` on the curve to `2ⁿ (x, y)` in extended coordinates, tight,
 for `n ≥ 1`. -/
 public theorem fd_ed25519_point_dbln.spec_ext (hP : P.Proj x y) (hc : Ed25519.OnCurve x y)
-    (hX : Limbs.Tight P.X) (hY : Limbs.Tight P.Y) (hZ : Limbs.Loose P.Z) {n : ℕ} (hn : 1 ≤ n) :
+    (hX : Limbs.Under2p P.X) (hY : Limbs.Tight P.Y) (hZ : Limbs.Loose P.Z) {n : ℕ}
+    (hn : 1 ≤ n) :
     let Q := Ed25519.dblN n (x, y)
     (fd_ed25519_point_dbln.spec P n).Ext Q.1 Q.2 ∧ (fd_ed25519_point_dbln.spec P n).Tight := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
@@ -680,13 +681,13 @@ public theorem fd_ed25519_point_set_zero.spec_ext :
   · simp only [fd_ed25519_point_set_zero.spec]
     decide
 
-/-- `neg` takes `(x, y)` to `-(x, y) = (-x, y)`; its `X` and `T` loose. -/
-public theorem fd_ed25519_point_neg.spec_ext (hP : P.Ext x y) (hX : Limbs.Tight P.X)
-    (hT : Limbs.Tight P.T) :
+/-- `neg` takes `(x, y)` to `-(x, y) = (-x, y)`; its `X` and `T` within `2p`'s limbs. -/
+public theorem fd_ed25519_point_neg.spec_ext (hP : P.Ext x y) (hX : Limbs.Under2p P.X)
+    (hT : Limbs.Under2p P.T) :
     let N := fd_ed25519_point_neg.spec P
-    N.Ext (-x) y ∧ Limbs.Loose N.X ∧ Limbs.Loose N.T := by
-  obtain ⟨vX, bX⟩ := fd_f25519_neg.spec_val hX
-  obtain ⟨vT, bT⟩ := fd_f25519_neg.spec_val hT
+    N.Ext (-x) y ∧ Limbs.Under2p N.X ∧ Limbs.Under2p N.T := by
+  obtain ⟨vX, bX, -⟩ := fd_f25519_neg.spec_wide hX
+  obtain ⟨vT, bT, -⟩ := fd_f25519_neg.spec_wide hT
   refine ⟨?_, bX, bT⟩
   have := Ed25519.IsExt.neg hP
   simpa only [PointLimbs.Ext, fd_ed25519_point_neg.spec, vX, vT] using this
@@ -694,11 +695,11 @@ public theorem fd_ed25519_point_neg.spec_ext (hP : P.Ext x y) (hX : Limbs.Tight 
 /-- `into_precomputed` takes `(x, y)` to its table form, `add_with_opts`'s precomputed operand;
 `X` and `Y` loose, `T` tight. -/
 public theorem fd_curve25519_into_precomputed.spec_operand (hP : P.Ext x y)
-    (hX : Limbs.Tight P.X) (hY : Limbs.Tight P.Y) (hT : Limbs.Loose P.T) :
+    (hX : Limbs.Under2p P.X) (hY : Limbs.Tight P.Y) (hT : Limbs.Loose P.T) :
     let Q := fd_curve25519_into_precomputed.spec P
     Q.Operand 0#32 1#32 x y ∧ Limbs.Loose Q.X ∧ Limbs.Loose Q.Y ∧ Limbs.Tight Q.T ∧ Q.Z = P.Z := by
-  obtain ⟨vX, bX⟩ := fd_f25519_sub_nr.spec_val hY hX
-  obtain ⟨vY, bY⟩ := fd_f25519_add_nr.spec_val hY hX
+  obtain ⟨vX, bX⟩ := fd_f25519_sub_nr.spec_wide hY hX
+  obtain ⟨vY, bY⟩ := fd_f25519_add_nr.spec_wide hY hX
   obtain ⟨vk, bk⟩ := fd_f25519_k.val
   obtain ⟨vT, bT⟩ := fd_f25519_mul.spec_val hT bk.loose
   refine ⟨⟨_, _, _, _, hP, ?_⟩, bX, bY, bT, rfl⟩
