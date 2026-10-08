@@ -94,6 +94,34 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_storeAt_of_id_ne {m : M
   · simpa [Pointer.add] using MemoryState.readAt_storeAt_disjoint (hd 0#64) x
   all_goals exact MemoryState.readAt_storeAt_disjoint (hd _) x
 
+/-! ### Limbs stored, read back one by one -/
+
+@[mlir_read]
+public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_0 {m : MemoryState} {p : Pointer}
+    {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt p 64 = l 0 := by
+  have := congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 0
+  exact this
+
+@[mlir_read]
+public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_1 {m : MemoryState} {p : Pointer}
+    {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 8#64) 64 = l 1 :=
+  congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 1
+
+@[mlir_read]
+public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_2 {m : MemoryState} {p : Pointer}
+    {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 16#64) 64 = l 2 :=
+  congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 2
+
+@[mlir_read]
+public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_3 {m : MemoryState} {p : Pointer}
+    {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 24#64) 64 = l 3 :=
+  congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 3
+
+@[mlir_read]
+public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_4 {m : MemoryState} {p : Pointer}
+    {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 32#64) 64 = l 4 :=
+  congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 4
+
 /-! ### Limb bounds carried across steps -/
 
 @[mlir_transport]
@@ -137,11 +165,24 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readWide_stores {m : MemoryState}
 
 @[expose] public section
 
+/-- Five limbs, lowest first. -/
+def Fe.mk5 (a0 a1 a2 a3 a4 : BitVec 64) : Fin 5 → BitVec 64
+  | ⟨0, _⟩ => a0
+  | ⟨1, _⟩ => a1
+  | ⟨2, _⟩ => a2
+  | ⟨3, _⟩ => a3
+  | ⟨4, _⟩ => a4
+
 /-- `MASK51`. -/
 abbrev Fe.mask : BitVec 64 :=
   0x7ffffffffffff#64
 
 end
+
+/-- Limbs are their five values. -/
+public theorem Fe.eta5 (x : Fin 5 → BitVec 64) : x = Fe.mk5 (x 0) (x 1) (x 2) (x 3) (x 4) := by
+  funext i
+  fin_cases i <;> rfl
 
 /-- `storeLimbs` as the five stores the code makes, given each limb. -/
 public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → BitVec 64}
