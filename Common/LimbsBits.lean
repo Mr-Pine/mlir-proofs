@@ -147,6 +147,11 @@ public theorem MemoryState.storeAt_readAt_eq_storeLimbs {m m' : MemoryState} {p 
     m.storeAt p (m'.readAt q 320) = m.storeLimbs p (m'.readLimbs q) := by
   rw [MemoryState.readAt_eq_limbsBits hq hqo, MemoryState.storeLimbs_eq_storeAt hp]
 
+/-- Stores never change a block's length: limbs fit after a store exactly when before. -/
+@[simp]
+public theorem MemoryState.limbsFit_storeAt_iff {m : MemoryState} {p q : Pointer} {x : BitVec w} :
+    (m.storeAt q x).LimbsFit p ↔ m.LimbsFit p := by simp [MemoryState.LimbsFit, Fits.storeAt_iff]
+
 /-- A field element copied whole reads back as the source's limbs. -/
 public theorem MemoryState.readLimbs_storeAt_readAt {m : MemoryState} {p q : Pointer}
     (hq : m.LimbsFit q) (hp : m.LimbsFit p) :
