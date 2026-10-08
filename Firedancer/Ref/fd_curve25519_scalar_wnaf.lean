@@ -108,21 +108,6 @@ theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x 
   simp only [Memory.getLsbD_spliceBits]
   grind
 
-/-- `getelementptr a[off]` at a constant byte offset, by its no-wrap fact `hov`; `step_pure`
-`decide`s that fact and reaches the maximum recursion depth for offsets in the hundreds. -/
-theorem runBodyFrom_gepConst {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos off : Nat}
-    {d : Dst Γ .ptr} {a : Reg Γ .ptr} {p : Pointer} {rest : List (Instr Γ)} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody : blk.body.drop pos = [.unop (.gepConst off) d a] ++ rest) (hp : E.read a = .value p)
-    (hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 off))
-    (hK : (blk.runBodyFrom E[d := .value (p.add (BitVec.ofNat 64 off))] (pos + 1) S >>= g) = K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  rw [BasicBlock.runBodyFrom_step_pure (List.lt_length_of_drop_eq_cons hbody) (E' :=
-      E[d := .value (p.add (BitVec.ofNat 64 off))])]
-  · exact hK
-  · rw [List.getElem_of_drop_eq_cons hbody]
-    simp only [Instr.run, UnOp.compute, hp, BitVec.natCast_eq_ofNat, gep_value hov]
-
 /-- Storing what a block holds changes nothing. -/
 theorem storeAt_readAt_self {m : MemoryState} {p : Pointer} (h : Fits m p w) :
     m.storeAt p (m.readAt p w) = m := by
@@ -1004,11 +989,7 @@ theorem fd_curve25519_scalar_wnaf.outer_loop (slides scalar : Pointer) (w : BitV
       rw [outerT_end] at hK
       simp only [hi255] at hK
       block_init
-      -- `_t[255]` as `_t[i]`: at the literal index `255#64`, `step_pure` `decide`s the
-      -- `getelementptr`'s no-wrap condition and reaches the maximum recursion depth
-      rw [show (255#64 : BitVec 64) = BitVec.ofNat 64 i by rw [hi255]] at hE
-      step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
-        show i * 2 = 2 * i by omega]
+      step_pure
       step_store
       rw [storeAt_shorts hso (j := 255) (by decide) (y := 1#16) (v := 1) (by decide)] at hS
       finish_block
@@ -1318,10 +1299,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   -- `_t[255] = 0;`
   block_init
   step_pure [max_eq (b := bits.toNat) (by omega)]
-  have h510 : ¬slides.offset.uaddOverflow (BitVec.ofNat 64 510) :=
-    BitVec.not_uaddOverflow_of_le hso (by decide)
-  step_pattern using runBodyFrom_gepConst (hov := h510)
-  clear h510
+  step_pure
   step_store
   rw [storeAt_shorts hso (j := 255) (by decide) (y := 0#16) (v := 0) (by decide),
     unpackFrom_set_255] at hS

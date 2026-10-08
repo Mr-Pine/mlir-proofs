@@ -3,7 +3,6 @@ module
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Common.Limbs
 public import Firedancer.Common.Tactics
-public import Firedancer.Common.StepCall
 public import Firedancer.Ref.Globals
 public import Firedancer.Ref.fd_f25519_sqr
 public import Firedancer.Ref.fd_f25519_mul
@@ -61,17 +60,7 @@ local macro "limbs_fit " x:ident : tactic => do
   let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
   let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
-  `(tactic| (have $limbs :=MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
-
-/-! ### Staged for Common -/
-
-/-- Limbs stored into an erased block are lost, wherever the store sits below the erase. -/
-theorem MemoryState.eraseFrom_storeLimbs_of_le {m : MemoryState} (h : n ≤ p.id.id) :
-    (m.storeLimbs p l).eraseFrom n = m.eraseFrom n := by
-  rw [MemoryState.eraseFrom_storeLimbs, MemoryState.storeLimbs_eraseFrom_of_le h]
-
--- tried before `eraseFrom_storeLimbs`, which moves the erase below the store
-attribute [local mlir_erase high] MemoryState.eraseFrom_storeLimbs_of_le
+  `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
 
 /-! ### The function -/
 

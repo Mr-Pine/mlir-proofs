@@ -413,6 +413,14 @@ theorem MemoryState.readPoint_alloca {s : GlobalState} (hne : p.id ≠ s.allocaP
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
   simp only [MemoryState.readPoint, readLimbs_alloca hne, readLimbs_alloca (hne' _)]
 
+/-- A point outside a new block: the point before it. -/
+@[mlir_read]
+theorem MemoryState.readPoint_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : p.id ≠ b) :
+    (m.addBlock b n x).readPoint p = m.readPoint p := by
+  have h' (k : BitVec 64) : (p.add k).id ≠ b := by simpa [Pointer.add_id] using h
+  simp only [MemoryState.readPoint, readLimbs_addBlock_of_id_ne h,
+    readLimbs_addBlock_of_id_ne (h' _)]
+
 /-- A point fits in a memory before a point store when it fits after it. -/
 theorem MemoryState.PointFit.of_storePoint {m : MemoryState} (h : (m.storePoint p P).PointFit q) :
     m.PointFit q :=
@@ -567,12 +575,6 @@ simplify the store's memory first. -/
 theorem MemoryState.eraseFrom_storePoint_of_le {m : MemoryState} (h : n ≤ p.id.id) :
     (m.storePoint p P).eraseFrom n = m.eraseFrom n := by
   rw [eraseFrom_storePoint, storePoint_eraseFrom_of_le h]
-
-/-- `eraseFrom_storePoint_of_le` for limbs. -/
-@[mlir_erase high]
-theorem MemoryState.eraseFrom_storeLimbs_of_le {m : MemoryState} (h : n ≤ p.id.id) :
-    (m.storeLimbs p l).eraseFrom n = m.eraseFrom n := by
-  rw [eraseFrom_storeLimbs, storeLimbs_eraseFrom_of_le h]
 
 end
 

@@ -3,13 +3,11 @@ module
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Tactics
-public import Firedancer.Common.StepCall
 public import Firedancer.Ref.Globals
 public import Firedancer.Ref.fd_ed25519_point_to
 public import Firedancer.Ref.fd_f25519_is_zero
 public import Firedancer.Ref.fd_f25519_eq
 public import Firedancer.Ref.Mlir.fd_ed25519_affine_is_small_order
-import Std.Data.ExtHashMap.Lemmas
 
 namespace LeanMLIR.RIR.Firedancer.Ref
 
@@ -25,43 +23,6 @@ def fd_ed25519_affine_is_small_order.spec (A : PointLimbs) : BitVec 32 :=
     fd_f25519_eq.spec A.Y fd_ed25519_order8_point_y1.limbs
 
 end
-
-/-! ## Staged for Common -/
-
-section Staged
-
-/-- A read outside a new block: the read before it. -/
-@[mlir_read]
-theorem MemoryState.readAt_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : q.id ≠ b) :
-    (m.addBlock b n x).readAt q w = m.readAt q w := by
-  have hget : (m.addBlock b n x)[q.id]? = m[q.id]? := by
-    simp only [MemoryState.addBlock, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_insert]
-    split
-    · rename_i heq
-      exact absurd (beq_iff_eq.mp heq).symm h
-    · rfl
-  unfold MemoryState.readAt
-  rw [hget]
-
-/-- `readAt_addBlock_of_id_ne` for limbs. -/
-@[mlir_read]
-theorem MemoryState.readLimbs_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : p.id ≠ b) :
-    (m.addBlock b n x).readLimbs p = m.readLimbs p := by
-  have h' (k : BitVec 64) : (p.add k).id ≠ b := by simpa [Pointer.add_id] using h
-  funext i
-  fin_cases i
-  · exact readAt_addBlock_of_id_ne h
-  all_goals exact readAt_addBlock_of_id_ne (h' _)
-
-/-- `readAt_addBlock_of_id_ne` for points. -/
-@[mlir_read]
-theorem MemoryState.readPoint_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : p.id ≠ b) :
-    (m.addBlock b n x).readPoint p = m.readPoint p := by
-  have h' (k : BitVec 64) : (p.add k).id ≠ b := by simpa [Pointer.add_id] using h
-  simp only [MemoryState.readPoint, readLimbs_addBlock_of_id_ne h,
-    readLimbs_addBlock_of_id_ne (h' _)]
-
-end Staged
 
 /-! ## Proof -/
 

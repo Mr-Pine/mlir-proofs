@@ -180,6 +180,13 @@ theorem MemoryState.storeLimbs_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id
     (m.eraseFrom n).storeLimbs p l = m.eraseFrom n := by
   simp [MemoryState.storeLimbs, MemoryState.storeAt_eraseFrom_of_le, Pointer.add, h]
 
+/-- Limbs stored into the frame, dropped before the erase moves past them: moved first, they stay
+above a store outside the frame. -/
+@[mlir_erase high]
+theorem MemoryState.eraseFrom_storeLimbs_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.storeLimbs p l).eraseFrom n = m.eraseFrom n := by
+  rw [eraseFrom_storeLimbs, storeLimbs_eraseFrom_of_le h]
+
 /-- `storeLimbs` keeps the set of blocks, so `WF` does not depend on it. -/
 @[simp, mlir_mem]
 theorem GlobalState.WF_storeLimbs {s : GlobalState} :
@@ -265,6 +272,17 @@ theorem MemoryState.readLimbs_addBlock {s : GlobalState} {x : BitVec v} (hwf : s
   · exact MemoryState.readAt_addBlock hwf h2
   · exact MemoryState.readAt_addBlock hwf h3
   · exact MemoryState.readAt_addBlock hwf h4
+
+/-- Limbs outside a new block: the limbs before it. For a block below others added since the state
+(a second global's), where `readLimbs_addBlock` does not match. -/
+@[mlir_read]
+theorem MemoryState.readLimbs_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : p.id ≠ b) :
+    (m.addBlock b n x).readLimbs p = m.readLimbs p := by
+  have h' (k : BitVec 64) : (p.add k).id ≠ b := by simpa [Pointer.add_id] using h
+  funext i
+  fin_cases i
+  · exact MemoryState.readAt_addBlock_of_id_ne h
+  all_goals exact MemoryState.readAt_addBlock_of_id_ne (h' _)
 
 end
 

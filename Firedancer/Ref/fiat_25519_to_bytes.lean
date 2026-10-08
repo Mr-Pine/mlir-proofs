@@ -153,14 +153,6 @@ local macro "store_byte" : tactic =>
 
 /-! ## Staged for Common -/
 
-/-- `MemoryState.readAt_alloca` with the fitting width the read's: the step tactics' side
-conditions then find it among the conjuncts of `LimbsFit`. -/
-private theorem MemoryState.readAt_alloca_of_fits {s : GlobalState} (hwf : s.WF)
-    (h : Fits s.mem q w) : (s.alloca n).mem.readAt q w = s.mem.readAt q w :=
-  MemoryState.readAt_alloca hwf h
-
-attribute [local mlir_read] MemoryState.readAt_alloca_of_fits
-
 private theorem insert_insert_self' (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
     (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
   apply Std.ExtHashMap.ext_getElem?

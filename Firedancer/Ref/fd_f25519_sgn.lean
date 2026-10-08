@@ -23,19 +23,6 @@ end
 
 section Proof
 
-/-! ### Staged for Common -/
-
-/-- A narrower read at the start of a known read: its low bits. -/
-theorem MemoryState.readAt_of_readAt_le {m : MemoryState} {p : Pointer} {x : BitVec v} (hw : w ≤ v)
-    (h : m.readAt p v = x) : m.readAt p w = x.setWidth w := by
-  subst h
-  unfold MemoryState.readAt
-  split
-  · apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp [hi, show i < v by omega]
-  · simp
-
 /-! ### The function -/
 
 /-- `fd_f25519_sgn` returns `spec` of `a`'s limbs; the buffer and `tobytes`'s 21 blocks are freed
@@ -55,9 +42,7 @@ public theorem fd_f25519_sgn.call_eq (a : Pointer) (s : GlobalState) (hwf : s.WF
   -- fd_f25519_tobytes( buf, a );
   step_call using fd_f25519_tobytes.call_eq consuming ha
   -- return buf[0] & 1;
-  have hread_buf0 := MemoryState.readAt_of_readAt_le (w := 8) (by decide) hread_buf
-  clear hread_buf
-  step_load consuming hread_buf0
+  step_load consuming hread_buf
   iterate 3 step_pure
   finish_block
   subst hS
