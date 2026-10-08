@@ -14,7 +14,8 @@
     python3 rewrite.py <in.mlir> <out.mlir>
 
 With `--regions <dir>`, it instead turns each byte string constant in the extracted regions
-into the `dense<[…]>` array RIR reads.
+into the `dense<[…]>` array RIR reads, and each `undef` byte array (a global's struct padding)
+into zeros: a refinement, and the bytes the object file holds.
 """
 import re, sys
 
@@ -25,6 +26,7 @@ VALUE = re.compile(r'%[A-Za-z_0-9.]+')
 HINTS = re.compile(r', (TailCallKind = #llvm\.tailcallkind<\w+>|memory_effects = #llvm\.memory_effects<[^>]*>'
                    r'|no_unwind|will_return|(noalias_scopes|alias_scopes) = \[[^]]*\])')
 
+UNDEF_BYTES = re.compile(r'"llvm\.mlir\.undef"\(\) : \(\) -> !llvm\.array<(\d+) x i8>')
 STRING = re.compile(r'value = "((?:[^"\\]|\\.)*)"(\}> : \(\) -> !llvm\.array<(\d+) x i8>)')
 
 def dense(m):
@@ -91,8 +93,9 @@ if sys.argv[1] == '--regions':
     import glob
     for f in glob.glob(sys.argv[2] + '/*.mlir'):
         t = open(f).read()
-        if STRING.search(t):
-            open(f, 'w').write(STRING.sub(dense, t))
+        u = UNDEF_BYTES.sub(lambda m: f'"llvm.mlir.constant"() <{{value = dense<0> : tensor<{m.group(1)}xi8>}}> : () -> !llvm.array<{m.group(1)} x i8>', STRING.sub(dense, t))
+        if u != t:
+            open(f, 'w').write(u)
     sys.exit()
 
 lines = open(sys.argv[1]).readlines()

@@ -76,7 +76,7 @@ noncomputable mlir_const_def Edwards25519_basePointPc :=
     %60 = "llvm.mlir.constant"() <{value = dense<[1214219747454372, 1931810652113743, 1290925308170273, 157124433198734, 394790170709317]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
     %61 = "llvm.mlir.constant"() <{value = dense<[1382875631722181, 1349928920135911, 1711916256545158, 47212905564237, 183840775072302]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
     %62 = "llvm.mlir.constant"() <{value = dense<[684290857876024, 657789607835756, 1569561823708010, 1217543024068483, 2219703400977787]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
-    %63 = "llvm.mlir.undef"() : () -> !llvm.array<7 x i8>
+    %63 = "llvm.mlir.constant"() <{value = dense<0> : tensor<7xi8>}> : () -> !llvm.array<7 x i8>
     %64 = "llvm.mlir.constant"() <{value = false}> : () -> i1
     %65 = "llvm.mlir.constant"() <{value = dense<[532578202911692, 1319541426005468, 1781351630930322, 2119904350936618, 1263392443823746]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
     %66 = "llvm.mlir.undef"() : () -> !llvm.struct<"Fe", (array<5 x i64>)>
