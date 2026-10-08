@@ -130,15 +130,15 @@ theorem baseTbl_eq {j : ℕ} (hj : j < 128) :
 Natural number checks, mod `p`, that the kernel decides. -/
 
 /-- `d`. -/
-def dN : ℕ :=
+@[expose] public def dN : ℕ :=
   37095705934669439343138083508754565189542113879843219016388785533085940283555
 
 /-- `2 B`'s `x`. -/
-def x2N : ℕ :=
+@[expose] public def x2N : ℕ :=
   24727413235106541002554574571675588834622768167397638456726423682521233608206
 
 /-- `2 B`'s `y`. -/
-def y2N : ℕ :=
+@[expose] public def y2N : ℕ :=
   15549675580280190176352668710449542251549572066445060580507079593062643049417
 
 /-- The affine point a precomputed entry stores, `((Y + X) - (Y - X), (Y + X) + (Y - X)) / 2`:
@@ -152,7 +152,7 @@ def bounded (c : ℕ) (l : Fin 5 → BitVec 64) : Bool :=
   (l 0).toNat ≤ c && (l 1).toNat ≤ c && (l 2).toNat ≤ c && (l 3).toNat ≤ c && (l 4).toNat ≤ c
 
 /-- `(x, y)` is on the curve: `y² = 1 + d x² y² + x²`. -/
-def curveOk (x y : ℕ) : Bool :=
+@[expose] public def curveOk (x y : ℕ) : Bool :=
   y * y % p == (1 + dN * (x * x) * (y * y) + x * x) % p
 
 /-- `P` is the curve point `(x, y)`, precomputed with `Z = 1`: `X, Y` loose, `T, Z` tight. -/
@@ -166,13 +166,13 @@ def entryOk (P : PointLimbs) (x y : ℕ) : Bool :=
     curveOk x y
 
 /-- `add` of `(x₁, y₁)` and `(x₂, y₂)` is `(x₃, y₃)`, denominators multiplied out. -/
-def addOk (x₁ y₁ x₂ y₂ x₃ y₃ : ℕ) : Bool :=
+@[expose] public def addOk (x₁ y₁ x₂ y₂ x₃ y₃ : ℕ) : Bool :=
   (1 + dN * x₁ * x₂ * y₁ * y₂) % p != 0 && dN * x₁ * x₂ * y₁ * y₂ % p != 1 &&
     (x₁ * y₂ + y₁ * x₂) % p == x₃ * (1 + dN * x₁ * x₂ * y₁ * y₂) % p &&
     (y₁ * y₂ + x₁ * x₂ + y₃ * (dN * x₁ * x₂ * y₁ * y₂)) % p == y₃ % p
 
 /-- `dbl` of `(x, y)` is `(x', y')`, denominators multiplied out. -/
-def dblOk (x y x' y' : ℕ) : Bool :=
+@[expose] public def dblOk (x y x' y' : ℕ) : Bool :=
   y * y % p != x * x % p && (2 * x * y + x' * (x * x)) % p == x' * (y * y) % p &&
     (2 + x * x) % p != y * y % p &&
     (y * y + x * x + y' * (y * y)) % p == y' * (2 + x * x) % p
@@ -205,20 +205,20 @@ theorem adds_ok :
 /-! ## Soundness -/
 
 /-- Naturals equal mod `p` are equal in `ZMod p`. -/
-theorem natCast_eq {a b : ℕ} (h : a % p = b % p) : (a : ZMod p) = b :=
+public theorem natCast_eq {a b : ℕ} (h : a % p = b % p) : (a : ZMod p) = b :=
   (ZMod.natCast_eq_natCast_iff' a b p).2 h
 
 /-- Naturals distinct mod `p` are distinct in `ZMod p`. -/
-theorem natCast_ne {a b : ℕ} (h : a % p ≠ b % p) : (a : ZMod p) ≠ b := fun e =>
+public theorem natCast_ne {a b : ℕ} (h : a % p ≠ b % p) : (a : ZMod p) ≠ b := fun e =>
   h ((ZMod.natCast_eq_natCast_iff' a b p).1 e)
 
 /-- `dN` is `d`. -/
-theorem dN_eq : (dN : ZMod p) = Ed25519.d := by
+public theorem dN_eq : (dN : ZMod p) = Ed25519.d := by
   unfold dN Ed25519.d
   exact Nat.cast_ofNat
 
 /-- `addOk` computes `add`. -/
-theorem add_of_ok {x₁ y₁ x₂ y₂ x₃ y₃ : ℕ} (h : addOk x₁ y₁ x₂ y₂ x₃ y₃ = true) :
+public theorem add_of_ok {x₁ y₁ x₂ y₂ x₃ y₃ : ℕ} (h : addOk x₁ y₁ x₂ y₂ x₃ y₃ = true) :
     Ed25519.add x₁ y₁ x₂ y₂ = ((x₃ : ZMod p), (y₃ : ZMod p)) := by
   simp only [addOk, Bool.and_eq_true, bne_iff_ne, beq_iff_eq, ne_eq] at h
   obtain ⟨⟨⟨h₁, h₂⟩, h₃⟩, h₄⟩ := h
@@ -233,7 +233,7 @@ theorem add_of_ok {x₁ y₁ x₂ y₂ x₃ y₃ : ℕ} (h : addOk x₁ y₁ x�
   exact ⟨by linear_combination e₃, by linear_combination e₄⟩
 
 /-- `dblOk` computes `dbl`. -/
-theorem dbl_of_ok {x y x' y' : ℕ} (h : dblOk x y x' y' = true) :
+public theorem dbl_of_ok {x y x' y' : ℕ} (h : dblOk x y x' y' = true) :
     Ed25519.dbl x y = ((x' : ZMod p), (y' : ZMod p)) := by
   simp only [dblOk, Bool.and_eq_true, bne_iff_ne, beq_iff_eq, ne_eq] at h
   obtain ⟨⟨⟨h₁, h₂⟩, h₃⟩, h₄⟩ := h
@@ -249,7 +249,7 @@ theorem dbl_of_ok {x y x' y' : ℕ} (h : dblOk x y x' y' = true) :
   exact ⟨by linear_combination e₂, by linear_combination e₄⟩
 
 /-- `curveOk` is `OnCurve`. -/
-theorem onCurve_of_ok {x y : ℕ} (h : curveOk x y = true) : Ed25519.OnCurve x y := by
+public theorem onCurve_of_ok {x y : ℕ} (h : curveOk x y = true) : Ed25519.OnCurve x y := by
   simp only [curveOk, beq_iff_eq] at h
   have e := natCast_eq h
   push_cast [dN_eq] at e
