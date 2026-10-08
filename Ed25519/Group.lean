@@ -1,14 +1,12 @@
 module
 
-public import Firedancer.Math.Curve
+public import Ed25519.Curve
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.Ring
 
 /-! The group law: the curve's points form an abelian group under `Ed25519.add`, with `(0, 1)`
 neutral and `-(x, y) = (-x, y)`, and `dblN n` multiplies by `2ⁿ`. Closure and associativity are
 polynomial identities modulo the curve equations, their certificates found by Singular's `lift`. -/
-
-namespace LeanMLIR.RIR.Firedancer.Ref
 
 namespace Ed25519
 
@@ -32,12 +30,12 @@ section Assoc
 variable {x₁ y₁ x₂ y₂ x₃ y₃ : ZMod p}
 
 /-- The sum's `x` times its denominator. -/
-theorem add_fst_mul (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) :
+public theorem add_fst_mul (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) :
     (add x₁ y₁ x₂ y₂).1 * (1 + d * x₁ * x₂ * y₁ * y₂) = x₁ * y₂ + y₁ * x₂ :=
   div_mul_cancel₀ _ (add_den₁ h1 h2)
 
 /-- The sum's `y` times its denominator. -/
-theorem add_snd_mul (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) :
+public theorem add_snd_mul (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) :
     (add x₁ y₁ x₂ y₂).2 * (1 - d * x₁ * x₂ * y₁ * y₂) = y₁ * y₂ + x₁ * x₂ :=
   div_mul_cancel₀ _ (add_den₂ h1 h2)
 
@@ -84,7 +82,7 @@ public theorem add_symm (x₁ y₁ x₂ y₂ : ZMod p) : add x₁ y₁ x₂ y₂
   congr 1 <;> ring
 
 /-- `(a, b) + (x, y)` for `a = nx / mx` and `b = ny / my`, its denominators cleared. -/
-theorem add_mul_den {a b x y nx mx ny my : ZMod p} (ha : a * mx = nx) (hb : b * my = ny)
+public theorem add_mul_den {a b x y nx mx ny my : ZMod p} (ha : a * mx = nx) (hb : b * my = ny)
     (hab : OnCurve a b) (hxy : OnCurve x y) (hmx : mx ≠ 0) (hmy : my ≠ 0) :
     (add a b x y).1 * (mx * my + d * nx * ny * x * y) = nx * my * y + ny * mx * x ∧
       mx * my + d * nx * ny * x * y ≠ 0 ∧
@@ -298,5 +296,3 @@ public theorem smallOrder_iff_nsmul (P : Point) : SmallOrder P.x P.y ↔ 8 • P
 end Point
 
 end Ed25519
-
-end LeanMLIR.RIR.Firedancer.Ref

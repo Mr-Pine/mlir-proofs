@@ -8,6 +8,11 @@ packagesDir = "../lean-mlir-nightly-port/.lake/packages"
 name = "SSA"
 path = "../lean-mlir-nightly-port"
 
+# Ed25519 as mathematics: the field, the curve's group, SHA-512, decoding.
+[[lean_lib]]
+name = "Ed25519"
+globs = ["Ed25519.+"]
+
 [[lean_lib]]
 name = "Firedancer"
 # every module, not just the root's imports
