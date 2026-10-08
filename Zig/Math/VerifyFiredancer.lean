@@ -2,6 +2,7 @@ module
 
 public import Zig.Math.Verify
 public import Firedancer.Math.Verify
+public import Ed25519.Order
 import Mathlib.Tactic.LinearCombination
 
 /-! Zig's cofactored `verify` accepts what Firedancer's cofactorless one accepts, for canonical
@@ -23,11 +24,10 @@ public theorem Point.two_nsmul_of_x_eq_zero {P : Point} (hx : P.x = 0) : 2 • P
   · rw [Point.add_x]; simp [Ed25519.add, hx]
   · rw [Point.add_y]; simp [Ed25519.add, hx, ← sq, hy]
 
-/-- Firedancer accepting a signature with canonical `r`, Zig accepts it, given no point of order
-16. -/
-public theorem verify_of_firedancer (h16 : ∀ P : Point, (32 • P).x = 0 → 8 • P = 0)
-    {msg : List (BitVec 8)} {r S A : BitVec 256} (hr : r.toNat % 2 ^ 255 < p)
-    (h : Firedancer.Ref.Ed25519.verify msg r S A = 0#32) : verify msg r S A = 0#32 := by
+/-- Firedancer accepting a signature with canonical `r`, Zig accepts it. -/
+public theorem verify_of_firedancer {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hr : r.toNat % 2 ^ 255 < p) (h : Firedancer.Ref.Ed25519.verify msg r S A = 0#32) :
+    verify msg r S A = 0#32 := by
   unfold Firedancer.Ref.Ed25519.verify at h
   unfold verify
   by_cases hS : ell ≤ S.toNat
@@ -43,7 +43,7 @@ public theorem verify_of_firedancer (h16 : ∀ P : Point, (32 • P).x = 0 → 8
   split_ifs at h with hA8 hR8 heq
   · exact absurd h (by decide)
   · exact absurd h (by decide)
-  · have h32 : (32 • PA).x ≠ 0 := fun h32 => hA8 (h16 PA h32)
+  · have h32 : (32 • PA).x ≠ 0 := fun h32 => hA8 (Point.eight_smul_of_x_eq_zero h32)
     simp only [h8 hA8, not_le.mpr hr, h8 hR8, h32, heq, smul_add, ↓reduceIte]
   · exact absurd h (by decide)
 
