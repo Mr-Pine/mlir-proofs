@@ -727,15 +727,16 @@ theorem fd_ed25519_order8_point_y.val :
       simp [fd_ed25519_order8_point_y0.limbs, fd_ed25519_order8_point_y1.limbs]
       reduce_mod_char
 
-/-- `is_small_order` on an affine point `(X, Y)` on the curve, tight: `1` exactly when `8 (X, Y)` is
-the neutral point. -/
-public theorem fd_ed25519_affine_is_small_order.spec_val (hX : Limbs.Tight P.X)
-    (hY : Limbs.Tight P.Y) (hc : Ed25519.OnCurve (Limbs.val P.X) (Limbs.val P.Y)) :
+/-- `is_small_order` on an affine point `(X, Y)` on the curve, `Y` tight and `X` within `2p`'s limbs
+and below `2p`: `1` exactly when `8 (X, Y)` is the neutral point. -/
+public theorem fd_ed25519_affine_is_small_order.spec_val (hX : Limbs.Under2p P.X)
+    (hXn : Limbs.nat P.X < 2 * p) (hY : Limbs.Tight P.Y)
+    (hc : Ed25519.OnCurve (Limbs.val P.X) (Limbs.val P.Y)) :
     fd_ed25519_affine_is_small_order.spec P =
       if Ed25519.SmallOrder (Limbs.val P.X) (Limbs.val P.Y) then 1#32 else 0#32 := by
   obtain ⟨⟨v0, b0⟩, ⟨v1, b1⟩⟩ := fd_ed25519_order8_point_y.val
   rw [fd_ed25519_affine_is_small_order.spec, fd_f25519_is_zero.spec_val hY.under2p hY.nat_lt,
-    fd_f25519_is_zero.spec_val hX.under2p hX.nat_lt, fd_f25519_eq.spec_val hY b0.under2p,
+    fd_f25519_is_zero.spec_val hX hXn, fd_f25519_eq.spec_val hY b0.under2p,
     fd_f25519_eq.spec_val hY b1.under2p, v0, v1]
   simp only [ite_or_ite]
   exact if_congr (by rw [Ed25519.smallOrder_iff hc]; tauto) rfl rfl
