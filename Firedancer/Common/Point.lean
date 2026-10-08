@@ -1,6 +1,6 @@
 module
 
-public import Common.Limbs
+public import Common.LimbsBits
 import Std.Data.ExtHashMap.Lemmas
 import SSA.Projects.RIR.Run.Tactic.Memory
 
@@ -50,43 +50,6 @@ theorem MemoryState.storeAt_comm {m : MemoryState} {p q : Pointer} {x : BitVec v
     intro a
     simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
     grind
-
-/-! ### Storing what is there -/
-
-/-- Storing the bits a range holds changes nothing. -/
-theorem MemoryState.storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
-    m.storeAt p (m.readAt p w) = m := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  rcases m with ⟨mm⟩
-  have hb : mm[p.id]? = some blk := by simpa [MemoryState.getElem?_eq] using hblk
-  simp only [MemoryState.storeAt, MemoryState.readAt, MemoryState.getElem?_eq, hb]
-  congr 1
-  apply Std.ExtHashMap.ext_getElem?
-  intro k
-  simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
-  split
-  · subst_vars
-    rw [hb]
-    congr 1
-    cases blk
-    congr 1
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    rw [getLsbD_spliceBits, BitVec.getLsbD_extractLsb']
-    split
-    · have h1 : p.offsetInBits + (i - p.offsetInBits) = i := by omega
-      have h2 : i - p.offsetInBits < w := by omega
-      simp [h1, h2]
-    · rfl
-  · rfl
-
-/-- Storing the limbs a field element holds changes nothing. -/
-theorem MemoryState.storeLimbs_readLimbs_self {m : MemoryState} (h : m.LimbsFit p) :
-    m.storeLimbs p (m.readLimbs p) = m := by
-  obtain ⟨-, h0, h1, h2, h3, h4⟩ := h
-  simp only [MemoryState.storeLimbs, MemoryState.readLimbs]
-  rw [storeAt_readAt_self h0, storeAt_readAt_self h1, storeAt_readAt_self h2,
-    storeAt_readAt_self h3, storeAt_readAt_self h4]
 
 /-! ### Limbs in one block -/
 
