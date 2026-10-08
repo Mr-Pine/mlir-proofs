@@ -4,7 +4,10 @@ public import SSA.Projects.RIR.Semantics.Func
 public import SSA.Projects.RIR.Run.BasicBlock
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
+public import Firedancer.Avx512.Common.Wwl
 import Std.Tactic.BVDecide
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 
 /-! `x = fd_r43x6_if( x_0 != x_mod_2, fd_r43x6_neg( x ), x )`, the sign fix-up of point
 decompression: `fd_r43x6_neg` inlined as `2p - x` and `fd_r43x6_fold_signed`, selected by a lane
@@ -75,6 +78,10 @@ theorem and_add_no_overflow (a m b : BitVec 64) (hm : m < 0x100000000000#64)
     (hb : b < 0x100000000000#64) :
     (a &&& m).saddOverflow b = false ∧ (a &&& m).uaddOverflow b = false := by bv_decide
 
+/-- The all-ones mask, as the constant spells it. -/
+theorem allOnes_64 : (18446744073709551615#64) = BitVec.allOnes 64 := by
+  decide
+
 /-- The masked low bits plus `fd_r43x6_fold_signed`'s bias: no overflow, the `nsw nuw` add. -/
 theorem negBias_no_overflow (a : BitVec 64) (i : Nat) (hi : i < 8) :
     (a &&& foldMask[i]).saddOverflow negBias[i] = false ∧
@@ -127,8 +134,8 @@ theorem runBodyFrom_negIfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
   rw [hE, ← hK]
   congr
   subst hvr
-  by_cases hXM : XM = X0 <;> ext i hi : 1 <;>
-    simp [hXM, Ty.wrap_vec, Ty.extractVecElem_eq, negBias_no_overflow _ i hi,
+  by_cases hXM : XM = X0 <;> apply vec_ext_fin <;> intro i <;>
+    simp [hXM, Ty.wrap_vec, Ty.extractVecElem_eq, negBias_no_overflow _ i.1 i.2,
       show (XM == X0) = decide (XM = X0) from rfl]
   · intro h
     exfalso
@@ -139,12 +146,12 @@ theorem runBodyFrom_negIfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
       rename_i h
       revert i
       decide
-    · rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i
+    · fin_cases i
       all_goals
         first
         | omega
         | simp [negFold, negIdx, negP, foldMask, foldShifts, negBias, neg18, negSel]
-      rw [show (18446744073709551615#64) = BitVec.allOnes 64 from rfl, BitVec.and_allOnes]
+      simp only [allOnes_64, BitVec.and_allOnes]
 
 end
 

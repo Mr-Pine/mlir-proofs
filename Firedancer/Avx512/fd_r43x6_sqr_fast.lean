@@ -8,6 +8,8 @@ public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.Callees
 public import Firedancer.Avx512.Common.WwlRun
 public import Firedancer.Avx512.Mlir.fd_r43x6_sqr_fast
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 
 namespace LeanMLIR.RIR.Firedancer.Avx512
 
@@ -90,9 +92,8 @@ theorem fd_r43x6_sqr_fast.spec_eq (x : Wwl) :
         #v[x[5], x[7], x[5], x[7], x[2], x[3], x[4], x[5]] := by
   delta fd_r43x6_sqr_fast.spec
   dsimp only
-  congr 1 <;> ext i hi : 1 <;>
-    rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;>
-    simp [wwl_permute, wwl_shl_vector, wwl] <;> omega
+  congr 1 <;> apply vec_ext_fin <;> intro i <;> fin_cases i <;>
+    simp [wwl_permute, wwl_shl_vector, wwl]
 
 /-! ## The permutes -/
 

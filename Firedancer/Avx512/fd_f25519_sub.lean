@@ -3,6 +3,8 @@ module
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.Mlir.fd_f25519_sub
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 
 namespace LeanMLIR.RIR.Firedancer.Avx512
 
@@ -74,11 +76,10 @@ public theorem fd_f25519_sub.call_eq (r a b : Pointer) (s : GlobalState) (hwf : 
   rw [hS]
   subst_vars
   congr 1; congr 1; congr 1; congr 1; congr 1
-  apply Vector.ext
-  intro i hi
-  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+  apply vec_ext_fin
+  intro i
+  fin_cases i
   all_goals try simp [spec, MemoryState.readVec, Ty.extractVecElem_eq]
-  all_goals try omega
   -- lane 0: `(c * 18) &&& -1 = 18 * c`
   rw [show (18446744073709551615#64) = BitVec.allOnes 64 by decide, BitVec.and_allOnes,
     BitVec.mul_comm]

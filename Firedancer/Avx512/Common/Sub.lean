@@ -5,6 +5,8 @@ public import SSA.Projects.RIR.Run.BasicBlock
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.Neg
 public import Firedancer.Avx512.Common.WwlRun
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 
 /-! `fd_r43x6_sub(x, y)`: `fd_r43x6_fold_signed` of `x + (p - y)`, compiled for a constant `y` as
 `x + k` with `k` folded, then the signed fold's carries. -/
@@ -75,8 +77,9 @@ theorem permute_negIdx (v : Vector (BitVec 64) 8) :
         if h : negIdx[i.1].toNat % 16 < 8 then PoisonOr.value v[negIdx[i.1].toNat % 16]
         else PoisonOr.value 0#64) =
       Ty.wrap (t := V) (negRot v) := by
-  ext i hi : 1
-  rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;> simp [negIdx, negRot, Ty.wrap_vec] <;> omega
+  apply vec_ext_fin
+  intro i
+  fin_cases i <;> simp [negIdx, negRot, Ty.wrap_vec]
 
 /-- `fd_r43x6_sub` as nine instructions: `x + k` in `d`, its low bits in `lo`, carries `hi`
 rotated into `c`, `18 ×` lane 0's in `u` (`t` before masking), summed into `s1 = c + lo` and

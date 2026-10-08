@@ -7,6 +7,8 @@ public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Wwl
 import Std.Tactic.BVDecide
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 
 /-! The `Wwl` intrinsics as the steps produce them, slides with poison lanes, and `za + 152 zb`, the
 reduction `fd_r43x6_mul_fast` and `fd_r43x6_sqr_fast` end with. -/
@@ -34,8 +36,9 @@ abbrev low6 (v : Vector (BitVec 64) 8) : Vector (PoisonOr (BitVec 64)) 8 :=
 /-- A slide equation, lane by lane. -/
 local macro "slide_lanes" : tactic =>
   `(tactic|
-    ( ext i hi : 1
-      rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;> simp [wwl_slide, lanesBelow] <;> omega))
+    ( apply vec_ext_fin
+      intro i
+      fin_cases i <;> simp [wwl_slide, lanesBelow]))
 
 /-! ### The intrinsics from their lanes, as the steps give them -/
 
@@ -203,10 +206,9 @@ theorem runBodyFrom_fold152Run {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
   step_pure with vr
   have e : vr = fold152 ZL ZH := by
     rw [hvr]
-    ext i hi : 1
-    obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i <;>
-      simp [fold152, wwl_and, wwl_add, wwl_shl, wwl_slide, add_mul152] <;>
-      omega
+    apply vec_ext_fin
+    intro i
+    fin_cases i <;> simp [fold152, wwl_and, wwl_add, wwl_shl, wwl_slide, add_mul152]
   rw [hE, e]
   exact hK _ _ _ _ _
 

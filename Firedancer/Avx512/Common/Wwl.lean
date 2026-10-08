@@ -15,6 +15,10 @@ abbrev Wwl := Vector (BitVec 64) 8
 /-- A `wv_t`: four 64-bit lanes, lane 0 lowest. -/
 abbrev Wv := Vector (BitVec 64) 4
 
+/-- Vectors with the same lanes, the lanes indexed by `Fin n` (for `fin_cases`). -/
+theorem vec_ext_fin {x y : Vector α n} (h : ∀ i : Fin n, x[i] = y[i]) : x = y :=
+  Vector.ext fun i hi => h ⟨i, hi⟩
+
 /-- `wwl(x0, …, x7)`. -/
 def wwl (x0 x1 x2 x3 x4 x5 x6 x7 : BitVec 64) : Wwl :=
   #v[x0, x1, x2, x3, x4, x5, x6, x7]

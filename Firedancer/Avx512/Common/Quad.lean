@@ -5,7 +5,10 @@ public import SSA.Projects.RIR.Run.BasicBlock
 public import SSA.Projects.RIR.Run.Memory
 public import SSA.Projects.RIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
+public import Firedancer.Avx512.Common.Wwl
 import Std.Tactic.BVDecide
+import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
 
 /-! `FD_R43X6_QUAD_PACK( *_P, x, y, z, t )`: four field elements transposed into the QUAD layout,
 limbs `0 3`, `1 4` and `2 5` of all four in one vector each, and stored.
@@ -182,15 +185,15 @@ theorem carry_add_low_lanes (i : Fin 8) (a0 a1 a2 a3 a4 a5 a6 a7 y : BitVec 64) 
   have h1 := carry_add_low a1 y
   have h2 := carry_add_low a2 y
   have h3 := carry_add_low a3 y
-  match i with
-  | ⟨0, _⟩ => exact ⟨hi.1, hi.2.1⟩
-  | ⟨1, _⟩ => exact ⟨hj.1, hj.2.1⟩
-  | ⟨2, _⟩ => exact ⟨hk.1, hk.2.1⟩
-  | ⟨3, _⟩ => exact ⟨hl.1, hl.2.1⟩
-  | ⟨4, _⟩ => exact ⟨h0.2.2.1, h0.2.2.2.1⟩
-  | ⟨5, _⟩ => exact ⟨h1.2.2.1, h1.2.2.2.1⟩
-  | ⟨6, _⟩ => exact ⟨h2.2.2.1, h2.2.2.2.1⟩
-  | ⟨7, _⟩ => exact ⟨h3.2.2.1, h3.2.2.2.1⟩
+  fin_cases i
+  · exact ⟨hi.1, hi.2.1⟩
+  · exact ⟨hj.1, hj.2.1⟩
+  · exact ⟨hk.1, hk.2.1⟩
+  · exact ⟨hl.1, hl.2.1⟩
+  · exact ⟨h0.2.2.1, h0.2.2.2.1⟩
+  · exact ⟨h1.2.2.1, h1.2.2.2.1⟩
+  · exact ⟨h2.2.2.1, h2.2.2.2.1⟩
+  · exact ⟨h3.2.2.1, h3.2.2.2.1⟩
 
 /-- `carry_add_low` under `quadFoldMask`'s lanes, as the steps see them. -/
 theorem low_add_carry (i : Fin 8) (x y : BitVec 64) :
@@ -206,11 +209,8 @@ theorem low_add_carry (i : Fin 8) (x y : BitVec 64) :
                   1099511627775#64][i.1]'(by simp))).uaddOverflow
           (x >>> 43) =
         false := by
-  rcases i with ⟨_ | _ | _ | _ | _ | _ | _ | _ | i, h⟩
-  all_goals
-    first
-    | omega
-    | (simp only [List.getElem_cons_zero, List.getElem_cons_succ]; bv_decide)
+  fin_cases i <;>
+    (simp only [List.getElem_cons_zero, List.getElem_cons_succ]; bv_decide)
 
 /-- `FD_R43X6_QUAD_FOLD_UNSIGNED`'s limbs `0 3`: the carries of limbs `5` (times `19`) and `2`,
 plus the low 43 bits. -/
@@ -313,11 +313,9 @@ theorem runBodyFrom_quadFoldRun {blk : BasicBlock Γ tRets bp} {E₀ : ⟪Γ⟫}
   step_pure [carry_add_low_lanes] with vr03
   replace hvr03 : vr03 = quadFold03 X03 X25 := by
     simp [quadFold03, hvr03]
-    ext i hi : 1
-    simp
-    replace hi : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 := by
-      revert i; decide
-    rcases hi with h | h | h | h | h | h | h | h <;> simp [h]
+    apply vec_ext_fin
+    intro i
+    fin_cases i <;> simp
   step_store
   step_load with vld14'
   step_pure with transparent vlo14
