@@ -290,7 +290,6 @@ public theorem fd_ed25519_point_sub_with_opts.call_eq (r a b : Pointer)
       ( block_init
         -- if( !b_is_precomputed ): not taken
         finish_block
-        · exact absurd hbr hpre
         last_close)
 
 end Proof

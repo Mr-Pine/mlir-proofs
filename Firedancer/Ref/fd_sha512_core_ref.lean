@@ -1336,7 +1336,6 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
     step_loop using
       blocks_loop st data X Kp n n.toNat _ _ hX_off hKp_off hdo hXK hdata_ne_X.symm hst_ne_Kp.symm
         hsep (n.toNat - 1) 0 (S₀.mem.readWords8 st)
-    iterate 8 rfl
     · rw [← hKp, ← hS]
       exact hread_Kp
     block_init
