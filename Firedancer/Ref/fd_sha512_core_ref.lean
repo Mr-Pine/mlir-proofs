@@ -564,39 +564,35 @@ def mem2 (X : Pointer) : (i n : Nat) → Vector (BitVec 64) 16 → MemoryState �
     mem2 X (i + 1) n (Xv.set (i % 16) (xNext Xv i) (Nat.mod_lt _ (by decide)))
       (m.storeAt (slot X (i % 16)) (xNext Xv i))
 
-@[simp]
 theorem fits_mem1 {m : MemoryState} : Fits (mem1 X block i n m) p w ↔ Fits m p w := by
   induction n generalizing i m with
   | zero => rfl
   | succ n ih => simp [mem1, ih]
 
-@[simp]
 theorem fits_mem2 {m : MemoryState} : Fits (mem2 X i n Xv m) p w ↔ Fits m p w := by
   induction n generalizing i Xv m with
   | zero => rfl
   | succ n ih => simp [mem2, ih]
 
-@[mlir_transport]
+-- local: the lemmas are private, and an exported attribute would name them in importers
+attribute [local simp] fits_mem1 fits_mem2
+
 theorem Fits.mem1 {m : MemoryState} (h : Fits m p w) : Fits (mem1 X block i n m) p w :=
   fits_mem1.2 h
 
-@[mlir_transport]
 theorem Fits.mem2 {m : MemoryState} (h : Fits m p w) : Fits (mem2 X i n Xv m) p w :=
   fits_mem2.2 h
 
-@[mlir_transport]
 theorem Words8Fit.mem1 {m : MemoryState} (h : m.Words8Fit p) :
     (mem1 X block i n m).Words8Fit p := by
   unfold MemoryState.Words8Fit at h ⊢
   simpa using h
 
-@[mlir_transport]
 theorem Words8Fit.mem2 {m : MemoryState} (h : m.Words8Fit p) : (mem2 X i n Xv m).Words8Fit p := by
   unfold MemoryState.Words8Fit at h ⊢
   simpa using h
 
 /-- Reads outside `X`'s block are unaffected by `mem1`. -/
-@[mlir_read]
 theorem readAt_mem1 {m : MemoryState} (h : p.id ≠ X.id) :
     (mem1 X block i n m).readAt p w = m.readAt p w := by
   induction n generalizing i m with
@@ -605,7 +601,6 @@ theorem readAt_mem1 {m : MemoryState} (h : p.id ≠ X.id) :
     rw [mem1, ih,
       MemoryState.readAt_storeAt_disjoint (p := slot X i) (Range.disjoint_of_id_ne h.symm)]
 
-@[mlir_read]
 theorem readAt_mem2 {m : MemoryState} (h : p.id ≠ X.id) :
     (mem2 X i n Xv m).readAt p w = m.readAt p w := by
   induction n generalizing i Xv m with
@@ -614,19 +609,21 @@ theorem readAt_mem2 {m : MemoryState} (h : p.id ≠ X.id) :
     rw [mem2, ih,
       MemoryState.readAt_storeAt_disjoint (p := slot X (i % 16)) (Range.disjoint_of_id_ne h.symm)]
 
-@[mlir_transport]
 theorem WF_mem1 {s : GlobalState} (h : s.WF) :
     ({ s with mem := mem1 X block i n s.mem } : GlobalState).WF := by
   induction n generalizing i s with
   | zero => exact h
   | succ n ih => exact ih (s := { s with mem := _ }) h.storeAt
 
-@[mlir_transport]
 theorem WF_mem2 {s : GlobalState} (h : s.WF) :
     ({ s with mem := mem2 X i n Xv s.mem } : GlobalState).WF := by
   induction n generalizing i Xv s with
   | zero => exact h
   | succ n ih => exact ih (s := { s with mem := _ }) h.storeAt
+
+attribute [local mlir_transport] Fits.mem1 Fits.mem2 Words8Fit.mem1 Words8Fit.mem2 WF_mem1 WF_mem2
+
+attribute [local mlir_read] readAt_mem1 readAt_mem2
 
 /-- A block's stores into `X` keep the state `WF`. -/
 theorem WF_mem12 {s : GlobalState} (h : s.WF) :
