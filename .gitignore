@@ -1,3 +1,4 @@
 /.lake
 /.lean-fmt-cache
 /Scratch
+/zig-build/out

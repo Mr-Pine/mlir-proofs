@@ -17,3 +17,8 @@ globs = ["Ed25519.+"]
 name = "Firedancer"
 # every module, not just the root's imports
 globs = ["Firedancer.+"]
+
+# Zig's std.crypto ed25519 verify, lifted from zig-build/ and proved.
+[[lean_lib]]
+name = "Zig"
+globs = ["Zig.+"]
