@@ -147,4 +147,11 @@ public theorem MemoryState.storeAt_readAt_eq_storeLimbs {m m' : MemoryState} {p 
     m.storeAt p (m'.readAt q 320) = m.storeLimbs p (m'.readLimbs q) := by
   rw [MemoryState.readAt_eq_limbsBits hq hqo, MemoryState.storeLimbs_eq_storeAt hp]
 
+/-- A field element copied whole reads back as the source's limbs. -/
+public theorem MemoryState.readLimbs_storeAt_readAt {m : MemoryState} {p q : Pointer}
+    (hq : m.LimbsFit q) (hp : m.LimbsFit p) :
+    (m.storeAt p (m.readAt q 320)).readLimbs p = m.readLimbs q := by
+  rw [MemoryState.storeAt_readAt_eq_storeLimbs hq.fits hq.1 hp.1,
+    MemoryState.readLimbs_storeLimbs_self hp]
+
 end LeanMLIR.RIR
