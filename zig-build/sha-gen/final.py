@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0,'/tmp/sha/gen')
+sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
 from info import *
 L="abcdefgh"
 def lst(xs): return ", ".join(xs)
