@@ -1,0 +1,302 @@
+module
+
+public import Common.Limbs
+import SSA.Projects.RIR.Run.Tactic.Memory
+public import Mathlib.Data.BitVec
+import Std.Tactic.BVDecide
+
+/-! Field elements as Zig's `Fe` holds them: five 64-bit limbs of 51 bits' weight, at the layout
+`readLimbs` reads. -/
+
+namespace LeanMLIR.RIR.Zig
+
+@[expose] public section
+
+/-- Every limb below `c`. -/
+abbrev Fe.Lt (l : Fin 5 → BitVec 64) (c : ℕ) : Prop :=
+  ∀ i, (l i).toNat < c
+
+/-- The five 128-bit columns of a product, as `_carry128` reads them at `p`. -/
+def _root_.LeanMLIR.RIR.MemoryState.readWide (m : MemoryState) (p : Pointer) : Fin 5 → BitVec 128
+  | ⟨0, _⟩ => m.readAt p 128
+  | ⟨1, _⟩ => m.readAt (p.add 16#64) 128
+  | ⟨2, _⟩ => m.readAt (p.add 32#64) 128
+  | ⟨3, _⟩ => m.readAt (p.add 48#64) 128
+  | ⟨4, _⟩ => m.readAt (p.add 64#64) 128
+
+/-- The columns `1 … 4` written back at `p`, as `_carry128` writes them. -/
+abbrev _root_.LeanMLIR.RIR.MemoryState.storeWideTail (m : MemoryState) (p : Pointer)
+    (x : Fin 5 → BitVec 128) : MemoryState :=
+  (((m.storeAt (p.add 16#64) (x 1)).storeAt (p.add 32#64) (x 2)).storeAt (p.add 48#64)
+        (x 3)).storeAt
+    (p.add 64#64) (x 4)
+
+/-- The five columns at `p` fit, and their offsets do not wrap. -/
+abbrev _root_.LeanMLIR.RIR.MemoryState.WideFit (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 64 < 2 ^ 64 ∧
+    Fits m p 128 ∧
+    Fits m (p.add 16#64) 128 ∧
+    Fits m (p.add 32#64) 128 ∧ Fits m (p.add 48#64) 128 ∧ Fits m (p.add 64#64) 128
+
+attribute [mlir_mem] MemoryState.WideFit
+
+end
+
+/-- Stores keep every block's length, so the columns still fit. -/
+@[mlir_mem, mlir_transport]
+public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.storeAt {m : MemoryState} {p q : Pointer}
+    {x : BitVec w} (h : m.WideFit p) : (m.storeAt q x).WideFit p := by
+  unfold MemoryState.WideFit at h ⊢
+  simpa using h
+
+@[mlir_mem, mlir_transport]
+public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.storeLimbs {m : MemoryState} {p q : Pointer}
+    {l : Fin 5 → BitVec 64} (h : m.WideFit p) : (m.storeLimbs q l).WideFit p := by
+  unfold MemoryState.storeLimbs
+  exact h.storeAt.storeAt.storeAt.storeAt.storeAt
+
+/-- An 80-byte block from its start holds five columns. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.of_fits {m : MemoryState} {p : Pointer}
+    (h : Fits m p 640) (ho : p.offset = 0) : m.WideFit p := by
+  have hov : ∀ off : BitVec 64, off.toNat ≤ 64 → ¬p.offset.uaddOverflow off := by
+    intro off hoff
+    simp [ho, BitVec.uaddOverflow]
+    omega
+  refine ⟨by simp [ho], h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
+    exact Fits.add_of_le (hov _ (by decide)) (by decide) h
+
+/-- Limbs that fit, read after an `alloca`: as before it. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_of_fit {s : GlobalState}
+    {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) :
+    (s.alloca n).mem.readLimbs p = s.mem.readLimbs p :=
+  MemoryState.readLimbs_alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1)
+
+/-- The same after two `alloca`s. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_alloca {s : GlobalState}
+    {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) :
+    ((s.alloca n).alloca n').mem.readLimbs p = s.mem.readLimbs p := by
+  rw [MemoryState.readLimbs_alloca_of_fit hwf.alloca
+      (MemoryState.LimbsFit.alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1) h),
+    MemoryState.readLimbs_alloca_of_fit hwf h]
+
+/-- Five columns stored at `p`, lowest first, read back. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.readWide_stores {m : MemoryState} {p : Pointer}
+    (h : m.WideFit p) (x0 x1 x2 x3 x4 : BitVec 128) :
+    (((((m.storeAt p x0).storeAt (p.add 16#64) x1).storeAt (p.add 32#64) x2).storeAt (p.add 48#64)
+                x3).storeAt
+            (p.add 64#64) x4).readWide
+        p =
+      fun
+      | ⟨0, _⟩ => x0
+      | ⟨1, _⟩ => x1
+      | ⟨2, _⟩ => x2
+      | ⟨3, _⟩ => x3
+      | ⟨4, _⟩ => x4 := by
+  obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
+  funext i
+  fin_cases i <;> simp only [MemoryState.readWide, Tactic.readThroughStore]
+
+@[expose] public section
+
+/-- `MASK51`. -/
+abbrev Fe.mask : BitVec 64 :=
+  0x7ffffffffffff#64
+
+end
+
+/-- `storeLimbs` as the five stores the code makes, given each limb. -/
+public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → BitVec 64}
+    {y0 y1 y2 y3 y4 : BitVec 64} (h0 : x 0 = y0) (h1 : x 1 = y1) (h2 : x 2 = y2) (h3 : x 3 = y3)
+    (h4 : x 4 = y4) :
+    m.storeLimbs p x =
+      ((((m.storeAt p y0).storeAt (p.add 8#64) y1).storeAt (p.add 16#64) y2).storeAt (p.add 24#64)
+            y3).storeAt
+        (p.add 32#64) y4 := by
+  subst h0 h1 h2 h3 h4
+  rfl
+
+/-- `-19`, as the code multiplies by it. -/
+public theorem neg19_eq : (18446744073709551597#64) = -19#64 := by decide
+
+/-- A sum below `2^64` does not overflow. -/
+public theorem uaddOverflow_eq_false {x y : BitVec 64} (h : y.toNat + x.toNat < 2 ^ 64) :
+    x.uaddOverflow y = false := by
+  simp only [BitVec.uaddOverflow, decide_eq_false_iff_not, not_le]
+  omega
+
+/-- A carry, below `2^13`, added to a limb below `2^63` does not overflow. -/
+public theorem shr51_uaddOverflow {x y : BitVec 64} (hy : y.toNat < 2 ^ 63) :
+    (x >>> 51).uaddOverflow y = false := by
+  apply uaddOverflow_eq_false
+  have := x.isLt
+  simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  omega
+
+/-- The same, the limb first. -/
+public theorem uaddOverflow_shr51 {x y : BitVec 64} (hy : y.toNat < 2 ^ 63) :
+    y.uaddOverflow (x >>> 51) = false := by
+  apply uaddOverflow_eq_false
+  have := x.isLt
+  simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  omega
+
+/-- A carry times `-19` does not overflow. -/
+public theorem shr51_smulOverflow (x : BitVec 64) :
+    (x >>> 51).smulOverflow 18446744073709551597#64 = false := by bv_decide
+
+/-- `2^52 - 2`, `2p`'s high limbs, added to a limb below `2^63`, does not overflow. -/
+public theorem uaddOverflow_twoP {x : BitVec 64} (h : x.toNat < 2 ^ 63) :
+    x.uaddOverflow 4503599627370494#64 = false := by
+  have : (4503599627370494#64).toNat = 4503599627370494 := rfl
+  exact uaddOverflow_eq_false (by omega)
+
+/-- A masked limb is below `2^52 - 2`, so subtracting it from `x + 2^52 - 2` does not wrap. -/
+public theorem usubOverflow_twoP {x : BitVec 64} (y : BitVec 64) (h : x.toNat < 2 ^ 63) :
+    (x + 4503599627370494#64).usubOverflow (y &&& 2251799813685247#64) = false := by
+  have h1 : (y &&& 2251799813685247#64).toNat ≤ 2251799813685247 := by
+    rw [BitVec.toNat_and]; exact Nat.and_le_right
+  have h2 : (x + 4503599627370494#64).toNat = x.toNat + 4503599627370494 := by
+    rw [BitVec.toNat_add]
+    have : (4503599627370494#64).toNat = 4503599627370494 := rfl
+    rw [this]
+    exact Nat.mod_eq_of_lt (by omega)
+  simp only [BitVec.usubOverflow, decide_eq_false_iff_not, Nat.not_lt]
+  omega
+
+/-! ### Columns -/
+
+/-- A column below `2^115` passes `_carry128`'s range check. -/
+public theorem ult_two115 {x : BitVec 128} (h : x.toNat < 2 ^ 115) :
+    x.ult 41538374868278621028243970633760768#128 = true := by
+  simp only [BitVec.ult, decide_eq_true_eq]
+  have : (41538374868278621028243970633760768#128).toNat = 2 ^ 115 := rfl
+  omega
+
+/-- A carry added to a column, exactly. -/
+public theorem toNat_add_shr51 {x y : BitVec 128} (hx : x.toNat < 2 ^ 115 - 2 ^ 64)
+    (hy : y.toNat < 2 ^ 115) : (x + (y >>> 51)).toNat = x.toNat + y.toNat / 2 ^ 51 := by
+  rw [BitVec.toNat_add, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  apply Nat.mod_eq_of_lt
+  have : y.toNat / 2 ^ 51 < 2 ^ 64 := by omega
+  omega
+
+/-- The same sum stays below `2^115`. -/
+public theorem add_shr51_lt {x y : BitVec 128} (hx : x.toNat < 2 ^ 115 - 2 ^ 64)
+    (hy : y.toNat < 2 ^ 115) : (x + (y >>> 51)).toNat < 2 ^ 115 := by
+  rw [toNat_add_shr51 hx hy]; omega
+
+/-- The same sum, below `x + 2^64`. -/
+public theorem add_shr51_lt_add {x y : BitVec 128} (hx : x.toNat < 2 ^ 115 - 2 ^ 64)
+    (hy : y.toNat < 2 ^ 115) : (x + (y >>> 51)).toNat < x.toNat + 2 ^ 64 := by
+  rw [toNat_add_shr51 hx hy]; omega
+
+/-- The same sum overflows neither unsigned nor signed. -/
+public theorem add_shr51_overflow {x y : BitVec 128} (hx : x.toNat < 2 ^ 115 - 2 ^ 64)
+    (hy : y.toNat < 2 ^ 115) :
+    x.uaddOverflow (y >>> 51) = false ∧ x.saddOverflow (y >>> 51) = false := by
+  have hs : (y >>> 51).toNat < 2 ^ 64 := by
+    rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]; omega
+  constructor
+  · simp only [BitVec.uaddOverflow, decide_eq_false_iff_not, Nat.not_le]; omega
+  · simp only [BitVec.saddOverflow, Bool.or_eq_false_iff, decide_eq_false_iff_not, Int.not_le,
+      Int.not_lt]
+    rw [BitVec.toInt_eq_toNat_of_lt (by omega), BitVec.toInt_eq_toNat_of_lt (by omega)]
+    omega
+
+/-- A column's carry. -/
+public theorem toNat_shr51 {x : BitVec 128} : (x >>> 51).toNat = x.toNat / 2 ^ 51 := by
+  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+
+/-- The carry of a column below `2^115` fits in 64 bits. -/
+public theorem setWidth_shr51 {x : BitVec 128} (h : x.toNat < 2 ^ 115) :
+    BitVec.setWidth 128 (BitVec.setWidth 64 (x >>> 51)) = x >>> 51 := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_setWidth, toNat_shr51]
+  rw [Nat.mod_eq_of_lt (a := x.toNat / 2 ^ 51 % 2 ^ 64) (by omega), Nat.mod_eq_of_lt (by omega)]
+
+/-- The top carry, of a column below `3 · 2^109 + 2^64`. -/
+public theorem toNat_top {x : BitVec 128} (h : x.toNat < 3 * 2 ^ 109 + 2 ^ 64) :
+    (BitVec.setWidth 64 (x >>> 51)).toNat = x.toNat / 2 ^ 51 := by
+  simp only [BitVec.toNat_setWidth, toNat_shr51]
+  omega
+
+/-- `19` times the top carry does not overflow. -/
+public theorem top_umulOverflow {x : BitVec 128} (h : x.toNat < 3 * 2 ^ 109 + 2 ^ 64) :
+    (BitVec.setWidth 64 (x >>> 51)).umulOverflow 19#64 = false := by
+  have : (19#64).toNat = 19 := rfl
+  simp only [BitVec.umulOverflow, decide_eq_false_iff_not, Nat.not_le, toNat_top h, this]
+  omega
+
+/-- Nor does adding a masked limb to it. -/
+public theorem top_uaddOverflow {x : BitVec 128} (h : x.toNat < 3 * 2 ^ 109 + 2 ^ 64)
+    (y : BitVec 64) :
+    (BitVec.setWidth 64 (x >>> 51) * 19#64).uaddOverflow (y &&& 2251799813685247#64) = false := by
+  have hy : (y &&& 2251799813685247#64).toNat ≤ 2251799813685247 := by
+    rw [BitVec.toNat_and]; exact Nat.and_le_right
+  have : (19#64).toNat = 19 := rfl
+  have hm : (BitVec.setWidth 64 (x >>> 51) * 19#64).toNat = x.toNat / 2 ^ 51 * 19 := by
+    rw [BitVec.toNat_mul, toNat_top h, this]; omega
+  simp only [BitVec.uaddOverflow, decide_eq_false_iff_not, Nat.not_le, hm]
+  omega
+
+/-- A carry plus a masked limb overflows neither unsigned nor signed. -/
+public theorem shr51_mask_overflow (x y : BitVec 64) :
+    (x >>> 51).uaddOverflow (y &&& 2251799813685247#64) = false ∧
+      (x >>> 51).saddOverflow (y &&& 2251799813685247#64) = false := by
+  constructor <;> bv_decide
+
+/-! ### Products -/
+
+/-- A zero-extended limb. -/
+public theorem toNat_zext (x : BitVec 64) : (BitVec.setWidth 128 x).toNat = x.toNat := by
+  rw [BitVec.toNat_setWidth];
+  exact
+    Nat.mod_eq_of_lt
+      (by
+        have := x.isLt; omega)
+
+/-- A zero-extended limb times 19 overflows neither way. -/
+public theorem zext_mul19_overflow (x : BitVec 64) :
+    (BitVec.setWidth 128 x).smulOverflow 19#128 = false ∧
+      (BitVec.setWidth 128 x).umulOverflow 19#128 = false := by
+  constructor <;> bv_decide
+
+/-- A zero-extended limb times 19, exactly. -/
+public theorem toNat_zext_mul19 (x : BitVec 64) :
+    (BitVec.setWidth 128 x * 19#128).toNat = x.toNat * 19 := by
+  have := x.isLt
+  rw [BitVec.toNat_mul, toNat_zext]
+  have : (19#128).toNat = 19 := rfl
+  rw [this]; omega
+
+/-- A product of zero-extended limbs does not overflow. -/
+public theorem zmul_umul (x y : BitVec 64) :
+    (BitVec.setWidth 128 x).umulOverflow (BitVec.setWidth 128 y) = false := by
+  have := Nat.mul_lt_mul'' x.isLt y.isLt
+  simp only [BitVec.umulOverflow, decide_eq_false_iff_not, Nat.not_le, toNat_zext]
+  omega
+
+/-- Nor does one with a factor 19, for limbs below `2^54`. -/
+public theorem zmul19_umul {x y : BitVec 64} (hx : x.toNat < 2 ^ 54) (hy : y.toNat < 2 ^ 54) :
+    (BitVec.setWidth 128 x * 19#128).umulOverflow (BitVec.setWidth 128 y) = false := by
+  have := Nat.mul_lt_mul'' hx hy
+  simp only [BitVec.umulOverflow, decide_eq_false_iff_not, Nat.not_le, toNat_zext, toNat_zext_mul19]
+  rw [Nat.mul_right_comm]
+  omega
+
+/-- A product of limbs below `2^54` is below `2^108`. -/
+public theorem zmul_lt {x y : BitVec 64} (hx : x.toNat < 2 ^ 54) (hy : y.toNat < 2 ^ 54) :
+    (BitVec.setWidth 128 x * BitVec.setWidth 128 y).toNat < 2 ^ 108 := by
+  have := Nat.mul_lt_mul'' hx hy
+  rw [BitVec.toNat_mul, toNat_zext, toNat_zext]
+  omega
+
+/-- With a factor 19, below `19 · 2^108`. -/
+public theorem zmul19_lt {x y : BitVec 64} (hx : x.toNat < 2 ^ 54) (hy : y.toNat < 2 ^ 54) :
+    (BitVec.setWidth 128 x * 19#128 * BitVec.setWidth 128 y).toNat < 19 * 2 ^ 108 := by
+  have := Nat.mul_lt_mul'' hx hy
+  rw [BitVec.toNat_mul, toNat_zext_mul19, toNat_zext, Nat.mul_right_comm,
+    Nat.mod_eq_of_lt (by omega)]
+  omega
+
+end LeanMLIR.RIR.Zig

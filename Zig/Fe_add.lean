@@ -1,0 +1,79 @@
+module
+
+public import SSA.Projects.RIR.Run.Tactic
+public import Zig.Fe
+public import Zig.Mlir.Fe_add
+
+namespace LeanMLIR.RIR.Zig
+
+/-! ## Specification -/
+
+@[expose] public section
+
+/-- `a + b` limbwise, without carrying, in the program's operand order. -/
+def Fe.add.spec (a b : Fin 5 → BitVec 64) : Fin 5 → BitVec 64
+  | k => b k + a k
+
+end
+
+/-! ## Proof -/
+
+section Proof
+
+/-- `Fe.add` stores `spec a b` at `out`, for limbs below `2^63`. -/
+public theorem Fe_add.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hb : s.mem.LimbsFit b)
+    (ha' : Fe.Lt (s.mem.readLimbs a) (2 ^ 63)) (hb' : Fe.Lt (s.mem.readLimbs b) (2 ^ 63)) :
+    Fe_add.call (Fe_add.args (.value out) (.value a) (.value b)) s =
+      .value
+        (.nil,
+          { s with
+            mem :=
+              s.mem.storeLimbs out (Fe.add.spec (s.mem.readLimbs a) (s.mem.readLimbs b)) }) := by
+  func_init
+  have hov (k : Fin 5) :=
+    uaddOverflow_eq_false (x := S₀.mem.readLimbs b k) (y := S₀.mem.readLimbs a k)
+      (by
+        have := hS ▸ ha' k; have := hS ▸ hb' k; omega)
+  have h0 := hov 0
+  have h1 := hov 1
+  have h2 := hov 2
+  have h3 := hov 3
+  have h4 := hov 4
+  simp only [MemoryState.readLimbs] at h0 h1 h2 h3 h4
+  clear hov ha' hb'
+  block_init
+  step_load
+  step_load
+  step_pure [h0]
+  step_pure
+  step_load
+  step_pure
+  step_load
+  step_pure [h1]
+  step_pure
+  step_load
+  step_pure
+  step_load
+  step_pure [h2]
+  step_pure
+  step_load
+  step_pure
+  step_load
+  step_pure [h3]
+  step_pure
+  step_load
+  step_pure
+  step_load
+  step_pure [h4]
+  step_store
+  iterate 4 
+    step_pure
+    step_store
+  finish_block
+  rw [hS, MemoryState.storeLimbs]
+  rfl
+
+end Proof
+
+end LeanMLIR.RIR.Zig
