@@ -53,7 +53,7 @@ def wl_madd52hi (a b c : Wl) : Wl :=
   Vector.ofFn fun i => a[i] + madd52hi b[i] c[i]
 
 /-- `wl_permute(x, i0, i1, i2, i3)`: lane `k` is lane `ik` of `x` (`ik < 4`). -/
-def wl_permute (x : Wl) (i0 i1 i2 i3 : Nat) : Wl :=
+def wlPermute (x : Wl) (i0 i1 i2 i3 : Nat) : Wl :=
   #v[x[i0 % 4]'(Nat.mod_lt _ (by decide)), x[i1 % 4]'(Nat.mod_lt _ (by decide)),
     x[i2 % 4]'(Nat.mod_lt _ (by decide)), x[i3 % 4]'(Nat.mod_lt _ (by decide))]
 

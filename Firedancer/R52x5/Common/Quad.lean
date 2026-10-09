@@ -35,8 +35,8 @@ def toPoint (Q : Quad5) : PointLimbs :=
 
 /-- `FD_R52X5_QUAD_PERMUTE( D, imm0,imm1,imm2,imm3, S )`: coordinate `k` of `D` is `S`'s `immk`. -/
 def permute (i0 i1 i2 i3 : Nat) (S : Quad5) : Quad5 :=
-  ⟨wl_permute S.P0 i0 i1 i2 i3, wl_permute S.P1 i0 i1 i2 i3, wl_permute S.P2 i0 i1 i2 i3,
-    wl_permute S.P3 i0 i1 i2 i3, wl_permute S.P4 i0 i1 i2 i3⟩
+  ⟨wlPermute S.P0 i0 i1 i2 i3, wlPermute S.P1 i0 i1 i2 i3, wlPermute S.P2 i0 i1 i2 i3,
+    wlPermute S.P3 i0 i1 i2 i3, wlPermute S.P4 i0 i1 i2 i3⟩
 
 /-- `FD_R52X5_QUAD_LANE_IF( D, imm0,imm1,imm2,imm3, S, T )`: coordinate `k` from `S` where `immk`,
 else from `T`. -/
