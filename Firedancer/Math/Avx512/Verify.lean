@@ -11,7 +11,7 @@ import Mathlib.Tactic.Abel
 namespace LeanMLIR.RIR.Firedancer.Avx512
 
 open Firedancer.Ref
-open Ref.Ed25519 (decode)
+open _root_.Ed25519 (decode bytesLE)
 
 /-- `fd_ed25519_verify`'s return code, on the base point's table, is `Ed25519.verify`'s. -/
 public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 * msgSz.toNat))

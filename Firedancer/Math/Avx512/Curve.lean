@@ -2,7 +2,7 @@ module
 
 public import Firedancer.Math.Avx512.Point
 public import Firedancer.Math.Avx512.F25519
-public import Firedancer.Math.Group
+public import Ed25519.Group
 public import Firedancer.Avx512.fd_ed25519_partial_dbl
 public import Firedancer.Avx512.fd_ed25519_point_sub_with_opts
 public import Firedancer.Avx512.fd_ed25519_point_dbln
@@ -23,7 +23,7 @@ its curve operation on the points its QUADs represent, folded. -/
 namespace LeanMLIR.RIR.Firedancer.Avx512
 
 open LeanMLIR.RIR.Firedancer.Ref (p)
-open LeanMLIR.RIR.Firedancer.Ref.Ed25519 (d OnCurve IsExt dbl_den₁ dbl_den₂ add_compl)
+open _root_.Ed25519 (d OnCurve IsExt dbl_den₁ dbl_den₂ add_compl)
 
 /-! ## The curve algebra -/
 
@@ -37,7 +37,7 @@ theorem isExt_add {x₁ y₁ X₁ Y₁ T₁ Z₁ x₂ y₂ X₂ Y₂ T₂ Z₂ A
     (hA : IsExt x₁ y₁ X₁ Y₁ T₁ Z₁) (hB : IsExt x₂ y₂ X₂ Y₂ T₂ Z₂)
     (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) (eA : A = (Y₁ - X₁) * (Y₂ - X₂))
     (eB : B = (Y₁ + X₁) * (Y₂ + X₂)) (eC : C = T₁ * T₂ * (2 * d)) (eD : D = (Z₁ + Z₁) * Z₂) :
-    let Q := Ref.Ed25519.add x₁ y₁ x₂ y₂
+    let Q := _root_.Ed25519.add x₁ y₁ x₂ y₂
     IsExt Q.1 Q.2 ((B - A) * (D - C)) ((C + D) * (A + B)) ((B - A) * (A + B))
       ((C + D) * (D - C)) := by
   obtain ⟨d₁, d₂, eX, eY⟩ := add_compl hA hB h1 h2
@@ -56,7 +56,7 @@ theorem isExt_dbl {X Y Z : ZMod p} (hz : Z ≠ 0) (hx : X = x * Z) (hy : Y = y *
     let G := A - B
     let F := G + (Z ^ 2 + Z ^ 2)
     let H := A + B
-    IsExt (Ref.Ed25519.dbl x y).1 (Ref.Ed25519.dbl x y).2 (E * F) (G * H) (E * H) (G * F) := by
+    IsExt (_root_.Ed25519.dbl x y).1 (_root_.Ed25519.dbl x y).2 (E * F) (G * H) (E * H) (G * F) := by
   intro A B E G F H
   have d₁ := dbl_den₁ hc
   have d₂ := dbl_den₂ hc
@@ -68,9 +68,9 @@ theorem isExt_dbl {X Y Z : ZMod p} (hz : Z ≠ 0) (hx : X = x * Z) (hy : Y = y *
   refine ⟨?_, ?_, ?_, by ring⟩
   · rw [eG, eF]
     exact mul_ne_zero (neg_ne_zero.2 (mul_ne_zero hz2 d₁)) (mul_ne_zero hz2 d₂)
-  · simp only [Ref.Ed25519.dbl, eE, eF, eG]
+  · simp only [_root_.Ed25519.dbl, eE, eF, eG]
     field_simp
-  · simp only [Ref.Ed25519.dbl, eH, eF, eG]
+  · simp only [_root_.Ed25519.dbl, eH, eF, eG]
     field_simp
 
 end Algebra
@@ -215,7 +215,7 @@ variable {A B : Quad} {x y x₁ y₁ x₂ y₂ : ZMod p}
 public theorem fd_ed25519_partial_dbl.spec_ext (hA : A.Proj x y) (hc : OnCurve x y)
     (hr : A.Unsigned 44) :
     let D := fd_ed25519_partial_dbl.spec A
-    D.Ext (Ref.Ed25519.dbl x y).1 (Ref.Ed25519.dbl x y).2 ∧ D.Folded := by
+    D.Ext (_root_.Ed25519.dbl x y).1 (_root_.Ed25519.dbl x y).2 ∧ D.Folded := by
   obtain ⟨hv, hf⟩ := geDbl_is (Quad.Is.of_unsigned hr (by decide))
   exact ⟨Quad.Is.ext hv (isExt_dbl hA.1 hA.2.1 hA.2.2 hc), hf⟩
 
@@ -225,7 +225,7 @@ elements below `2^61`, `B`'s below `2^61`, or `2^47` precomputed. -/
 public theorem fd_ed25519_point_add_with_opts.spec_ext {pre : BitVec 32} (hA : A.Ext x₁ y₁)
     (hB : B.Operand pre x₂ y₂) (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) (hAr : A.Unsigned 61)
     (hBr : B.Unsigned (if pre = 0 then 61 else 47)) :
-    let Q := Ref.Ed25519.add x₁ y₁ x₂ y₂
+    let Q := _root_.Ed25519.add x₁ y₁ x₂ y₂
     let R := fd_ed25519_point_add_with_opts.spec A B pre
     R.Ext Q.1 Q.2 ∧ R.Folded := by
   have ha := Quad.Is.of_unsigned hAr (by decide)
@@ -304,7 +304,7 @@ in extended coordinates, folded; `A`'s elements below `2^61`. -/
 public theorem fd_ed25519_point_sub_with_opts.spec_ext {pre : BitVec 32} (hA : A.Ext x₁ y₁)
     (hB : B.Operand pre x₂ y₂) (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) (hAr : A.Unsigned 61)
     (hBr : B.Folded) :
-    let Q := Ref.Ed25519.add x₁ y₁ (-x₂) y₂
+    let Q := _root_.Ed25519.add x₁ y₁ (-x₂) y₂
     let R := fd_ed25519_point_sub_with_opts.spec A B pre
     R.Ext Q.1 Q.2 ∧ R.Folded := by
   simp only [fd_ed25519_point_sub_with_opts.spec, ne_eq, ite_not]
@@ -356,24 +356,24 @@ public theorem fd_ed25519_point_from.spec_folded {x y z t : Wwl} (hx : R43x6.Fol
 
 /-- `dblN (n + 1)` doubles `dblN n`. -/
 public theorem dblN_succ' (n : ℕ) (P : ZMod p × ZMod p) :
-    Ref.Ed25519.dblN (n + 1) P =
-      Ref.Ed25519.dbl (Ref.Ed25519.dblN n P).1 (Ref.Ed25519.dblN n P).2 := by
+    _root_.Ed25519.dblN (n + 1) P =
+      _root_.Ed25519.dbl (_root_.Ed25519.dblN n P).1 (_root_.Ed25519.dblN n P).2 := by
   induction n generalizing P with
   | zero => rfl
-  | succ n ih => rw [Ref.Ed25519.dblN, ih, Ref.Ed25519.dblN]
+  | succ n ih => rw [_root_.Ed25519.dblN, ih, _root_.Ed25519.dblN]
 
 /-- Doubling `n` times stays on the curve. -/
 public theorem dblN_onCurve (n : ℕ) {P : ZMod p × ZMod p} (h : OnCurve P.1 P.2) :
-    OnCurve (Ref.Ed25519.dblN n P).1 (Ref.Ed25519.dblN n P).2 := by
+    OnCurve (_root_.Ed25519.dblN n P).1 (_root_.Ed25519.dblN n P).2 := by
   induction n with
   | zero => exact h
-  | succ n ih => rw [dblN_succ']; exact Ref.Ed25519.dbl_onCurve ih
+  | succ n ih => rw [dblN_succ']; exact _root_.Ed25519.dbl_onCurve ih
 
 /-- `dbln` takes a projective `(x, y)` on the curve, its elements below `2^44`, to `2ⁿ (x, y)` in
 extended coordinates, folded, for `n ≥ 1`. -/
 public theorem fd_ed25519_point_dbln.spec_ext {n : ℕ} (hA : A.Proj x y) (hc : OnCurve x y)
     (hr : A.Unsigned 44) (hn : 1 ≤ n) :
-    let Q := Ref.Ed25519.dblN n (x, y)
+    let Q := _root_.Ed25519.dblN n (x, y)
     (fd_ed25519_point_dbln.spec A n).Ext Q.1 Q.2 ∧ (fd_ed25519_point_dbln.spec A n).Folded := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
   simp only [fd_ed25519_point_dbln.spec, Nat.add_sub_cancel]
@@ -469,18 +469,18 @@ public theorem fd_ed25519_point_eq_z1.spec_val {X Y : Quad} (hX : X.Proj x₁ y�
 
 /-- The order-8 `y`s' lanes: `y8` and `-y8`. -/
 theorem order8_y :
-    (R43x6.val fd_ed25519_order8_point_y0.vec = Ref.Ed25519.y8 ∧
+    (R43x6.val fd_ed25519_order8_point_y0.vec = _root_.Ed25519.y8 ∧
         R43x6.Signed 61 fd_ed25519_order8_point_y0.vec) ∧
-      (R43x6.val fd_ed25519_order8_point_y1.vec = -Ref.Ed25519.y8 ∧
+      (R43x6.val fd_ed25519_order8_point_y1.vec = -_root_.Ed25519.y8 ∧
         R43x6.Signed 61 fd_ed25519_order8_point_y1.vec) := by
-  refine ⟨⟨?_, by decide⟩, ⟨?_, by decide⟩⟩ <;> unfold Ref.Ed25519.y8 <;> decide
+  refine ⟨⟨?_, by decide⟩, ⟨?_, by decide⟩⟩ <;> unfold _root_.Ed25519.y8 <;> decide
 
 /-- `is_small_order` on an affine point `(x, y)` on the curve (`X = x`, `Y = y`), folded: `1`
 exactly when `8 (x, y)` is the neutral point. -/
 public theorem fd_ed25519_affine_is_small_order.spec_val {A : Quad} (hx : A.val 0 = x)
     (hy : A.val 1 = y) (hc : OnCurve x y) (hr : A.Folded) :
     fd_ed25519_affine_is_small_order.spec A =
-      if Ref.Ed25519.SmallOrder x y then 1 else 0 := by
+      if _root_.Ed25519.SmallOrder x y then 1 else 0 := by
   obtain ⟨⟨v0, s0⟩, ⟨v1, s1⟩⟩ := order8_y
   have sy : R43x6.Signed 61 A.Y := by
     rw [Quad.Y_eq]
@@ -492,7 +492,7 @@ public theorem fd_ed25519_affine_is_small_order.spec_val {A : Quad} (hx : A.val 
     R43x6.fd_f25519_is_zero_spec (by rw [Quad.X_eq]; exact .inl (hr 0 (by decide))),
     R43x6.fd_f25519_eq_spec sy s0, R43x6.fd_f25519_eq_spec sy s1, v0, v1, hx', hy']
   simp only [ite_or_ite']
-  exact if_congr (by rw [Ref.Ed25519.smallOrder_iff hc]; tauto) rfl rfl
+  exact if_congr (by rw [_root_.Ed25519.smallOrder_iff hc]; tauto) rfl rfl
 
 end Compare
 

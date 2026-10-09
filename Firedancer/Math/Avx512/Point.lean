@@ -40,13 +40,13 @@ def Proj (Q : Quad) (x y : ZMod p) : Prop :=
 
 /-- `Q` is `(x, y)` in extended coordinates `(X, Y, Z, T)`. -/
 def Ext (Q : Quad) (x y : ZMod p) : Prop :=
-  Ref.Ed25519.IsExt x y (Q.val 0) (Q.val 1) (Q.val 3) (Q.val 2)
+  _root_.Ed25519.IsExt x y (Q.val 0) (Q.val 1) (Q.val 3) (Q.val 2)
 
 /-- `Q` is `(x, y)` precomputed, as `into_precomputed` and the base table give it and
 `FD_R43X6_GE_ADD_TABLE_ALT` takes it: `(Y - X, Y + X, Z, 2d T)` of extended coordinates. -/
 def Pre (Q : Quad) (x y : ZMod p) : Prop :=
-  ∃ X Y T Z, Ref.Ed25519.IsExt x y X Y T Z ∧ Q.val 0 = Y - X ∧ Q.val 1 = Y + X ∧ Q.val 2 = Z ∧
-    Q.val 3 = 2 * Ref.Ed25519.d * T
+  ∃ X Y T Z, _root_.Ed25519.IsExt x y X Y T Z ∧ Q.val 0 = Y - X ∧ Q.val 1 = Y + X ∧ Q.val 2 = Z ∧
+    Q.val 3 = 2 * _root_.Ed25519.d * T
 
 /-- `Q` is `(x, y)` as `add_with_opts`' second operand: precomputed for a nonzero `pre`, else
 extended. -/
@@ -584,7 +584,7 @@ theorem Ext.proj (h : Q.Ext x y) : Q.Proj x y :=
 
 /-- Element values `X, Y, Z, T` that are extended coordinates make `Q` extended. -/
 theorem Is.ext {X Y Z T : ZMod p} (h : Q.Is ![X, Y, Z, T] lo hi)
-    (he : Ref.Ed25519.IsExt x y X Y T Z) :
+    (he : _root_.Ed25519.IsExt x y X Y T Z) :
     Q.Ext x y := by
   have e0 : Q.val 0 = X := h.val 0
   have e1 : Q.val 1 = Y := h.val 1
@@ -596,7 +596,7 @@ theorem Is.ext {X Y Z T : ZMod p} (h : Q.Is ![X, Y, Z, T] lo hi)
 /-- Elements `(y - x, y + x, 1, 2d x y)`, as the base table holds them: `(x, y)` precomputed, with
 `Z = 1`. -/
 theorem Pre.of_affine (h0 : Q.val 0 = y - x) (h1 : Q.val 1 = y + x) (h2 : Q.val 2 = 1)
-    (h3 : Q.val 3 = 2 * Ref.Ed25519.d * (x * y)) : Q.Pre x y :=
+    (h3 : Q.val 3 = 2 * _root_.Ed25519.d * (x * y)) : Q.Pre x y :=
   ⟨x, y, x * y, 1, ⟨one_ne_zero, (mul_one x).symm, (mul_one y).symm, mul_one _⟩, h0, h1, h2, h3⟩
 
 end Quad
