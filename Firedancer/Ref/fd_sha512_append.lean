@@ -545,8 +545,8 @@ theorem toNat_and_neg128 (n : BitVec 64) :
 
 /-- `^bb7`, the leftover of the `n` bytes at `d`. -/
 abbrev hdr7 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%0 := .value 0#64, %6 := .value 127#64, %7 := .value 18446744073709551488#64, %10 :=
-    .value (sha.add 200#64), %32 := .value d, %33 := .value n]
+  E[%1031 := .value 0#64, %1037 := .value 127#64, %1038 := .value 18446744073709551488#64,
+    %1041 := .value (sha.add 200#64), %1063 := .value d, %1064 := .value n]
 
 /-- "Buffer any leftover bytes", then return `sha`. -/
 theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
@@ -618,7 +618,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
 
 /-- `^bb5`, the bulk of the `n` bytes at `d`. -/
 abbrev hdr5 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  (hdr7 sha d n E)[%3 := .value 128#64, %5 := .value 7#64, %9 := .value (sha.add 128#64)]
+  (hdr7 sha d n E)[%1036 := .value 7#64, %1040 := .value (sha.add 128#64)]
 
 /-- "Append the bulk of the data", then the leftover. -/
 theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
@@ -639,6 +639,8 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
   subst hK
   have hSf : S₁.mem.ShaFit sha := hM ▸ hMf.storeSha
   block_init
+  -- ulong block_cnt = sz >> FD_SHA512_PRIVATE_LG_BUF_MAX;
+  step_pure
   step_pure
   finish_block
   · -- block_cnt == 0
@@ -661,7 +663,6 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
       simp [BitVec.uaddOverflow] at hdo
       omega
     block_init
-    step_pure
     step_call using fd_sha512_core_ref.call_eq
     finish_block
     have hstate : S₁.mem.readWords8 (sha.add 128#64) = v.state := by
@@ -805,11 +806,13 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
               rw [hrem]; omega)
         have hlt' : (128#64 - S₀.mem.readAt (sha.add 200#64) 64).toNat < 18446744073709551616 := by
           omega
+        have hnuw : sz.usubOverflow (128#64 - S₀.mem.readAt (sha.add 200#64) 64) = false := by
+          simp only [BitVec.usubOverflow, hrem, decide_eq_false_iff_not]; omega
         clear hM
         block_init
         step_call using fd_memcpy.call_eq consuming hsrc hbuf
         step_pure [hlt', gep_value hov']
-        step_pure
+        step_pure [hnuw]
         -- fd_sha512_core( state, buf, 1UL ); sha->buf_used = 0UL;
         have hst := hsha.words8Fit
         have h1 : Fits S.mem sha (1024 * (1#64).toNat) := hsha.fits_buf (by decide)
