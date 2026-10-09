@@ -1,8 +1,8 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Wwl
 import Std.Tactic.BVDecide
@@ -13,7 +13,7 @@ import Mathlib.Data.Fintype.Basic
 decompression: `fd_r43x6_neg` inlined as `2p - x` and `fd_r43x6_fold_signed`, selected by a lane
 mask from comparing the two flags. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -155,4 +155,4 @@ theorem runBodyFrom_negIfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

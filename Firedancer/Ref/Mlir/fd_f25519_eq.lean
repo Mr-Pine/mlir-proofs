@@ -2,16 +2,16 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_f25519_eq.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_f25519_is_zero
 public import Firedancer.Ref.Mlir.fd_f25519_sub
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_f25519_is_zero
 meta import Firedancer.Ref.Mlir.fd_f25519_sub
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -30,4 +30,4 @@ mlir_def fd_f25519_eq :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

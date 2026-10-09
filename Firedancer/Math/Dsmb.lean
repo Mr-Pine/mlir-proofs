@@ -10,7 +10,7 @@ import Mathlib.Tactic.Module
 /-! The Ref `double_scalar_mul_base` computes `n1 A + n2 B` from a table of `B`'s odd multiples:
 `ai` holds `A`'s, each wNAF digit adds its odd multiple, and the ladder doubles between digits. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 namespace fd_ed25519_double_scalar_mul_base
 
@@ -306,4 +306,4 @@ public theorem spec_val_base {A : PointLimbs} {n1 n2 : BitVec 256} (PA : Ed25519
 
 end fd_ed25519_double_scalar_mul_base
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

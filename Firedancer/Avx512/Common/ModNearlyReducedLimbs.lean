@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.Call
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.Call
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.fd_long_if
 public import Firedancer.Avx512.Common.BiasedCarryPropagateLimbs
 import Std.Tactic.BVDecide
@@ -13,7 +13,7 @@ import Std.Tactic.BVDecide
 Compiled in two runs around `fd_r43x6_biased_carry_propagate_limbs`'s last two instructions; the
 second leaves limbs `0 … 4` unmasked (`fd_r43x6_diagnose` masks them itself). -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -472,4 +472,4 @@ theorem runBodyFrom_modSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

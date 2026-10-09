@@ -1,8 +1,8 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Neg
 public import Firedancer.Avx512.Common.WwlRun
 import Mathlib.Tactic.FinCases
@@ -11,7 +11,7 @@ import Mathlib.Data.Fintype.Basic
 /-! `fd_r43x6_sub(x, y)`: `fd_r43x6_fold_signed` of `x + (p - y)`, compiled for a constant `y` as
 `x + k` with `k` folded, then the signed fold's carries. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -164,4 +164,4 @@ theorem runBodyFrom_subRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos :
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

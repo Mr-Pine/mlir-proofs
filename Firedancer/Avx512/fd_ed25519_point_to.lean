@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_to
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Proof -/
 
@@ -51,4 +51,4 @@ public theorem fd_ed25519_point_to.call_eq (x y z t a : Pointer) (s : GlobalStat
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

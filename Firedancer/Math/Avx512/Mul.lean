@@ -10,9 +10,9 @@ import Mathlib.Tactic.Ring
 `fd_r43x6_sqr`, in `ZMod p`: lane by lane, the products' 52-bit halves summed by columns, then
 `za + 152 zb`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 namespace R43x6
 
@@ -893,4 +893,4 @@ public theorem fd_r43x6_sqr_spec {x : Wwl} (hx : Unreduced x) :
 end R43x6
 
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_tobytes
 
 meta import Firedancer.Ref.fd_f25519_tobytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -29,4 +29,4 @@ private def aBytes : BitVec 320 :=
       s'.mem.readAt out 256 == fd_f25519_tobytes.spec ((state aBytes).mem.readLimbs a)
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

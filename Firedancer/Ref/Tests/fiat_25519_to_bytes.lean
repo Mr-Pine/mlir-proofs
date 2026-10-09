@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_to_bytes
 
 meta import Firedancer.Ref.fiat_25519_to_bytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out1 : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -56,4 +56,4 @@ private def m51 : BitVec 64 :=
 -- a poison pointer is UB
 #guard (out .poison (limbs 1 2 3 4 5)).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

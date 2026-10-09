@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.QuadOps
 public import Firedancer.Avx512.Mlir.fd_curve25519_into_precomputed
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -66,4 +66,4 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -7,7 +7,7 @@ the products' lanes stay below `7 · 2^59` (squares of `u45` limbs below `2^61`)
 `u62`/`u61` comments say, so the sums and differences the point formulas take of them do not
 overflow. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 namespace R43x6
 
@@ -174,4 +174,4 @@ public theorem fd_r43x6_quad_sqr_fast_lt {x03 x14 x25 : Wwl}
 
 end R43x6
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

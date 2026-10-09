@@ -8,7 +8,7 @@ public import Firedancer.Common.Dsmb
 /-! Points in memory, as their callers use them: stores that commute, overwrite or restore, tables
 of points, and points read from a known read. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 open Firedancer Firedancer.Avx512
 
@@ -175,4 +175,4 @@ theorem MemoryState.readQuad_storeQuad_apart {m : MemoryState} {p : Pointer} {a 
 
 end
 
-end LeanMLIR.RIR
+end MLIR

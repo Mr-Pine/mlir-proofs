@@ -1,14 +1,14 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.Memory
+public import MLIR.Semantics.Func
+public import MLIR.Run.Memory
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Vec
 
 /-! The callees of the r43x6 field and point code: their types, and specs to state callers
 against. A spec says what a callee returns on poison-free values and how the state changes. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -84,4 +84,4 @@ abbrev Classify.Spec (f : Classify) (classS : Vector (BitVec 64) 8 → BitVec 32
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

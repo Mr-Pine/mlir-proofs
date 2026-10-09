@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_sub
 
 meta import Firedancer.Ref.fiat_25519_sub
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -45,4 +45,4 @@ private def outLimbs (o i j : ⟦Ty.ptr⟧) : Option (Fin 5 → BitVec 64) :=
 -- A poison pointer is UB.
 #guard (outLimbs (.value out) .poison (.value y)).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

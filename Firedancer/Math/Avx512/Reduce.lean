@@ -11,9 +11,9 @@ import Mathlib.Tactic.Ring
 `fd_r43x6_biased_carry_propagate_limbs` and `fd_r43x6_mod_nearly_reduced_limbs` take a signed
 `fd_r43x6_t` to the reduced limbs of its value. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 namespace R43x6
 
@@ -375,4 +375,4 @@ end R43x6
 
 
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

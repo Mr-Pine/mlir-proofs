@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_f25519_sub
 
 meta import Firedancer.Avx512.fd_f25519_sub
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -58,4 +58,4 @@ private def check (ab bb : BitVec 512) : Bool :=
   | .value _ => false
   | _ => true
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

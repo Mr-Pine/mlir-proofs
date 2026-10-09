@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.fd_ed25519_point_neg
 public import Firedancer.Avx512.fd_ed25519_point_neg_precomputed
 public import Firedancer.Avx512.fd_ed25519_point_add_with_opts
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_sub_with_opts
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -59,4 +59,4 @@ public theorem fd_ed25519_point_sub_with_opts.call_eq (r a b : Pointer) (pre : B
     erase_frame
     simp [fd_ed25519_point_sub_with_opts.spec, hbr]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

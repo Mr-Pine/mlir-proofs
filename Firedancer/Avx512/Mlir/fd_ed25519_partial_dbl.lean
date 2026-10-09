@@ -2,16 +2,16 @@ module
 
 -- build/native/gcc/mlir_canonicalized/avx512/region/fd_ed25519_partial_dbl.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Avx512.Mlir.fd_r43x6_quad_mul_fast
 public import Firedancer.Avx512.Mlir.fd_r43x6_quad_sqr_fast
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Avx512.Mlir.fd_r43x6_quad_mul_fast
 meta import Firedancer.Avx512.Mlir.fd_r43x6_quad_sqr_fast
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -229,4 +229,4 @@ mlir_def fd_ed25519_partial_dbl :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

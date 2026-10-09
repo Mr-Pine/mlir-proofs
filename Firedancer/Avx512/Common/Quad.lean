@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Memory
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Memory
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Wwl
 import Std.Tactic.BVDecide
@@ -14,7 +14,7 @@ import Mathlib.Data.Fintype.Basic
 limbs `0 3`, `1 4` and `2 5` of all four in one vector each, and stored.
 `FD_R43X6_QUAD_FOLD_UNSIGNED` on such a QUAD in memory. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -332,4 +332,4 @@ theorem runBodyFrom_quadFoldRun {blk : BasicBlock Γ tRets bp} {E₀ : ⟪Γ⟫}
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

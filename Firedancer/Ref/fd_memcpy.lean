@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.Mlir.fd_memcpy
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Proof -/
 
@@ -26,4 +26,4 @@ public theorem fd_memcpy.call_eq (d src : Pointer) (sz : BitVec 64) (s : GlobalS
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

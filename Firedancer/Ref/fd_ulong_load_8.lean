@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.Mlir.fd_ulong_load_8
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Proof -/
 
@@ -22,4 +22,4 @@ public theorem fd_ulong_load_8.call_eq (ptr : Pointer) (s : GlobalState) (hwf : 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

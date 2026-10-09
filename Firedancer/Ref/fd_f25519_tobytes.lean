@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Limbs
 public import Firedancer.Ref.fiat_25519_to_bytes
 public import Firedancer.Ref.Mlir.fd_f25519_tobytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -41,4 +41,4 @@ public theorem fd_f25519_tobytes.call_eq (out a : Pointer) (s : GlobalState) (hw
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

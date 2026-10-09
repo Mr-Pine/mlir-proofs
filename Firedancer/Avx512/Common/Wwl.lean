@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Ty
+public import MLIR.Ty
 
 /-! The AVX-512 `wwl_t` operations of `fd_avx512_wwl.h` and `wv_t` of `fd_avx_wv.h`, lane by lane,
 as the specs use them. Each operation is a `Vector.ofFn`, so `expandOfFn` splits it into lanes. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -153,4 +153,4 @@ def mm512_permutexvar_epi8 (perm x : Wwl) : Wwl :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -8,7 +8,7 @@ meta import Firedancer.Ref.fd_ed25519_double_scalar_mul_base
 evaluated. These test `spec`: a copy memoizing each callee's result, proved equal to it, against
 `n1 A + n2 B` in affine coordinates, with the table of `B`'s odd multiples computed here. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open fd_ed25519_double_scalar_mul_base
 
@@ -184,4 +184,4 @@ private def check (n1 n2 : Nat) : Bool :=
 -- the top bit of `n1` is ignored
 #guard check (2 ^ 255 + 12345) 0
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

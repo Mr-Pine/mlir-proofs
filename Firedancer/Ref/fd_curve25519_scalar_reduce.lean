@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_ulong_load_8
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_reduce
 import Std.Tactic.BVDecide
@@ -8,7 +8,7 @@ meta import Std.Tactic.BVDecide.Reflect
 import Std.Data.ExtHashMap.Lemmas
 public meta import Lean.Elab.Tactic
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -3028,4 +3028,4 @@ public theorem fd_curve25519_scalar_reduce.call_eq (out inp : Pointer) (s : Glob
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

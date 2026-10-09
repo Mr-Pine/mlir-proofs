@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.fd_r43x6_repsqr_mul2
 public import Firedancer.Avx512.Mlir.fd_r43x6_pow22523_2
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -128,4 +128,4 @@ public theorem fd_r43x6_pow22523_2.call_eq (_za _zb : Pointer) (za zb : Wwl) (s 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

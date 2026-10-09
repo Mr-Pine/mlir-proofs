@@ -12,9 +12,9 @@ import Std.Tactic.BVDecide
 the C's limb range classes, and the value and ranges of the fast add, sub and neg and of the
 folds. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 /-! ## Definitions -/
 
@@ -714,4 +714,4 @@ end R43x6
 
 
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -2,18 +2,18 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_sha512_core_ref.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_ulong_bswap
 public import Firedancer.Ref.Mlir.fd_ulong_rotate_right
 public import Firedancer.Ref.Mlir.fd_sha512_core_ref_K
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_ulong_bswap
 meta import Firedancer.Ref.Mlir.fd_ulong_rotate_right
 meta import Firedancer.Ref.Mlir.fd_sha512_core_ref_K
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -186,4 +186,4 @@ mlir_def fd_sha512_core_ref :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Mlir.fd_int_if
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -34,4 +34,4 @@ public theorem fd_int_if.call_eq (c f : BitVec 32) (s : GlobalState) (hwf : s.WF
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

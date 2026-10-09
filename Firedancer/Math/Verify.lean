@@ -12,7 +12,7 @@ import Mathlib.Tactic.LinearCombination
 /-! Ed25519 verification as mathematics: decoding points from 32 bytes, and the checks
 `fd_ed25519_verify` performs, in its order. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Definitions -/
 
@@ -289,4 +289,4 @@ public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 *
 
 end Verify
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Tactics
 public import Firedancer.Ref.fd_int_min
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_wnaf
 import Std.Data.ExtHashMap.Lemmas
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification
 
@@ -1447,4 +1447,4 @@ end fd_curve25519_scalar_wnaf
 
 end Digits
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

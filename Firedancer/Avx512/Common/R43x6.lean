@@ -5,7 +5,7 @@ public import Firedancer.Avx512.Common.Wwl
 /-! The `fd_r43x6_t` constants and inline macros of `fd_r43x6.h`, over `Wwl`: a field element as
 six radix-`2^43` limbs in lanes 0-5. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -58,4 +58,4 @@ def fd_r43x6_fold_unsigned (x : Wwl) : Wwl :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

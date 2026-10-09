@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_eq_z1
 
 meta import Firedancer.Ref.fd_ed25519_point_eq_z1
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def a : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -45,4 +45,4 @@ private def point (x y z : Nat) : BitVec 1280 :=
 
 #guard out (point 10 15 2) (point 5 7 1) == some 0#32
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

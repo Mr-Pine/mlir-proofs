@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_point_add_final_mul
 
 meta import Firedancer.Avx512.fd_ed25519_point_add_final_mul
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def r : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -27,4 +27,4 @@ private def aBytes : BitVec 1536 :=
   | .value (some (.cons ret .nil), s') => ret == .value r && s'.mem.readAt r 1536 == aBytes
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

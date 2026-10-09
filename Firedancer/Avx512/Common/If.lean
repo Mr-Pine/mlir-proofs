@@ -1,15 +1,15 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 
 /-! `fd_r43x6_if(c, x, y)`: `x` if `c` is nonzero, else `y`. Compiled for a `c` that is `0` or `1`
 (an `is_nonzero` result): the low byte of `c` minus one is the lane mask, all set exactly when
 `c = 0`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -55,4 +55,4 @@ theorem runBodyFrom_ifRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : N
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

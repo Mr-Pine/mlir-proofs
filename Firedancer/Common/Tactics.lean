@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public meta import Firedancer.Common.Limbs
-public meta import SSA.Projects.RIR.Run.Tactic.Util
+public meta import MLIR.Run.Tactic.Util
 public meta import Lean.Elab.Tactic
 
 /-! Proof tactics shared by the Firedancer proofs. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 public meta section
 
@@ -79,4 +79,4 @@ elab "name_limbs " x:ident : tactic =>
 
 end
 
-end LeanMLIR.RIR
+end MLIR

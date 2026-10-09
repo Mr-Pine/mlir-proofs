@@ -8,7 +8,7 @@ meta import Firedancer.Avx512.fd_ed25519_double_scalar_mul_base
 evaluated. These test `spec`, with `ai`'s eight entries computed once, against `n1 A + n2 B` in
 affine coordinates, with the table of `B`'s odd multiples computed here. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 open fd_ed25519_double_scalar_mul_base Firedancer.Ref
 
@@ -132,4 +132,4 @@ private def check (n1 n2 : Nat) : Bool :=
 -- the top bit of `n1` is ignored
 #guard check (2 ^ 255 + 12345) 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

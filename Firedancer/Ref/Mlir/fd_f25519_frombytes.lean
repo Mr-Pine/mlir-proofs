@@ -2,14 +2,14 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_f25519_frombytes.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fiat_25519_from_bytes
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fiat_25519_from_bytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -23,4 +23,4 @@ mlir_def fd_f25519_frombytes :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

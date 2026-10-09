@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Limbs
 public import Firedancer.Ref.Mlir.fd_f25519_zero
 public import Firedancer.Ref.Mlir.fd_f25519_one
@@ -13,7 +13,7 @@ public import Firedancer.Ref.Mlir.fd_ed25519_order8_point_y1
 /-! The field-element globals: their limbs, their initializers' values, and their limbs read back
 from the block `addressof` gives them. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -143,4 +143,4 @@ public theorem fd_ed25519_order8_point_y1.readLimbs {m : MemoryState} {p : Point
   funext i
   fin_cases i <;> rfl
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

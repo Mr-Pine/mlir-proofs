@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 
 /-! `fd_r43x6_extract_limbs(x, y)`: lanes `0 … 5` of `x` into the longs `y0 … y5`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -66,4 +66,4 @@ theorem runBodyFrom_extractLimbsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

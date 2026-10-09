@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_affine_is_small_order
 
 meta import Firedancer.Ref.fd_ed25519_affine_is_small_order
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def a : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -48,4 +48,4 @@ private def three : Fin 5 → BitVec 64 := fun i => if i = 0 then 3 else 0
 -- none of them
 #guard out (point three three) == some 0#32
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

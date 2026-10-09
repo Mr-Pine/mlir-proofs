@@ -15,9 +15,9 @@ coordinate forms the point operations take and give (projective, extended, preco
 QUAD lane operations (`PERMUTE`, `LANE_ADD_FAST`, `LANE_SUB_FAST`, the folds, `MUL_FAST`,
 `SQR_FAST`) as operations on the four elements' values and limb ranges. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 open R43x6 (quadElem)
 
 /-! ## Definitions -/
@@ -603,4 +603,4 @@ end Quad
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

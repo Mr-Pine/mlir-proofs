@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.fd_ed25519_point_eq
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_eq_z1
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -36,4 +36,4 @@ public theorem fd_ed25519_point_eq_z1.call_eq (a b : Pointer) (s : GlobalState) 
   simp only [he]
   rfl
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_sqrt_ratio
 
 meta import Firedancer.Ref.fd_f25519_sqrt_ratio
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -72,4 +72,4 @@ private def sqrtm1 : BitVec 256 :=
 -- `v` may be `u`: `√(4/4) = ±1`
 #guard out 4#320 0#320 (q := u) == some (1#32, pm1)
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

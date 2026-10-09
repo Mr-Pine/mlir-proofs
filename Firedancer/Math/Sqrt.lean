@@ -10,7 +10,7 @@ import Mathlib.Tactic.ReduceModChar
 
 /-! The Ref square roots in `ZMod p`: `if`, `abs`, and `sqrt_ratio`'s root of `u / v`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Definitions -/
 
@@ -292,4 +292,4 @@ public theorem fd_f25519_sqrt_ratio.spec_pos {u v : Fin 5 → BitVec 64} (hu : L
 
 end Sqrt
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

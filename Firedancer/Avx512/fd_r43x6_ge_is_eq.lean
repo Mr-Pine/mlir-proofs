@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.QuadOps
 public import Firedancer.Avx512.fd_r43x6_is_nonzero
 public import Firedancer.Avx512.Mlir.fd_r43x6_ge_is_eq
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -116,4 +116,4 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

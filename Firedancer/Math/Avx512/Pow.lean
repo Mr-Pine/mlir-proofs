@@ -9,9 +9,9 @@ import Mathlib.Tactic.Ring
 /-! `fd_r43x6_repsqr_mul2`'s repeated squaring and multiply, and `fd_r43x6_pow22523_2`'s
 `z^((p - 5) / 8)`, in `ZMod p`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 namespace R43x6
 
@@ -71,4 +71,4 @@ public theorem fd_r43x6_pow22523_2_spec {z : Wwl} (hz : Unreduced z) :
 
 end R43x6
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

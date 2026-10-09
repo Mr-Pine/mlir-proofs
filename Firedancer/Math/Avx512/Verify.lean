@@ -8,7 +8,7 @@ import Mathlib.Tactic.Abel
 
 /-! The AVX-512 `fd_ed25519_verify` computes `Ed25519.verify`, as Ref's does. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 open Firedancer.Ref
 open Ref.Ed25519 (decode)
@@ -85,4 +85,4 @@ public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 *
   · rw [ite_eq_left (key.2 hq), ite_eq_right (by decide), ite_eq_left hq]
   · rw [ite_eq_right (mt key.1 hq), ite_eq_left (by decide), ite_eq_right hq]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

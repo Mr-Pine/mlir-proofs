@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ulong_rotate_right
 
 meta import Firedancer.Ref.fd_ulong_rotate_right
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def s0 : GlobalState :=
   ⟨default, default⟩
@@ -27,4 +27,4 @@ private def out (x : BitVec 64) (n : BitVec 32) : Option (PoisonOr (BitVec 64)) 
         (0xdeadbeef#64, 41#32), (0xfedcba9876543210#64, 100#32), (5#64, (-61 : BitVec 32))].all
     fun (x, n) => out x n == some (.value (fd_ulong_rotate_right.spec x n))
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

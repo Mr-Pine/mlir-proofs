@@ -1,18 +1,7 @@
-{
- "version": "1.2.0",
- "packagesDir": "../lean-mlir-nightly-port/.lake/packages",
- "packages": [
-  {
-   "type": "path",
-   "scope": "",
-   "name": "SSA",
-   "manifestFile": "lake-manifest.json",
-   "inherited": false,
-   "dir": "../lean-mlir-nightly-port",
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/mathlib4-nightly-testing",
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"url": "https://github.com/leanprover-community/mathlib4-nightly-testing",
    "type": "git",
    "subDir": null,
    "scope": "",
@@ -20,71 +9,16 @@
    "name": "mathlib",
    "manifestFile": "lake-manifest.json",
    "inputRev": "nightly-testing-2026-09-16",
-   "inherited": true,
-   "configFile": "lakefile.lean"
-  },
-  {
-   "url": "https://github.com/opencompl/riscv-lean.git",
-   "type": "git",
-   "subDir": null,
+   "inherited": false,
+   "configFile": "lakefile.lean"},
+  {"type": "path",
    "scope": "",
-   "rev": "ccdfd67647b334a830e220c4caef0f067cd9e15c",
-   "name": "SailRV64",
+   "name": "MLIR",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "main",
-   "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/Mr-Pine/Leanwuzla.git",
-   "type": "git",
-   "subDir": null,
-   "scope": "",
-   "rev": "d5e744bd54c714d795881d2cdf4a012b245c3467",
-   "name": "leanwuzla",
-   "manifestFile": "lake-manifest.json",
-   "inputRev": "main",
-   "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "type": "path",
-   "scope": "",
-   "name": "SexprPBV",
-   "manifestFile": "lake-manifest.json",
-   "inherited": true,
-   "dir": "../lean-mlir-nightly-port/SexprPBV",
-   "configFile": "lakefile.toml"
-  },
-  {
-   "type": "path",
-   "scope": "",
-   "name": "Blase",
-   "manifestFile": "lake-manifest.json",
-   "inherited": true,
-   "dir": "../lean-mlir-nightly-port/Blase",
-   "configFile": "lakefile.toml"
-  },
-  {
-   "type": "path",
-   "scope": "",
-   "name": "TacBench",
-   "manifestFile": "lake-manifest.json",
-   "inherited": true,
-   "dir": "../lean-mlir-nightly-port/TacBench",
-   "configFile": "lakefile.toml"
-  },
-  {
-   "type": "path",
-   "scope": "",
-   "name": "LeanMLIR",
-   "manifestFile": "lake-manifest.json",
-   "inherited": true,
-   "dir": "../lean-mlir-nightly-port/LeanMLIR",
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/plausible",
+   "inherited": false,
+   "dir": "../lean-mlir-nightly-port",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover-community/plausible",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -93,10 +27,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "nightly-testing",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/LeanSearchClient",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover-community/LeanSearchClient",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -105,10 +37,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/import-graph",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover-community/import-graph",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -117,10 +47,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/ProofWidgets4",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover-community/ProofWidgets4",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -129,10 +57,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "nightly-testing",
    "inherited": true,
-   "configFile": "lakefile.lean"
-  },
-  {
-   "url": "https://github.com/leanprover-community/aesop",
+   "configFile": "lakefile.lean"},
+  {"url": "https://github.com/leanprover-community/aesop",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -141,10 +67,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "nightly-testing",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/quote4",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover-community/quote4",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -153,10 +77,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "master",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover-community/batteries",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover-community/batteries",
    "type": "git",
    "subDir": null,
    "scope": "leanprover-community",
@@ -165,22 +87,8 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "nightly-testing",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/opencompl/sail-riscv-lean.git",
-   "type": "git",
-   "subDir": null,
-   "scope": "",
-   "rev": "11d8fa212a60c05dcc9fe5db925dd4d06dad65b5",
-   "name": "Lean_RV64D",
-   "manifestFile": "lake-manifest.json",
-   "inputRev": "main",
-   "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/leanprover/lean4-cli",
+   "configFile": "lakefile.toml"},
+  {"url": "https://github.com/leanprover/lean4-cli",
    "type": "git",
    "subDir": null,
    "scope": "leanprover",
@@ -189,34 +97,7 @@
    "manifestFile": "lake-manifest.json",
    "inputRev": "v4.35.0-rc1",
    "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/Mr-Pine/valaig",
-   "type": "git",
-   "subDir": null,
-   "scope": "",
-   "rev": "13fc27e8bbb126707528a40bcaea407876903dbf",
-   "name": "valaig",
-   "manifestFile": "lake-manifest.json",
-   "inputRev": "13fc27e8bbb126707528a40bcaea407876903dbf",
-   "inherited": true,
-   "configFile": "lakefile.toml"
-  },
-  {
-   "url": "https://github.com/rems-project/lean-sail",
-   "type": "git",
-   "subDir": null,
-   "scope": "",
-   "rev": "079463134b9c50450b8393e1566a09fc492a34d9",
-   "name": "Sail",
-   "manifestFile": "lake-manifest.json",
-   "inputRev": "v5",
-   "inherited": true,
-   "configFile": "lakefile.toml"
-  }
- ],
+   "configFile": "lakefile.toml"}],
  "name": "«rir-firedancer»",
  "lakeDir": ".lake",
- "fixedToolchain": false
-}
+ "fixedToolchain": false}

@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Common.QuadMem
 public import Firedancer.Common.Verify
@@ -18,7 +18,7 @@ public import Firedancer.Avx512.fd_ed25519_double_scalar_mul_base
 public import Firedancer.Avx512.fd_ed25519_point_eq_z1
 public import Firedancer.Avx512.Mlir.fd_ed25519_verify
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification
 
@@ -349,4 +349,4 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

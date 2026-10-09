@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_set
 
 meta import Firedancer.Ref.fd_ed25519_point_set
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -27,4 +27,4 @@ private def aBytes : BitVec 1280 :=
   | .value (some (.cons ret .nil), s') => ret == .value r && s'.mem.readAt r 1280 == aBytes
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Tactics
 public import Firedancer.Ref.Globals
@@ -10,7 +10,7 @@ public import Firedancer.Ref.fd_f25519_set
 public import Firedancer.Ref.fd_f25519_mul
 public import Firedancer.Ref.Mlir.fd_curve25519_into_precomputed
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -83,4 +83,4 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

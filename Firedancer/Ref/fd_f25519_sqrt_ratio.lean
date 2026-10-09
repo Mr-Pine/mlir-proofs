@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Limbs
 public import Firedancer.Common.Tactics
 public import Firedancer.Ref.Globals
@@ -13,7 +13,7 @@ public import Firedancer.Ref.fd_f25519_pow22523
 public import Firedancer.Ref.fd_f25519_abs
 public import Firedancer.Ref.Mlir.fd_f25519_sqrt_ratio
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -196,4 +196,4 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

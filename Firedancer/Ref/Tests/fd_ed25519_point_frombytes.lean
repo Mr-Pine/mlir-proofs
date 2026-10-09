@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_frombytes
 
 meta import Firedancer.Ref.fd_ed25519_point_frombytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -65,4 +65,4 @@ private def out (b : BitVec 256) :
   out 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffee#256 ==
     some (some (0#256, 1#256, 1#256, 0#256))
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

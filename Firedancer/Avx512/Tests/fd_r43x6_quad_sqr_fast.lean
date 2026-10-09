@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_quad_sqr_fast
 
 meta import Firedancer.Avx512.fd_r43x6_quad_sqr_fast
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def z03 : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -58,4 +58,4 @@ private def check (xs : List Wwl) : Bool :=
       0x77777777777, 0, 0], #v[1, 0, 0, 0, 0, 0, 0, 0], #v[0, 0, 0, 0, 0, 0, 0, 0],
     #v[13, 14, 15, 16, 17, 18, 0, 0]]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

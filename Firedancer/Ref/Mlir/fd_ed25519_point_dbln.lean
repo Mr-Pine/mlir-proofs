@@ -2,18 +2,18 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_point_dbln.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_ed25519_partial_dbl
 public import Firedancer.Ref.Mlir.fd_ed25519_point_add_final_mul
 public import Firedancer.Ref.Mlir.fd_ed25519_point_add_final_mul_projective
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_ed25519_partial_dbl
 meta import Firedancer.Ref.Mlir.fd_ed25519_point_add_final_mul
 meta import Firedancer.Ref.Mlir.fd_ed25519_point_add_final_mul_projective
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -45,4 +45,4 @@ mlir_def fd_ed25519_point_dbln :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

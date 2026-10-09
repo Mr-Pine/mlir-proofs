@@ -5,7 +5,7 @@ public import Firedancer.Ref.fd_curve25519_scalar_validate
 import Std.Tactic.BVDecide
 meta import Lean.Elab.Tactic
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## The group order -/
 
@@ -521,4 +521,4 @@ public theorem fd_curve25519_scalar_validate.spec_iff (s : BitVec 256) :
   simp only [fd_curve25519_scalar_validate.spec, decide_eq_true_eq, BitVec.lt_def]
   rfl
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

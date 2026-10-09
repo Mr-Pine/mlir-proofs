@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Common.Callees
 public import Firedancer.Avx512.Common.If
@@ -17,7 +17,7 @@ public import Firedancer.Avx512.fd_r43x6_pow22523_2
 public import Firedancer.Avx512.wv_ld
 public import Firedancer.Avx512.Mlir.fd_r43x6_ge_decode2
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## The blocks -/
 
@@ -753,4 +753,4 @@ end
 
 end fd_r43x6_ge_decode2
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

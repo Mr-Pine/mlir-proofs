@@ -2,14 +2,14 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_point_frombytes_2x.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -35,4 +35,4 @@ mlir_def fd_ed25519_point_frombytes_2x :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

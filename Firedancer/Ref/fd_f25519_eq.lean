@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Limbs
 public import Firedancer.Ref.fd_f25519_sub
 public import Firedancer.Ref.fd_f25519_is_zero
 public import Firedancer.Ref.Mlir.fd_f25519_eq
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -52,4 +52,4 @@ public theorem fd_f25519_eq.call_eq (a b : Pointer) (s : GlobalState) (hwf : s.W
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_int_min
 
 meta import Firedancer.Ref.fd_int_min
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def s0 : GlobalState :=
   ⟨default, default⟩
@@ -35,4 +35,4 @@ private def out (x : PoisonOr (BitVec 32)) (fuel : Nat := 1) : Option (PoisonOr 
 -- Without fuel there is no result at all.
 #guard out (.value 3#32) 0 == none
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

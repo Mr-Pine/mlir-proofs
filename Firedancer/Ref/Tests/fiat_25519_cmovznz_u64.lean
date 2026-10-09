@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_cmovznz_u64
 
 meta import Firedancer.Ref.fiat_25519_cmovznz_u64
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def s0 : GlobalState :=
   ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨8, 0⟩)]⟩⟩
@@ -38,4 +38,4 @@ private def outPoison : Option (BitVec 64) :=
 
 #guard outPoison.isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -8,9 +8,9 @@ import Mathlib.Tactic.NormNum
 /-! `fd_r43x6_unpack` in `ZMod p`: the 256-bit little-endian integer of a `wv_t`, cut into five
 43-bit limbs and a 41-bit one. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 namespace R43x6
 
@@ -206,4 +206,4 @@ public theorem fd_r43x6_unpack_spec (u : Wv) :
 
 end R43x6
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

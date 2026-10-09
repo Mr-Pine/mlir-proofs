@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Tactics
 public import Firedancer.Ref.Globals
@@ -11,7 +11,7 @@ public import Firedancer.Ref.fd_f25519_mul3
 public import Firedancer.Ref.fd_ed25519_point_add_final_mul
 public import Firedancer.Ref.Mlir.fd_ed25519_point_add_with_opts
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -292,4 +292,4 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

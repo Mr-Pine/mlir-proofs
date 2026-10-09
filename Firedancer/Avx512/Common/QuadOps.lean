@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
@@ -9,7 +9,7 @@ import Mathlib.Data.Fintype.Basic
 variables, its lane flags and shuffle masks as parameters, its result an equation to the macro's
 `Quad` operation; and the code's vector constants, built lane by lane. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 @[expose] public section
 
@@ -1031,4 +1031,4 @@ end Patterns
 
 end
 
-end LeanMLIR.RIR
+end MLIR

@@ -12,9 +12,9 @@ affine (`Z = 1`) and precomputed (`fd_curve25519_into_precomputed`) as the QUAD
 are read off the global's bits; the points are checked by the kernel, mod `p`, against the curve
 formulas. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p dN x2N y2N curveOk addOk dblOk natCast_eq natCast_ne dN_eq
+open MLIR.Firedancer.Ref (p dN x2N y2N curveOk addOk dblOk natCast_eq natCast_ne dN_eq
   add_of_ok dbl_of_ok onCurve_of_ok)
 open R43x6 (quadElem)
 
@@ -198,4 +198,4 @@ public theorem fd_ed25519_base_point_wnaf_table.point_operand {j : ℕ} (hj : j 
   rw [show Q = _ from oddMul_eq hj]
   exact entry_of_ok h
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

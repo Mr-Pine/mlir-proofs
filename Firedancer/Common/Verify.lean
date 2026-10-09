@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_sha512_append
 public import Firedancer.Ref.fd_sha512_fini
 public import Firedancer.Ref.fd_sha512_init
@@ -8,7 +8,7 @@ public import Firedancer.Ref.fd_sha512_init
 /-! What the implementations of `fd_ed25519_verify` share: its result, the hash of
 `r ‖ publicKey ‖ msg`, and the memory its SHA-512 calls leave. -/
 
-namespace LeanMLIR.RIR.Firedancer
+namespace MLIR.Firedancer
 
 open Ref
 
@@ -86,7 +86,7 @@ theorem ite_ofBool_beq {x y : BitVec w} {a b : α} :
     simp [h, hb]
 
 /-- A pointer at a positive offset into a range that does not wrap is not null. -/
-theorem _root_.LeanMLIR.RIR.Pointer.add_ne_null {p : Pointer} {a b : BitVec 64}
+theorem _root_.MLIR.Pointer.add_ne_null {p : Pointer} {a b : BitVec 64}
     (h : ¬p.offset.uaddOverflow b) (ha : 0 < a.toNat) (hab : a.toNat ≤ b.toNat) :
     p.add a ≠ Pointer.null := by
   intro he
@@ -97,7 +97,7 @@ theorem _root_.LeanMLIR.RIR.Pointer.add_ne_null {p : Pointer} {a b : BitVec 64}
   omega
 
 /-- A hash object stored twice: the second. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.storeSha_storeSha_self {m : MemoryState}
+theorem _root_.MLIR.MemoryState.storeSha_storeSha_self {m : MemoryState}
     (h : ¬p.offset.uaddOverflow 256#64) : (m.storeSha p a).storeSha p b = m.storeSha p b := by
   rw [MemoryState.storeSha.eq_1 (m.storeSha p a) p b,
     MemoryState.storeSha_storeAt_buf_base h le_rfl, MemoryState.storeSha_storeAt_bufUsed h,
@@ -111,19 +111,19 @@ theorem _root_.LeanMLIR.RIR.MemoryState.storeSha_storeSha_self {m : MemoryState}
   rw [hbuf]
 
 /-- A framed callee's state over a hash object store keeps `WF`. -/
-theorem _root_.LeanMLIR.RIR.GlobalState.WF.add_blocks_storeSha {s : GlobalState} (h : s.WF) :
+theorem _root_.MLIR.GlobalState.WF.add_blocks_storeSha {s : GlobalState} (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem.storeSha p v⟩ : GlobalState).WF :=
   GlobalState.WF.storeSha (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem⟩) h.add_blocks
 
 /-- `add_blocks_storeSha`, then the digest's words. -/
-theorem _root_.LeanMLIR.RIR.GlobalState.WF.add_blocks_storeSha_storeWords8 {s : GlobalState}
+theorem _root_.MLIR.GlobalState.WF.add_blocks_storeSha_storeWords8 {s : GlobalState}
     (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + k⟩, (s.mem.storeSha p v).storeWords8 q w⟩ : GlobalState).WF :=
   GlobalState.WF.storeWords8 (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem.storeSha p v⟩)
     (GlobalState.WF.add_blocks_storeSha h)
 
 /-- Eight words fit in a 64-byte block from its start. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.Words8Fit.of_fits {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.Words8Fit.of_fits {m : MemoryState} {p : Pointer}
     (h : Fits m p 512) (hoff : p.offset = 0) : m.Words8Fit p := by
   have hov (k : Nat) (hk : k ≤ 64) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
     simp [BitVec.uaddOverflow, hoff]
@@ -139,27 +139,27 @@ theorem _root_.LeanMLIR.RIR.MemoryState.Words8Fit.of_fits {m : MemoryState} {p :
 
 /-! ### The memory after the SHA-512 calls -/
 
-theorem _root_.LeanMLIR.RIR.Fits.initStores_iff {m : MemoryState} :
+theorem _root_.MLIR.Fits.initStores_iff {m : MemoryState} :
     Fits (fd_sha512_init.stores m p) q w ↔ Fits m q w := by
   simp [fd_sha512_init.stores, Fits.storeAt_iff]
 
-theorem _root_.LeanMLIR.RIR.Fits.hashMem_iff {m : MemoryState} :
+theorem _root_.MLIR.Fits.hashMem_iff {m : MemoryState} :
     Fits (fd_ed25519_verify.hashMem m sha k X v) q w ↔ Fits m q w := by
   simp [fd_ed25519_verify.hashMem, Fits.storeWords8_iff, Fits.storeSha_iff, Fits.initStores_iff]
 
-theorem _root_.LeanMLIR.RIR.Fits.hashMem {m : MemoryState} (h : Fits m q w) :
+theorem _root_.MLIR.Fits.hashMem {m : MemoryState} (h : Fits m q w) :
     Fits (fd_ed25519_verify.hashMem m sha k X v) q w :=
   Fits.hashMem_iff.2 h
 
-theorem _root_.LeanMLIR.RIR.MemoryState.ShaFit.hashMem {m : MemoryState} (h : m.ShaFit q) :
+theorem _root_.MLIR.MemoryState.ShaFit.hashMem {m : MemoryState} (h : m.ShaFit q) :
     (fd_ed25519_verify.hashMem m sha k X v).ShaFit q := by
   simpa only [MemoryState.ShaFit, Fits.hashMem_iff] using h
 
-theorem _root_.LeanMLIR.RIR.MemoryState.Words8Fit.hashMem {m : MemoryState} (h : m.Words8Fit q) :
+theorem _root_.MLIR.MemoryState.Words8Fit.hashMem {m : MemoryState} (h : m.Words8Fit q) :
     (fd_ed25519_verify.hashMem m sha k X v).Words8Fit q := by
   simpa only [MemoryState.Words8Fit, Fits.hashMem_iff] using h
 
-theorem _root_.LeanMLIR.RIR.GlobalState.WF.hashMem_mk {s : GlobalState} (h : s.WF) :
+theorem _root_.MLIR.GlobalState.WF.hashMem_mk {s : GlobalState} (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + n⟩, fd_ed25519_verify.hashMem s.mem sha k X v⟩ :
         GlobalState).WF := by
   have h1 : (⟨⟨s.alloc.nextFreeBlock + n⟩, s.mem⟩ : GlobalState).WF := h.add_blocks
@@ -170,7 +170,7 @@ theorem _root_.LeanMLIR.RIR.GlobalState.WF.hashMem_mk {s : GlobalState} (h : s.W
         h1.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt)
 
 /-- A read outside the hash object and the digest. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState}
+theorem _root_.MLIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState}
     (hsha : q.id ≠ sha.id) (hk : q.id ≠ k.id) :
     (fd_ed25519_verify.hashMem m sha k X v).readAt q w = m.readAt q w := by
   have h' (o : BitVec 64) : (sha.add o).id ≠ q.id := by simpa [Pointer.add_id] using hsha.symm
@@ -179,14 +179,14 @@ theorem _root_.LeanMLIR.RIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState
     Tactic.readThroughStore]
 
 /-- A store at the start of a known read: the bits spliced in. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeAt_base {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.readAt_storeAt_base {m : MemoryState} {p : Pointer}
     (hfits : Fits m p v) (hv : ¬p.offset.uaddOverflow 0#64) (hw : w ≤ v) (x : BitVec w) :
     (m.storeAt p x).readAt p v = Memory.spliceBits (m.readAt p v) 0 x := by
   have := MemoryState.readAt_add_storeAt (off := 0#64) hfits hv (by simpa using hw) x
   simpa [Pointer.add] using this
 
 /-- The digest's 64 bytes read back from the eight words stored at `p`. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeWords8_self {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.readAt_storeWords8_self {m : MemoryState} {p : Pointer}
     (h : Fits m p 512) (hov : ¬p.offset.uaddOverflow 64#64) :
     (m.storeWords8 p v).readAt p 512 = Words8.bits v := by
   have hov' (o : Nat) (ho : o ≤ 64) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 o) :=
@@ -217,25 +217,25 @@ theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeWords8_self {m : MemoryState
   grind
 
 /-- The digest at `k` read back. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.readAt_hashMem_k {m : MemoryState} (h : Fits m k 512)
+theorem _root_.MLIR.MemoryState.readAt_hashMem_k {m : MemoryState} (h : Fits m k 512)
     (hov : ¬k.offset.uaddOverflow 64#64) :
     (fd_ed25519_verify.hashMem m sha k X v).readAt k 512 = Words8.bits v :=
   MemoryState.readAt_storeWords8_self (by simpa [Fits.storeSha_iff, Fits.initStores_iff] using h)
     hov
 
-theorem _root_.LeanMLIR.RIR.MemoryState.eraseFrom_initStores {m : MemoryState} :
+theorem _root_.MLIR.MemoryState.eraseFrom_initStores {m : MemoryState} :
     (fd_sha512_init.stores m p).eraseFrom n = fd_sha512_init.stores (m.eraseFrom n) p := by
   simp [fd_sha512_init.stores, MemoryState.eraseFrom_storeAt]
 
 /-- Eight words stored in the frame are gone once it is erased. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.eraseFrom_storeWords8_of_le {m : MemoryState}
+theorem _root_.MLIR.MemoryState.eraseFrom_storeWords8_of_le {m : MemoryState}
     (h : n ≤ p.id.id) : (m.storeWords8 p v).eraseFrom n = m.eraseFrom n := by
   have h' (o : BitVec 64) : n ≤ (p.add o).id.id := by simpa [Pointer.add_id] using h
   simp only [MemoryState.storeWords8, MemoryState.eraseFrom_storeAt_of_le h,
     MemoryState.eraseFrom_storeAt_of_le (h' _)]
 
 /-- The digest in the frame, dropped before the erase moves past it. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.eraseFrom_hashMem_of_le {m : MemoryState}
+theorem _root_.MLIR.MemoryState.eraseFrom_hashMem_of_le {m : MemoryState}
     (h : n ≤ k.id.id) :
     (fd_ed25519_verify.hashMem m sha k X v).eraseFrom n =
       (fd_sha512_init.stores (m.eraseFrom n) sha).storeSha sha X := by
@@ -244,4 +244,4 @@ theorem _root_.LeanMLIR.RIR.MemoryState.eraseFrom_hashMem_of_le {m : MemoryState
 
 end
 
-end LeanMLIR.RIR.Firedancer
+end MLIR.Firedancer

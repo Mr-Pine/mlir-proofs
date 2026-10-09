@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Tactics
 public import Firedancer.Ref.Globals
@@ -9,7 +9,7 @@ public import Firedancer.Ref.fd_f25519_is_zero
 public import Firedancer.Ref.fd_f25519_eq
 public import Firedancer.Ref.Mlir.fd_ed25519_affine_is_small_order
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -86,4 +86,4 @@ public theorem fd_ed25519_affine_is_small_order.call_eq (a : Pointer) (s : Globa
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

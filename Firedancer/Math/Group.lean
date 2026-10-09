@@ -8,7 +8,7 @@ import Mathlib.Tactic.Ring
 neutral and `-(x, y) = (-x, y)`, and `dblN n` multiplies by `2ⁿ`. Closure and associativity are
 polynomial identities modulo the curve equations, their certificates found by Singular's `lift`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 namespace Ed25519
 
@@ -299,4 +299,4 @@ end Point
 
 end Ed25519
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

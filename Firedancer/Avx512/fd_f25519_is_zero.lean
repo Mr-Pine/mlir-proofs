@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.Common.R43x6
 public import Firedancer.Avx512.Mlir.fd_f25519_is_zero
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -139,4 +139,4 @@ public theorem fd_f25519_is_zero.call_eq (a : Pointer) (s : GlobalState) (hwf : 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

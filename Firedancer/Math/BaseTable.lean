@@ -11,7 +11,7 @@ import Mathlib.Tactic.Ring
 affine (`Z = 1`) and precomputed as `(Y - X, Y + X, 2d T)`. The limbs are read off the global's
 bits; the points are checked by the kernel, mod `p`, against the curve formulas. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open fd_ed25519_double_scalar_mul_base
 
@@ -336,4 +336,4 @@ public theorem Ed25519.oddMul_eq_nsmul (j : ℕ) :
       show Ed25519.By = Ed25519.basePoint.y from rfl, Ed25519.Point.dbl_eq, e]
     rfl
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.Common.R43x6
 public import Firedancer.Avx512.fd_r43x6_quad_mul_fast
@@ -12,7 +12,7 @@ import Std.Data.ExtHashMap.Lemmas
 /-! Points in memory: `fd_ed25519_point_t`'s `FD_R43X6_QUAD`, three vectors of eight 64-bit lanes
 at byte offsets 0, 64, 128, read and stored as a whole. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 @[expose] public section
 
@@ -1660,4 +1660,4 @@ end Patterns
 
 end
 
-end LeanMLIR.RIR
+end MLIR

@@ -7,7 +7,7 @@ meta import Firedancer.Ref.fd_ed25519_verify
 /-! The lift reads the 20 KB base-point table and cannot be evaluated; these test the spec's parts
 that evaluate quickly. The point decoding's `pow22523` chain is too slow to run here. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-- No table: the tests below never reach the scalar multiplication. -/
 private def noTbl : Nat → PointLimbs := fun _ => ⟨0, 0, 0, 0⟩
@@ -39,4 +39,4 @@ private def noTbl : Nat → PointLimbs := fun _ => ⟨0, 0, 0, 0⟩
     BitVec.ofNat 512
       2113626006853070987569356334403230428970188404400764128064959858859507509059298575746253257956050671484778280016492655593550391659505145575534877717010997
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -2,13 +2,13 @@ module
 
 public import Firedancer.Avx512.fd_ed25519_point_frombytes_2x
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Avx512.fd_ed25519_point_frombytes_2x
 
 /-! `fd_ed25519_point_frombytes_2x` run, with the lifted callees, on encodings that decode and
 that do not. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 section Tests
 
@@ -93,4 +93,4 @@ private def fails (ea eb : Nat) (r : BitVec 32) : Bool :=
 
 end Tests
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

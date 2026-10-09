@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_sqr_fast
 
 meta import Firedancer.Avx512.fd_r43x6_sqr_fast
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def p : Nat :=
   2 ^ 255 - 19
@@ -37,4 +37,4 @@ private def check (x : Wwl) : Bool :=
 -- any lanes: the program is the spec
 #guard (out #v[-1, -2, -3, -4, -5, -6, -7, -8]).isSome
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

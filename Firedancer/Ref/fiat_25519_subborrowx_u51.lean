@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.Mlir.fiat_25519_subborrowx_u51
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -60,4 +60,4 @@ public theorem fiat_25519_subborrowx_u51.call_eq (out1 out2 : Pointer) (arg1 : B
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

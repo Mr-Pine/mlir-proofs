@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Ref.fd_memcpy
 public import Firedancer.Ref.fd_sha512_core_ref
@@ -8,7 +8,7 @@ public import Firedancer.Ref.Mlir.fd_sha512_append
 import Std.Data.ExtHashMap.Lemmas
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 open Memory
 
@@ -439,9 +439,9 @@ theorem MemoryState.eraseFrom_storeSha {m : MemoryState} :
 
 end
 
-end LeanMLIR.RIR
+end MLIR
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open Memory
 
@@ -926,4 +926,4 @@ public theorem fd_sha512_append.spec_bufUsed_lt (sha : ShaState) (sz : BitVec 64
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

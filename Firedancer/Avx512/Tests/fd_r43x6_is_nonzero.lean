@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_is_nonzero
 
 meta import Firedancer.Avx512.fd_r43x6_is_nonzero
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-- The result if it is `spec x`, else `none`. -/
 private def out (x : Wwl) : Option (BitVec 32) :=
@@ -29,4 +29,4 @@ private def out (x : Wwl) : Option (BitVec 32) :=
 -- `2^43 - 2^43`: zero
 #guard out #v[8796093022208, -1, 0, 0, 0, 0, 0, 0] == some 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

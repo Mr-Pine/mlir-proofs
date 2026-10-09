@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_curve25519_scalar_wnaf
 
 /-! What the implementations of `fd_ed25519_double_scalar_mul_base` share: the slides in memory,
 and the arithmetic of its counters, digits and table indices. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 @[expose] public section
 
@@ -231,4 +231,4 @@ end Firedancer
 
 end
 
-end LeanMLIR.RIR
+end MLIR

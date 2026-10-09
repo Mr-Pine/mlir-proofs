@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.Mlir.fd_ulong_bswap
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -45,4 +45,4 @@ public theorem fd_ulong_bswap.call_eq (x : BitVec 64) (s : GlobalState) (hwf : s
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

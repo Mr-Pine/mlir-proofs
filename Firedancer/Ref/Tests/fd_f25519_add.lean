@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_add
 
 meta import Firedancer.Ref.fd_f25519_add
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -38,4 +38,4 @@ private def bBytes : BitVec 320 :=
         s'.mem.readLimbs r k == fd_f25519_add.spec (s.mem.readLimbs a) (s.mem.readLimbs b) k
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

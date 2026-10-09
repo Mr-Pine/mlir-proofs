@@ -4,7 +4,7 @@ public import Firedancer.Avx512.wv_ld
 
 meta import Firedancer.Avx512.wv_ld
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def p : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -25,4 +25,4 @@ private def state : GlobalState :=
   | .value _ => false
   | _ => true
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

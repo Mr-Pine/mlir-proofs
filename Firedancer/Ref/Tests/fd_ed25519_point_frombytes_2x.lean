@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_frombytes_2x
 
 meta import Firedancer.Ref.fd_ed25519_point_frombytes_2x
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
@@ -76,4 +76,4 @@ private def oneSignBytes : BitVec 256 :=
 -- both from one buffer
 #guard out baseBytes 0 (q := ptr 2) == some (0#32, 158, base, base)
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

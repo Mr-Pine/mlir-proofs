@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_point_dbln
 
 meta import Firedancer.Avx512.fd_ed25519_point_dbln
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def r : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -35,4 +35,4 @@ private def check (n : Nat) : Bool :=
 
 #guard check 3
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Dsmb
 public import Firedancer.Common.Tactics
@@ -18,7 +18,7 @@ public import Firedancer.Ref.Mlir.fd_ed25519_double_scalar_mul_base
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification
 
@@ -267,7 +267,7 @@ theorem TableAt.storePoint {m : MemoryState}
     exact (h k hk).2⟩
 
 /-- `SlidesAt` past a store into another block. -/
-theorem _root_.LeanMLIR.RIR.Firedancer.SlidesAt.storePoint {m : MemoryState}
+theorem _root_.MLIR.Firedancer.SlidesAt.storePoint {m : MemoryState}
     (h : SlidesAt m q w) (hne : p.id ≠ q.id) : SlidesAt (m.storePoint p P) q w := fun k hk =>
   ⟨Fits.storePoint (h k hk).1, by
     rw [MemoryState.readAt_storePoint_of_id_ne (by simpa [Pointer.add_id] using hne)]
@@ -280,7 +280,7 @@ theorem TableAt.storePoint_add {m : MemoryState} {p q : Pointer} (h : TableAt m 
   h.storePoint (by simpa [Pointer.add_id] using hne)
 
 /-- `SlidesAt.storePoint` for a store into another block at an offset. -/
-theorem _root_.LeanMLIR.RIR.Firedancer.SlidesAt.storePoint_add {m : MemoryState} {p q : Pointer}
+theorem _root_.MLIR.Firedancer.SlidesAt.storePoint_add {m : MemoryState} {p q : Pointer}
     (h : SlidesAt m q w) (hne : p.id ≠ q.id) :
     SlidesAt (m.storePoint (p.add k) P) q w :=
   h.storePoint (by simpa [Pointer.add_id] using hne)
@@ -1171,4 +1171,4 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref
