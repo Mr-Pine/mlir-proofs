@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_curve25519_scalar_validate
 
 meta import Firedancer.Ref.fd_curve25519_scalar_validate
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def p : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -50,4 +50,4 @@ private def agrees (bytes : BitVec 256) : Bool :=
 -- A poison pointer is UB.
 #guard (out 0#256 .poison).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

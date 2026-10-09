@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Fe
 public import Zig.Mlir.Fe_carry128
 import Mathlib.Tactic.NormNum
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -135,4 +135,4 @@ public theorem Fe_carry128.call_eq (out r : Pointer) (s : GlobalState) (hwf : s.
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

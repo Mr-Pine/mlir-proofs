@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_is_zero
 
 meta import Firedancer.Ref.fd_f25519_is_zero
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def x : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -36,4 +36,4 @@ private def out (bytes : BitVec 320) (p : ⟦Ty.ptr⟧ := .value x) : Option (Po
 -- A poison pointer is UB.
 #guard (out 0#320 .poison).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

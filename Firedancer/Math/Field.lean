@@ -26,7 +26,7 @@ import Std.Tactic.BVDecide
 /-! The Ref field arithmetic in `ZMod p`, `p = 2^255 - 19`: each spec computes its field operation
 on the limbs' values, under fiat-crypto's tight and loose limb bounds. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 export Ed25519 (p)
 
@@ -979,4 +979,4 @@ public theorem fd_f25519_frombytes.spec_val (buf : BitVec 256) :
 
 end Decode
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Tactics
 public import Zig.Point
 import Std.Tactic.BVDecide
 public import Zig.Mlir.Edwards25519_slide
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -524,4 +524,4 @@ public theorem Edwards25519_slide.call_eq (out sp : Pointer) (s : GlobalState) (
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

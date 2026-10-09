@@ -1,14 +1,14 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Sha512
 public import Zig.Mlir.Sha512_iv
-import all SSA.Projects.RIR.Ty
+import all MLIR.Ty
 
 /-! `Sha512.iv`, the fresh object: its initializer's value, and an object copied from it has
 absorbed nothing. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -53,4 +53,4 @@ public theorem Sha512Obj.absorbed_iv {m : MemoryState} {d : Pointer} {hw : Sha51
   · rw [Sha512Obj.totalLen, MemoryState.readAt_of_readAt_le (by omega) h]
     decide +kernel
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

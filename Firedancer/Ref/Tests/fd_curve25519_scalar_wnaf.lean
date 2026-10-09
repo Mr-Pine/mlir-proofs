@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_curve25519_scalar_wnaf
 
 meta import Firedancer.Ref.fd_curve25519_scalar_wnaf
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def slides : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -73,4 +73,4 @@ private def mixed : BitVec 256 :=
 
 #guard value (BitVec.allOnes 255 |>.setWidth 256) 5 == 2 ^ 255 - 1
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

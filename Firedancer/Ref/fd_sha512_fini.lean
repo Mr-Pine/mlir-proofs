@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_memset
 public import Firedancer.Ref.fd_ulong_bswap
 public import Firedancer.Ref.fd_sha512_append
@@ -8,7 +8,7 @@ public import Firedancer.Ref.fd_sha512_init
 public import Firedancer.Ref.Mlir.fd_sha512_fini
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open Memory
 
@@ -352,4 +352,4 @@ public theorem fd_sha512_init.readSha {m : MemoryState} (h : m.ShaFit sha) :
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

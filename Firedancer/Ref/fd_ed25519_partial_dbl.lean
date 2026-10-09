@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Ref.fd_f25519_add
 public import Firedancer.Ref.fd_f25519_sub
@@ -9,7 +9,7 @@ public import Firedancer.Ref.fd_f25519_sub_nr
 public import Firedancer.Ref.fd_f25519_sqr4
 public import Firedancer.Ref.Mlir.fd_ed25519_partial_dbl
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -86,4 +86,4 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

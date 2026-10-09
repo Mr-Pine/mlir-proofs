@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Limbs
 public import Common.Tactics
 public import Firedancer.Ref.fiat_25519_cmovznz_u64
 public import Firedancer.Ref.Mlir.fiat_25519_selectznz
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -102,4 +102,4 @@ public theorem fiat_25519_selectznz.call_eq (out : Pointer) (c : BitVec 8) (x y 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

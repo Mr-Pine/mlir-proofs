@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_if
 
 meta import Firedancer.Ref.fd_f25519_if
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -75,4 +75,4 @@ private def selects (cond : BitVec 32) : Bool :=
 
 #guard (result (.value r) .poison (.value a0) (.value a1) r).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

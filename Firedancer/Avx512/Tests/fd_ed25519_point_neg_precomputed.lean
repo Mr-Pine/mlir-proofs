@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_point_neg_precomputed
 
 meta import Firedancer.Avx512.fd_ed25519_point_neg_precomputed
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
@@ -32,4 +32,4 @@ private def check (r a : Pointer) : Bool :=
 -- into another block
 #guard check (ptr 1) (ptr 2)
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

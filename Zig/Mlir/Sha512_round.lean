@@ -2,12 +2,12 @@ module
 
 -- zig-build/out/mlir_canonicalized/region/Sha512.round.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -2294,4 +2294,4 @@ noncomputable mlir_def Sha512_round :=
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

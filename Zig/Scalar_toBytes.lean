@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Scalar
 public import Zig.Mlir.Scalar_toBytes
 import Std.Tactic.BVDecide
 import Std.Data.ExtHashMap.Lemmas
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -169,4 +169,4 @@ public theorem Scalar.toBytes.toNat_spec_canonical {l : Fin 5 → BitVec 64}
     (h : Scalar.Canonical l) : (Scalar.toBytes.spec l).toNat = Scalar.val l :=
   Scalar.toBytes.toNat_spec h.1 h.top_lt
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

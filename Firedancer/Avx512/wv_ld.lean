@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.Mlir.wv_ld
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Proof -/
 
@@ -24,4 +24,4 @@ public theorem wv_ld.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

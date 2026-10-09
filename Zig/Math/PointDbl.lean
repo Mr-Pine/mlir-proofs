@@ -13,7 +13,7 @@ import Mathlib.Tactic.Ring
 /-! Zig's point doubling on the curve: `dbl` doubles in extended coordinates, `clearCofactor`
 multiplies by 8, and `rejectIdentity` tests `x` against zero. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -159,4 +159,4 @@ public theorem Edwards25519.rejectIdentity.spec_eq {P : ZPt} {x y : ZMod p} (hP 
   · simp [h, e.2 h]
   · simp [h, mt e.1 h]
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

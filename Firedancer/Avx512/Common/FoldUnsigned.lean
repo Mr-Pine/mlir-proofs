@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 
 /-! `fd_r43x6_fold_unsigned`, the four instructions after every `fd_r43x6_mul_fast` and
 `fd_r43x6_sqr_fast` call: its spec, the instructions as a template, and the lemma stepping them. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -82,4 +82,4 @@ theorem runBodyFrom_foldRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos :
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

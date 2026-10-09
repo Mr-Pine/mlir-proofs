@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Point
 public import Zig.Sha512
 public import Zig.Sha512_iv
@@ -10,13 +10,13 @@ public import Zig.Edwards25519_rejectIdentity
 public import Zig.Fe_rejectNonCanonical
 public import Zig.scalar_rejectNonCanonical
 public import Zig.Mlir.Verifier_init
-import all SSA.Projects.RIR.Ty
+import all MLIR.Ty
 import all Zig.Edwards25519_fromBytes
 import all Zig.Sha512_iv
 import all Zig.Point
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519 Memory
 
@@ -807,4 +807,4 @@ public theorem Verifier.init.mem_ok {m : MemoryState} {out : Pointer} {r S A : B
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

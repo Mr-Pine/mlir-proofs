@@ -2,8 +2,8 @@ module
 
 -- build/native/gcc/mlir_canonicalized/avx512/region/fd_ed25519_verify.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_reduce
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_validate
 public import Firedancer.Avx512.Mlir.fd_ed25519_affine_is_small_order
@@ -15,7 +15,7 @@ public import Firedancer.Ref.Mlir.fd_sha512_append
 public import Firedancer.Ref.Mlir.fd_sha512_fini
 public import Firedancer.Ref.Mlir.fd_sha512_init
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_curve25519_scalar_reduce
 meta import Firedancer.Ref.Mlir.fd_curve25519_scalar_validate
 meta import Firedancer.Avx512.Mlir.fd_ed25519_affine_is_small_order
@@ -27,7 +27,7 @@ meta import Firedancer.Ref.Mlir.fd_sha512_append
 meta import Firedancer.Ref.Mlir.fd_sha512_fini
 meta import Firedancer.Ref.Mlir.fd_sha512_init
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -102,4 +102,4 @@ noncomputable mlir_def fd_ed25519_verify :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

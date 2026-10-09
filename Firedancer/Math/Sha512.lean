@@ -7,7 +7,7 @@ import Std.Tactic.BVDecide
 /-! `fd_ed25519_verify.hash` computes SHA-512: its digest's bytes are SHA-512 of
 `r ‖ publicKey ‖ msg`, whatever `buf0` holds. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open _root_.Ed25519
 
@@ -181,7 +181,7 @@ end fd_sha512_core_ref
 
 /-- `sha` has absorbed the bytes `m`: their whole blocks compressed from `IV`, the rest buffered,
 their bit length counted mod `2^128`. -/
-public structure _root_.LeanMLIR.RIR.ShaState.Absorbed (sha : ShaState) (m : List (BitVec 8)) :
+public structure _root_.MLIR.ShaState.Absorbed (sha : ShaState) (m : List (BitVec 8)) :
     Prop where
   state : sha.state = Sha512.compressBlocks Sha512.IV m
   bufUsed : sha.bufUsed.toNat = m.length % 128
@@ -189,7 +189,7 @@ public structure _root_.LeanMLIR.RIR.ShaState.Absorbed (sha : ShaState) (m : Lis
   bitCnt : sha.bitCntHi ++ sha.bitCntLo = BitVec.ofNat 128 (8 * m.length)
 
 /-- `init`'s object has absorbed nothing. -/
-public theorem _root_.LeanMLIR.RIR.ShaState.absorbed_init (buf0 : BitVec 1024) :
+public theorem _root_.MLIR.ShaState.absorbed_init (buf0 : BitVec 1024) :
     ShaState.Absorbed ⟨buf0, sha512IV, 0#64, 0#64, 0#64⟩ [] := by
   refine ⟨?_, rfl, rfl, ?_⟩
   · rw [Sha512.compressBlocks_of_lt (by simp)]
@@ -295,7 +295,7 @@ end fd_sha512_append
 
 open fd_sha512_append in
 /-- `append` absorbs `data`'s bytes. -/
-public theorem _root_.LeanMLIR.RIR.ShaState.Absorbed.append {sha : ShaState}
+public theorem _root_.MLIR.ShaState.Absorbed.append {sha : ShaState}
     {m : List (BitVec 8)} (h : sha.Absorbed m) (sz : BitVec 64) (data : BitVec (8 * sz.toNat)) :
     (fd_sha512_append.spec sha sz data).Absorbed (m ++ bytesLE data) := by
   have hD : (bytesLE data).length = sz.toNat := by simp
@@ -435,7 +435,7 @@ end fd_sha512_fini
 
 open fd_sha512_fini in
 /-- `fini` on an object that absorbed `m`: the digest's bytes are SHA-512 of `m`. -/
-public theorem _root_.LeanMLIR.RIR.ShaState.Absorbed.fini {sha : ShaState} {m : List (BitVec 8)}
+public theorem _root_.MLIR.ShaState.Absorbed.fini {sha : ShaState} {m : List (BitVec 8)}
     (h : sha.Absorbed m) : bytesLE (Words8.bits (fd_sha512_fini.spec sha).2) = Sha512.digest m := by
   rw [Sha512.digest]
   suffices hs :
@@ -506,4 +506,4 @@ public theorem fd_ed25519_verify.hash_eq (buf0 : BitVec 1024) (r publicKey : Bit
   rw [List.nil_append] at h
   exact h.fini
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

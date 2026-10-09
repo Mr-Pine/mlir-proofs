@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_addcarryx_u51
 
 meta import Firedancer.Ref.fiat_25519_addcarryx_u51
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out1 : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -38,4 +38,4 @@ private def agrees (c : BitVec 8) (a b : BitVec 64) : Bool :=
 -- a poison pointer is UB
 #guard (outs .poison 0#8 1#64 2#64).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

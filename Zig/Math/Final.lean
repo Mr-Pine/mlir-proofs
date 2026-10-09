@@ -8,7 +8,7 @@ public import Zig.Math.Verify
 /-! `zig_ed25519_verify` computes `Zig.verify`: Zig's `Ed25519.Signature.verify`, cofactored, with its
 error codes. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -52,4 +52,4 @@ public theorem zig_ed25519_verify.correct (msg : Pointer) (len : BitVec 64) (sig
   dsimp only
   rw [ZigVerify.code_eq]
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

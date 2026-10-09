@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Tactics
 public import Zig.Edwards25519_dbl
 public import Zig.Mlir.Edwards25519_clearCofactor
 import Std.Data.ExtHashMap.Lemmas
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -107,4 +107,4 @@ public theorem Edwards25519_clearCofactor.call_eq (out p : Pointer) (s : GlobalS
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

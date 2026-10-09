@@ -10,7 +10,7 @@ import Std.Tactic.BVDecide
 /-! The arithmetic of `Edwards25519.slide.spec`: for `x < 2^255` its digits `e_k` sum to `x` as
 `Σ e_k 16^k`, each in `[-8, 8]`. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 namespace Edwards25519.slide
 
@@ -116,4 +116,4 @@ public theorem spec_digit (x : BitVec 256) (h : x.msb = false) (k : Fin 64) :
 
 end Edwards25519.slide
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

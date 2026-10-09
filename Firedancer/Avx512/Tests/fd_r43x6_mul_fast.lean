@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_mul_fast
 
 meta import Firedancer.Avx512.fd_r43x6_mul_fast
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def p : Nat :=
   2 ^ 255 - 19
@@ -42,4 +42,4 @@ private def check (x y : Wwl) : Bool :=
 #guard out #v[1, 2, 3, 4, 5, 6, 99, 99] #v[1, 0, 0, 0, 0, 0, 0, 0] ==
   out #v[1, 2, 3, 4, 5, 6, 0, 0] #v[1, 0, 0, 0, 0, 0, 0, 0]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

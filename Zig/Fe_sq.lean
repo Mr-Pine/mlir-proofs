@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Fe_carry128
@@ -8,7 +8,7 @@ public import Zig.Mlir.Fe_sq
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -255,4 +255,4 @@ public theorem Fe_sq.call_eq_of (out a : Pointer) (s : GlobalState) (hwf : s.WF)
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

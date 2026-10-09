@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Ed25519.Sha512
 public import Zig.Memory
 
 /-! Zig's `Sha512` object in memory: `total_len : u128` at `d`, the state `s : [8]u64` at `d + 16`,
 `buf : [128]u8` at `d + 80`, `buf_len : u8` at `d + 208`; 224 bytes. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -65,4 +65,4 @@ end Sha512Obj
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

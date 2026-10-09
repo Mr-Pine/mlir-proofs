@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Mlir.Fe_rejectNonCanonical
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -207,4 +207,4 @@ public theorem Fe_rejectNonCanonical.call_eq (p : Pointer) (s : GlobalState) (hw
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

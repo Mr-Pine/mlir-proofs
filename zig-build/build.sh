@@ -36,4 +36,4 @@ python3 rewrite.py out/verify.canonical.mlir out/mlir_canonicalized/verify.mlir
 python3 extract_region.py out/mlir_canonicalized/verify.mlir out/mlir_canonicalized/region
 python3 rewrite.py --regions out/mlir_canonicalized/region
 python3 lift.py --src out/mlir_canonicalized/region --out ../Zig/Mlir --prefix Zig.Mlir \
-  --ns LeanMLIR.RIR.Zig zig_ed25519_verify
+  --ns MLIR.Zig zig_ed25519_verify

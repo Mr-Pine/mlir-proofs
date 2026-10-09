@@ -15,7 +15,7 @@ import Mathlib.Tactic.LinearCombination
 /-! Ed25519 verification as mathematics, in `fd_ed25519_verify`'s order and error codes, and
 `fd_ed25519_verify` computes it. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open _root_.Ed25519
 
@@ -147,4 +147,4 @@ public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 *
 
 end Verify
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Ref.fd_ed25519_partial_dbl
 public import Firedancer.Ref.fd_ed25519_point_add_final_mul
 public import Firedancer.Ref.fd_ed25519_point_add_final_mul_projective
 public import Firedancer.Ref.Mlir.fd_ed25519_point_dbln
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -180,4 +180,4 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

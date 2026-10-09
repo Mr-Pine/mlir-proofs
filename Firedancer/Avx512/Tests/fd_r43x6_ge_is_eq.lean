@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_ge_is_eq
 
 meta import Firedancer.Avx512.fd_r43x6_ge_is_eq
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-- Eight 43-bit lanes from `seed`. -/
 private def lanes (seed : Nat) : Wwl :=
@@ -31,4 +31,4 @@ private def Q : Nat × Nat × Nat :=
 
 #guard run P Q == some 0 && specOf P Q == 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -4,13 +4,13 @@ public import Common.LimbsBits
 public import Zig.Fe
 public import Zig.Memory
 import Std.Data.ExtHashMap.Lemmas
-import SSA.Projects.RIR.Run.Tactic.Memory
+import MLIR.Run.Tactic.Memory
 import Std.Tactic.BVDecide
 
 /-! Points as Zig's `Edwards25519` holds them: field elements `x, y, z, t` at byte offsets 0, 40, 80,
 120, then 8 bytes whose lowest bit is `is_base`; 168 bytes in all, copied whole. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open Memory
 
@@ -28,20 +28,20 @@ def ZPt.bits (P : ZPt) (rest : BitVec 64) : BitVec 1344 :=
   rest ++ limbsBits P.t ++ limbsBits P.z ++ limbsBits P.y ++ limbsBits P.x
 
 /-- The point at `p`. -/
-def _root_.LeanMLIR.RIR.MemoryState.readPt (m : MemoryState) (p : Pointer) : ZPt :=
+def _root_.MLIR.MemoryState.readPt (m : MemoryState) (p : Pointer) : ZPt :=
   ⟨m.readLimbs p, m.readLimbs (p.add 40#64), m.readLimbs (p.add 80#64), m.readLimbs (p.add 120#64)⟩
 
 /-- The last 8 bytes at `p`, `is_base` lowest. -/
-def _root_.LeanMLIR.RIR.MemoryState.readRest (m : MemoryState) (p : Pointer) : BitVec 64 :=
+def _root_.MLIR.MemoryState.readRest (m : MemoryState) (p : Pointer) : BitVec 64 :=
   m.readAt (p.add 160#64) 64
 
 /-- Store a point and its last 8 bytes at `p`, at once. -/
-abbrev _root_.LeanMLIR.RIR.MemoryState.storePt (m : MemoryState) (p : Pointer) (P : ZPt)
+abbrev _root_.MLIR.MemoryState.storePt (m : MemoryState) (p : Pointer) (P : ZPt)
     (rest : BitVec 64) : MemoryState :=
   m.storeAt p (P.bits rest)
 
 /-- The point at `p` fits, its offsets not wrapping. -/
-abbrev _root_.LeanMLIR.RIR.MemoryState.PtFit (m : MemoryState) (p : Pointer) : Prop :=
+abbrev _root_.MLIR.MemoryState.PtFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 168 ≤ 2 ^ 64 ∧ Fits m p 1344
 
 /-- `rest` with its lowest bit, `is_base`, replaced. -/
@@ -67,7 +67,7 @@ theorem ZPt.getLsbD_bits (P : ZPt) (rest : BitVec 64) (j : Nat) :
     | rfl
 
 /-- A second store at the same place, of the same width, overwrites the first. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_storeAt_self {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.storeAt_storeAt_self {m : MemoryState} {p : Pointer}
     {x y : BitVec w} : (m.storeAt p x).storeAt p y = m.storeAt p y := by
   cases hb : m[p.id]? with
   | none => simp [MemoryState.storeAt, hb]
@@ -77,7 +77,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_storeAt_self {m : MemoryS
       spliceBits_spliceBits_self]
 
 /-- A store inside a range that fits: the range stored whole, the bits spliced in. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_add_eq {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.storeAt_add_eq {m : MemoryState} {p : Pointer}
     {off : BitVec 64} (hf : Fits m p v) (hov : ¬p.offset.uaddOverflow off)
     (hw : off.toNat * 8 + w ≤ v) (y : BitVec w) :
     m.storeAt (p.add off) y = m.storeAt p (spliceBits (m.readAt p v) (off.toNat * 8) y) := by
@@ -145,7 +145,7 @@ theorem bits_slices (x : BitVec 1344) :
   bv_decide
 
 /-- A point that fits, read whole: its fields' and last 8 bytes' bits. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_eq_ptBits {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readAt_eq_ptBits {m : MemoryState} {p : Pointer}
     (hf : Fits m p 1344) (ho : p.offset.toNat + 168 ≤ 2 ^ 64) :
     m.readAt p 1344 = (m.readPt p).bits (m.readRest p) := by
   have h0 := readLimbs_of_readAt_add (k := 0) hf (by omega) (by omega) rfl
@@ -163,7 +163,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_eq_ptBits {m : MemoryState
   exact (bits_slices _).symm
 
 /-- A point copied whole (a `memcpy` of 168 bytes): stored as a point. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_readAt_eq_storePt {m m' : MemoryState}
+public theorem _root_.MLIR.MemoryState.storeAt_readAt_eq_storePt {m m' : MemoryState}
     {p q : Pointer} (hq : m'.PtFit q) :
     m.storeAt p (m'.readAt q 1344) = m.storePt p (m'.readPt q) (m'.readRest q) := by
   rw [MemoryState.readAt_eq_ptBits hq.2 hq.1]
@@ -185,7 +185,7 @@ theorem slices_bits (P : ZPt) (rest : BitVec 64) :
     fin_cases i <;> simp only [ZPt.bits, limbsBits, Fe.mk5, Fin.isValue] <;> bv_decide
 
 /-- A point stored where it fits reads back. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_storePt_self {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_storePt_self {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) :
     (m.storePt p P rest).readPt p = P ∧ (m.storePt p P rest).readRest p = rest := by
   have hr := MemoryState.readAt_storeAt_self h.2 (P.bits rest)
@@ -221,7 +221,7 @@ theorem splices_eq (B : BitVec 1344) (x y z t : Fin 5 → BitVec 64) (b : BitVec
   bv_decide
 
 /-- The field stores a point function ends with: `x, y, z, t`, then `is_base`, as one point store. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_fields_eq {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.storeAt_fields_eq {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) (x y z t : Fin 5 → BitVec 64) (b : BitVec 1) :
     ((((m.storeAt p (limbsBits x)).storeAt (p.add 40#64) (limbsBits y)).storeAt (p.add 80#64)
                 (limbsBits z)).storeAt
@@ -250,7 +250,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_fields_eq {m : MemoryStat
   rfl
 
 /-- A point copied whole reads back as the source. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_storeAt_readAt {m m' : MemoryState}
+public theorem _root_.MLIR.MemoryState.readPt_storeAt_readAt {m m' : MemoryState}
     {p q : Pointer} (hq : m'.PtFit q) (hp : m.PtFit p) :
     (m.storeAt p (m'.readAt q 1344)).readPt p = m'.readPt q ∧
       (m.storeAt p (m'.readAt q 1344)).readRest p = m'.readRest q := by
@@ -258,7 +258,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_storeAt_readAt {m m' : Mem
   exact MemoryState.readPt_storePt_self hp
 
 /-- A field's offset does not wrap, in a point whose offsets do not. -/
-public theorem _root_.LeanMLIR.RIR.Pointer.field_offset {p : Pointer}
+public theorem _root_.MLIR.Pointer.field_offset {p : Pointer}
     (hp : p.offset.toNat + 168 ≤ 2 ^ 64) {a : Nat} (ha : a ≤ 120) :
     (p.add (BitVec.ofNat 64 a)).offset.toNat + 32 < 2 ^ 64 := by
   simp only [Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat]
@@ -288,27 +288,27 @@ theorem PtFit.limbsFit_add {m : MemoryState} {p : Pointer} (h : m.PtFit p) {k : 
     rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]; omega
 
 @[mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.limbsFit_x {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.limbsFit_x {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) : m.LimbsFit p := by
   simpa [Pointer.add_zero] using PtFit.limbsFit_add h (k := 0) (by omega)
 
 @[mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.limbsFit_y {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.limbsFit_y {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) : m.LimbsFit (p.add 40#64) :=
   PtFit.limbsFit_add h (k := 40) (by omega)
 
 @[mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.limbsFit_z {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.limbsFit_z {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) : m.LimbsFit (p.add 80#64) :=
   PtFit.limbsFit_add h (k := 80) (by omega)
 
 @[mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.limbsFit_t {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.limbsFit_t {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) : m.LimbsFit (p.add 120#64) :=
   PtFit.limbsFit_add h (k := 120) (by omega)
 
 /-- The last 8 bytes of a point that fits. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.fits_rest {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.fits_rest {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) : Fits m (p.add 160#64) 64 :=
   Fits.add_of_le
     (by
@@ -316,29 +316,29 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.fits_rest {m : MemoryState}
     (by simp) h.2
 
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.storeAt {m : MemoryState} {p q : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.storeAt {m : MemoryState} {p q : Pointer}
     {x : BitVec w} (h : m.PtFit p) : (m.storeAt q x).PtFit p :=
   ⟨h.1, Fits.storeAt h.2⟩
 
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.storeLimbs {m : MemoryState} {p q : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.storeLimbs {m : MemoryState} {p q : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.PtFit p) : (m.storeLimbs q l).PtFit p :=
   ⟨h.1, Fits.storeLimbs h.2⟩
 
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.alloca {s : GlobalState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.alloca {s : GlobalState} {p : Pointer}
     (hwf : s.WF) (h : s.mem.PtFit p) : (s.alloca n).mem.PtFit p :=
   ⟨h.1, Fits.alloca hwf h.2⟩
 
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.addBlock {s : GlobalState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.addBlock {s : GlobalState} {p : Pointer}
     {x : BitVec v} (hwf : s.WF) (h : s.mem.PtFit p) :
     (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).PtFit p := by
   rw [← GlobalState.alloca_storeAt_allocaPtr]
   exact (h.alloca hwf).storeAt
 
 /-- A point that fits, read after an `alloca`: as before it. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_alloca {s : GlobalState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_alloca {s : GlobalState} {p : Pointer}
     (hwf : s.WF) (h : s.mem.PtFit p) : (s.alloca n).mem.readPt p = s.mem.readPt p := by
   have hne := GlobalState.ne_allocaPtr_of_fits hwf h.2
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
@@ -346,24 +346,24 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_alloca {s : GlobalState} {
     MemoryState.readLimbs_alloca (hne' _)]
 
 /-- The same for the last 8 bytes. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readRest_alloca {s : GlobalState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readRest_alloca {s : GlobalState} {p : Pointer}
     (hwf : s.WF) (h : s.mem.PtFit p) : (s.alloca n).mem.readRest p = s.mem.readRest p :=
   MemoryState.readAt_alloca hwf h.fits_rest
 
 /-- A point in a fresh 168-byte block, from its start. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.of_fits {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.PtFit.of_fits {m : MemoryState} {p : Pointer}
     (h : Fits m p 1344) (ho : p.offset = 0) : m.PtFit p :=
   ⟨by simp [ho], h⟩
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_storeAt_of_id_ne {m : MemoryState}
+public theorem _root_.MLIR.MemoryState.readPt_storeAt_of_id_ne {m : MemoryState}
     {p q : Pointer} {x : BitVec w} (h : q.id ≠ p.id) : (m.storeAt q x).readPt p = m.readPt p := by
   have h' (k : BitVec 64) : q.id ≠ (p.add k).id := by simpa [Pointer.add_id] using h
   simp only [MemoryState.readPt, MemoryState.readLimbs_storeAt_of_id_ne h,
     MemoryState.readLimbs_storeAt_of_id_ne (h' _)]
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readRest_storeAt_of_id_ne {m : MemoryState}
+public theorem _root_.MLIR.MemoryState.readRest_storeAt_of_id_ne {m : MemoryState}
     {p q : Pointer} {x : BitVec w} (h : q.id ≠ p.id) :
     (m.storeAt q x).readRest p = m.readRest p := by
   have h' : (Range.of q w).Disjoint (Range.of (p.add 160#64) 64) := by
@@ -371,7 +371,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readRest_storeAt_of_id_ne {m : Me
   exact MemoryState.readAt_storeAt_disjoint h' x
 
 /-- A copy of `p` at `c`, `c` apart from `p`: both read the same point. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_copy {m : MemoryState} {p c : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_copy {m : MemoryState} {p c : Pointer}
     {v : BitVec 1344} (hp : (m.storeAt c v).PtFit p) (hc : (m.storeAt c v).PtFit c)
     (hne : c.id ≠ p.id) (hv : m.readAt p 1344 = v) :
     (m.storeAt c v).readPt c = (m.storeAt c v).readPt p := by
@@ -381,7 +381,7 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_copy {m : MemoryState} {p 
   rw [(MemoryState.readPt_storeAt_readAt hp' hc').1, MemoryState.readPt_storeAt_of_id_ne hne]
 
 /-- A point read back from its 168 bytes. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_of_readAt {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_of_readAt {m : MemoryState} {p : Pointer}
     {P : ZPt} {rest : BitVec 64} (h : m.PtFit p) (hr : m.readAt p 1344 = P.bits rest) :
     m.readPt p = P ∧ m.readRest p = rest := by
   have hm : m = m.storePt p P rest := by
@@ -389,4 +389,4 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_of_readAt {m : MemoryState
   rw [hm]
   exact MemoryState.readPt_storePt_self h
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

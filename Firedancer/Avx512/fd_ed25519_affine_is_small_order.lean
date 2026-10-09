@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Globals
 public import Firedancer.Avx512.fd_ed25519_point_to
@@ -8,7 +8,7 @@ public import Firedancer.Avx512.fd_f25519_is_zero
 public import Firedancer.Avx512.fd_f25519_eq
 public import Firedancer.Avx512.Mlir.fd_ed25519_affine_is_small_order
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -75,4 +75,4 @@ public theorem fd_ed25519_affine_is_small_order.call_eq (a : Pointer) (s : Globa
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

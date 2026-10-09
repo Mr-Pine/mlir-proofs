@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_unpack
 
 meta import Firedancer.Avx512.fd_r43x6_unpack
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def state : GlobalState :=
   ⟨⟨1⟩, ⟨∅⟩⟩
@@ -39,4 +39,4 @@ private def check (u : Wv) : Bool :=
 
 #guard check #v[0, 0, 0, 0]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

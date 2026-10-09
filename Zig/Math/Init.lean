@@ -7,7 +7,7 @@ public import Zig.Math.PointDbl
 
 /-! `Verifier.init`'s error code is `verify`'s rejection before hashing: `-code` when nonzero. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -97,4 +97,4 @@ public theorem Verifier.init.checks_of_code_eq {r S A : BitVec 256}
   exact ⟨hS, by simp only [p]; omega, a, R, PA, PR, rfl, rfl, hPA, hPR, hext, hextR, hz, hzR, hlt,
     hltR, hx, hxR⟩
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

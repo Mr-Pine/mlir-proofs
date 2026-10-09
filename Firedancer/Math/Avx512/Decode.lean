@@ -16,10 +16,10 @@ import Std.Tactic.BVDecide
 encoding's checks pass exactly when a point with its `y` exists, and then the QUAD it stores is that
 point, affine, of the parity its top bit asks for (any sign for `x = 0`, as Dalek and Ref). -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
-open LeanMLIR.RIR.Firedancer.Ref (sq_eq_one_iff' isSquare_div_iff)
+open MLIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (sq_eq_one_iff' isSquare_div_iff)
 open _root_.Ed25519 (OnCurve exists_decodes_iff)
 open fd_r43x6_ge_decode2
 
@@ -559,4 +559,4 @@ public theorem fd_ed25519_point_eq.spec_point {X Y : Quad} {P Q : _root_.Ed25519
 
 end Decode
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

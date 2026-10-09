@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ulong_bswap
 
 meta import Firedancer.Ref.fd_ulong_bswap
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def s0 : GlobalState :=
   ⟨default, default⟩
@@ -26,4 +26,4 @@ private def out (x : PoisonOr (BitVec 64)) : Option (PoisonOr (BitVec 64)) :=
 -- A poison argument poisons the result.
 #guard out .poison == some .poison
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

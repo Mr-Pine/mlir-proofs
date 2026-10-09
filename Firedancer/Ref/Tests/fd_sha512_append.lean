@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_sha512_append
 
 meta import Firedancer.Ref.fd_sha512_append
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def sha : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -55,4 +55,4 @@ private def mid (u : BitVec 64) : ShaState :=
 -- nothing buffered: one block, 72 bytes left
 #guard agrees (mid 0#64) 200
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

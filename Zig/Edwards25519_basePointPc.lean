@@ -1,14 +1,14 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Edwards25519_identityElement
 public import Zig.Mlir.Edwards25519_basePointPc
-import all SSA.Projects.RIR.Ty
+import all MLIR.Ty
 
 /-! `Edwards25519.basePointPc`, the base point's precomputed multiples `0 … 15`: the initializer's
 literal, and the entries read back from the block `addressof` gives it. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -112,7 +112,7 @@ theorem basePointPc_entry_bits :
 
 /-- Entry `i` of the table global's block (`step_addressof … value_eq`'s facts): its point,
 `is_base` set at `1` alone. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_basePointPc {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_basePointPc {m : MemoryState} {p : Pointer}
     {hw : Edwards25519_basePointPc.t.width = 21504} (i : Fin 16) (hf : Fits m p 21504)
     (ho : p.offset = 0)
     (hr : m.readAt p 21504 = Ty.flatBits Edwards25519_basePointPc.lit (hw := hw)) :
@@ -145,4 +145,4 @@ public theorem Edwards25519.basePointPc.pts_lt (i : Fin 16) :
   unfold ZPt.Lt Fe.Lt
   decide +kernel
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

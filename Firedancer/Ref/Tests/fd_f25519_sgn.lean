@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_sgn
 
 meta import Firedancer.Ref.fd_f25519_sgn
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def a : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -42,4 +42,4 @@ private def p1Bytes : BitVec 320 :=
 
 #guard out p1Bytes == some 1#32
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

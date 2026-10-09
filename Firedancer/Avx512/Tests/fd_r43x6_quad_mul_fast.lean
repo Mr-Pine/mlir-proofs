@@ -6,7 +6,7 @@ public import Firedancer.Avx512.fd_r43x6_mul_fast
 meta import Firedancer.Avx512.fd_r43x6_quad_mul_fast
 meta import Firedancer.Avx512.fd_r43x6_mul_fast
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def z03 : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -53,4 +53,4 @@ private def check (xs ys : List Wwl) : Bool :=
       #v[0x123456789AB, 0x7FEDCBA9876, 0x1F2E3D4C5B6, 0x0A1B2C3D4E5, 0x66554433221, 0x77777777777,
         0, 0]]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

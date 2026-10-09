@@ -6,7 +6,7 @@ public import Firedancer.Ref.fd_sha512_init
 meta import Firedancer.Ref.fd_sha512_fini
 meta import Firedancer.Ref.fd_sha512_init
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-- Bytes, byte `k` at bits `8 * k`. -/
 private def bytes (l : List UInt8) : BitVec (8 * l.length) :=
@@ -120,4 +120,4 @@ private def longDigest : Nat :=
 
 #guard specDigest long [(0, 50), (50, 150)] == longDigest
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

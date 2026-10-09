@@ -8,7 +8,7 @@ import Mathlib.Tactic.Linarith
 /-! The constant-time comparisons behind Zig's `scalar.rejectNonCanonical` and
 `Fe.rejectNonCanonical`, as numbers. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Definitions -/
 
@@ -121,4 +121,4 @@ public theorem ltScan_eq (s o : ℕ → BitVec 8) (i : ℕ) (c n : BitVec 8) (hc
       rcases hn with rfl | rfl <;>
       decide
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

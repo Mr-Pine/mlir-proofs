@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_to
 
 meta import Firedancer.Ref.fd_ed25519_point_to
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
@@ -32,4 +32,4 @@ private def pBytes : BitVec 1280 :=
       s'.mem.readAt (ptr 3) 320 == pBytes.extractLsb' 640 320
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

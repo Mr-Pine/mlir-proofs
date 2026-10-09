@@ -1,18 +1,18 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Ed25519.Sha512
 public import Zig.Sha512
 public import Zig.Sha512_round
 public import Zig.Sha512_update
 public import Zig.Mlir.Sha512_final
 import Std.Tactic.BVDecide
-import all SSA.Projects.RIR.Semantics.Effectful.Memory.Bits
+import all MLIR.Semantics.Effectful.Memory.Bits
 
 /-! `Sha512.final`: the state it leaves (`post`), and the 64 bytes it writes at `out`, SHA-512 of
 what the object absorbed (`digest`). -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -870,4 +870,4 @@ public theorem post_readAt {s : GlobalState} {d out q : Pointer} {w : Nat} (hdo 
 
 end Sha512_final
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

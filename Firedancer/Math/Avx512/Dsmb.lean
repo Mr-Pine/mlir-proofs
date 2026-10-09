@@ -10,7 +10,7 @@ import Mathlib.Tactic.Module
 multiples: `ai` holds `A`'s, each wNAF digit adds its odd multiple, and the ladder doubles between
 digits. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 namespace fd_ed25519_double_scalar_mul_base
 
@@ -246,4 +246,4 @@ public theorem spec_val_base {A : Quad} {n1 n2 : BitVec 256} (PA : Point)
 
 end fd_ed25519_double_scalar_mul_base
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

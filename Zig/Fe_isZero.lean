@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Fe_reduce
 public import Zig.Mlir.Fe_isZero
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -76,4 +76,4 @@ public theorem Fe_isZero.call_eq_of (a : Pointer) (s : GlobalState) (hwf : s.WF)
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

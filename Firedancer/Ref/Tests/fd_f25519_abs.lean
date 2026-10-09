@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_abs
 
 meta import Firedancer.Ref.fd_f25519_abs
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -67,4 +67,4 @@ private def same (x y : Option (Fin 5 → BitVec 64)) : Bool :=
 
 #guard same (out 2#320 (q := a)) (out 2#320)
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

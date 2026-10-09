@@ -2,7 +2,7 @@ module
 
 public import Common.Limbs
 public import Zig.Memory
-import SSA.Projects.RIR.Run.Tactic.Memory
+import MLIR.Run.Tactic.Memory
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 public import Mathlib.Data.BitVec
@@ -11,7 +11,7 @@ import Std.Tactic.BVDecide
 /-! Field elements as Zig's `Fe` holds them: five 64-bit limbs of 51 bits' weight, at the layout
 `readLimbs` reads. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -20,7 +20,7 @@ abbrev Fe.Lt (l : Fin 5 → BitVec 64) (c : ℕ) : Prop :=
   ∀ i, (l i).toNat < c
 
 /-- The five 128-bit columns of a product, as `_carry128` reads them at `p`. -/
-def _root_.LeanMLIR.RIR.MemoryState.readWide (m : MemoryState) (p : Pointer) : Fin 5 → BitVec 128
+def _root_.MLIR.MemoryState.readWide (m : MemoryState) (p : Pointer) : Fin 5 → BitVec 128
   | ⟨0, _⟩ => m.readAt p 128
   | ⟨1, _⟩ => m.readAt (p.add 16#64) 128
   | ⟨2, _⟩ => m.readAt (p.add 32#64) 128
@@ -28,14 +28,14 @@ def _root_.LeanMLIR.RIR.MemoryState.readWide (m : MemoryState) (p : Pointer) : F
   | ⟨4, _⟩ => m.readAt (p.add 64#64) 128
 
 /-- The columns `1 … 4` written back at `p`, as `_carry128` writes them. -/
-abbrev _root_.LeanMLIR.RIR.MemoryState.storeWideTail (m : MemoryState) (p : Pointer)
+abbrev _root_.MLIR.MemoryState.storeWideTail (m : MemoryState) (p : Pointer)
     (x : Fin 5 → BitVec 128) : MemoryState :=
   (((m.storeAt (p.add 16#64) (x 1)).storeAt (p.add 32#64) (x 2)).storeAt (p.add 48#64)
         (x 3)).storeAt
     (p.add 64#64) (x 4)
 
 /-- The five columns at `p` fit, and their offsets do not wrap. -/
-abbrev _root_.LeanMLIR.RIR.MemoryState.WideFit (m : MemoryState) (p : Pointer) : Prop :=
+abbrev _root_.MLIR.MemoryState.WideFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 64 < 2 ^ 64 ∧
     Fits m p 128 ∧
     Fits m (p.add 16#64) 128 ∧
@@ -47,19 +47,19 @@ end
 
 /-- Stores keep every block's length, so the columns still fit. -/
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.storeAt {m : MemoryState} {p q : Pointer}
+public theorem _root_.MLIR.MemoryState.WideFit.storeAt {m : MemoryState} {p q : Pointer}
     {x : BitVec w} (h : m.WideFit p) : (m.storeAt q x).WideFit p := by
   unfold MemoryState.WideFit at h ⊢
   simpa using h
 
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.storeLimbs {m : MemoryState} {p q : Pointer}
+public theorem _root_.MLIR.MemoryState.WideFit.storeLimbs {m : MemoryState} {p q : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.WideFit p) : (m.storeLimbs q l).WideFit p := by
   unfold MemoryState.storeLimbs
   exact h.storeAt.storeAt.storeAt.storeAt.storeAt
 
 /-- An 80-byte block from its start holds five columns. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.of_fits {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.WideFit.of_fits {m : MemoryState} {p : Pointer}
     (h : Fits m p 640) (ho : p.offset = 0) : m.WideFit p := by
   have hov : ∀ off : BitVec 64, off.toNat ≤ 64 → ¬p.offset.uaddOverflow off := by
     intro off hoff
@@ -70,14 +70,14 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.WideFit.of_fits {m : MemoryState}
 
 /-- Limbs that fit, read after an `alloca`: as before it. -/
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_of_fit {s : GlobalState}
+public theorem _root_.MLIR.MemoryState.readLimbs_alloca_of_fit {s : GlobalState}
     {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) :
     (s.alloca n).mem.readLimbs p = s.mem.readLimbs p :=
   MemoryState.readLimbs_alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1)
 
 /-- Limbs in another block are unaffected by a store. -/
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_storeAt_of_id_ne {m : MemoryState}
+public theorem _root_.MLIR.MemoryState.readLimbs_storeAt_of_id_ne {m : MemoryState}
     {p q : Pointer} {x : BitVec w} (h : q.id ≠ p.id) :
     (m.storeAt q x).readLimbs p = m.readLimbs p := by
   have hd (k : BitVec 64) : (Range.of q w).Disjoint (Range.of (p.add k) 64) := by
@@ -91,28 +91,28 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_storeAt_of_id_ne {m : M
 /-! ### Limbs stored, read back one by one -/
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_0 {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_0 {m : MemoryState} {p : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt p 64 = l 0 := by
   have := congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 0
   exact this
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_1 {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_1 {m : MemoryState} {p : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 8#64) 64 = l 1 :=
   congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 1
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_2 {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_2 {m : MemoryState} {p : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 16#64) 64 = l 2 :=
   congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 2
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_3 {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_3 {m : MemoryState} {p : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 24#64) 64 = l 3 :=
   congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 3
 
 @[mlir_read]
-public theorem _root_.LeanMLIR.RIR.MemoryState.readAt_storeLimbs_4 {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_4 {m : MemoryState} {p : Pointer}
     {l : Fin 5 → BitVec 64} (h : m.LimbsFit p) : (m.storeLimbs p l).readAt (p.add 32#64) 64 = l 4 :=
   congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 4
 
@@ -127,7 +127,7 @@ public theorem Fe.Lt.alloca {s : GlobalState} {p : Pointer} {c : ℕ} (hne : p.i
   rwa [MemoryState.readLimbs_alloca hne]
 
 @[mlir_mem, mlir_transport]
-public theorem _root_.LeanMLIR.RIR.MemoryState.LimbsFit.alloca_of_fit {s : GlobalState}
+public theorem _root_.MLIR.MemoryState.LimbsFit.alloca_of_fit {s : GlobalState}
     {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) : (s.alloca n).mem.LimbsFit p :=
   h.alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1)
 
@@ -155,7 +155,7 @@ public theorem Fe.Lt.storeAt {m : MemoryState} {p q : Pointer} {c : ℕ} {x : Bi
   rwa [MemoryState.readLimbs_storeAt_of_id_ne hne]
 
 /-- Five columns stored at `p`, lowest first, read back. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readWide_stores {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readWide_stores {m : MemoryState} {p : Pointer}
     (h : m.WideFit p) (x0 x1 x2 x3 x4 : BitVec 128) :
     (((((m.storeAt p x0).storeAt (p.add 16#64) x1).storeAt (p.add 32#64) x2).storeAt (p.add 48#64)
                 x3).storeAt
@@ -204,7 +204,7 @@ public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → B
   rfl
 
 /-- Five limb stores at `p`, read back. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_stores {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readLimbs_stores {m : MemoryState} {p : Pointer}
     (h : m.LimbsFit p) (x : Fin 5 → BitVec 64) :
     (((((m.storeAt p (x 0)).storeAt (p.add 8#64) (x 1)).storeAt (p.add 16#64) (x 2)).storeAt
                 (p.add 24#64) (x 3)).storeAt
@@ -510,4 +510,4 @@ public theorem zshl_lt {x y : BitVec 64} (hx : x.toNat < 2 ^ 54) (hy : y.toNat <
       toNat_zext_shl1, Nat.mul_assoc]
     omega
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

@@ -20,9 +20,9 @@ import Mathlib.Tactic.Ring
 /-! The AVX-512 point operations on the twisted Edwards curve over `ZMod p`: each spec computes
 its curve operation on the points its QUADs represent, folded. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 open _root_.Ed25519 (d OnCurve IsExt dbl_den₁ dbl_den₂ add_compl)
 
 /-! ## The curve algebra -/
@@ -496,4 +496,4 @@ public theorem fd_ed25519_affine_is_small_order.spec_val {A : Quad} (hx : A.val 
 
 end Compare
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

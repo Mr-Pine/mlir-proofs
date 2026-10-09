@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_f25519_mul
 public import Firedancer.Ref.Mlir.fd_f25519_mul3
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Proof -/
 
@@ -38,4 +38,4 @@ public theorem fd_f25519_mul3.call_eq (r1 a1 b1 r2 a2 b2 r3 a3 b3 : Pointer) (s 
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_diagnose
 
 meta import Firedancer.Avx512.fd_r43x6_diagnose
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-- The result if it is `spec x`, else `none`. -/
 private def out (x : Wwl) : Option (BitVec 32) :=
@@ -31,4 +31,4 @@ private def out (x : Wwl) : Option (BitVec 32) :=
 
 #guard out #v[-1, 0, 0, 0, 0, 0, 0, 0] == some 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

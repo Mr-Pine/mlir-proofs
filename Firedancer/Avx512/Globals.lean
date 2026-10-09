@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Mlir.fd_ed25519_order8_point_y0
 public import Firedancer.Avx512.Mlir.fd_ed25519_order8_point_y1
@@ -9,7 +9,7 @@ public import Firedancer.Avx512.Mlir.fd_ed25519_base_point_wnaf_table
 /-! The globals: their values, and the field elements and points read back from the block
 `addressof` gives them. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -79,4 +79,4 @@ public theorem fd_ed25519_order8_point_y1.readVec {m : MemoryState} {p : Pointer
   simp only [MemoryState.readVec, h, extractVecElem_flatBits]
   decide
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_point_from
 
 meta import Firedancer.Avx512.fd_ed25519_point_from
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
@@ -36,4 +36,4 @@ private def state : GlobalState :=
     ret == .value (ptr 1) && P.P03 == Q.P03 && P.P14 == Q.P14 && P.P25 == Q.P25
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

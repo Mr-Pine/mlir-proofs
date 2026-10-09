@@ -2,12 +2,12 @@ module
 
 -- build/native/gcc/mlir_canonicalized/avx512/region/fd_ed25519_order8_point_y0.mlir
 
-public import SSA.Projects.RIR.Semantics.GlobalInitializer
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.GlobalInitializer
+public import MLIR.Syntax.Elab
 
-meta import SSA.Projects.RIR.Semantics.GlobalInitializer
+meta import MLIR.Semantics.GlobalInitializer
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -23,4 +23,4 @@ mlir_const_def fd_ed25519_order8_point_y0 :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

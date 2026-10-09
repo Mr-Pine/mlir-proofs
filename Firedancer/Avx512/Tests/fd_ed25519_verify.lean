@@ -6,7 +6,7 @@ public import Firedancer.Avx512.fd_ed25519_verify
 through the point decoding. The hashing is the ref's, tested there; this checks the scalar check's
 early exit by proof. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 open Firedancer.Ref
 
@@ -29,4 +29,4 @@ example :
     decide
   simp [fd_ed25519_verify.spec, h]
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

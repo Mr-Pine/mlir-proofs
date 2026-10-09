@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_point_eq_z1
 
 meta import Firedancer.Avx512.fd_ed25519_point_eq_z1
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def a : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -41,4 +41,4 @@ private def specOf (sa sb : Nat) : BitVec 32 :=
 
 #guard specOf 4000000000000 1234567890123 == 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

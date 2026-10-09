@@ -14,7 +14,7 @@ import Mathlib.Tactic.Abel
 /-! `Verifier.verify`'s code on the curve: `WeakPublicKey` (`4`) when `32 A` has `x = 0`, else `0`
 exactly when `8 [S]B = 8 R + 8 [k]A`, `k` the digest mod `ℓ`, else `5`. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 

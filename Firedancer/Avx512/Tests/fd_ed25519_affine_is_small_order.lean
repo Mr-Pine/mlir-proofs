@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_affine_is_small_order
 
 meta import Firedancer.Avx512.fd_ed25519_affine_is_small_order
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def a : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -30,4 +30,4 @@ private def check (b : BitVec 1536) (r : BitVec 32) : Bool :=
 #guard check (bytes fun i => 1000 + 37 * i) 0
 #guard check (bytes fun i => if i % 4 = 0 then 0 else 1000 + 37 * i) 1
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

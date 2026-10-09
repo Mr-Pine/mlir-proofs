@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_carry_mul
 
 meta import Firedancer.Ref.fiat_25519_carry_mul
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -50,4 +50,4 @@ private def agrees (s : GlobalState) : Bool :=
 -- A poison pointer is UB.
 #guard (outLimbs .poison (.value a) (.value b) (state mixed mixed)).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

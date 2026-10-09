@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_from_bytes
 
 meta import Firedancer.Ref.fiat_25519_from_bytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -56,4 +56,4 @@ private def agrees (s : GlobalState) (src : Pointer) : Bool :=
   | .value (some _, _) => false
   | _ => true
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

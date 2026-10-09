@@ -13,7 +13,7 @@ import Mathlib.Tactic.Ring
 /-! Zig's point operations on the curve: `add`, `neg` and `sub` compute the curve's sum, negation
 and difference in extended coordinates, under the limb bounds the program proofs assume. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -171,4 +171,4 @@ public theorem Edwards25519.sub.spec_point {A B : Point} (hP : P.Ext A.x A.y) (h
 
 end Neg
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

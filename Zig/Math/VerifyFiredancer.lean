@@ -6,7 +6,7 @@ public import Firedancer.Math.VerifySpec
 /-! Zig's cofactored `verify` accepts what Firedancer's cofactorless one accepts, for canonical
 `R`: the library's variants compared. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -17,4 +17,4 @@ public theorem verify_of_firedancer {msg : List (BitVec 8)} {r S A : BitVec 256}
   (verify_eq_zero_iff msg r S A).2
     (Variant.zig_of_firedancer ((Firedancer.Ref.Ed25519.verify_eq_zero_iff msg r S A).1 h) hr)
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

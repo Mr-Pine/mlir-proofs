@@ -7,7 +7,7 @@ import Std.Tactic.BVDecide
 /-! Scalars mod `ℓ` as Zig's `Scalar` holds them: five 64-bit limbs of 56 bits' weight, at the
 layout `readLimbs` reads. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -86,4 +86,4 @@ public theorem Scalar.limbs_lt_val {z : BitVec 320} (h : z.toNat < 2 ^ 280) :
   · simp only [Scalar.val, Scalar.limbs, Fe.mk5, hm, hs, h0]
     omega
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

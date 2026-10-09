@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_dbln
 
 meta import Firedancer.Ref.fd_ed25519_point_dbln
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -60,4 +60,4 @@ private def check (dst src : Pointer) (n : Nat) : Bool :=
 -- in place
 #guard check a a 3
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

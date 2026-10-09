@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_sub_with_opts
 
 meta import Firedancer.Ref.fd_ed25519_point_sub_with_opts
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -74,4 +74,4 @@ private def check (dst src1 src2 : Pointer) (z p s : BitVec 32) : Bool :=
 
 #guard check r a a 0 1 0
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

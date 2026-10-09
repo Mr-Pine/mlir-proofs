@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_f25519_eq
 
 meta import Firedancer.Avx512.fd_f25519_eq
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def a : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -47,4 +47,4 @@ private def out (ab bb : BitVec 512) (q : Pointer := b) : Option (BitVec 32) :=
 
 #guard out (pack [1, 2, 3]) (pack [1, 2, 4]) == some 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

@@ -1,15 +1,15 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Effectful.Memory.Operations
-public import SSA.Projects.RIR.Semantics.Effectful.Memory.Fits
-import SSA.Projects.RIR.Run.Tactic.Memory
-public meta import SSA.Projects.RIR.Run.Tactic.Util
+public import MLIR.Semantics.Effectful.Memory.Operations
+public import MLIR.Semantics.Effectful.Memory.Fits
+import MLIR.Run.Tactic.Memory
+public meta import MLIR.Run.Tactic.Util
 public meta import Lean.Elab.Tactic
 import Std.Data.ExtHashMap.Lemmas
 public import Mathlib.Tactic.FinCases
 public import Mathlib.Data.Fintype.Basic
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 @[expose] public section
 
@@ -287,4 +287,4 @@ theorem MemoryState.readLimbs_addBlock_of_id_ne {m : MemoryState} {x : BitVec v}
 
 end
 
-end LeanMLIR.RIR
+end MLIR

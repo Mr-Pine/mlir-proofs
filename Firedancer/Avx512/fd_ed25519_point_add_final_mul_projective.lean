@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.fd_ed25519_point_set
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_add_final_mul_projective
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Proof -/
 
@@ -27,4 +27,4 @@ public theorem fd_ed25519_point_add_final_mul_projective.call_eq (r a : Pointer)
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

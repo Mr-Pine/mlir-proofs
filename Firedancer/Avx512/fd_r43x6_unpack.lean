@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.WwlRun
 public import Firedancer.Avx512.Mlir.fd_r43x6_unpack
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -69,4 +69,4 @@ public theorem fd_r43x6_unpack.call_eq (u : Wv) (s : GlobalState) (hwf : s.WF) :
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

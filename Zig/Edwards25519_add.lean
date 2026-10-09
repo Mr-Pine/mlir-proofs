@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Point
@@ -11,7 +11,7 @@ public import Zig.Globals
 public import Zig.Steps
 public import Zig.Mlir.Edwards25519_add
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -376,4 +376,4 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

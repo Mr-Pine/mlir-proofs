@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Ref.fd_f25519_set
 public import Firedancer.Ref.Mlir.fd_ed25519_point_set
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Proof -/
 
@@ -29,4 +29,4 @@ public theorem fd_ed25519_point_set.call_eq (r a : Pointer) (s : GlobalState) (h
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

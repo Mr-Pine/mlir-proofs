@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_f25519_sqr
 
 meta import Firedancer.Ref.fd_f25519_sqr
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -37,4 +37,4 @@ private def result (p q : ⟦Ty.ptr⟧) : Option (⟦Ty.ptr⟧ × (Fin 5 → Bit
 -- A poison pointer is UB, inside the callee.
 #guard (result (.value r) .poison).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

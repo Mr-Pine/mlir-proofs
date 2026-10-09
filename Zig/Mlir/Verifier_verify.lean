@@ -2,8 +2,8 @@ module
 
 -- zig-build/out/mlir_canonicalized/region/Verifier.verify.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Zig.Mlir.Edwards25519_clearCofactor
 public import Zig.Mlir.Edwards25519_mulDoubleBasePublic
 public import Zig.Mlir.Edwards25519_neg
@@ -13,7 +13,7 @@ public import Zig.Mlir.Verifier_isIdentity
 public import Zig.Mlir.scalar_mul8
 public import Zig.Mlir.scalar_reduce64
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Zig.Mlir.Edwards25519_clearCofactor
 meta import Zig.Mlir.Edwards25519_mulDoubleBasePublic
 meta import Zig.Mlir.Edwards25519_neg
@@ -23,7 +23,7 @@ meta import Zig.Mlir.Verifier_isIdentity
 meta import Zig.Mlir.scalar_mul8
 meta import Zig.Mlir.scalar_reduce64
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -71,4 +71,4 @@ noncomputable mlir_def Verifier_verify :=
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

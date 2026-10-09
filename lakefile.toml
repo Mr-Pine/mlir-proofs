@@ -3,10 +3,16 @@ defaultTargets = ["Firedancer"]
 # Mathlib is built once, in the dependency's checkout: share its packages.
 packagesDir = "../lean-mlir-nightly-port/.lake/packages"
 
-# Firedancer's ed25519 verify (ref), lifted to the register-based IR and proved.
+# The register-based IR: lifts, semantics and proof tactics.
 [[require]]
-name = "SSA"
+name = "MLIR"
 path = "../lean-mlir-nightly-port"
+
+# The framework no longer brings Mathlib: required here, at its nightly-2026-09-16 tag.
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4-nightly-testing"
+rev = "nightly-testing-2026-09-16"
 
 # Ed25519 as mathematics: the field, the curve's group, SHA-512, decoding.
 [[lean_lib]]

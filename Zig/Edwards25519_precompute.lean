@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Point
@@ -11,7 +11,7 @@ public import Zig.Mlir.Edwards25519_precompute
 import Std.Data.ExtHashMap.Lemmas
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -394,7 +394,7 @@ public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalStat
   congr 4
 
 /-- Entry `i` of the table stored at `out`: its point, `P`'s last 8 bytes at `1`, zero elsewhere. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_precompute {m : MemoryState} {out : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_precompute {m : MemoryState} {out : Pointer}
     (P : ZPt) (r : BitVec 64) (i : Fin 9) (hf : Fits m out 12096)
     (ho : out.offset.toNat + 1512 ≤ 2 ^ 64) :
     (m.storeAt out (Edwards25519.precompute.bits P r)).PtFit
@@ -425,4 +425,4 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_precompute {m : MemoryStat
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

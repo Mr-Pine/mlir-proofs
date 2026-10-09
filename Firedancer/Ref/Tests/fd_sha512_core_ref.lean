@@ -6,7 +6,7 @@ public import Firedancer.Ref.fd_sha512_init
 meta import Firedancer.Ref.fd_sha512_core_ref
 meta import Firedancer.Ref.fd_sha512_init
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-- `"abc"` padded to one 128-byte block, byte `k` at bits `8 * k`: `0x80` after the message, its
 bit length `24` big-endian at the end. -/
@@ -52,4 +52,4 @@ private def two : BitVec 2048 :=
 
 #guard out abcDigest 2 two == some (fd_sha512_core_ref.spec (n := 2) abcDigest two)
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

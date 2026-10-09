@@ -13,9 +13,9 @@ import Mathlib.Tactic.FinCases
 `fd_r43x6_fold_signed` of `fd_r43x6_sub_fast`; `is_zero` tests for the lanes of `0` and of `p`,
 which decides `val = 0` on folded or nearly reduced inputs, so `eq` decides equality. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 namespace R43x6
 
@@ -161,4 +161,4 @@ public theorem fd_f25519_eq_spec {a b : Wwl} (ha : Signed 61 a) (hb : Signed 61 
 end R43x6
 
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

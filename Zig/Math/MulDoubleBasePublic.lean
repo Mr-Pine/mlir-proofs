@@ -16,7 +16,7 @@ import Mathlib.Tactic.Module
 /-! `mulDoubleBasePublic`'s spec on the curve: `n1 B + n2 A` from the scalars' digits and the
 tables of `B`'s and `A`'s multiples, `error.WeakPublicKey` exactly when `4 A` has `x = 0`. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -201,4 +201,4 @@ public theorem spec_point (x1 x2 : BitVec 256) (hm1 : x1.msb = false) (hm2 : x2.
 
 end Edwards25519.mulDoubleBasePublic
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.Mlir.fd_int_min
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -31,4 +31,4 @@ public theorem fd_int_min.call_eq (x : BitVec 32) (s : GlobalState) (hwf : s.WF)
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

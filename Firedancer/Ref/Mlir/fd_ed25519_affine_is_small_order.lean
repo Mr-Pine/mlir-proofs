@@ -2,22 +2,22 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_affine_is_small_order.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_ed25519_point_to
 public import Firedancer.Ref.Mlir.fd_f25519_eq
 public import Firedancer.Ref.Mlir.fd_f25519_is_zero
 public import Firedancer.Ref.Mlir.fd_ed25519_order8_point_y0
 public import Firedancer.Ref.Mlir.fd_ed25519_order8_point_y1
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_ed25519_point_to
 meta import Firedancer.Ref.Mlir.fd_f25519_eq
 meta import Firedancer.Ref.Mlir.fd_f25519_is_zero
 meta import Firedancer.Ref.Mlir.fd_ed25519_order8_point_y0
 meta import Firedancer.Ref.Mlir.fd_ed25519_order8_point_y1
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -56,4 +56,4 @@ mlir_def fd_ed25519_affine_is_small_order :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

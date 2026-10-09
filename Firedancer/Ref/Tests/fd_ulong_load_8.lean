@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ulong_load_8
 
 meta import Firedancer.Ref.fd_ulong_load_8
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def p0 : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -31,4 +31,4 @@ private def out (ptr : ⟦Ty.ptr⟧) (bytes : BitVec 64) : Option (PoisonOr (Bit
 -- A poison pointer is UB.
 #guard out .poison 0#64 == none
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

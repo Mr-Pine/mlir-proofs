@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 import Std.Data.ExtHashMap.Lemmas
 public import Firedancer.Ref.fd_ulong_bswap
 public import Firedancer.Ref.fd_ulong_rotate_right
 public import Firedancer.Ref.Mlir.fd_sha512_core_ref
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 /-! ## Staged for Common -/
 
@@ -146,9 +146,9 @@ theorem MemoryState.readAt_storeWords8_of_disjoint {m : MemoryState}
 
 end
 
-end LeanMLIR.RIR
+end MLIR
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -1352,4 +1352,4 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

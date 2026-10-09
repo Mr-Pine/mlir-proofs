@@ -2,12 +2,12 @@ module
 
 -- zig-build/out/mlir_canonicalized/region/Sha512.iv.mlir
 
-public import SSA.Projects.RIR.Semantics.GlobalInitializer
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.GlobalInitializer
+public import MLIR.Syntax.Elab
 
-meta import SSA.Projects.RIR.Semantics.GlobalInitializer
+meta import MLIR.Semantics.GlobalInitializer
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -29,4 +29,4 @@ mlir_const_def Sha512_iv :=
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

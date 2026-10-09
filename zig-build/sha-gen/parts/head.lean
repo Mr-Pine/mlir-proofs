@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Ed25519.Sha512
 public import Zig.Sha512
 public import Zig.Mlir.Sha512_round
@@ -10,7 +10,7 @@ import Std.Tactic.BVDecide
 and the block's bytes. The 80 unrolled rounds of `^bb5` are stepped in 4-round chunks, each its
 own lemma. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 

@@ -9,7 +9,7 @@ import Mathlib.Tactic.Abel
 
 /-! `precompute(P, 8)`'s table: entry `i` represents `i • A`, for `P` representing `A`. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -53,4 +53,4 @@ public theorem Edwards25519.precompute.spec_point {P : ZPt} {A : Point} (hP : P.
       (s 8 (A + A + (A + A) + (A + A + (A + A))) (by abel)).2]
     exact ⟨e8, l53 b8⟩
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

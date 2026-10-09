@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_r43x6_repsqr_mul2
 
 meta import Firedancer.Avx512.fd_r43x6_repsqr_mul2
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def p : Nat :=
   2 ^ 255 - 19
@@ -54,4 +54,4 @@ private def check (xa ya xb yb n : Nat) : Bool :=
 
 #guard check (2 ^ 250 + 12345) (2 ^ 200 + 1) (p - 1) (p - 2) 3
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

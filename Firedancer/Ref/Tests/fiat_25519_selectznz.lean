@@ -4,7 +4,7 @@ public import Firedancer.Ref.fiat_25519_selectznz
 
 meta import Firedancer.Ref.fiat_25519_selectznz
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def out : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -71,4 +71,4 @@ private def selects (c : BitVec 8) : Bool :=
 
 #guard (result (.value out) .poison (.value x) (.value y) out).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

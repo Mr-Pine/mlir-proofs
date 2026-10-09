@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Tactics
 public import Zig.Edwards25519_add
 public import Zig.Edwards25519_sub
@@ -12,11 +12,11 @@ public import Zig.Edwards25519_identityElement
 public import Zig.Edwards25519_precompute
 public import Zig.Steps
 public import Zig.Mlir.Edwards25519_mulDoubleBasePublic
-import all SSA.Projects.RIR.Ty
+import all MLIR.Ty
 import Std.Tactic.BVDecide
 import Std.Data.ExtHashMap.Lemmas
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -108,7 +108,7 @@ theorem weak_bits :
   decide +kernel
 
 /-- `is_base`, the lowest bit of a point's last 8 bytes, loaded alone. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.isBase {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.PtFit.isBase {m : MemoryState} {p : Pointer}
     (h : m.PtFit p) :
     Fits m (p.add 160#64) 1 ∧ m.readAt (p.add 160#64) 1 = (m.readRest p).extractLsb' 0 1 := by
   have hf := h.fits_rest
@@ -1326,4 +1326,4 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

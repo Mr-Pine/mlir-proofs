@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Tactics
 public import Zig.Sha512_final
 public import Zig.Edwards25519_clearCofactor
@@ -14,7 +14,7 @@ public import Ed25519.Decode
 public import Zig.Mlir.Verifier_verify
 import Std.Data.ExtHashMap.Lemmas
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -835,4 +835,4 @@ public theorem Verifier_verify.call_eq (hred : Reduce64Call) (self : Pointer) (s
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

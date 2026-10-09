@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Fe_sq
 public import Zig.Mlir.Fe_sqn
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -241,4 +241,4 @@ public theorem Fe_sqn.call_eq (out a : Pointer) (n : BitVec 64) (s : GlobalState
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

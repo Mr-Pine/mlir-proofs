@@ -7,7 +7,7 @@ import Mathlib.Tactic.Conv
 /-! Five limbs as one 320-bit value: storing them is one 320-bit store, as a `memcpy` of a field
 element writes them. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 open Memory
 
@@ -152,4 +152,4 @@ public theorem MemoryState.readLimbs_storeAt_readAt {m : MemoryState} {p q : Poi
   rw [MemoryState.storeAt_readAt_eq_storeLimbs hq.fits hq.1 hp.1,
     MemoryState.readLimbs_storeLimbs_self hp]
 
-end LeanMLIR.RIR
+end MLIR

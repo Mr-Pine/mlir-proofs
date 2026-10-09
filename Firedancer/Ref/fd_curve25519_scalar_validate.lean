@@ -1,11 +1,11 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_ulong_load_8
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_validate
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -118,4 +118,4 @@ public theorem fd_curve25519_scalar_validate.call_eq (p : Pointer) (s : GlobalSt
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

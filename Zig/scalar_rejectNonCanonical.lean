@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Math.Canonical
 public import Zig.Scalar
 public import Zig.Mlir.scalar_rejectNonCanonical
@@ -8,7 +8,7 @@ import Std.Tactic.BVDecide
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.NormNum
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -227,4 +227,4 @@ public theorem scalar.rejectNonCanonical.spec_eq (b : BitVec 256) :
   rw [this]
   split <;> decide
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

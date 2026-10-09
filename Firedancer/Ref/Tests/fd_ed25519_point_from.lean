@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_ed25519_point_from
 
 meta import Firedancer.Ref.fd_ed25519_point_from
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
@@ -29,4 +29,4 @@ private def state : GlobalState :=
       s'.mem.readAt ((ptr 0).add 80#64) 320 == 4
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

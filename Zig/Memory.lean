@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 import Std.Data.ExtHashMap.Lemmas
 
 /-! Memory and counter facts the Zig proofs share: fresh blocks read zero, reads below an erased
 frame, `spliceBits` as bit operations, a loop counter's increment. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open Memory
 
@@ -87,4 +87,4 @@ public theorem getElem?_of_eraseFrom {m m' : MemoryState} {b : BlockId}
     (he : m'.eraseFrom N = m.eraseFrom N) (hb : b.id < N) : m'[b]? = m[b]? := by
   rw [← getElem?_eraseFrom (m := m') hb, he, getElem?_eraseFrom hb]
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

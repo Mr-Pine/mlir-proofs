@@ -2,22 +2,22 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_partial_dbl.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_f25519_add
 public import Firedancer.Ref.Mlir.fd_f25519_add_nr
 public import Firedancer.Ref.Mlir.fd_f25519_sqr4
 public import Firedancer.Ref.Mlir.fd_f25519_sub
 public import Firedancer.Ref.Mlir.fd_f25519_sub_nr
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_f25519_add
 meta import Firedancer.Ref.Mlir.fd_f25519_add_nr
 meta import Firedancer.Ref.Mlir.fd_f25519_sqr4
 meta import Firedancer.Ref.Mlir.fd_f25519_sub
 meta import Firedancer.Ref.Mlir.fd_f25519_sub_nr
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -60,4 +60,4 @@ mlir_def fd_ed25519_partial_dbl :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

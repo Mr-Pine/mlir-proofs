@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Zig.Fe
 
 /-! Step helpers for proofs whose state `S` has an equation `hS : S = …`: loads the facts do not
 resolve, five-limb stores read back, and checkpoints hiding `hS` from later steps. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-- The five stores at `p` on top of `hS`, of `x`'s limbs, read back as `hr`. -/
 macro "read_stores " p:term ", " x:term " with " hr:ident : tactic =>
@@ -35,4 +35,4 @@ macro "fix_load " v:ident hv:ident h:term : tactic =>
       subst $v:ident
       clear h'))
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

@@ -1,9 +1,9 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Vector
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Vector
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Wwl
 import Std.Tactic.BVDecide
@@ -13,7 +13,7 @@ import Mathlib.Data.Fintype.Basic
 /-! The `Wwl` intrinsics as the steps produce them, slides with poison lanes, and `za + 152 zb`, the
 reduction `fd_r43x6_mul_fast` and `fd_r43x6_sqr_fast` end with. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -214,4 +214,4 @@ theorem runBodyFrom_fold152Run {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

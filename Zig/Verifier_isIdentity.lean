@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Point
@@ -8,7 +8,7 @@ public import Zig.Fe_isZero
 public import Zig.Fe_sub
 public import Zig.Mlir.Verifier_isIdentity
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -91,4 +91,4 @@ public theorem Verifier_isIdentity.call_eq (p : Pointer) (s : GlobalState) (hwf 
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

@@ -5,7 +5,7 @@ public import Ed25519.Verify
 /-! Ed25519 verification as mathematics, in `fd_ed25519_verify`'s order and error codes, and the
 library's Firedancer variant of RFC 8032 accepts what it accepts. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open _root_.Ed25519
 
@@ -64,4 +64,4 @@ public theorem Ed25519.verify_eq_zero_iff (msg : List (BitVec 8)) (r S A : BitVe
     simp only [not_or] at hrej
     simp only [show ¬ell ≤ S.toNat by omega, hrej.1, hrej.2, heq, ↓reduceIte]
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.Common.WwlRun
 public import Firedancer.Avx512.Mlir.fd_r43x6_quad_sqr_fast
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 -- folded, so the steps' terms and the specs compare without unfolding the lanes
 attribute [local irreducible] wwl_add wwl_and wwl_shl wwl_slide wwl_madd52lo wwl_madd52hi
@@ -247,4 +247,4 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

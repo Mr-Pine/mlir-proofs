@@ -1,14 +1,14 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Effectful.Memory.Operations
-public import SSA.Projects.RIR.Semantics.Effectful.Memory.Fits
+public import MLIR.Semantics.Effectful.Memory.Operations
+public import MLIR.Semantics.Effectful.Memory.Fits
 public import Firedancer.Avx512.Common.Wwl
 
 /-! A `wwl_t` (an `fd_f25519_t`, 64 bytes) and a `wv_t` (32 bytes) in memory: read and store
 functions in the shape the steps produce, and their lemmas for the step tactics. An object's fit
 predicate is the plain `Fits m p 512` (`256`), which the framework already transports. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 @[expose] public section
 
@@ -129,4 +129,4 @@ theorem MemoryState.readVec_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr
 
 end
 
-end LeanMLIR.RIR
+end MLIR

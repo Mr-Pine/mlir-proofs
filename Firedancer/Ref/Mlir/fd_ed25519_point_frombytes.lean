@@ -2,8 +2,8 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_point_frombytes.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_ed25519_point_from
 public import Firedancer.Ref.Mlir.fd_f25519_add
 public import Firedancer.Ref.Mlir.fd_f25519_frombytes
@@ -16,7 +16,7 @@ public import Firedancer.Ref.Mlir.fd_f25519_sub
 public import Firedancer.Ref.Mlir.fd_f25519_d
 public import Firedancer.Ref.Mlir.fd_f25519_one
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_ed25519_point_from
 meta import Firedancer.Ref.Mlir.fd_f25519_add
 meta import Firedancer.Ref.Mlir.fd_f25519_frombytes
@@ -29,7 +29,7 @@ meta import Firedancer.Ref.Mlir.fd_f25519_sub
 meta import Firedancer.Ref.Mlir.fd_f25519_d
 meta import Firedancer.Ref.Mlir.fd_f25519_one
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -91,4 +91,4 @@ mlir_def fd_ed25519_point_frombytes :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

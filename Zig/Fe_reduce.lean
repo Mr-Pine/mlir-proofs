@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Fe
 public import Common.Tactics
 public import Zig.Mlir.Fe_reduce
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -7488,4 +7488,4 @@ public theorem Fe_reduce.call_eq (fe : Pointer) (s : GlobalState) (hwf : s.WF)
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

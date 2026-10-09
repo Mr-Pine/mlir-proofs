@@ -2,8 +2,8 @@ module
 
 -- build/native/gcc/mlir_canonicalized/ref/region/fd_ed25519_double_scalar_mul_base.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Firedancer.Ref.Mlir.fd_curve25519_into_precomputed
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_wnaf
 public import Firedancer.Ref.Mlir.fd_ed25519_partial_dbl
@@ -16,7 +16,7 @@ public import Firedancer.Ref.Mlir.fd_ed25519_point_set_zero
 public import Firedancer.Ref.Mlir.fd_ed25519_point_sub_with_opts
 public import Firedancer.Ref.Mlir.fd_ed25519_base_point_wnaf_table
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Ref.Mlir.fd_curve25519_into_precomputed
 meta import Firedancer.Ref.Mlir.fd_curve25519_scalar_wnaf
 meta import Firedancer.Ref.Mlir.fd_ed25519_partial_dbl
@@ -29,7 +29,7 @@ meta import Firedancer.Ref.Mlir.fd_ed25519_point_set_zero
 meta import Firedancer.Ref.Mlir.fd_ed25519_point_sub_with_opts
 meta import Firedancer.Ref.Mlir.fd_ed25519_base_point_wnaf_table
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 @[expose] public section
 
@@ -185,4 +185,4 @@ noncomputable mlir_def fd_ed25519_double_scalar_mul_base :=
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

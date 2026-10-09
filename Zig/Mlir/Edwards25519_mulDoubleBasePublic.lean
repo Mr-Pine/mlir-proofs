@@ -2,8 +2,8 @@ module
 
 -- zig-build/out/mlir_canonicalized/region/Edwards25519.mulDoubleBasePublic.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Zig.Mlir.Edwards25519_add
 public import Zig.Mlir.Edwards25519_dbl
 public import Zig.Mlir.Edwards25519_precompute
@@ -14,7 +14,7 @@ public import Zig.Mlir.Edwards25519_basePointPc
 public import Zig.Mlir.Edwards25519_identityElement
 public import Zig.Mlir.Edwards25519_mulDoubleBasePublic_weak
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Zig.Mlir.Edwards25519_add
 meta import Zig.Mlir.Edwards25519_dbl
 meta import Zig.Mlir.Edwards25519_precompute
@@ -25,7 +25,7 @@ meta import Zig.Mlir.Edwards25519_basePointPc
 meta import Zig.Mlir.Edwards25519_identityElement
 meta import Zig.Mlir.Edwards25519_mulDoubleBasePublic_weak
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -143,4 +143,4 @@ noncomputable mlir_def Edwards25519_mulDoubleBasePublic :=
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

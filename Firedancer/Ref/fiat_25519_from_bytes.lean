@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Std.Tactic.BVDecide
 public meta import Std.Tactic.BVDecide.Reflect
 public import Common.Limbs
 public import Common.Tactics
 public import Firedancer.Ref.Mlir.fiat_25519_from_bytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -354,4 +354,4 @@ public theorem fiat_25519_from_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalSt
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

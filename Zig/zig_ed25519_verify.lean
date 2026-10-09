@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Tactics
 public import Zig.Steps
 public import Zig.Verifier_init
@@ -15,7 +15,7 @@ public import Zig.Mlir.zig_ed25519_verify
 import all Zig.Edwards25519_fromBytes
 import Std.Tactic.BVDecide
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -447,4 +447,4 @@ public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

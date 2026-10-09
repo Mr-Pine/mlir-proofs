@@ -2,8 +2,8 @@ module
 
 -- zig-build/out/mlir_canonicalized/region/Verifier.init.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Zig.Mlir.Edwards25519_fromBytes
 public import Zig.Mlir.Edwards25519_rejectIdentity
 public import Zig.Mlir.Fe_rejectNonCanonical
@@ -11,7 +11,7 @@ public import Zig.Mlir.Sha512_update
 public import Zig.Mlir.scalar_rejectNonCanonical
 public import Zig.Mlir.Sha512_iv
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Zig.Mlir.Edwards25519_fromBytes
 meta import Zig.Mlir.Edwards25519_rejectIdentity
 meta import Zig.Mlir.Fe_rejectNonCanonical
@@ -19,7 +19,7 @@ meta import Zig.Mlir.Sha512_update
 meta import Zig.Mlir.scalar_rejectNonCanonical
 meta import Zig.Mlir.Sha512_iv
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -116,4 +116,4 @@ noncomputable mlir_def Verifier_init :=
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

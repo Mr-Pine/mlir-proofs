@@ -1,10 +1,10 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Fe
 public import Zig.Mlir.Fe_add
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -96,4 +96,4 @@ public theorem Fe_add.call_eq_of (out a b : Pointer) (s : GlobalState) (hwf : s.
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

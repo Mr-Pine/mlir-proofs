@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Point
@@ -17,9 +17,9 @@ public import Zig.Fe_sub
 public import Zig.Mlir.Edwards25519_fromBytes
 import Std.Tactic.BVDecide
 import Std.Data.ExtHashMap.Lemmas
-import all SSA.Projects.RIR.Ty
+import all MLIR.Ty
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open Memory
 
@@ -100,7 +100,7 @@ def Edwards25519.fromBytes.invalidBits : BitVec 1408 :=
 /-- The `EncodingError!Edwards25519` `fromBytes` stores at `out`, 176 bytes: a point with `is_base`
 byte `0` (the rest byte's others kept) and error code `0`; or the `InvalidEncoding` constant, a
 zero point and error code `2`. -/
-def _root_.LeanMLIR.RIR.MemoryState.storeFromBytes (m : MemoryState) (out : Pointer) :
+def _root_.MLIR.MemoryState.storeFromBytes (m : MemoryState) (out : Pointer) :
     Option ZPt → MemoryState
   | some P => (m.storeAt (out.add 168#64) 0#16).storePt out P (m.readRest out &&& 0xffffffffffffff00#64)
   | none => m.storeAt out Edwards25519.fromBytes.invalidBits
@@ -171,17 +171,17 @@ theorem limbsFit_of_block {m : MemoryState} {p : Pointer} {v : Nat} (k : Nat) (h
   · simp [Pointer.add, ho, hkn]; omega
 
 /-- `readAt`, as a fact the steps carry only past writes to other blocks. -/
-def _root_.LeanMLIR.RIR.MemoryState.readBlk (m : MemoryState) (p : Pointer) (w : Nat) : BitVec w :=
+def _root_.MLIR.MemoryState.readBlk (m : MemoryState) (p : Pointer) (w : Nat) : BitVec w :=
   m.readAt p w
 
 @[mlir_read]
-theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeAt_of_id_ne {m : MemoryState}
+theorem _root_.MLIR.MemoryState.readBlk_storeAt_of_id_ne {m : MemoryState}
     {p q : Pointer} {x : BitVec v} (h : q.id ≠ p.id) :
     (m.storeAt q x).readBlk p w = m.readBlk p w :=
   MemoryState.readAt_storeAt_disjoint (by simp only [Range.Disjoint, Range.of]; exact .inl h) x
 
 @[mlir_read]
-theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeLimbs_of_id_ne {m : MemoryState}
+theorem _root_.MLIR.MemoryState.readBlk_storeLimbs_of_id_ne {m : MemoryState}
     {p q : Pointer} {l : Fin 5 → BitVec 64} (h : q.id ≠ p.id) :
     (m.storeLimbs q l).readBlk p w = m.readBlk p w := by
   have h' (k : BitVec 64) : (q.add k).id ≠ p.id := by simpa [Pointer.add_id] using h
@@ -190,12 +190,12 @@ theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeLimbs_of_id_ne {m : MemoryS
 
 /-- `readBlk` past an `alloca`. -/
 @[mlir_read]
-theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_alloca {s : GlobalState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.readBlk_alloca {s : GlobalState} {p : Pointer}
     (hwf : s.WF) (h : Fits s.mem p w) : (s.alloca n).mem.readBlk p w = s.mem.readBlk p w :=
   MemoryState.readAt_alloca hwf h
 
 /-- A store inside a block read whole from its start: spliced into the read. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeAt_add {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.readBlk_storeAt_add {m : MemoryState} {p : Pointer}
     {off : BitVec 64} {x : BitVec w} (hf : Fits m p v) (ho : p.offset = 0)
     (hw : off.toNat * 8 + w ≤ v) :
     (m.storeAt (p.add off) x).readBlk p v = spliceBits (m.readBlk p v) (off.toNat * 8) x := by
@@ -208,14 +208,14 @@ theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeAt_add {m : MemoryState} {p
 
 /-- The same at the block's start. -/
 @[mlir_read]
-theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeAt_base {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.readBlk_storeAt_base {m : MemoryState} {p : Pointer}
     {x : BitVec w} (hf : Fits m p v) (ho : p.offset = 0) (hw : w ≤ v) :
     (m.storeAt p x).readBlk p v = spliceBits (m.readBlk p v) 0 x := by
   have := MemoryState.readBlk_storeAt_add (off := 0#64) (x := x) hf ho (by simpa using hw)
   simpa [Pointer.add_zero] using this
 
 /-- Limbs stored inside a block read whole from its start: their bits spliced into the read. -/
-theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeLimbs_add {m : MemoryState} {p : Pointer}
+theorem _root_.MLIR.MemoryState.readBlk_storeLimbs_add {m : MemoryState} {p : Pointer}
     {off : BitVec 64} {l : Fin 5 → BitVec 64} (hf : Fits m p v) (ho : p.offset = 0)
     (hw : off.toNat * 8 + 320 ≤ v) (hv : v < 2 ^ 32) :
     (m.storeLimbs (p.add off) l).readBlk p v =
@@ -767,4 +767,4 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

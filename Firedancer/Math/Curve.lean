@@ -25,7 +25,7 @@ import Mathlib.Tactic.ReduceModChar
 /-! The Ref point operations on the twisted Edwards curve `-x² + y² = 1 + d x² y²` over `ZMod p`:
 each spec computes its curve operation on the points its limbs represent. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 open _root_.Ed25519
 
@@ -34,17 +34,17 @@ open _root_.Ed25519
 @[expose] public section
 
 /-- `P` is `(x, y)` in projective coordinates, `T` ignored: `x = X/Z`, `y = Y/Z`. -/
-def _root_.LeanMLIR.RIR.PointLimbs.Proj (P : PointLimbs) (x y : ZMod p) : Prop :=
+def _root_.MLIR.PointLimbs.Proj (P : PointLimbs) (x y : ZMod p) : Prop :=
   Limbs.val P.Z ≠ 0 ∧ Limbs.val P.X = x * Limbs.val P.Z ∧ Limbs.val P.Y = y * Limbs.val P.Z
 
 /-- `P` is `(x, y)` in extended coordinates. -/
-def _root_.LeanMLIR.RIR.PointLimbs.Ext (P : PointLimbs) (x y : ZMod p) : Prop :=
+def _root_.MLIR.PointLimbs.Ext (P : PointLimbs) (x y : ZMod p) : Prop :=
   Ed25519.IsExt x y (Limbs.val P.X) (Limbs.val P.Y) (Limbs.val P.T) (Limbs.val P.Z)
 
 /-- `P` is `(x, y)` as `add_with_opts`'s second operand: extended coordinates `(X : Y : T : Z)`,
 with `Z = 1` for a nonzero `zOne` (`P.Z` unused) and stored as `(Y - X, Y + X, 2d T)` for a nonzero
 `pre`. -/
-def _root_.LeanMLIR.RIR.PointLimbs.Operand (P : PointLimbs) (zOne pre : BitVec 32) (x y : ZMod p) :
+def _root_.MLIR.PointLimbs.Operand (P : PointLimbs) (zOne pre : BitVec 32) (x y : ZMod p) :
     Prop :=
   ∃ X Y T Z, Ed25519.IsExt x y X Y T Z ∧ (if zOne = 0#32 then Limbs.val P.Z = Z else Z = 1) ∧
     if pre = 0#32 then Limbs.val P.X = X ∧ Limbs.val P.Y = Y ∧ Limbs.val P.T = T
@@ -52,16 +52,16 @@ def _root_.LeanMLIR.RIR.PointLimbs.Operand (P : PointLimbs) (zOne pre : BitVec 3
 
 /-- `P` is `(x, y)` as a completed point, before the last multiplications of an addition:
 `x = X/Z`, `y = T/Y`. -/
-def _root_.LeanMLIR.RIR.PointLimbs.Compl (P : PointLimbs) (x y : ZMod p) : Prop :=
+def _root_.MLIR.PointLimbs.Compl (P : PointLimbs) (x y : ZMod p) : Prop :=
   Limbs.val P.Z ≠ 0 ∧ Limbs.val P.Y ≠ 0 ∧ Limbs.val P.X = x * Limbs.val P.Z ∧
     Limbs.val P.T = y * Limbs.val P.Y
 
 /-- All four coordinates within fiat's tight bounds. -/
-abbrev _root_.LeanMLIR.RIR.PointLimbs.Tight (P : PointLimbs) : Prop :=
+abbrev _root_.MLIR.PointLimbs.Tight (P : PointLimbs) : Prop :=
   Limbs.Tight P.X ∧ Limbs.Tight P.Y ∧ Limbs.Tight P.T ∧ Limbs.Tight P.Z
 
 /-- All four coordinates within fiat's loose bounds. -/
-abbrev _root_.LeanMLIR.RIR.PointLimbs.Loose (P : PointLimbs) : Prop :=
+abbrev _root_.MLIR.PointLimbs.Loose (P : PointLimbs) : Prop :=
   Limbs.Loose P.X ∧ Limbs.Loose P.Y ∧ Limbs.Loose P.T ∧ Limbs.Loose P.Z
 
 end
@@ -367,7 +367,7 @@ public theorem fd_curve25519_into_precomputed.spec_operand (hP : P.Ext x y)
   ring
 
 /-- An operand whose `Z` is one may be passed with `zOne` set. -/
-public theorem _root_.LeanMLIR.RIR.PointLimbs.Operand.of_z_one {B : PointLimbs} {pre : BitVec 32}
+public theorem _root_.MLIR.PointLimbs.Operand.of_z_one {B : PointLimbs} {pre : BitVec 32}
     (h : B.Operand 0#32 pre x y) (hZ : Limbs.val B.Z = 1) (zOne : BitVec 32) :
     B.Operand zOne pre x y := by
   obtain ⟨X, Y, T, Z, hE, hz, hB⟩ := h
@@ -573,4 +573,4 @@ public theorem fd_ed25519_point_frombytes.spec_some {buf : BitVec 256} {P : Poin
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

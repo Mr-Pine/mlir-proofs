@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 import Mathlib.Tactic.Ring
 public import Zig.Fe_carry128
 public import Zig.Mlir.Fe_mul
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -411,4 +411,4 @@ public theorem Fe_mul.call_eq_of (out a b : Pointer) (s : GlobalState) (hwf : s.
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

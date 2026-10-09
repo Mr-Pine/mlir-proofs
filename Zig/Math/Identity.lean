@@ -8,7 +8,7 @@ public import Zig.Edwards25519_identityElement
 
 /-! `isIdentity` tests for the curve's identity, and the identity global represents it. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 variable {P : ZPt} {x y : ZMod p}
@@ -46,4 +46,4 @@ public theorem Edwards25519.identity_ext :
   unfold ZPt.Ext IsExt
   simp [Edwards25519.identity, Limbs.val_eq, Fe.mk5]
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

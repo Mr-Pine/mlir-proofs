@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.Limbs
 public import Zig.Mlir.Fe_zero
 public import Zig.Mlir.Fe_one
@@ -11,10 +11,10 @@ public import Zig.Mlir.Fe_sqrtm1
 /-! The field-element globals: their initializers' values, and their limbs read back from the block
 `addressof` gives them. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-- The limbs of a field element global's block, read back: its initializer's limbs. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_of_readAt_fe {m : MemoryState}
+public theorem _root_.MLIR.MemoryState.readLimbs_of_readAt_fe {m : MemoryState}
     {p : Pointer} {v : Vector (BitVec 64) 5} {hw : (Ty.struct [.array 5 (.bv 64)]).width = 320}
     (hf : Fits m p 320) (ho : p.offset = 0)
     (h : m.readAt p 320 = Ty.flatBits (t := .struct [.array 5 (.bv 64)]) v (hw := hw)) :
@@ -47,4 +47,4 @@ public theorem Fe_sqrtm1.value_eq (s : GlobalState) :
     Fe_sqrtm1.value s = .value (Ty.wrap Fe_sqrtm1.lit, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

@@ -5,7 +5,7 @@ import Std.Data.ExtHashMap.Lemmas
 
 /-! `Sha512.update` writes only the object's block: memories that agree off it erase alike. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open Sha512_update
 
@@ -110,4 +110,4 @@ public theorem post_alloc {s : GlobalState} {d b : Pointer} {n : BitVec 64}
         omega
     simp only [Nat.sub_zero]; omega
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

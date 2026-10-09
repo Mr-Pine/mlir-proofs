@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_memcpy
 
 meta import Firedancer.Ref.fd_memcpy
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def d : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -45,4 +45,4 @@ private def bytes : BitVec 128 :=
 
 #guard out d ⟨⟨0⟩, 4⟩ 8#64 bytes == none
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

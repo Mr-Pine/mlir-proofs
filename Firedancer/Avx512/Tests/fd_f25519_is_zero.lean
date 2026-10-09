@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_f25519_is_zero
 
 meta import Firedancer.Avx512.fd_f25519_is_zero
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def a : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -37,4 +37,4 @@ private def out (bytes : BitVec 512) : Option (BitVec 32) :=
 
 #guard out (pack [0, 0, 0, 0, 0, 0, 0, 1]) == some 0
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

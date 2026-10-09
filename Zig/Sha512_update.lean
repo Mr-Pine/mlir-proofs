@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Ed25519.Sha512
 public import Zig.Sha512
 public import Zig.Sha512_round
@@ -10,7 +10,7 @@ import Std.Tactic.BVDecide
 /-! `Sha512.update`: the state it leaves (`post`), and that the object then has absorbed the bytes
 (`absorbed`). Its loop over whole blocks calls `Sha512.round` (`Sha512_round.call_eq`). -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -979,4 +979,4 @@ public theorem post_readAt {s : GlobalState} (hf : Fits s.mem d 1792) (hdo : d.o
 
 end Sha512_update
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

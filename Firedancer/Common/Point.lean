@@ -2,12 +2,12 @@ module
 
 public import Common.LimbsBits
 import Std.Data.ExtHashMap.Lemmas
-import SSA.Projects.RIR.Run.Tactic.Memory
+import MLIR.Run.Tactic.Memory
 
 /-! Points in memory: `fd_ed25519_point_t`'s field elements `X, Y, T, Z` at byte offsets 0, 40, 80,
 120, read and stored as a whole. -/
 
-namespace LeanMLIR.RIR
+namespace MLIR
 
 open Memory
 
@@ -643,4 +643,4 @@ theorem MemoryState.eraseFrom_storePointOpt {m : MemoryState} :
 
 end
 
-end LeanMLIR.RIR
+end MLIR

@@ -10,7 +10,7 @@ public import Ed25519.Verify
 /-! Zig's `Ed25519.Signature.verify` as mathematics: its checks in order, its error codes, and its
 cofactored equation. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -74,4 +74,4 @@ public theorem verify_eq_zero_iff (msg : List (BitVec 8)) (r S A : BitVec 256) :
     simp only [show ¬ell ≤ S.toNat by omega, hAx, show ¬p ≤ r.toNat % 2 ^ 255 by omega, hRx, h32,
       heq, ↓reduceIte]
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

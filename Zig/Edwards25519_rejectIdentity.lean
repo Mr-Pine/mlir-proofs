@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Point
 public import Zig.Fe_isZero
 public import Zig.Mlir.Edwards25519_rejectIdentity
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -45,4 +45,4 @@ public theorem Edwards25519_rejectIdentity.call_eq (p : Pointer) (s : GlobalStat
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

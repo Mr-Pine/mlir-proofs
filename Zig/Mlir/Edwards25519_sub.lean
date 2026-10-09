@@ -2,16 +2,16 @@ module
 
 -- zig-build/out/mlir_canonicalized/region/Edwards25519.sub.mlir
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Syntax.Elab
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
 public import Zig.Mlir.Edwards25519_add
 public import Zig.Mlir.Edwards25519_neg
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Zig.Mlir.Edwards25519_add
 meta import Zig.Mlir.Edwards25519_neg
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -31,4 +31,4 @@ mlir_def Edwards25519_sub :=
 
 end
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

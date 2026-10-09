@@ -1,14 +1,14 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Point
 public import Zig.Mlir.Edwards25519_identityElement
-import all SSA.Projects.RIR.Ty
+import all MLIR.Ty
 
 /-! The `Edwards25519` struct as a global's value, and `Edwards25519.identityElement`'s: its
 initializer's literal, and the point read back from the block `addressof` gives it. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 @[expose] public section
 
@@ -45,11 +45,11 @@ theorem identity_bits :
   decide +kernel
 
 /-- The identity global's block (`step_addressof … value_eq`'s facts) read back. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_identity {m : MemoryState} {p : Pointer}
+public theorem _root_.MLIR.MemoryState.readPt_identity {m : MemoryState} {p : Pointer}
     {hw : EdTy.width = 1344} (hf : Fits m p 1344) (ho : p.offset = 0)
     (hr : m.readAt p 1344 = Ty.flatBits Edwards25519_identityElement.lit (hw := hw)) :
     m.PtFit p ∧ m.readPt p = Edwards25519.identity ∧ m.readRest p = 0#64 := by
   have hp : m.PtFit p := ⟨by simp [ho], hf⟩
   exact ⟨hp, MemoryState.readPt_of_readAt hp (hr.trans identity_bits)⟩
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

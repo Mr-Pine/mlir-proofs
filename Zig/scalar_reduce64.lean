@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Scalar_toBytes
 public import Zig.Mlir.scalar_reduce64
 public import Common.Tactics
@@ -9,7 +9,7 @@ import Std.Tactic.BVDecide
 import Mathlib.Tactic.ClearExcept
 import Mathlib.Tactic.Ring
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -1626,4 +1626,4 @@ public theorem scalar_reduce64.call_eq (out p : Pointer) (s : GlobalState) (hwf 
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

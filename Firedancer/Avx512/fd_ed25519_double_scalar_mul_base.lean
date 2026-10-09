@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Common.QuadMem
 public import Firedancer.Common.Dsmb
@@ -18,7 +18,7 @@ public import Firedancer.Avx512.fd_ed25519_point_add_final_mul_projective
 public import Firedancer.Avx512.fd_ed25519_point_set
 public import Firedancer.Avx512.Mlir.fd_ed25519_double_scalar_mul_base
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification
 
@@ -105,7 +105,7 @@ end
 section Proof
 
 /-- `SlidesAt` past a point store into another block. -/
-theorem _root_.LeanMLIR.RIR.Firedancer.SlidesAt.storeQuad {m : MemoryState} (h : SlidesAt m q w)
+theorem _root_.MLIR.Firedancer.SlidesAt.storeQuad {m : MemoryState} (h : SlidesAt m q w)
     (hne : p.id ≠ q.id) : SlidesAt (m.storeQuad p P) q w := fun k hk =>
   ⟨Fits.storeQuad (h k hk).1, by
     rw [MemoryState.readAt_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hne)]
@@ -1102,4 +1102,4 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

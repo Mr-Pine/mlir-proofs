@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_curve25519_into_precomputed
 
 meta import Firedancer.Ref.fd_curve25519_into_precomputed
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def r : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -46,4 +46,4 @@ private def PointLimbs.beq (P Q : PointLimbs) : Bool :=
     (List.finRange 5).all fun k => s'.mem.readLimbs (r.add 80#64) k == fd_f25519_k.limbs k
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

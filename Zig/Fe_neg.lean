@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Common.LimbsBits
 public import Common.Tactics
 public import Zig.Fe_sub
 public import Zig.Globals
 public import Zig.Mlir.Fe_neg
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -71,4 +71,4 @@ public theorem Fe_neg.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
 
 end Proof
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

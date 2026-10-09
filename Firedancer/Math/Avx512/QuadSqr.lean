@@ -7,9 +7,9 @@ import Mathlib.Tactic.Ring
 /-! `fd_r43x6_quad_sqr_fast` in `ZMod p`: four independent squares, each lane `j < 4` and `j + 4`
 of the QUAD's vectors one element's limbs. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
-open LeanMLIR.RIR.Firedancer.Ref (p)
+open MLIR.Firedancer.Ref (p)
 
 namespace R43x6
 
@@ -872,4 +872,4 @@ public theorem fd_r43x6_quad_sqr_fast_spec {x03 x14 x25 : Wwl} {j : ℕ} (hj : j
 
 end R43x6
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

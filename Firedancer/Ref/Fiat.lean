@@ -7,7 +7,7 @@ public meta import Std.Tactic.BVDecide.Reflect
 /-! The no-overflow facts of the fiat-crypto carries: every flagged operand of a carry is a
 13-bit carry (times 19) and a 51-bit limb, or a product of zero-extended 64-bit limbs. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 public section
 
@@ -43,4 +43,4 @@ theorem setWidth_no_umulOverflow (x y : BitVec 64) :
 
 end
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

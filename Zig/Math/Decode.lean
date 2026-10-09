@@ -18,7 +18,7 @@ The program file `Zig/Edwards25519_fromBytes.lean` is still in progress, so its 
 (`Fe.d`, `Fe.one`, `Fe.sqrtm1`, `Fe.fromBytes.spec`, `Fe.pow2523.spec`) are mirrored here under
 `Decode`, and `Decode.fromBytes` is the source's `Edwards25519.fromBytes.spec`. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -363,4 +363,4 @@ public theorem fromBytes_eq_some {b : BitVec 256} {P : ZPt}
 
 end Decode
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

@@ -2,12 +2,12 @@ module
 
 public import Firedancer.Avx512.fd_r43x6_ge_decode2
 
-meta import SSA.Projects.RIR.Semantics.Func
+meta import MLIR.Semantics.Func
 meta import Firedancer.Avx512.fd_r43x6_ge_decode2
 
 /-! `fd_r43x6_ge_decode2` run, with the lifted callees, on encodings that decode and that do not. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 section Tests
 
@@ -91,4 +91,4 @@ private def fails (ea eb : Nat) (r : BitVec 32) : Bool :=
 
 end Tests
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

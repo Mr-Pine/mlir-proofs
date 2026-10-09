@@ -1,7 +1,7 @@
 """Lift Zig functions to RIR `mlir_def`s.
 
     python3 lift.py --src out/mlir_canonicalized/region --out ../Zig/Mlir \
-        --prefix Zig.Mlir --ns LeanMLIR.RIR.Zig zig_ed25519_verify
+        --prefix Zig.Mlir --ns MLIR.Zig zig_ed25519_verify
 
 writes `<out>/<f>.lean` for each `f` and every function and global it reaches, from
 `<src>/<f>.mlir`. Each file quotes its
@@ -69,10 +69,10 @@ def write(f, seen):
     cmd = ('noncomputable ' if nc(f) else '') + ('mlir_const_def' if glob else 'mlir_def')
     lines = ['module', '',
              f'-- zig-build/out/mlir_canonicalized/region/{f}.mlir', '',
-             f'public import SSA.Projects.RIR.Semantics.{base}',
-             'public import SSA.Projects.RIR.Syntax.Elab']
+             f'public import MLIR.Semantics.{base}',
+             'public import MLIR.Syntax.Elab']
     lines += [f'public import {i}' for i in imps]
-    lines += ['', f'meta import SSA.Projects.RIR.Semantics.{base}']
+    lines += ['', f'meta import MLIR.Semantics.{base}']
     lines += [f'meta import {i}' for i in imps]
     lines += ['', f'namespace {args.ns}', '', '@[expose] public section', '',
               f'{cmd} {lean(f)} :=', region(f)] + with_lines(binds)

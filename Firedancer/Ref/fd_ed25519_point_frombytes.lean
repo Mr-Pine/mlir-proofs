@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Common.Tactics
 public import Firedancer.Ref.Globals
@@ -15,7 +15,7 @@ public import Firedancer.Ref.fd_f25519_neg
 public import Firedancer.Ref.fd_ed25519_point_from
 public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 /-! ## Specification -/
 
@@ -167,4 +167,4 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

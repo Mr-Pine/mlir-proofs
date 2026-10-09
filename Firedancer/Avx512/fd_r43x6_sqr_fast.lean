@@ -1,17 +1,17 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.Call
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Vector
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.Call
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Vector
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Callees
 public import Firedancer.Avx512.Common.WwlRun
 public import Firedancer.Avx512.Mlir.fd_r43x6_sqr_fast
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 -- folded, so the steps' terms and the specs compare without unfolding the lanes
 attribute [local irreducible] wwl_add wwl_and wwl_shl wwl_slide wwl_madd52lo wwl_madd52hi
@@ -420,4 +420,4 @@ public theorem fd_r43x6_sqr_fast.call_eq (x : Wwl) (s : GlobalState) (hwf : s.WF
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

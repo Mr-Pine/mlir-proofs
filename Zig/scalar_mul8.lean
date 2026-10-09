@@ -1,13 +1,13 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Scalar_fromBytes
 public import Zig.Scalar_add
 public import Zig.Scalar_toBytes
 public import Zig.Mlir.scalar_mul8
 public import Common.Tactics
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -84,4 +84,4 @@ public theorem scalar.mul8.toNat_spec (b : BitVec 256) :
   congr 1
   omega
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

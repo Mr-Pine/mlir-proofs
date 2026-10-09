@@ -10,7 +10,7 @@ import Mathlib.Tactic.Ring
 /-! The arithmetic of `fd_curve25519_scalar_wnaf.wnaf`: for `x < 2^255` and `bits ≤ 13` its digits
 `d_i` sum to `x` as `Σ d_i 2^i`, each `0` or odd in `[-(2^bits - 1), 2^bits - 1]`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 namespace fd_curve25519_scalar_wnaf
 
@@ -266,4 +266,4 @@ end Digits
 
 end fd_curve25519_scalar_wnaf
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

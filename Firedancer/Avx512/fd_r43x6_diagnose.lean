@@ -1,6 +1,6 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.fd_int_if
 public import Firedancer.Avx512.fd_long_if
 public import Firedancer.Avx512.Common.ExtractLimbs
@@ -9,7 +9,7 @@ public import Firedancer.Avx512.Mlir.fd_r43x6_diagnose
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 /-! ## Specification -/
 
@@ -73,4 +73,4 @@ public theorem fd_r43x6_diagnose.call_eq (x : Wwl) (s : GlobalState) (hwf : s.WF
 
 end Proof
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

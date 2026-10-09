@@ -4,7 +4,7 @@ public import Firedancer.Ref.fd_curve25519_scalar_reduce
 
 meta import Firedancer.Ref.fd_curve25519_scalar_reduce
 
-namespace LeanMLIR.RIR.Firedancer.Ref
+namespace MLIR.Firedancer.Ref
 
 private def inp : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -54,4 +54,4 @@ private def inputs : List (BitVec 512) :=
 -- A poison pointer is UB.
 #guard (run 0 .poison).isNone
 
-end LeanMLIR.RIR.Firedancer.Ref
+end MLIR.Firedancer.Ref

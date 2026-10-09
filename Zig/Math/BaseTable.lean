@@ -10,7 +10,7 @@ import Mathlib.Tactic.Ring
 /-! The base-point table `basePointPc`: entry `i` is `i B`, its limbs below `2^52`. The entries are
 checked by the kernel, over `ℕ` mod `p`, against the extended-coordinates sum. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -100,4 +100,4 @@ public theorem Edwards25519.basePointPc.pts_ext (i : Fin 16) :
   simp only [Limbs.val_nat]
   exact h
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

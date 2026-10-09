@@ -4,7 +4,7 @@ public import Firedancer.Avx512.fd_ed25519_partial_dbl
 
 meta import Firedancer.Avx512.fd_ed25519_partial_dbl
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 private def r : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -30,4 +30,4 @@ private def state : GlobalState :=
     p == r && P.P03 == Q.P03 && P.P14 == Q.P14 && P.P25 == Q.P25
   | _ => false
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

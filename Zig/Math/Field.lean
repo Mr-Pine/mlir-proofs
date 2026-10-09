@@ -16,7 +16,7 @@ import Mathlib.Tactic.Ring
 /-! Zig's field arithmetic in `ZMod p`: each spec computes its field operation on the limbs'
 values, under the limb bounds the program proofs assume. -/
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 open _root_.Ed25519
 
@@ -509,4 +509,4 @@ public theorem Fe.cMov.spec_val {fe a : Fin 5 → BitVec 64} {c : BitVec 64} (hc
   rw [Fe.cMov.spec_eq fe a c hc]
   split <;> rfl
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig

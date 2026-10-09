@@ -1,8 +1,8 @@
 module
 
-public import SSA.Projects.RIR.Semantics.Func
-public import SSA.Projects.RIR.Run.BasicBlock
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Semantics.Func
+public import MLIR.Run.BasicBlock
+public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.ExtractLimbs
 public import Firedancer.Avx512.Common.R43x6
 import Std.Tactic.BVDecide
@@ -12,7 +12,7 @@ import Std.Tactic.BVDecide
 runs: the carries, then (after `fd_r43x6_mod_nearly_reduced_limbs`'s first carries) limb 5's
 `+= _c; += _b`. -/
 
-namespace LeanMLIR.RIR.Firedancer.Avx512
+namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
@@ -186,4 +186,4 @@ theorem runBodyFrom_biasedCarryTailRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ
 
 end
 
-end LeanMLIR.RIR.Firedancer.Avx512
+end MLIR.Firedancer.Avx512

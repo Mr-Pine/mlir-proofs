@@ -1,12 +1,12 @@
 module
 
-public import SSA.Projects.RIR.Run.Tactic
+public import MLIR.Run.Tactic
 public import Zig.Scalar
 public import Zig.Mlir.Scalar_fromBytes
 import Std.Tactic.BVDecide
 import Mathlib.Tactic.ClearExcept
 
-namespace LeanMLIR.RIR.Zig
+namespace MLIR.Zig
 
 /-! ## Specification -/
 
@@ -383,4 +383,4 @@ public theorem Scalar.fromBytes.spec_canonical (b : BitVec 256) :
 
 end Meaning
 
-end LeanMLIR.RIR.Zig
+end MLIR.Zig
