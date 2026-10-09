@@ -217,12 +217,12 @@ theorem and_sqrMaskN2 (p : Vector (BitVec 64) 8) : wwl_and p sqrMaskN2 = wwl_and
 
 /-! ## The products -/
 
-/-- The products as nine instructions: `madd52lo` of `x0 x1`, `x2 x3`, `x4 x5` into `p0l p1l p2l`,
-`madd52hi` into `t0 t1 t2` shifted by `9` into `p0h p1h p2h` (`zero nine` hold the splats). -/
-def sqrProdRun (x0 x1 x2 x3 x4 x5 zero nine p0l p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V) :
+/-- The products but `x0 x1`'s low part as eight instructions: `madd52lo` of `x2 x3`, `x4 x5` into
+`p1l p2l`, `madd52hi` of `x0 x1`, `x2 x3`, `x4 x5` into `t0 t1 t2` shifted by `9` into
+`p0h p1h p2h` (`zero nine` hold the splats). -/
+def sqrProdRun (x0 x1 x2 x3 x4 x5 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V) :
     List (Instr Γ) :=
-  [.ternop .vpmadd52l p0l (.val zero.i zero.h) (.val x0.i x0.h) (.val x1.i x1.h),
-    .ternop .vpmadd52l p1l (.val zero.i zero.h) (.val x2.i x2.h) (.val x3.i x3.h),
+  [.ternop .vpmadd52l p1l (.val zero.i zero.h) (.val x2.i x2.h) (.val x3.i x3.h),
     .ternop .vpmadd52l p2l (.val zero.i zero.h) (.val x4.i x4.h) (.val x5.i x5.h),
     .ternop .vpmadd52h t0 (.val zero.i zero.h) (.val x0.i x0.h) (.val x1.i x1.h),
     .binop (.vector (.shl {})) p0h (.val t0.i t0.h) (.val nine.i nine.h),
@@ -232,34 +232,32 @@ def sqrProdRun (x0 x1 x2 x3 x4 x5 zero nine p0l p1l p2l t0 p0h t1 p1h t2 p2h : D
     .binop (.vector (.shl {})) p2h (.val t2.i t2.h) (.val nine.i nine.h)]
 
 /-- Where the body at `pos` is `sqrProdRun` and `x0 … x5` hold `X0 … X5`: running on from `pos` then
-`g` gives `K` if it does from `pos + 9` with the products in `p0l … p2h`, whatever `t0 t1 t2`
+`g` gives `K` if it does from `pos + 8` with the products in `p1l … p2h`, whatever `t0 t1 t2`
 hold. -/
 theorem runBodyFrom_sqrProdRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {x0 x1 x2 x3 x4 x5 zero nine p0l p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V} {rest : List (Instr Γ)}
+    {x0 x1 x2 x3 x4 x5 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V} {rest : List (Instr Γ)}
     {X0 X1 X2 X3 X4 X5 : Vector (BitVec 64) 8} {S : GlobalState}
     {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        sqrProdRun x0 x1 x2 x3 x4 x5 zero nine p0l p1l p2l t0 p0h t1 p1h t2 p2h ++ rest)
+        sqrProdRun x0 x1 x2 x3 x4 x5 zero nine p1l p2l t0 p0h t1 p1h t2 p2h ++ rest)
     (hR :
       E ⊨ [x0 := X0, x1 := X1, x2 := X2, x3 := X3, x4 := X4, x5 := X5, zero := Vector.replicate 8 0,
         nine := Vector.replicate 8 9])
     (hd :
-      [x0.i, x1.i, x2.i, x3.i, x4.i, x5.i, zero.i, nine.i, p0l.i, p1l.i, p2l.i, t0.i, p0h.i, t1.i,
-          p1h.i, t2.i].Nodup)
+      [x0.i, x1.i, x2.i, x3.i, x4.i, x5.i, zero.i, nine.i, p1l.i, p2l.i, t0.i, p0h.i, t1.i, p1h.i,
+          t2.i].Nodup)
     (hK :
       ∀ vt0 vt1 vt2 : ⟦V⟧,
         (blk.runBodyFrom
-              E[p0l := wwl_madd52lo wwl_zero X0 X1, p1l := wwl_madd52lo wwl_zero X2 X3, p2l :=
-                wwl_madd52lo wwl_zero X4 X5, t0 := vt0, p0h :=
-                wwl_shl (wwl_madd52hi wwl_zero X0 X1) 9, t1 := vt1, p1h :=
+              E[p1l := wwl_madd52lo wwl_zero X2 X3, p2l := wwl_madd52lo wwl_zero X4 X5, t0 := vt0,
+                p0h := wwl_shl (wwl_madd52hi wwl_zero X0 X1) 9, t1 := vt1, p1h :=
                 wwl_shl (wwl_madd52hi wwl_zero X2 X3) 9, t2 := vt2, p2h :=
                 wwl_shl (wwl_madd52hi wwl_zero X4 X5) 9]
-              (pos + 9) S >>=
+              (pos + 8) S >>=
             g) =
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
-  step_pure with v0
   step_pure with v1
   step_pure with v2
   step_pure with transparent w0
@@ -268,8 +266,6 @@ theorem runBodyFrom_sqrProdRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
   step_pure with h1
   step_pure with transparent w2
   step_pure with h2
-  have e0 : v0 = wwl_madd52lo wwl_zero X0 X1 := by
-    rw [hv0]; ext i hi : 1; simp [wwl_madd52lo, madd52lo]
   have e1 : v1 = wwl_madd52lo wwl_zero X2 X3 := by
     rw [hv1]; ext i hi : 1; simp [wwl_madd52lo, madd52lo]
   have e2 : v2 = wwl_madd52lo wwl_zero X4 X5 := by
@@ -280,20 +276,23 @@ theorem runBodyFrom_sqrProdRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
     rw [hh1]; ext i hi : 1; simp [wwl_shl, wwl_madd52hi, madd52hi]
   have f2 : h2 = wwl_shl (wwl_madd52hi wwl_zero X4 X5) 9 := by
     rw [hh2]; ext i hi : 1; simp [wwl_shl, wwl_madd52hi, madd52hi]
-  rw [hE, e0, e1, e2, f0, f1, f2]
+  rw [hE, e1, e2, f0, f1, f2]
   exact hK _ _ _
 
 /-! ## The sums -/
 
 /-- The sums as twenty instructions: `wwl_andnot`s (as `and`s with `mn1 mn2`, the masks'
-complements) into `l* h*`, `wwl_and`s with `m1l m2l m1h m2h` (the masks on the read lanes) into
-`k* j*`, the adds, and the slides (`pz zp` the zero operands) into `zl` and `zh`. -/
+complements) into `l* h*`, `x0 x1`'s low product accumulated onto `l2 + l1` into `zll`, `wwl_and`s
+with `m1l m2l m1h m2h` (the masks on the read lanes) into `k* j*`, the adds, and the slides (`pz zp`
+the zero operands) into `zl` and `zh`. -/
 def sqrSumsRun
-    (p0l p1l p2l p0h p1h p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs
-      zll0 zll zl zhhs zlht zhl zh0 zh : Dst Γ V) :
+    (x0 x1 p1l p2l p0h p1h p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2
+      zhh zlhs zl zhhs zlht zhl zh0 zh : Dst Γ V) :
     List (Instr Γ) :=
   [.binop (.vector .and) l1 (.val p1l.i p1l.h) (.val mn1.i mn1.h),
     .binop (.vector .and) l2 (.val p2l.i p2l.h) (.val mn2.i mn2.h),
+    .binop (.vector (.add {})) ls (.val l2.i l2.h) (.val l1.i l1.h),
+    .ternop .vpmadd52l zll (.val ls.i ls.h) (.val x0.i x0.h) (.val x1.i x1.h),
     .binop (.vector .and) h1 (.val p1h.i p1h.h) (.val mn1.i mn1.h),
     .binop (.vector .and) h2 (.val p2h.i p2h.h) (.val mn2.i mn2.h),
     .binop (.vector (.add {})) zlh0 (.val h1.i h1.h) (.val p0h.i p0h.h),
@@ -305,9 +304,7 @@ def sqrSumsRun
     .binop (.vector (.add {})) zhh (.val j2.i j2.h) (.val j1.i j1.h),
     .binop (.shufflevector #v[some 7, some 8, some 9, some 10, some 11, some 12, some 13, some 14])
       zlhs (.val pz.i pz.h) (.val zlh.i zlh.h),
-    .binop (.vector (.add {})) zll0 (.val l1.i l1.h) (.val p0l.i p0l.h),
-    .binop (.vector (.add {})) zll (.val zll0.i zll0.h) (.val l2.i l2.h),
-    .binop (.vector (.add {})) zl (.val zll.i zll.h) (.val zlhs.i zlhs.h),
+    .binop (.vector (.add {})) zl (.val zlhs.i zlhs.h) (.val zll.i zll.h),
     .binop (.shufflevector #v[some 7, some 8, some 9, some 10, some 11, some 12, none, none]) zhhs
       (.val pz.i pz.h) (.val zhh.i zhh.h),
     .binop (.shufflevector #v[some 7, some 8, some 9, some 10, some 11, some 12, none, none]) zlht
@@ -316,43 +313,44 @@ def sqrSumsRun
     .binop (.vector (.add {})) zh0 (.val zhl.i zhl.h) (.val zhhs.i zhhs.h),
     .binop (.vector (.add {})) zh (.val zh0.i zh0.h) (.val zlht.i zlht.h)]
 
-/-- Where the body at `pos` is `sqrSumsRun`, `p0l … p2h` hold the products and the others the masks:
-running on from `pos` then `g` gives `K` if it does from `pos + 20` with `sums`' `zl` in `zl` and
-its `zh` in `zh`'s lanes `0 … 5`, whatever the intermediates hold. -/
+/-- Where the body at `pos` is `sqrSumsRun`, `x0 x1` hold `X0 X1`, `p1l … p2h` the products and the
+others the masks: running on from `pos` then `g` gives `K` if it does from `pos + 20` with `sums`'
+`zl` in `zl` and its `zh` in `zh`'s lanes `0 … 5`, whatever the intermediates hold. -/
 theorem runBodyFrom_sqrSumsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {p0l p1l p2l p0h p1h p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs
-      zll0 zll zl zhhs zlht zhl zh0 zh : Dst Γ V}
-    {rest : List (Instr Γ)} {P0L P1L P2L P0H P1H P2H : Vector (BitVec 64) 8} {S : GlobalState}
+    {x0 x1 p1l p2l p0h p1h p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2
+      zhh zlhs zl zhhs zlht zhl zh0 zh : Dst Γ V}
+    {rest : List (Instr Γ)} {X0 X1 P1L P2L P0H P1H P2H : Vector (BitVec 64) 8} {S : GlobalState}
     {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        sqrSumsRun p0l p1l p2l p0h p1h p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 h1 h2 zlh0 zlh k1 k2
-            j1 j2 zhh zlhs zll0 zll zl zhhs zlht zhl zh0 zh ++
+        sqrSumsRun x0 x1 p1l p2l p0h p1h p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0
+            zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl zh0 zh ++
           rest)
     (hR :
-      E ⊨ [p0l := P0L, p1l := P1L, p2l := P2L, p0h := P0H, p1h := P1H, p2h := P2H, mn1 := sqrMaskN1,
-        mn2 := sqrMaskN2, m1l := lanesBelow 6 sqrMask1, m2l := lanesBelow 6 sqrMask2, m1h :=
-        lanesBelow 5 sqrMask1, m2h := lanesBelow 5 sqrMask2, pz := lanesFrom 7 wwl_zero, zp :=
-        lanesBelow 5 wwl_zero])
+      E ⊨ [x0 := X0, x1 := X1, p1l := P1L, p2l := P2L, p0h := P0H, p1h := P1H, p2h := P2H, mn1 :=
+        sqrMaskN1, mn2 := sqrMaskN2, m1l := lanesBelow 6 sqrMask1, m2l := lanesBelow 6 sqrMask2,
+        m1h := lanesBelow 5 sqrMask1, m2h := lanesBelow 5 sqrMask2, pz := lanesFrom 7 wwl_zero,
+        zp := lanesBelow 5 wwl_zero])
     (hd :
-      [p0l.i, p1l.i, p2l.i, p0h.i, p1h.i, p2h.i, mn1.i, mn2.i, m1l.i, m2l.i, m1h.i, m2h.i, pz.i,
-          zp.i, l1.i, l2.i, h1.i, h2.i, zlh0.i, zlh.i, k1.i, k2.i, j1.i, j2.i, zhh.i, zlhs.i,
-          zll0.i, zll.i, zl.i, zhhs.i, zlht.i, zhl.i, zh0.i].Nodup)
+      [x0.i, x1.i, p1l.i, p2l.i, p0h.i, p1h.i, p2h.i, mn1.i, mn2.i, m1l.i, m2l.i, m1h.i, m2h.i,
+          pz.i, zp.i, l1.i, l2.i, ls.i, zll.i, h1.i, h2.i, zlh0.i, zlh.i, k1.i, k2.i, j1.i, j2.i,
+          zhh.i, zlhs.i, zl.i, zhhs.i, zlht.i, zhl.i, zh0.i].Nodup)
     (hK :
-      ∀ vl1 vl2 vh1 vh2 vzlh0 vzlh vk1 vk2 vj1 vj2 vzhh vzlhs vzll0 vzll vzhhs vzlht vzhl vzh0 :
-        ⟦V⟧,
+      ∀ vl1 vl2 vls vzll vh1 vh2 vzlh0 vzlh vk1 vk2 vj1 vj2 vzhh vzlhs vzhhs vzlht vzhl vzh0 : ⟦V⟧,
         (blk.runBodyFrom
-              E[l1 := vl1, l2 := vl2, h1 := vh1, h2 := vh2, zlh0 := vzlh0, zlh := vzlh, k1 := vk1,
-                k2 := vk2, j1 := vj1, j2 := vj2, zhh := vzhh, zlhs := vzlhs, zll0 := vzll0, zll :=
-                vzll, zl := Ty.wrap (fd_r43x6_sqr_fast.sums P0L P1L P2L P0H P1H P2H).1, zhhs :=
-                vzhhs, zlht := vzlht, zhl := vzhl, zh0 := vzh0, zh :=
-                low6 (fd_r43x6_sqr_fast.sums P0L P1L P2L P0H P1H P2H).2]
+              E[l1 := vl1, l2 := vl2, ls := vls, zll := vzll, h1 := vh1, h2 := vh2, zlh0 := vzlh0,
+                zlh := vzlh, k1 := vk1, k2 := vk2, j1 := vj1, j2 := vj2, zhh := vzhh, zlhs := vzlhs,
+                zl := Ty.wrap (fd_r43x6_sqr_fast.sums (wwl_madd52lo wwl_zero X0 X1) P1L P2L P0H P1H
+                  P2H).1, zhhs := vzhhs, zlht := vzlht, zhl := vzhl, zh0 := vzh0, zh :=
+                low6 (fd_r43x6_sqr_fast.sums (wwl_madd52lo wwl_zero X0 X1) P1L P2L P0H P1H P2H).2]
               (pos + 20) S >>=
             g) =
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   step_pure with vl1
   step_pure with vl2
+  step_pure with vls
+  step_pure with vzll
   step_pure with vh1
   step_pure with vh2
   step_pure with vzlh0
@@ -363,19 +361,20 @@ theorem runBodyFrom_sqrSumsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
   step_pure with vj2
   step_pure with vzhh
   step_pure with vzlhs
-  step_pure with vzll0
-  step_pure with vzll
   step_pure with vzl
   step_pure with vzhhs
   step_pure with vzlht
   step_pure with vzhl
   step_pure with vzh0
   step_pure with vzh
+  have ezll : vzll = wwl_add vls (wwl_madd52lo wwl_zero X0 X1) := by
+    rw [hvzll]; ext i hi : 1; simp [wwl_add, wwl_madd52lo, madd52lo, wwl_zero]
+  subst ezll
   -- the steps' lanes as the intrinsics they are
   simp only [← wwl_add_getElem, ← wwl_and_getElem, Vector.ofFn_getElem, lanesFrom_getElem,
     Nat.le_refl, ↓reduceIte, Vector.getElem_replicate, BitVec.ofNat_eq_ofNat, pullWrap,
-    ← wwl_slide_zero_7] at hvl1 hvl2 hvh1 hvh2 hvzlh0 hvzlh hvzll0 hvzll hvzlhs
-  subst hvl1 hvl2 hvh1 hvh2 hvzlh0 hvzlh hvzll0 hvzll hvzlhs
+    ← wwl_slide_zero_7] at hvl1 hvl2 hvls hvh1 hvh2 hvzlh0 hvzlh hvzlhs
+  subst hvl1 hvl2 hvls hvh1 hvh2 hvzlh0 hvzlh hvzlhs
   simp only [ofFn_and_lanesBelow] at hvk1 hvk2 hvj1 hvj2
   subst hvk1 hvk2 hvj1 hvj2
   simp only [ofFn_add_lanesBelow] at hvzhh hvzhl
@@ -387,11 +386,15 @@ theorem runBodyFrom_sqrSumsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
   simp only [ofFn_add_lanesBelow] at hvzh0
   subst hvzh0
   simp only [ofFn_add_lanesBelow] at hvzh
-  have e1 : vzl = Ty.wrap (t := V) (fd_r43x6_sqr_fast.sums P0L P1L P2L P0H P1H P2H).1 := by
+  have e1 :
+      vzl =
+        Ty.wrap (t := V)
+          (fd_r43x6_sqr_fast.sums (wwl_madd52lo wwl_zero X0 X1) P1L P2L P0H P1H P2H).1 := by
     simp only [hvzl, wrapGetElem, PoisonOr.value_bind, pullWrapOfFn, ← wwl_add_getElem,
       Vector.ofFn_getElem, fd_r43x6_sqr_fast.sums, and_sqrMaskN1, and_sqrMaskN2]
     ac_rfl
-  have e2 : vzh = low6 (fd_r43x6_sqr_fast.sums P0L P1L P2L P0H P1H P2H).2 := by
+  have e2 :
+      vzh = low6 (fd_r43x6_sqr_fast.sums (wwl_madd52lo wwl_zero X0 X1) P1L P2L P0H P1H P2H).2 := by
     simp only [hvzh, fd_r43x6_sqr_fast.sums, and_sqrMaskN1, and_sqrMaskN2]
     ac_rfl
   rw [hE, e1, e2]
@@ -403,7 +406,7 @@ public theorem fd_r43x6_sqr_fast.call_eq (x : Wwl) (s : GlobalState) (hwf : s.WF
       .value (.cons (Ty.wrap (fd_r43x6_sqr_fast.spec x)) .nil, s) := by
   func_init
   block_init
-  iterate 76 step_pure
+  iterate 71 step_pure
   -- the permutes, `x0 … x5`, the three doubled
   step_pattern using runBodyFrom_sqrPermRun with x4
   -- the lane products `p0l … p2h`
