@@ -39,7 +39,7 @@ axiom blocks : Fin n → BasicBlock Γ [] blockTys
 end fd_sha512_core_avx2
 
 open fd_sha512_core_avx2 in
-noncomputable def fd_sha512_core_avx2 : Func :=
+@[reducible] noncomputable def fd_sha512_core_avx2 : Func :=
   { Γ, tRets := [], n, blockTys, blockParams, hhasBlock := hn, hentry, blocks }
 
 noncomputable def fd_sha512_core_avx2.args (st data : ⟦.ptr⟧) (n : ⟦.bv 64⟧) :
