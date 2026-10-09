@@ -10,9 +10,6 @@ namespace MLIR.Firedancer.Avx512
 
 section Proof
 
--- `vpermi2var` stays folded until its index is a literal, for `reduceVpermi2var`
-attribute [-mlir_operation] Operation.vpermi2var
-
 /-- `fd_ed25519_point_to` stores the coordinates of the point at `a` at `x, y, z, t`, in that order.
 The loads all come before the stores, so the outputs may alias `a` and each other. -/
 public theorem fd_ed25519_point_to.call_eq (x y z t a : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -27,7 +24,7 @@ public theorem fd_ed25519_point_to.call_eq (x y z t a : Pointer) (s : GlobalStat
                 (s.mem.readQuad a).Z).storeVec t (s.mem.readQuad a).T }) := by
   func_init
   block_init
-  iterate 30 step_pure
+  iterate 27 step_pure
   step_load with transparent v03
   step_pure
   step_load with transparent v14
