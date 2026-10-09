@@ -575,6 +575,58 @@ public theorem and_mask43 (x : BitVec 64) (a b : Int) (hx : Bnd x a b)
   have := hx.2
   rw [and_mask43_eq _ (by omega), and_neg_shift]
 
+/-- A value with a non-negative lower bound has its sign bit clear. -/
+theorem msb_eq_false {x : BitVec 64} {a b : Int} (hx : Bnd x a b) (h : 0 ≤ a) : x.msb = false := by
+  have := toInt_eq_toNat hx h
+  have := hx.1
+  rw [BitVec.msb_eq_false_iff_two_mul_lt]
+  rw [BitVec.toInt_eq_toNat_cond] at *
+  split at * <;> omega
+
+/-- On a non-negative value, the compiler's sign-cleared carry mask is `-2^21`. -/
+theorem and_mask63_eq {y : BitVec 64} {a b : Int} (hy : Bnd y a b) (h : 0 ≤ a) :
+    y &&& 9223372036852678656#64 = y &&& 18446744073707454464#64 := by
+  have := msb_eq_false hy h
+  bv_decide
+
+/-- The compiler's sign-cleared mask, for `0 ≤ x`, clears the low 21 bits. -/
+public theorem and_mask63 (x : BitVec 64) (a b : Int) (hx : Bnd x a b) (h : 0 ≤ a) :
+    x &&& 9223372036852678656#64 = x.sshiftRight 21 <<< 21 := by
+  rw [and_mask63_eq hx h, and_neg_shift]
+
+/-- `and_neg21`, with the sign-cleared mask, for `0 ≤ x`. -/
+public theorem and_neg63 (x : BitVec 64) (a b lo hi : Int) (hx : Bnd x a b)
+    (h : 0 ≤ a ∧ lo = a / 2097152 * 2097152 ∧ hi = b / 2097152 * 2097152) :
+    Bnd (x &&& 9223372036852678656#64) lo hi := by
+  rw [and_mask63_eq hx h.1]
+  exact and_neg21 x a b lo hi hx h.2
+
+/-- `residual`, with the sign-cleared mask, for `0 ≤ x + 2^20`. -/
+public theorem residual63 (x : BitVec 64) (a b : Int) (hs : Bnd (x + 1048576#64) a b) (h : 0 ≤ a) :
+    Bnd (x - ((x + 1048576#64) &&& 9223372036852678656#64)) (-1048576) 1048575 := by
+  rw [and_mask63_eq hs h]
+  exact residual x
+
+/-- `residual_add`, with the sign-cleared mask, for `0 ≤ x + 2^20`. -/
+public theorem residual63_add (x y : BitVec 64) (c d lo hi : Int) (hy : Bnd y c d) (a b : Int)
+    (hs : Bnd (x + 1048576#64) a b)
+    (h :
+      0 ≤ a ∧ lo = -1048576 + c ∧ hi = 1048575 + d ∧ -9223372036854775808 ≤ lo ∧
+        hi ≤ 9223372036854775807) :
+    Bnd ((x + y) - ((x + 1048576#64) &&& 9223372036852678656#64)) lo hi := by
+  rw [and_mask63_eq hs h.1]
+  exact residual_add x y c d lo hi hy h.2
+
+/-- `residual_add'`, with the sign-cleared mask, for `0 ≤ x + 2^20`. -/
+public theorem residual63_add' (x y : BitVec 64) (c d lo hi : Int) (hy : Bnd y c d) (a b : Int)
+    (hs : Bnd (x + 1048576#64) a b)
+    (h :
+      0 ≤ a ∧ lo = -1048576 + c ∧ hi = 1048575 + d ∧ -9223372036854775808 ≤ lo ∧
+        hi ≤ 9223372036854775807) :
+    Bnd ((y + x) - ((x + 1048576#64) &&& 9223372036852678656#64)) lo hi := by
+  rw [and_mask63_eq hs h.1]
+  exact residual_add' x y c d lo hi hy h.2
+
 /-- `shl nsw` by `n` does not overflow on values of `64 - n` signed bits. -/
 public theorem shl_sshiftRight (x : BitVec 64) (a b : Int) (hx : Bnd x a b) (n : Nat)
     (h : (n = 18 ∨ n = 19 ∨ n = 39 ∨ n = 40) ∧ -2 ^ (63 - n) ≤ a ∧ b < 2 ^ (63 - n)) :
@@ -601,6 +653,11 @@ public theorem shl_sshiftRight (x : BitVec 64) (a b : Int) (hx : Bnd x a b) (n :
     have h1 : x.slt 8388608#64 := by
       rw [BitVec.slt_iff_toInt_lt]; simp at *; omega
     bv_decide
+
+/-- `(x >> 21 + y) << 39` keeps the low 25 bits, where the logical and arithmetic shifts agree. -/
+public theorem ushiftRight_add_shl39 (x y : BitVec 64) :
+    (x >>> 21 + y) <<< 39 = (y + x.sshiftRight 21) <<< 39 := by
+  bv_decide
 
 /-- A limb's low 21 bits are the limb less its shifted carry. -/
 public theorem and_mask_sub (x : BitVec 64) : x &&& 2097151#64 = x - x.sshiftRight 21 <<< 21 := by
@@ -699,23 +756,41 @@ partial def bound (atoms : Std.HashMap Expr (Int × Int × Expr)) (e : Expr) :
                 #[x, y, int a, int b, int c, int d, int lo, int hi, hx, hy]))
   | HSub.hSub _ _ _ _ x y =>
     -- a rounded carry's residual: `x - m`, `(x + y) - m` or `(y + x) - m`, `m` the carry's mask
-    let mask? : Option (Expr × Expr × Expr) :=
+    let mask? : Option (Expr × Expr × Expr × Expr) :=
       match_expr y with
       | HAnd.hAnd _ _ _ _ s m =>
         match_expr s with
-        | HAdd.hAdd _ _ _ _ x' k => some (x', k, m)
+        | HAdd.hAdd _ _ _ _ x' k => some (s, x', k, m)
         | _ => none
       | _ => none
-    if let some (x', k, m) := mask? then
+    let parts? : Option (Expr × Expr) :=
+      match_expr x with
+      | HAdd.hAdd _ _ _ _ p q => some (p, q)
+      | _ => none
+    if let some (s, x', k, m) := mask? then
       if (← litVal? k) == some 1048576 then
         let mv ← litVal? m
+        if mv == some 9223372036852678656 then
+          let (a, b, hs) ← bound atoms s
+          if 0 ≤ a then
+            if x == x' then
+              return (-1048576, 1048575,
+                  ← withSide (mkAppN (mkConst ``Bnd.residual63) #[x', int a, int b, hs]))
+            if let some (p, q) := parts? then
+              for (u, w, lem) in [(p, q, ``Bnd.residual63_add), (q, p, ``Bnd.residual63_add')] do
+                if u == x' then
+                  let (c, d, hw) ← bound atoms w
+                  let lo := -1048576 + c
+                  let hi := 1048575 + d
+                  if lo64 ≤ lo && hi ≤ hi64 then
+                    return (lo, hi,
+                        ←
+                          withSide
+                              (mkAppN (mkConst lem)
+                                #[x', w, int c, int d, int lo, int hi, hw, int a, int b, hs]))
         if mv == some (-2097152) then
           if x == x' then
             return (-1048576, 1048575, mkApp (mkConst ``Bnd.residual) x')
-          let parts? : Option (Expr × Expr) :=
-            match_expr x with
-            | HAdd.hAdd _ _ _ _ p q => some (p, q)
-            | _ => none
           if let some (p, q) := parts? then
             for (u, w, lem) in [(p, q, ``Bnd.residual_add), (q, p, ``Bnd.residual_add')] do
               if u == x' then
@@ -762,6 +837,13 @@ partial def bound (atoms : Std.HashMap Expr (Int × Int × Expr)) (e : Expr) :
                 #[x, int a, int b, int lo, int hi, hx, mkNatLit n]))
   | HAnd.hAnd _ _ _ _ x c =>
     let some k ← litVal? c | any
+    if k == 9223372036852678656 then
+      let (a, b, hx) ← bound atoms x
+      if 0 ≤ a then
+        let lo := a / 2097152 * 2097152
+        let hi := b / 2097152 * 2097152
+        return (lo, hi,
+            ← withSide (mkAppN (mkConst ``Bnd.and_neg63) #[x, int a, int b, int lo, int hi, hx]))
     if 0 ≤ k then
       return (0, k, ← withSide (mkAppN (mkConst ``Bnd.and_nonneg) #[x, c, int 0, int k]))
     if k == -2097152 then
@@ -864,21 +946,23 @@ simproc_decl lshrNonneg (_ >>> _) := fun e => do
           ← withSide (mkAppN (mkConst ``Bnd.ushiftRight_eq) #[x, int a, int b, hx, mkNatLit n]) }
 
 open Bnd in
-/-- The compiler's narrowed carry mask, as the cleared low bits. -/
-simproc_decl andMask43 (_ &&& _) := fun e => do
+/-- The compiler's narrowed and sign-cleared carry masks, as the cleared low bits. -/
+simproc_decl andMask (_ &&& _) := fun e => do
   let_expr HAnd.hAnd _ _ _ _ x c := e | return .continue
-  unless (← litVal? c) == some 8796090925056 do
+  let some k ← litVal? c | return .continue
+  unless k == 8796090925056 || k == 9223372036852678656 do
     return .continue
   let (a, b, hx) ← bound (← atoms) x
-  unless 0 ≤ a && b < 8796093022208 do
+  unless 0 ≤ a && (k != 8796090925056 || b < 8796093022208) do
     return .continue
+  let lem := if k == 8796090925056 then ``Bnd.and_mask43 else ``Bnd.and_mask63
   return .done
       {
         expr :=
           ←
             mkAppM ``HShiftLeft.hShiftLeft
                 #[← mkAppM ``BitVec.sshiftRight #[x, mkNatLit 21], mkNatLit 21],
-        proof? := ← withSide (mkAppN (mkConst ``Bnd.and_mask43) #[x, int a, int b, hx]) }
+        proof? := ← withSide (mkAppN (mkConst lem) #[x, int a, int b, hx]) }
 
 /-- `bnd x`: `hbx : Bnd x lo hi`, from `x`'s equation `hx : x = e` and `e`'s bounds. -/
 elab "bnd " x:ident : tactic =>
@@ -916,7 +1000,7 @@ def evalBridge : Tactic := fun stx =>
       thms ← thms.addConst n
     let ctx ← Simp.mkContext (simpTheorems := #[thms]) (congrTheorems := ← getSimpCongrTheorems)
     let mut procs : Simp.Simprocs := {}
-    for p in [``lshrNonneg, ``andMask43] do
+    for p in [``lshrNonneg, ``andMask] do
       procs ← procs.add p (post := true)
     match ← simpTarget (← getMainGoal) ctx #[procs] with
     | (none, _) =>
@@ -965,23 +1049,25 @@ section Proof
 
 /-- The constants the code reads after loading the input. -/
 abbrev fd_curve25519_scalar_reduce.Consts (E : ⟪fd_curve25519_scalar_reduce.Γ⟫) : Prop :=
-  E ⊨ [%0 := 16#64, %1 := 40#64, %2 := 2097151#64, %3 := 21#64, %4 := 42#64, %5 := 1#64, %6 :=
-    20#64, %7 := 41#64, %8 := 2#64, %9 := 19#64, %10 := 3#64, %11 := 18#64, %12 := 39#64, %13 :=
-    4#64, %14 := 17#64, %15 := 38#64, %16 := 5#64, %17 := 37#64, %18 := 6#64, %19 := 15#64, %20 :=
-    36#64, %21 := 7#64, %22 := 14#64, %23 := 35#64, %24 := 666643#64, %25 := 470296#64, %26 :=
-    654183#64, %27 := 18446744073708553811#64, %28 := 136657#64, %29 := 18446744073708867715#64,
-    %30 := 1048576#64, %31 := 8796090925056#64, %32 := 18446744073707454464#64, %33 :=
-    4398044413952#64, %34 := 9223367638808264704#64, %35 := 63#64, %36 := 1048575#64, %37 :=
-    2199022206976#64, %38 := 4611683819404132352#64, %39 := 62#64, %40 := 524287#64, %41 :=
-    1099511103488#64, %42 := 2305841909702066176#64, %43 := 61#64, %44 := 262143#64, %45 :=
-    549755551744#64]
+  E ⊨ [%1096 := 16#64, %1097 := 40#64, %1098 := 2097151#64, %1099 := 21#64, %1100 := 42#64, %1101 :=
+    1#64, %1102 := 20#64, %1103 := 41#64, %1104 := 2#64, %1105 := 19#64, %1106 := 3#64, %1107 :=
+    18#64, %1108 := 39#64, %1109 := 4#64, %1110 := 17#64, %1111 := 38#64, %1112 := 5#64, %1113 :=
+    37#64, %1114 := 6#64, %1115 := 15#64, %1116 := 36#64, %1117 := 7#64, %1118 := 14#64, %1119 :=
+    35#64, %1120 := 666643#64, %1121 := 470296#64, %1122 := 654183#64, %1123 :=
+    18446744073708553811#64, %1124 := 136657#64, %1125 := 18446744073708867715#64, %1126 :=
+    1048576#64, %1127 := 8796090925056#64, %1128 := 9223372036852678656#64, %1129 :=
+    18446744073707454464#64, %1130 := 4398044413952#64, %1131 := 9223367638808264704#64, %1132 :=
+    63#64, %1133 := 1048575#64, %1134 := 2199022206976#64, %1135 := 4611683819404132352#64, %1136 :=
+    62#64, %1137 := 524287#64, %1138 := 1099511103488#64, %1139 := 2305841909702066176#64, %1140 :=
+    61#64, %1141 := 262143#64, %1142 := 549755551744#64]
 
-/-! `^bb0` in thirteen runs. Each `runK` steps the instructions from `%K` of any block whose body
-from there on is `^bb0`'s (`hbody`), in continuation form: `hK` takes the env with the run's values
-named (`sK_n` is C's `sK` after its `n`-th assignment, `tN` the compiled code's `%N`), their C forms
-and their bounds. The input values' bounds (`hb…`) let the `nsw`/`nuw` flags be discharged. -/
+/-! `^bb0` in thirteen runs. Each `runK` steps the instructions from the `K`-th of any block whose
+body from there on is `^bb0`'s (`hbody`), in continuation form: `hK` takes the env with the run's
+values named (`sK_n` is C's `sK` after its `n`-th assignment, `tN` the compiled code's `%N`), their
+C forms and their bounds. The input values' bounds (`hb…`) let the `nsw`/`nuw` flags be discharged.
+-/
 
-/-- From `%0`: the constants, and the input words `in0 … in7`. -/
+/-- From `%1096`: the constants, and the input words `in0 … in7`. -/
 theorem fd_curve25519_scalar_reduce.run0 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
     (hbody : blk.body.drop 0 = fd_curve25519_scalar_reduce.entry.body.drop 0)
@@ -994,8 +1080,8 @@ theorem fd_curve25519_scalar_reduce.run0 {β : Type} {out inp : Pointer}
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%46 := in0, %48 := in1, %50 := in2, %52 := in3, %54 := in4, %56 := in5, %58 :=
-              in6, %60 := in7]) →
+            E' ⊨ [%1143 := in0, %1145 := in1, %1147 := in2, %1149 := in3, %1151 := in4, %1153 :=
+              in5, %1155 := in6, %1157 := in7]) →
           (hin0 : in0 = (S.mem.readAt inp 512).extractLsb' 0 64) →
           (hin1 : in1 = (S.mem.readAt inp 512).extractLsb' 64 64) →
           (hin2 : in2 = (S.mem.readAt inp 512).extractLsb' 128 64) →
@@ -1004,9 +1090,9 @@ theorem fd_curve25519_scalar_reduce.run0 {β : Type} {out inp : Pointer}
           (hin5 : in5 = (S.mem.readAt inp 512).extractLsb' 320 64) →
           (hin6 : in6 = (S.mem.readAt inp 512).extractLsb' 384 64) →
           (hin7 : in7 = (S.mem.readAt inp 512).extractLsb' 448 64) →
-          (blk.runBodyFrom E' 61 S >>= g) = K) :
+          (blk.runBodyFrom E' 62 S >>= g) = K) :
     (blk.runBodyFrom E 0 S >>= g) = K := by
-  iterate 46 step_pure
+  iterate 47 step_pure
   step_call using fd_ulong_load_8.call_eq with in0
   step_pure
   step_call using fd_ulong_load_8.call_eq with in1
@@ -1030,18 +1116,18 @@ theorem fd_curve25519_scalar_reduce.run0 {β : Type} {out inp : Pointer}
       (by env_reads) (hin0.trans (BitVec.setWidth_eq_extractLsb' (by decide))) hin1 hin2 hin3 hin4
       hin5 hin6 hin7
 
-/-- From `%61`: `in0 … in7` unpacked into the limbs `s0 … s23`. -/
-theorem fd_curve25519_scalar_reduce.run61 {β : Type} {out inp : Pointer}
+/-- From `%1158`: `in0 … in7` unpacked into the limbs `s0 … s23`. -/
+theorem fd_curve25519_scalar_reduce.run62 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 61 = fd_curve25519_scalar_reduce.entry.body.drop 61)
+    (hbody : blk.body.drop 62 = fd_curve25519_scalar_reduce.entry.body.drop 62)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {in0 in1 in2 in3 in4 in5 in6 in7 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%46 := in0, %48 := in1, %50 := in2, %52 := in3, %54 := in4, %56 := in5, %58 := in6,
-        %60 := in7])
+      E ⊨ [%1143 := in0, %1145 := in1, %1147 := in2, %1149 := in3, %1151 := in4, %1153 := in5,
+        %1155 := in6, %1157 := in7])
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
         (s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 :
@@ -1049,10 +1135,10 @@ theorem fd_curve25519_scalar_reduce.run61 {β : Type} {out inp : Pointer}
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %73 := s6,
-              %75 := s7, %77 := s8, %79 := s9, %81 := s10, %83 := s11, %85 := s12, %87 := s13,
-              %89 := s14, %91 := s15, %93 := s16, %95 := s17, %97 := s18, %99 := s19, %101 := s20,
-              %103 := s21, %105 := s22, %106 := s23]) →
+            E' ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5,
+              %1170 := s6, %1172 := s7, %1174 := s8, %1176 := s9, %1178 := s10, %1180 := s11,
+              %1182 := s12, %1184 := s13, %1186 := s14, %1188 := s15, %1190 := s16, %1192 := s17,
+              %1194 := s18, %1196 := s19, %1198 := s20, %1200 := s21, %1202 := s22, %1203 := s23]) →
           (hs0 : s0 = in0 &&& 2097151#64) →
           (hs1 : s1 = in0 >>> 21 &&& 2097151#64) →
           (hs2 : s2 = in0 >>> 42 &&& 2097151#64) →
@@ -1100,8 +1186,8 @@ theorem fd_curve25519_scalar_reduce.run61 {β : Type} {out inp : Pointer}
           (hbs20 : Bnd s20 0 2097151) →
           (hbs21 : Bnd s21 0 2097151) →
           (hbs22 : Bnd s22 0 2097151) →
-          (hbs23 : Bnd s23 0 536870911) → (blk.runBodyFrom E' 107 S >>= g) = K) :
-    (blk.runBodyFrom E 61 S >>= g) = K := by
+          (hbs23 : Bnd s23 0 536870911) → (blk.runBodyFrom E' 108 S >>= g) = K) :
+    (blk.runBodyFrom E 62 S >>= g) = K := by
   -- long s0 = …
   step_pure with s0
   bnd s0
@@ -1210,10 +1296,10 @@ theorem fd_curve25519_scalar_reduce.run61 {β : Type} {out inp : Pointer}
       hbs3 hbs4 hbs5 hbs6 hbs7 hbs8 hbs9 hbs10 hbs11 hbs12 hbs13 hbs14 hbs15 hbs16 hbs17 hbs18 hbs19
       hbs20 hbs21 hbs22 hbs23
 
-/-- From `%107`: the rows of `s23 … s18` into `s6 … s16`, begun. -/
-theorem fd_curve25519_scalar_reduce.run107 {β : Type} {out inp : Pointer}
+/-- From `%1204`: the rows of `s23 … s18` into `s6 … s16`, begun. -/
+theorem fd_curve25519_scalar_reduce.run108 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 107 = fd_curve25519_scalar_reduce.entry.body.drop 107)
+    (hbody : blk.body.drop 108 = fd_curve25519_scalar_reduce.entry.body.drop 108)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 :
@@ -1221,43 +1307,44 @@ theorem fd_curve25519_scalar_reduce.run107 {β : Type} {out inp : Pointer}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %73 := s6, %75 := s7,
-        %77 := s8, %79 := s9, %81 := s10, %83 := s11, %85 := s12, %87 := s13, %89 := s14, %91 :=
-        s15, %93 := s16, %95 := s17, %97 := s18, %99 := s19, %101 := s20, %103 := s21, %105 := s22,
-        %106 := s23])
+      E ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5, %1170 :=
+        s6, %1172 := s7, %1174 := s8, %1176 := s9, %1178 := s10, %1180 := s11, %1182 := s12,
+        %1184 := s13, %1186 := s14, %1188 := s15, %1190 := s16, %1192 := s17, %1194 := s18, %1196 :=
+        s19, %1198 := s20, %1200 := s21, %1202 := s22, %1203 := s23])
     (hbs8 : Bnd s8 0 2097151) (hbs11 : Bnd s11 0 2097151) (hbs12 : Bnd s12 0 2097151)
     (hbs13 : Bnd s13 0 2097151) (hbs14 : Bnd s14 0 2097151) (hbs15 : Bnd s15 0 2097151)
     (hbs16 : Bnd s16 0 2097151) (hbs20 : Bnd s20 0 2097151) (hbs21 : Bnd s21 0 2097151)
     (hbs22 : Bnd s22 0 2097151) (hbs23 : Bnd s23 0 536870911)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (s11_1 s12_1 s13_1 s14_1 s15_1 s16_1 t119 t120 t121 t122 s14_2 s15_2 t127 t128 t129 t130
-          t131 s14_3 s8_1 : BitVec 64),
+        (s11_1 s12_1 s13_1 s14_1 s15_1 s16_1 t1216 t1217 t1218 t1219 s14_2 s15_2 t1224 t1225 t1226
+          t1227 t1228 s14_3 s8_1 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %73 := s6,
-              %75 := s7, %79 := s9, %81 := s10, %95 := s17, %97 := s18, %99 := s19, %101 := s20,
-              %108 := s11_1, %110 := s12_1, %112 := s13_1, %118 := s16_1, %119 := t119, %120 :=
-              t120, %121 := t121, %122 := t122, %126 := s15_2, %127 := t127, %128 := t128, %129 :=
-              t129, %130 := t130, %131 := t131, %133 := s14_3, %135 := s8_1]) →
+            E' ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5,
+              %1170 := s6, %1172 := s7, %1176 := s9, %1178 := s10, %1192 := s17, %1194 := s18,
+              %1196 := s19, %1198 := s20, %1205 := s11_1, %1207 := s12_1, %1209 := s13_1, %1215 :=
+              s16_1, %1216 := t1216, %1217 := t1217, %1218 := t1218, %1219 := t1219, %1223 := s15_2,
+              %1224 := t1224, %1225 := t1225, %1226 := t1226, %1227 := t1227, %1228 := t1228,
+              %1230 := s14_3, %1232 := s8_1]) →
           (hs11_1 : s11_1 = s11 + s23 * 666643#64) →
           (hs12_1 : s12_1 = s12 + s23 * 470296#64) →
           (hs13_1 : s13_1 = s13 + s23 * 654183#64) →
           (hs14_1 : s14_1 = s14 - s23 * 997805#64) →
           (hs15_1 : s15_1 = s15 + s23 * 136657#64) →
           (hs16_1 : s16_1 = s16 - s23 * 683901#64) →
-          (ht119 : t119 = (s22 * 666643#64)) →
-          (ht120 : t120 = (s22 * 470296#64)) →
-          (ht121 : t121 = (s22 * 654183#64)) →
-          (ht122 : t122 = (s22 * 18446744073708553811#64)) →
+          (ht1216 : t1216 = (s22 * 666643#64)) →
+          (ht1217 : t1217 = (s22 * 470296#64)) →
+          (ht1218 : t1218 = (s22 * 654183#64)) →
+          (ht1219 : t1219 = (s22 * 18446744073708553811#64)) →
           (hs14_2 : s14_2 = s14_1 + s22 * 136657#64) →
           (hs15_2 : s15_2 = s15_1 - s22 * 683901#64) →
-          (ht127 : t127 = (s21 * 666643#64)) →
-          (ht128 : t128 = (s21 * 470296#64)) →
-          (ht129 : t129 = (s21 * 654183#64)) →
-          (ht130 : t130 = (s21 * 18446744073708553811#64)) →
-          (ht131 : t131 = (s21 * 136657#64)) →
+          (ht1224 : t1224 = (s21 * 666643#64)) →
+          (ht1225 : t1225 = (s21 * 470296#64)) →
+          (ht1226 : t1226 = (s21 * 654183#64)) →
+          (ht1227 : t1227 = (s21 * 18446744073708553811#64)) →
+          (ht1228 : t1228 = (s21 * 136657#64)) →
           (hs14_3 : s14_3 = s14_2 - s21 * 683901#64) →
           (hs8_1 : s8_1 = s8 + s20 * 666643#64) →
           (hbs11_1 : Bnd s11_1 0 357901236818924) →
@@ -1266,20 +1353,20 @@ theorem fd_curve25519_scalar_reduce.run107 {β : Type} {out inp : Pointer}
           (hbs14_1 : Bnd s14_1 (-535692479350355) 2097151) →
           (hbs15_1 : Bnd s15_1 0 73367170181678) →
           (hbs16_1 : Bnd s16_1 (-367166552903811) 2097151) →
-          (hbt119 : Bnd t119 0 1398051034093) →
-          (hbt120 : Bnd t120 0 986281726696) →
-          (hbt121 : Bnd t121 0 1371920532633) →
-          (hbt122 : Bnd t122 (-2092547753555) 0) →
+          (hbt1216 : Bnd t1216 0 1398051034093) →
+          (hbt1217 : Bnd t1217 0 986281726696) →
+          (hbt1218 : Bnd t1218 0 1371920532633) →
+          (hbt1219 : Bnd t1219 (-2092547753555) 0) →
           (hbs14_2 : Bnd s14_2 (-535692479350355) 286592461358) →
           (hbs15_2 : Bnd s15_2 (-1434243666051) 73367170181678) →
-          (hbt127 : Bnd t127 0 1398051034093) →
-          (hbt128 : Bnd t128 0 986281726696) →
-          (hbt129 : Bnd t129 0 1371920532633) →
-          (hbt130 : Bnd t130 (-2092547753555) 0) →
-          (hbt131 : Bnd t131 0 286590364207) →
+          (hbt1224 : Bnd t1224 0 1398051034093) →
+          (hbt1225 : Bnd t1225 0 986281726696) →
+          (hbt1226 : Bnd t1226 0 1371920532633) →
+          (hbt1227 : Bnd t1227 (-2092547753555) 0) →
+          (hbt1228 : Bnd t1228 0 286590364207) →
           (hbs14_3 : Bnd s14_3 (-537126723016406) 286592461358) →
-          (hbs8_1 : Bnd s8_1 0 1398053131244) → (blk.runBodyFrom E' 136 S >>= g) = K) :
-    (blk.runBodyFrom E 107 S >>= g) = K := by
+          (hbs8_1 : Bnd s8_1 0 1398053131244) → (blk.runBodyFrom E' 137 S >>= g) = K) :
+    (blk.runBodyFrom E 108 S >>= g) = K := by
   step_pure [nswMul, nuwMul]
   -- s11 += s23*666643L
   step_pure [nswAdd, nuwAdd] with s11_1
@@ -1304,14 +1391,14 @@ theorem fd_curve25519_scalar_reduce.run107 {β : Type} {out inp : Pointer}
   -- s16 -= s23*683901L
   step_pure [nswAdd] with s16_1
   bnd s16_1
-  step_pure [nswMul, nuwMul] with t119
-  bnd t119
-  step_pure [nswMul, nuwMul] with t120
-  bnd t120
-  step_pure [nswMul, nuwMul] with t121
-  bnd t121
-  step_pure [nswMul] with t122
-  bnd t122
+  step_pure [nswMul, nuwMul] with t1216
+  bnd t1216
+  step_pure [nswMul, nuwMul] with t1217
+  bnd t1217
+  step_pure [nswMul, nuwMul] with t1218
+  bnd t1218
+  step_pure [nswMul] with t1219
+  bnd t1219
   step_pure [nswMul, nuwMul]
   -- s14 += s22*136657L
   step_pure [nswAdd] with s14_2
@@ -1320,16 +1407,16 @@ theorem fd_curve25519_scalar_reduce.run107 {β : Type} {out inp : Pointer}
   -- s15 -= s22*683901L
   step_pure [nswAdd] with s15_2
   bnd s15_2
-  step_pure [nswMul, nuwMul] with t127
-  bnd t127
-  step_pure [nswMul, nuwMul] with t128
-  bnd t128
-  step_pure [nswMul, nuwMul] with t129
-  bnd t129
-  step_pure [nswMul] with t130
-  bnd t130
-  step_pure [nswMul, nuwMul] with t131
-  bnd t131
+  step_pure [nswMul, nuwMul] with t1224
+  bnd t1224
+  step_pure [nswMul, nuwMul] with t1225
+  bnd t1225
+  step_pure [nswMul, nuwMul] with t1226
+  bnd t1226
+  step_pure [nswMul] with t1227
+  bnd t1227
+  step_pure [nswMul, nuwMul] with t1228
+  bnd t1228
   step_pure [nswMul]
   -- s14 -= s21*683901L
   step_pure [nswAdd] with s14_3
@@ -1339,56 +1426,57 @@ theorem fd_curve25519_scalar_reduce.run107 {β : Type} {out inp : Pointer}
   step_pure [nswAdd, nuwAdd] with s8_1
   bnd s8_1
   exact
-    hK _ s11_1 s12_1 s13_1 s14_1 s15_1 s16_1 t119 t120 t121 t122 s14_2 s15_2 t127 t128 t129 t130
-      t131 s14_3 s8_1 hArgs
+    hK _ s11_1 s12_1 s13_1 s14_1 s15_1 s16_1 t1216 t1217 t1218 t1219 s14_2 s15_2 t1224 t1225 t1226
+      t1227 t1228 s14_3 s8_1 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
       (by env_reads) (by bridge hs11_1) (by bridge hs12_1) (by bridge hs13_1) (by bridge hs14_1)
-      (by bridge hs15_1) (by bridge hs16_1) ht119 ht120 ht121 ht122 (by bridge hs14_2)
-      (by bridge hs15_2) ht127 ht128 ht129 ht130 ht131 (by bridge hs14_3) (by bridge hs8_1) hbs11_1
-      hbs12_1 hbs13_1 hbs14_1 hbs15_1 hbs16_1 hbt119 hbt120 hbt121 hbt122 hbs14_2 hbs15_2 hbt127
-      hbt128 hbt129 hbt130 hbt131 hbs14_3 hbs8_1
+      (by bridge hs15_1) (by bridge hs16_1) ht1216 ht1217 ht1218 ht1219 (by bridge hs14_2)
+      (by bridge hs15_2) ht1224 ht1225 ht1226 ht1227 ht1228 (by bridge hs14_3) (by bridge hs8_1)
+      hbs11_1 hbs12_1 hbs13_1 hbs14_1 hbs15_1 hbs16_1 hbt1216 hbt1217 hbt1218 hbt1219 hbs14_2
+      hbs15_2 hbt1224 hbt1225 hbt1226 hbt1227 hbt1228 hbs14_3 hbs8_1
 
-/-- From `%136`: those rows finished, then `carry6` and `carry8`. -/
-theorem fd_curve25519_scalar_reduce.run136 {β : Type} {out inp : Pointer}
+/-- From `%1233`: those rows finished, then `carry6` and `carry8`. -/
+theorem fd_curve25519_scalar_reduce.run137 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 136 = fd_curve25519_scalar_reduce.entry.body.drop 136)
+    (hbody : blk.body.drop 137 = fd_curve25519_scalar_reduce.entry.body.drop 137)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s0 s1 s2 s3 s4 s5 s6 s7 s9 s10 s17 s18 s19 s20 s11_1 s12_1 s13_1 s16_1 t119 t120 t121 t122
-      s15_2 t127 t128 t129 t130 t131 s14_3 s8_1 s21 s22 : BitVec 64}
+    {s0 s1 s2 s3 s4 s5 s6 s7 s9 s10 s17 s18 s19 s20 s11_1 s12_1 s13_1 s16_1 t1216 t1217 t1218 t1219
+      s15_2 t1224 t1225 t1226 t1227 t1228 s14_3 s8_1 s21 s22 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %73 := s6, %75 := s7,
-        %79 := s9, %81 := s10, %95 := s17, %97 := s18, %99 := s19, %101 := s20, %108 := s11_1,
-        %110 := s12_1, %112 := s13_1, %118 := s16_1, %119 := t119, %120 := t120, %121 := t121,
-        %122 := t122, %126 := s15_2, %127 := t127, %128 := t128, %129 := t129, %130 := t130, %131 :=
-        t131, %133 := s14_3, %135 := s8_1])
-    (ht119 : t119 = (s22 * 666643#64)) (ht121 : t121 = (s22 * 654183#64))
-    (ht127 : t127 = (s21 * 666643#64)) (ht128 : t128 = (s21 * 470296#64))
-    (ht130 : t130 = (s21 * 18446744073708553811#64)) (hbs6 : Bnd s6 0 2097151)
+      E ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5, %1170 :=
+        s6, %1172 := s7, %1176 := s9, %1178 := s10, %1192 := s17, %1194 := s18, %1196 := s19,
+        %1198 := s20, %1205 := s11_1, %1207 := s12_1, %1209 := s13_1, %1215 := s16_1, %1216 :=
+        t1216, %1217 := t1217, %1218 := t1218, %1219 := t1219, %1223 := s15_2, %1224 := t1224,
+        %1225 := t1225, %1226 := t1226, %1227 := t1227, %1228 := t1228, %1230 := s14_3, %1232 :=
+        s8_1])
+    (ht1216 : t1216 = (s22 * 666643#64)) (ht1218 : t1218 = (s22 * 654183#64))
+    (ht1224 : t1224 = (s21 * 666643#64)) (ht1225 : t1225 = (s21 * 470296#64))
+    (ht1227 : t1227 = (s21 * 18446744073708553811#64)) (hbs6 : Bnd s6 0 2097151)
     (hbs7 : Bnd s7 0 2097151) (hbs9 : Bnd s9 0 2097151) (hbs10 : Bnd s10 0 2097151)
     (hbs18 : Bnd s18 0 2097151) (hbs19 : Bnd s19 0 2097151) (hbs20 : Bnd s20 0 2097151)
     (hbs21 : Bnd s21 0 2097151) (hbs22 : Bnd s22 0 2097151) (hbs12_1 : Bnd s12_1 0 252488244056807)
     (hbs8_1 : Bnd s8_1 0 1398053131244)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (t138 t140 s7_1 s8_2 t147 s12_5 s6_1 s7_2 s8_3 s10_5 t166 carry6_1 s7_3 s6_2 carry8_1 s9_4
-          s9_5 s8_4 : BitVec 64),
+        (t1235 t1237 s7_1 s8_2 t1244 s12_5 s6_1 s7_2 s8_3 s10_5 t1263 carry6_1 s7_3 s6_2 carry8_1
+          s9_4 s9_5 s8_4 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %95 := s17,
-              %108 := s11_1, %112 := s13_1, %118 := s16_1, %120 := t120, %122 := t122, %126 :=
-              s15_2, %129 := t129, %131 := t131, %133 := s14_3, %138 := t138, %140 := t140, %147 :=
-              t147, %152 := s12_5, %165 := s10_5, %166 := t166, %169 := s7_3, %171 := s6_2, %178 :=
-              s9_5, %180 := s8_4]) →
-          (ht138 : t138 = (s20 * 18446744073708553811#64)) →
-          (ht140 : t140 = (s20 * 18446744073708867715#64)) →
+            E' ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5,
+              %1192 := s17, %1205 := s11_1, %1209 := s13_1, %1215 := s16_1, %1217 := t1217, %1219 :=
+              t1219, %1223 := s15_2, %1226 := t1226, %1228 := t1228, %1230 := s14_3, %1235 := t1235,
+              %1237 := t1237, %1244 := t1244, %1249 := s12_5, %1262 := s10_5, %1263 := t1263,
+              %1266 := s7_3, %1268 := s6_2, %1275 := s9_5, %1277 := s8_4]) →
+          (ht1235 : t1235 = (s20 * 18446744073708553811#64)) →
+          (ht1237 : t1237 = (s20 * 18446744073708867715#64)) →
           (hs7_1 : s7_1 = s7 + s19 * 666643#64) →
           (hs8_2 : s8_2 = s8_1 + s19 * 470296#64) →
-          (ht147 : t147 = (s19 * 136657#64)) →
+          (ht1244 : t1244 = (s19 * 136657#64)) →
           (hs12_5 :
             s12_5 =
               (((s12_1 + s22 * 654183#64) - s21 * 997805#64) + s20 * 136657#64) - s19 * 683901#64) →
@@ -1399,7 +1487,7 @@ theorem fd_curve25519_scalar_reduce.run136 {β : Type} {out inp : Pointer}
             s10_5 =
               ((((s10 + s22 * 666643#64) + s21 * 470296#64) + s20 * 654183#64) - s19 * 997805#64) +
                 s18 * 136657#64) →
-          (ht166 : t166 = (s18 * 18446744073708867715#64)) →
+          (ht1263 : t1263 = (s18 * 18446744073708867715#64)) →
           (hcarry6_1 : carry6_1 = (s6_1 + 1048576#64).sshiftRight 21) →
           (hs7_3 : s7_3 = s7_2 + ((s6_1 + 1048576#64).sshiftRight 21)) →
           (hs6_2 : s6_2 = s6_1 - ((s6_1 + 1048576#64).sshiftRight 21) <<< 21) →
@@ -1409,32 +1497,32 @@ theorem fd_curve25519_scalar_reduce.run136 {β : Type} {out inp : Pointer}
               (((s9 + s21 * 666643#64) + s20 * 470296#64) + s19 * 654183#64) - s18 * 997805#64) →
           (hs9_5 : s9_5 = s9_4 + ((s8_3 + 1048576#64).sshiftRight 21)) →
           (hs8_4 : s8_4 = s8_3 - ((s8_3 + 1048576#64).sshiftRight 21) <<< 21) →
-          (hbt138 : Bnd t138 (-2092547753555) 0) →
-          (hbt140 : Bnd t140 (-1434243666051) 0) →
+          (hbt1235 : Bnd t1235 (-2092547753555) 0) →
+          (hbt1237 : Bnd t1237 (-1434243666051) 0) →
           (hbs7_1 : Bnd s7_1 0 1398053131244) →
           (hbs8_2 : Bnd s8_2 0 2384334857940) →
-          (hbt147 : Bnd t147 0 286590364207) →
+          (hbt1244 : Bnd t1244 0 286590364207) →
           (hbs12_5 : Bnd s12_5 (-3526791419606) 254146754953647) →
           (hbs6_1 : Bnd s6_1 0 1398053131244) →
           (hbs7_2 : Bnd s7_2 0 2384334857940) →
           (hbs8_3 : Bnd s8_3 0 3756255390573) →
           (hbs10_5 : Bnd s10_5 (-2092547753555) 4042845754780) →
-          (hbt166 : Bnd t166 (-1434243666051) 0) →
+          (hbt1263 : Bnd t1263 (-1434243666051) 0) →
           (hbcarry6_1 : Bnd carry6_1 0 666644) →
           (hbs7_3 : Bnd s7_3 0 2384335524584) →
           (hbs6_2 : Bnd s6_2 (-1048576) 1048575) →
           (hbcarry8_1 : Bnd carry8_1 0 1791122) →
           (hbs9_4 : Bnd s9_4 (-2092547753555) 3756255390573) →
           (hbs9_5 : Bnd s9_5 (-2092547753555) 3756257181695) →
-          (hbs8_4 : Bnd s8_4 (-1048576) 1048575) → (blk.runBodyFrom E' 181 S >>= g) = K) :
-    (blk.runBodyFrom E 136 S >>= g) = K := by
+          (hbs8_4 : Bnd s8_4 (-1048576) 1048575) → (blk.runBodyFrom E' 182 S >>= g) = K) :
+    (blk.runBodyFrom E 137 S >>= g) = K := by
   step_pure [nswMul, nuwMul]
   step_pure [nswMul, nuwMul]
-  step_pure [nswMul] with t138
-  bnd t138
+  step_pure [nswMul] with t1235
+  bnd t1235
   step_pure [nswMul, nuwMul]
-  step_pure [nswMul] with t140
-  bnd t140
+  step_pure [nswMul] with t1237
+  bnd t1237
   step_pure [nswMul, nuwMul]
   -- s7 += s19*666643L
   step_pure [nswAdd, nuwAdd] with s7_1
@@ -1445,8 +1533,8 @@ theorem fd_curve25519_scalar_reduce.run136 {β : Type} {out inp : Pointer}
   bnd s8_2
   step_pure [nswMul, nuwMul]
   step_pure [nswMul]
-  step_pure [nswMul, nuwMul] with t147
-  bnd t147
+  step_pure [nswMul, nuwMul] with t1244
+  bnd t1244
   step_pure [nswMul]
   step_pure [nswAdd, nuwAdd]
   step_pure [nswAdd]
@@ -1475,8 +1563,8 @@ theorem fd_curve25519_scalar_reduce.run136 {β : Type} {out inp : Pointer}
   -- s10 += s18*136657L
   step_pure [nswAdd] with s10_5
   bnd s10_5
-  step_pure [nswMul] with t166
-  bnd t166
+  step_pure [nswMul] with t1263
+  bnd t1263
   step_pure [nswAdd, nuwAdd]
   -- long carry6 = (s6 + (1L << 20)) >> 21
   step_pure with carry6_1
@@ -1506,37 +1594,38 @@ theorem fd_curve25519_scalar_reduce.run136 {β : Type} {out inp : Pointer}
   step_pure [nswSub] with s8_4
   bnd s8_4
   exact
-    hK _ t138 t140 s7_1 s8_2 t147 s12_5 s6_1 s7_2 s8_3 s10_5 t166 carry6_1 s7_3 s6_2 carry8_1 s9_4
-      s9_5 s8_4 hArgs
+    hK _ t1235 t1237 s7_1 s8_2 t1244 s12_5 s6_1 s7_2 s8_3 s10_5 t1263 carry6_1 s7_3 s6_2 carry8_1
+      s9_4 s9_5 s8_4 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
-      (by env_reads) ht138 ht140 (by bridge hs7_1) (by bridge hs8_2) ht147 (by bridge hs12_5)
-      (by bridge hs6_1) (by bridge hs7_2) (by bridge hs8_3) (by bridge hs10_5) ht166
+      (by env_reads) ht1235 ht1237 (by bridge hs7_1) (by bridge hs8_2) ht1244 (by bridge hs12_5)
+      (by bridge hs6_1) (by bridge hs7_2) (by bridge hs8_3) (by bridge hs10_5) ht1263
       (by bridge hcarry6_1) (by bridge hs7_3 hcarry6_1) (by bridge hs6_2) (by bridge hcarry8_1)
-      (by bridge hs9_4) (by bridge hs9_5 hcarry8_1) (by bridge hs8_4) hbt138 hbt140 hbs7_1 hbs8_2
-      hbt147 hbs12_5 hbs6_1 hbs7_2 hbs8_3 hbs10_5 hbt166 hbcarry6_1 hbs7_3 hbs6_2 hbcarry8_1 hbs9_4
-      hbs9_5 hbs8_4
+      (by bridge hs9_4) (by bridge hs9_5 hcarry8_1) (by bridge hs8_4) hbt1235 hbt1237 hbs7_1 hbs8_2
+      hbt1244 hbs12_5 hbs6_1 hbs7_2 hbs8_3 hbs10_5 hbt1263 hbcarry6_1 hbs7_3 hbs6_2 hbcarry8_1
+      hbs9_4 hbs9_5 hbs8_4
 
-/-- From `%181`: `carry10 … carry16`. -/
-theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
+/-- From `%1278`: `carry10 … carry16`. -/
+theorem fd_curve25519_scalar_reduce.run182 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 181 = fd_curve25519_scalar_reduce.entry.body.drop 181)
+    (hbody : blk.body.drop 182 = fd_curve25519_scalar_reduce.entry.body.drop 182)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s0 s1 s2 s3 s4 s5 s17 s11_1 s13_1 s16_1 t120 t122 s15_2 t129 t131 s14_3 t138 t140 t147 s12_5
-      s10_5 t166 s7_3 s6_2 s9_5 s8_4 s18 s19 s20 s21 s22 : BitVec 64}
+    {s0 s1 s2 s3 s4 s5 s17 s11_1 s13_1 s16_1 t1217 t1219 s15_2 t1226 t1228 s14_3 t1235 t1237 t1244
+      s12_5 s10_5 t1263 s7_3 s6_2 s9_5 s8_4 s18 s19 s20 s21 s22 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %95 := s17, %108 :=
-        s11_1, %112 := s13_1, %118 := s16_1, %120 := t120, %122 := t122, %126 := s15_2, %129 :=
-        t129, %131 := t131, %133 := s14_3, %138 := t138, %140 := t140, %147 := t147, %152 := s12_5,
-        %165 := s10_5, %166 := t166, %169 := s7_3, %171 := s6_2, %178 := s9_5, %180 := s8_4])
-    (ht120 : t120 = (s22 * 470296#64)) (ht122 : t122 = (s22 * 18446744073708553811#64))
-    (ht129 : t129 = (s21 * 654183#64)) (ht131 : t131 = (s21 * 136657#64))
-    (ht138 : t138 = (s20 * 18446744073708553811#64))
-    (ht140 : t140 = (s20 * 18446744073708867715#64)) (ht147 : t147 = (s19 * 136657#64))
-    (ht166 : t166 = (s18 * 18446744073708867715#64)) (hbs17 : Bnd s17 0 2097151)
+      E ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5, %1192 :=
+        s17, %1205 := s11_1, %1209 := s13_1, %1215 := s16_1, %1217 := t1217, %1219 := t1219,
+        %1223 := s15_2, %1226 := t1226, %1228 := t1228, %1230 := s14_3, %1235 := t1235, %1237 :=
+        t1237, %1244 := t1244, %1249 := s12_5, %1262 := s10_5, %1263 := t1263, %1266 := s7_3,
+        %1268 := s6_2, %1275 := s9_5, %1277 := s8_4])
+    (ht1217 : t1217 = (s22 * 470296#64)) (ht1219 : t1219 = (s22 * 18446744073708553811#64))
+    (ht1226 : t1226 = (s21 * 654183#64)) (ht1228 : t1228 = (s21 * 136657#64))
+    (ht1235 : t1235 = (s20 * 18446744073708553811#64))
+    (ht1237 : t1237 = (s20 * 18446744073708867715#64)) (ht1244 : t1244 = (s19 * 136657#64))
+    (ht1263 : t1263 = (s18 * 18446744073708867715#64)) (hbs17 : Bnd s17 0 2097151)
     (hbs18 : Bnd s18 0 2097151) (hbs19 : Bnd s19 0 2097151) (hbs20 : Bnd s20 0 2097151)
     (hbs21 : Bnd s21 0 2097151) (hbs22 : Bnd s22 0 2097151) (hbs11_1 : Bnd s11_1 0 357901236818924)
     (hbs13_1 : Bnd s13_1 0 351211825267864) (hbs16_1 : Bnd s16_1 (-367166552903811) 2097151)
@@ -1546,15 +1635,15 @@ theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
     (hbs10_5 : Bnd s10_5 (-2092547753555) 4042845754780)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (carry10_1 s11_6 s11_7 t189 carry12_1 s13_4 s13_5 s12_6 carry14_1 s15_3 s14_4 carry16_1
+        (carry10_1 s11_6 s11_7 t1286 carry12_1 s13_4 s13_5 s12_6 carry14_1 s15_3 s14_4 carry16_1
           s17_1 s16_2 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %165 := s10_5,
-              %169 := s7_3, %171 := s6_2, %178 := s9_5, %180 := s8_4, %188 := s11_7, %189 := t189,
-              %195 := s13_5, %197 := s12_6, %200 := s15_3, %202 := s14_4, %205 := s17_1, %207 :=
-              s16_2]) →
+            E' ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5,
+              %1262 := s10_5, %1266 := s7_3, %1268 := s6_2, %1275 := s9_5, %1277 := s8_4, %1285 :=
+              s11_7, %1286 := t1286, %1292 := s13_5, %1294 := s12_6, %1297 := s15_3, %1299 := s14_4,
+              %1302 := s17_1, %1304 := s16_2]) →
           (hcarry10_1 : carry10_1 = (s10_5 + 1048576#64).sshiftRight 21) →
           (hs11_6 :
             s11_6 =
@@ -1562,7 +1651,7 @@ theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
                   s19 * 136657#64) -
                 s18 * 683901#64) →
           (hs11_7 : s11_7 = s11_6 + ((s10_5 + 1048576#64).sshiftRight 21)) →
-          (ht189 : t189 = ((s10_5 + 1048576#64) &&& 18446744073707454464#64)) →
+          (ht1286 : t1286 = ((s10_5 + 1048576#64) &&& 18446744073707454464#64)) →
           (hcarry12_1 : carry12_1 = (s12_5 + 1048576#64).sshiftRight 21) →
           (hs13_4 : s13_4 = ((s13_1 - s22 * 997805#64) + s21 * 136657#64) - s20 * 683901#64) →
           (hs13_5 : s13_5 = s13_4 + ((s12_5 + 1048576#64).sshiftRight 21)) →
@@ -1576,7 +1665,7 @@ theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
           (hbcarry10_1 : Bnd carry10_1 (-997805) 1927779) →
           (hbs11_6 : Bnd s11_6 (-3526791419606) 360546029442460) →
           (hbs11_7 : Bnd s11_7 (-3526792417411) 360546031370239) →
-          (hbt189 : Bnd t189 (-2092548751360) 4042845585408) →
+          (hbt1286 : Bnd t1286 (-2092548751360) 4042845585408) →
           (hbcarry12_1 : Bnd carry12_1 (-1681705) 121186616) →
           (hbs13_4 : Bnd s13_4 (-3526791419606) 351498415632071) →
           (hbs13_5 : Bnd s13_5 (-3526793101311) 351498536818687) →
@@ -1586,8 +1675,8 @@ theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
           (hbs14_4 : Bnd s14_4 (-1048576) 1048575) →
           (hbcarry16_1 : Bnd carry16_1 (-175078656) 1) →
           (hbs17_1 : Bnd s17_1 (-175078656) 2097152) →
-          (hbs16_2 : Bnd s16_2 (-1048576) 1048575) → (blk.runBodyFrom E' 208 S >>= g) = K) :
-    (blk.runBodyFrom E 181 S >>= g) = K := by
+          (hbs16_2 : Bnd s16_2 (-1048576) 1048575) → (blk.runBodyFrom E' 209 S >>= g) = K) :
+    (blk.runBodyFrom E 182 S >>= g) = K := by
   step_pure [nswAdd]
   -- long carry10 = (s10 + (1L << 20)) >> 21
   step_pure with carry10_1
@@ -1602,8 +1691,8 @@ theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
   -- s11 += carry10
   step_pure [nswAdd] with s11_7
   bnd s11_7
-  step_pure with t189
-  bnd t189
+  step_pure with t1286
+  bnd t1286
   step_pure [nswAdd]
   -- long carry12 = (s12 + (1L << 20)) >> 21
   step_pure with carry12_1
@@ -1643,30 +1732,31 @@ theorem fd_curve25519_scalar_reduce.run181 {β : Type} {out inp : Pointer}
   step_pure [nswSub] with s16_2
   bnd s16_2
   exact
-    hK _ carry10_1 s11_6 s11_7 t189 carry12_1 s13_4 s13_5 s12_6 carry14_1 s15_3 s14_4 carry16_1
+    hK _ carry10_1 s11_6 s11_7 t1286 carry12_1 s13_4 s13_5 s12_6 carry14_1 s15_3 s14_4 carry16_1
       s17_1 s16_2 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
-      (by env_reads) (by bridge hcarry10_1) (by bridge hs11_6) (by bridge hs11_7 hcarry10_1) ht189
+      (by env_reads) (by bridge hcarry10_1) (by bridge hs11_6) (by bridge hs11_7 hcarry10_1) ht1286
       (by bridge hcarry12_1) (by bridge hs13_4) (by bridge hs13_5 hcarry12_1) (by bridge hs12_6)
       (by bridge hcarry14_1) (by bridge hs15_3 hcarry14_1) (by bridge hs14_4) (by bridge hcarry16_1)
-      (by bridge hs17_1 hcarry16_1) (by bridge hs16_2) hbcarry10_1 hbs11_6 hbs11_7 hbt189
+      (by bridge hs17_1 hcarry16_1) (by bridge hs16_2) hbcarry10_1 hbs11_6 hbs11_7 hbt1286
       hbcarry12_1 hbs13_4 hbs13_5 hbs12_6 hbcarry14_1 hbs15_3 hbs14_4 hbcarry16_1 hbs17_1 hbs16_2
 
-/-- From `%208`: `carry7 … carry15`, and the `s17` row begun. -/
-theorem fd_curve25519_scalar_reduce.run208 {β : Type} {out inp : Pointer}
+/-- From `%1305`: `carry7 … carry15`, and the `s17` row begun. -/
+theorem fd_curve25519_scalar_reduce.run209 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 208 = fd_curve25519_scalar_reduce.entry.body.drop 208)
+    (hbody : blk.body.drop 209 = fd_curve25519_scalar_reduce.entry.body.drop 209)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s0 s1 s2 s3 s4 s5 s10_5 s7_3 s6_2 s9_5 s8_4 s11_7 t189 s13_5 s12_6 s15_3 s14_4 s17_1 s16_2 :
+    {s0 s1 s2 s3 s4 s5 s10_5 s7_3 s6_2 s9_5 s8_4 s11_7 t1286 s13_5 s12_6 s15_3 s14_4 s17_1 s16_2 :
       BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %71 := s5, %165 := s10_5, %169 :=
-        s7_3, %171 := s6_2, %178 := s9_5, %180 := s8_4, %188 := s11_7, %189 := t189, %195 := s13_5,
-        %197 := s12_6, %200 := s15_3, %202 := s14_4, %205 := s17_1, %207 := s16_2])
+      E ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1168 := s5, %1262 :=
+        s10_5, %1266 := s7_3, %1268 := s6_2, %1275 := s9_5, %1277 := s8_4, %1285 := s11_7, %1286 :=
+        t1286, %1292 := s13_5, %1294 := s12_6, %1297 := s15_3, %1299 := s14_4, %1302 := s17_1,
+        %1304 := s16_2])
     (hbs5 : Bnd s5 0 2097151) (hbs7_3 : Bnd s7_3 0 2384335524584)
     (hbs6_2 : Bnd s6_2 (-1048576) 1048575) (hbs9_5 : Bnd s9_5 (-2092547753555) 3756257181695)
     (hbs11_7 : Bnd s11_7 (-3526792417411) 360546031370239)
@@ -1675,20 +1765,20 @@ theorem fd_curve25519_scalar_reduce.run208 {β : Type} {out inp : Pointer}
     (hbs17_1 : Bnd s17_1 (-175078656) 2097152) (hbs16_2 : Bnd s16_2 (-1048576) 1048575)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (carry7_1 t210 carry9_1 t213 carry11_1 s12_7 s11_8 carry13_1 s14_5 s13_6 carry15_1 s16_3
-          s15_4 s5_1 s6_3 t233 : BitVec 64),
+        (carry7_1 t1307 carry9_1 t1310 carry11_1 s12_7 s11_8 carry13_1 s14_5 s13_6 carry15_1 s16_3
+          s15_4 s5_1 s6_3 t1330 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %165 := s10_5, %169 :=
-              s7_3, %178 := s9_5, %180 := s8_4, %189 := t189, %205 := s17_1, %209 := carry7_1,
-              %210 := t210, %212 := carry9_1, %213 := t213, %216 := s12_7, %218 := s11_8, %221 :=
-              s14_5, %223 := s13_6, %226 := s16_3, %228 := s15_4, %230 := s5_1, %232 := s6_3,
-              %233 := t233]) →
+            E' ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1262 := s10_5,
+              %1266 := s7_3, %1275 := s9_5, %1277 := s8_4, %1286 := t1286, %1302 := s17_1, %1306 :=
+              carry7_1, %1307 := t1307, %1309 := carry9_1, %1310 := t1310, %1313 := s12_7, %1315 :=
+              s11_8, %1318 := s14_5, %1320 := s13_6, %1323 := s16_3, %1325 := s15_4, %1327 := s5_1,
+              %1329 := s6_3, %1330 := t1330]) →
           (hcarry7_1 : carry7_1 = (s7_3 + 1048576#64).sshiftRight 21) →
-          (ht210 : t210 = ((s7_3 + 1048576#64) &&& 18446744073707454464#64)) →
+          (ht1307 : t1307 = ((s7_3 + 1048576#64) &&& 9223372036852678656#64)) →
           (hcarry9_1 : carry9_1 = (s9_5 + 1048576#64).sshiftRight 21) →
-          (ht213 : t213 = ((s9_5 + 1048576#64) &&& 18446744073707454464#64)) →
+          (ht1310 : t1310 = ((s9_5 + 1048576#64) &&& 18446744073707454464#64)) →
           (hcarry11_1 : carry11_1 = (s11_7 + 1048576#64).sshiftRight 21) →
           (hs12_7 : s12_7 = s12_6 + ((s11_7 + 1048576#64).sshiftRight 21)) →
           (hs11_8 : s11_8 = s11_7 - ((s11_7 + 1048576#64).sshiftRight 21) <<< 21) →
@@ -1700,11 +1790,11 @@ theorem fd_curve25519_scalar_reduce.run208 {β : Type} {out inp : Pointer}
           (hs15_4 : s15_4 = s15_3 - ((s15_3 + 1048576#64).sshiftRight 21) <<< 21) →
           (hs5_1 : s5_1 = s5 + s17_1 * 666643#64) →
           (hs6_3 : s6_3 = s6_2 + s17_1 * 470296#64) →
-          (ht233 : t233 = (s17_1 * 654183#64)) →
+          (ht1330 : t1330 = (s17_1 * 654183#64)) →
           (hbcarry7_1 : Bnd carry7_1 0 1136940) →
-          (hbt210 : Bnd t210 0 2384335994880) →
+          (hbt1307 : Bnd t1307 0 2384335994880) →
           (hbcarry9_1 : Bnd carry9_1 (-997805) 1791123) →
-          (hbt213 : Bnd t213 (-2092548751360) 3756257181696) →
+          (hbt1310 : Bnd t1310 (-2092548751360) 3756257181696) →
           (hbcarry11_1 : Bnd carry11_1 (-1681706) 171921745) →
           (hbs12_7 : Bnd s12_7 (-2730282) 172970320) →
           (hbs11_8 : Bnd s11_8 (-1048576) 1048575) →
@@ -1716,21 +1806,21 @@ theorem fd_curve25519_scalar_reduce.run208 {β : Type} {out inp : Pointer}
           (hbs15_4 : Bnd s15_4 (-1048576) 1048575) →
           (hbs5_1 : Bnd s5_1 (-116714960471808) 1398053797887) →
           (hbs6_3 : Bnd s6_3 (-82338792650752) 986283245567) →
-          (hbt233 : Bnd t233 (-114533480418048) 1371921186816) →
-          (blk.runBodyFrom E' 234 S >>= g) = K) :
-    (blk.runBodyFrom E 208 S >>= g) = K := by
+          (hbt1330 : Bnd t1330 (-114533480418048) 1371921186816) →
+          (blk.runBodyFrom E' 235 S >>= g) = K) :
+    (blk.runBodyFrom E 209 S >>= g) = K := by
   step_pure [nswAdd, nuwAdd]
   -- long carry7 = (s7 + (1L << 20)) >> 21
   step_pure with carry7_1
   bnd carry7_1
-  step_pure with t210
-  bnd t210
+  step_pure with t1307
+  bnd t1307
   step_pure [nswAdd]
   -- long carry9 = (s9 + (1L << 20)) >> 21
   step_pure with carry9_1
   bnd carry9_1
-  step_pure with t213
-  bnd t213
+  step_pure with t1310
+  bnd t1310
   step_pure [nswAdd]
   -- long carry11 = (s11 + (1L << 20)) >> 21
   step_pure with carry11_1
@@ -1772,36 +1862,37 @@ theorem fd_curve25519_scalar_reduce.run208 {β : Type} {out inp : Pointer}
   -- s6 += s17*470296L
   step_pure [nswAdd] with s6_3
   bnd s6_3
-  step_pure [nswMul] with t233
-  bnd t233
+  step_pure [nswMul] with t1330
+  bnd t1330
   exact
-    hK _ carry7_1 t210 carry9_1 t213 carry11_1 s12_7 s11_8 carry13_1 s14_5 s13_6 carry15_1 s16_3
-      s15_4 s5_1 s6_3 t233 hArgs
+    hK _ carry7_1 t1307 carry9_1 t1310 carry11_1 s12_7 s11_8 carry13_1 s14_5 s13_6 carry15_1 s16_3
+      s15_4 s5_1 s6_3 t1330 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
-      (by env_reads) (by bridge hcarry7_1) ht210 (by bridge hcarry9_1) ht213 (by bridge hcarry11_1)
-      (by bridge hs12_7 hcarry11_1) (by bridge hs11_8) (by bridge hcarry13_1)
+      (by env_reads) (by bridge hcarry7_1) ht1307 (by bridge hcarry9_1) ht1310
+      (by bridge hcarry11_1) (by bridge hs12_7 hcarry11_1) (by bridge hs11_8) (by bridge hcarry13_1)
       (by bridge hs14_5 hcarry13_1) (by bridge hs13_6) (by bridge hcarry15_1)
-      (by bridge hs16_3 hcarry15_1) (by bridge hs15_4) (by bridge hs5_1) (by bridge hs6_3) ht233
-      hbcarry7_1 hbt210 hbcarry9_1 hbt213 hbcarry11_1 hbs12_7 hbs11_8 hbcarry13_1 hbs14_5 hbs13_6
-      hbcarry15_1 hbs16_3 hbs15_4 hbs5_1 hbs6_3 hbt233
+      (by bridge hs16_3 hcarry15_1) (by bridge hs15_4) (by bridge hs5_1) (by bridge hs6_3) ht1330
+      hbcarry7_1 hbt1307 hbcarry9_1 hbt1310 hbcarry11_1 hbs12_7 hbs11_8 hbcarry13_1 hbs14_5 hbs13_6
+      hbcarry15_1 hbs16_3 hbs15_4 hbs5_1 hbs6_3 hbt1330
 
-/-- From `%234`: the rows of `s17 … s14` into `s2 … s10`. -/
-theorem fd_curve25519_scalar_reduce.run234 {β : Type} {out inp : Pointer}
+/-- From `%1331`: the rows of `s17 … s14` into `s2 … s10`. -/
+theorem fd_curve25519_scalar_reduce.run235 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 234 = fd_curve25519_scalar_reduce.entry.body.drop 234)
+    (hbody : blk.body.drop 235 = fd_curve25519_scalar_reduce.entry.body.drop 235)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s0 s1 s2 s3 s4 s10_5 s7_3 s9_5 s8_4 t189 s17_1 carry7_1 t210 carry9_1 t213 s12_7 s11_8 s14_5
-      s13_6 s16_3 s15_4 s5_1 s6_3 t233 : BitVec 64}
+    {s0 s1 s2 s3 s4 s10_5 s7_3 s9_5 s8_4 t1286 s17_1 carry7_1 t1307 carry9_1 t1310 s12_7 s11_8 s14_5
+      s13_6 s16_3 s15_4 s5_1 s6_3 t1330 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%61 := s0, %63 := s1, %65 := s2, %67 := s3, %69 := s4, %165 := s10_5, %169 := s7_3,
-        %178 := s9_5, %180 := s8_4, %189 := t189, %205 := s17_1, %209 := carry7_1, %210 := t210,
-        %212 := carry9_1, %213 := t213, %216 := s12_7, %218 := s11_8, %221 := s14_5, %223 := s13_6,
-        %226 := s16_3, %228 := s15_4, %230 := s5_1, %232 := s6_3, %233 := t233])
-    (ht189 : t189 = ((s10_5 + 1048576#64) &&& 18446744073707454464#64))
+      E ⊨ [%1158 := s0, %1160 := s1, %1162 := s2, %1164 := s3, %1166 := s4, %1262 := s10_5, %1266 :=
+        s7_3, %1275 := s9_5, %1277 := s8_4, %1286 := t1286, %1302 := s17_1, %1306 := carry7_1,
+        %1307 := t1307, %1309 := carry9_1, %1310 := t1310, %1313 := s12_7, %1315 := s11_8, %1318 :=
+        s14_5, %1320 := s13_6, %1323 := s16_3, %1325 := s15_4, %1327 := s5_1, %1329 := s6_3,
+        %1330 := t1330])
+    (ht1286 : t1286 = ((s10_5 + 1048576#64) &&& 18446744073707454464#64))
     (hcarry7_1 : carry7_1 = (s7_3 + 1048576#64).sshiftRight 21)
     (hcarry9_1 : carry9_1 = (s9_5 + 1048576#64).sshiftRight 21) (hbs2 : Bnd s2 0 2097151)
     (hbs3 : Bnd s3 0 2097151) (hbs4 : Bnd s4 0 2097151)
@@ -1813,16 +1904,17 @@ theorem fd_curve25519_scalar_reduce.run234 {β : Type} {out inp : Pointer}
     (hbs6_3 : Bnd s6_3 (-82338792650752) 986283245567)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (t235 s10_8 s4_1 s5_2 s6_4 t246 t248 s3_1 s4_2 s5_3 s6_5 t257 s8_6 s8_7 s8_8 s2_1 s3_2
+        (t1332 s10_8 s4_1 s5_2 s6_4 t1343 t1345 s3_1 s4_2 s5_3 s6_5 t1354 s8_6 s8_7 s8_8 s2_1 s3_2
           s4_3 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%61 := s0, %63 := s1, %169 := s7_3, %178 := s9_5, %210 := t210, %213 := t213,
-              %216 := s12_7, %218 := s11_8, %221 := s14_5, %223 := s13_6, %233 := t233, %235 :=
-              t235, %239 := s10_8, %246 := t246, %248 := t248, %254 := s5_3, %256 := s6_5, %257 :=
-              t257, %262 := s8_8, %264 := s2_1, %266 := s3_2, %268 := s4_3]) →
-          (ht235 : t235 = (s17_1 * 136657#64)) →
+            E' ⊨ [%1158 := s0, %1160 := s1, %1266 := s7_3, %1275 := s9_5, %1307 := t1307, %1310 :=
+              t1310, %1313 := s12_7, %1315 := s11_8, %1318 := s14_5, %1320 := s13_6, %1330 := t1330,
+              %1332 := t1332, %1336 := s10_8, %1343 := t1343, %1345 := t1345, %1351 := s5_3,
+              %1353 := s6_5, %1354 := t1354, %1359 := s8_8, %1361 := s2_1, %1363 := s3_2, %1365 :=
+              s4_3]) →
+          (ht1332 : t1332 = (s17_1 * 136657#64)) →
           (hs10_8 :
             s10_8 =
               ((s10_5 - ((s10_5 + 1048576#64).sshiftRight 21) <<< 21) +
@@ -1831,42 +1923,42 @@ theorem fd_curve25519_scalar_reduce.run234 {β : Type} {out inp : Pointer}
           (hs4_1 : s4_1 = s4 + s16_3 * 666643#64) →
           (hs5_2 : s5_2 = s5_1 + s16_3 * 470296#64) →
           (hs6_4 : s6_4 = s6_3 + s16_3 * 654183#64) →
-          (ht246 : t246 = (s16_3 * 18446744073708553811#64)) →
-          (ht248 : t248 = (s16_3 * 18446744073708867715#64)) →
+          (ht1343 : t1343 = (s16_3 * 18446744073708553811#64)) →
+          (ht1345 : t1345 = (s16_3 * 18446744073708867715#64)) →
           (hs3_1 : s3_1 = s3 + s15_4 * 666643#64) →
           (hs4_2 : s4_2 = s4_1 + s15_4 * 470296#64) →
           (hs5_3 : s5_3 = s5_2 + s15_4 * 654183#64) →
           (hs6_5 : s6_5 = s6_4 - s15_4 * 997805#64) →
-          (ht257 : t257 = (s15_4 * 136657#64)) →
+          (ht1354 : t1354 = (s15_4 * 136657#64)) →
           (hs8_6 : s8_6 = (s8_4 + ((s7_3 + 1048576#64).sshiftRight 21)) - s17_1 * 997805#64) →
           (hs8_7 : s8_7 = s8_6 + s16_3 * 136657#64) →
           (hs8_8 : s8_8 = s8_7 - s15_4 * 683901#64) →
           (hs2_1 : s2_1 = s2 + s14_5 * 666643#64) →
           (hs3_2 : s3_2 = s3_1 + s14_5 * 470296#64) →
           (hs4_3 : s4_3 = s4_2 + s14_5 * 654183#64) →
-          (hbt235 : Bnd t235 (-23925723892992) 286590500864) →
+          (hbt1332 : Bnd t1332 (-23925723892992) 286590500864) →
           (hbs10_8 : Bnd s10_8 (-1434246396333) 119736470756754) →
           (hbs4_1 : Bnd s4_1 (-1155024995157) 24020994654975) →
           (hbs5_2 : Bnd s5_2 (-117529794851112) 18344120457215) →
           (hbs6_4 : Bnd s6_4 (-83472229462369) 24558307514111) →
-          (hbt246 : Bnd t246 (-35953676074240) 1728795945195) →
-          (hbt248 : Bnd t248 (-24642846067968) 1184926188699) →
+          (hbt1343 : Bnd t1343 (-35953676074240) 1728795945195) →
+          (hbt1345 : Bnd t1345 (-24642846067968) 1184926188699) →
           (hbs3_1 : Bnd s3_1 (-699025850368) 699027280876) →
           (hbs4_2 : Bnd s4_2 (-1648166093653) 24514135283175) →
           (hbs5_3 : Bnd s5_3 (-118215755444520) 19030080396440) →
           (hbs6_5 : Bnd s6_5 (-84518502840244) 25604581889791) →
-          (hbt257 : Bnd t257 (-143295250432) 143295113775) →
+          (hbt1354 : Bnd t1354 (-143295250432) 143295113775) →
           (hbs8_6 : Bnd s8_6 (-2092549799936) 174694360535595) →
           (hbs8_7 : Bnd s8_7 (-2329321581479) 179618490512171) →
           (hbs8_8 : Bnd s8_8 (-3046443072554) 180335612687147) →
           (hbs2_1 : Bnd s2_1 (-1820123383326) 112433435901885) →
           (hbs3_2 : Bnd s3_2 (-1983066553840) 80017334357724) →
           (hbs4_3 : Bnd s4_3 (-3434270163259) 134846113608429) →
-          (blk.runBodyFrom E' 269 S >>= g) = K) :
-    (blk.runBodyFrom E 234 S >>= g) = K := by
+          (blk.runBodyFrom E' 270 S >>= g) = K) :
+    (blk.runBodyFrom E 235 S >>= g) = K := by
   step_pure [nswMul]
-  step_pure [nswMul] with t235
-  bnd t235
+  step_pure [nswMul] with t1332
+  bnd t1332
   step_pure [nswMul]
   step_pure [nswAdd]
   step_pure
@@ -1885,11 +1977,11 @@ theorem fd_curve25519_scalar_reduce.run234 {β : Type} {out inp : Pointer}
   -- s6 += s16*654183L
   step_pure with s6_4
   bnd s6_4
-  step_pure with t246
-  bnd t246
+  step_pure with t1343
+  bnd t1343
   step_pure
-  step_pure with t248
-  bnd t248
+  step_pure with t1345
+  bnd t1345
   step_pure
   -- s3 += s15*666643L
   step_pure with s3_1
@@ -1906,8 +1998,8 @@ theorem fd_curve25519_scalar_reduce.run234 {β : Type} {out inp : Pointer}
   -- s6 -= s15*997805L
   step_pure with s6_5
   bnd s6_5
-  step_pure with t257
-  bnd t257
+  step_pure with t1354
+  bnd t1354
   step_pure
   step_pure [nswAdd]
   -- s8 -= s17*997805L
@@ -1932,31 +2024,31 @@ theorem fd_curve25519_scalar_reduce.run234 {β : Type} {out inp : Pointer}
   step_pure with s4_3
   bnd s4_3
   exact
-    hK _ t235 s10_8 s4_1 s5_2 s6_4 t246 t248 s3_1 s4_2 s5_3 s6_5 t257 s8_6 s8_7 s8_8 s2_1 s3_2 s4_3
-      hArgs
+    hK _ t1332 s10_8 s4_1 s5_2 s6_4 t1343 t1345 s3_1 s4_2 s5_3 s6_5 t1354 s8_6 s8_7 s8_8 s2_1 s3_2
+      s4_3 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
-      (by env_reads) ht235 (by bridge hs10_8) (by bridge hs4_1) (by bridge hs5_2) (by bridge hs6_4)
-      ht246 ht248 (by bridge hs3_1) (by bridge hs4_2) (by bridge hs5_3) (by bridge hs6_5) ht257
+      (by env_reads) ht1332 (by bridge hs10_8) (by bridge hs4_1) (by bridge hs5_2) (by bridge hs6_4)
+      ht1343 ht1345 (by bridge hs3_1) (by bridge hs4_2) (by bridge hs5_3) (by bridge hs6_5) ht1354
       (by bridge hs8_6) (by bridge hs8_7) (by bridge hs8_8) (by bridge hs2_1) (by bridge hs3_2)
-      (by bridge hs4_3) hbt235 hbs10_8 hbs4_1 hbs5_2 hbs6_4 hbt246 hbt248 hbs3_1 hbs4_2 hbs5_3
-      hbs6_5 hbt257 hbs8_6 hbs8_7 hbs8_8 hbs2_1 hbs3_2 hbs4_3
+      (by bridge hs4_3) hbt1332 hbs10_8 hbs4_1 hbs5_2 hbs6_4 hbt1343 hbt1345 hbs3_1 hbs4_2 hbs5_3
+      hbs6_5 hbt1354 hbs8_6 hbs8_7 hbs8_8 hbs2_1 hbs3_2 hbs4_3
 
-/-- From `%269`: the rows of `s13` and `s12`, and `carry0`. -/
-theorem fd_curve25519_scalar_reduce.run269 {β : Type} {out inp : Pointer}
+/-- From `%1366`: the rows of `s13` and `s12`, and `carry0`. -/
+theorem fd_curve25519_scalar_reduce.run270 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 269 = fd_curve25519_scalar_reduce.entry.body.drop 269)
+    (hbody : blk.body.drop 270 = fd_curve25519_scalar_reduce.entry.body.drop 270)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s0 s1 s7_3 s9_5 t210 t213 s12_7 s11_8 s14_5 s13_6 t233 t235 s10_8 t246 t248 s5_3 s6_5 t257 s8_8
-      s2_1 s3_2 s4_3 : BitVec 64}
+    {s0 s1 s7_3 s9_5 t1307 t1310 s12_7 s11_8 s14_5 s13_6 t1330 t1332 s10_8 t1343 t1345 s5_3 s6_5
+      t1354 s8_8 s2_1 s3_2 s4_3 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%61 := s0, %63 := s1, %169 := s7_3, %178 := s9_5, %210 := t210, %213 := t213, %216 :=
-        s12_7, %218 := s11_8, %221 := s14_5, %223 := s13_6, %233 := t233, %235 := t235, %239 :=
-        s10_8, %246 := t246, %248 := t248, %254 := s5_3, %256 := s6_5, %257 := t257, %262 := s8_8,
-        %264 := s2_1, %266 := s3_2, %268 := s4_3])
+      E ⊨ [%1158 := s0, %1160 := s1, %1266 := s7_3, %1275 := s9_5, %1307 := t1307, %1310 := t1310,
+        %1313 := s12_7, %1315 := s11_8, %1318 := s14_5, %1320 := s13_6, %1330 := t1330, %1332 :=
+        t1332, %1336 := s10_8, %1343 := t1343, %1345 := t1345, %1351 := s5_3, %1353 := s6_5,
+        %1354 := t1354, %1359 := s8_8, %1361 := s2_1, %1363 := s3_2, %1365 := s4_3])
     (hbs0 : Bnd s0 0 2097151) (hbs1 : Bnd s1 0 2097151) (hbs12_7 : Bnd s12_7 (-2730282) 172970320)
     (hbs14_5 : Bnd s14_5 (-2730282) 168656138) (hbs13_6 : Bnd s13_6 (-1048576) 1048575)
     (hbs5_3 : Bnd s5_3 (-118215755444520) 19030080396440)
@@ -1966,18 +2058,18 @@ theorem fd_curve25519_scalar_reduce.run269 {β : Type} {out inp : Pointer}
     (hbs4_3 : Bnd s4_3 (-3434270163259) 134846113608429)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (s5_4 s6_6 t273 s1_1 s2_2 s3_3 s4_4 s5_5 s6_7 s0_1 s1_2 s2_3 s3_4 s4_5 s5_6 carry0_1 s1_3
+        (s5_4 s6_6 t1370 s1_1 s2_2 s3_3 s4_4 s5_5 s6_7 s0_1 s1_2 s2_3 s3_4 s4_5 s5_6 carry0_1 s1_3
           s0_2 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%169 := s7_3, %178 := s9_5, %210 := t210, %213 := t213, %218 := s11_8, %233 :=
-              t233, %235 := t235, %239 := s10_8, %246 := t246, %248 := t248, %257 := t257, %262 :=
-              s8_8, %273 := t273, %285 := s6_7, %291 := s2_3, %293 := s3_4, %295 := s4_5, %297 :=
-              s5_6, %300 := s1_3, %302 := s0_2]) →
+            E' ⊨ [%1266 := s7_3, %1275 := s9_5, %1307 := t1307, %1310 := t1310, %1315 := s11_8,
+              %1330 := t1330, %1332 := t1332, %1336 := s10_8, %1343 := t1343, %1345 := t1345,
+              %1354 := t1354, %1359 := s8_8, %1370 := t1370, %1382 := s6_7, %1388 := s2_3, %1390 :=
+              s3_4, %1392 := s4_5, %1394 := s5_6, %1397 := s1_3, %1399 := s0_2]) →
           (hs5_4 : s5_4 = s5_3 - s14_5 * 997805#64) →
           (hs6_6 : s6_6 = s6_5 + s14_5 * 136657#64) →
-          (ht273 : t273 = (s14_5 * 18446744073708867715#64)) →
+          (ht1370 : t1370 = (s14_5 * 18446744073708867715#64)) →
           (hs1_1 : s1_1 = s1 + s13_6 * 666643#64) →
           (hs2_2 : s2_2 = s2_1 + s13_6 * 470296#64) →
           (hs3_3 : s3_3 = s3_2 + s13_6 * 654183#64) →
@@ -1995,7 +2087,7 @@ theorem fd_curve25519_scalar_reduce.run269 {β : Type} {out inp : Pointer}
           (hs0_2 : s0_2 = s0_1 - ((s0_1 + 1048576#64).sshiftRight 21) <<< 21) →
           (hbs5_4 : Bnd s5_4 (-286501693221610) 21754369427450) →
           (hbs6_6 : Bnd s6_6 (-84891614987518) 48652623740457) →
-          (hbt273 : Bnd t273 (-115344101434338) 1867242590082) →
+          (hbt1370 : Bnd t1370 (-115344101434338) 1867242590082) →
           (hbs1_1 : Bnd s1_1 (-699025850368) 699027280876) →
           (hbs2_2 : Bnd s2_2 (-2313264481822) 112926576530085) →
           (hbs3_3 : Bnd s3_3 (-2669027147248) 80703294296949) →
@@ -2010,8 +2102,8 @@ theorem fd_curve25519_scalar_reduce.run269 {β : Type} {out inp : Pointer}
           (hbs5_6 : Bnd s5_6 (-404939563290362) 23764907131307) →
           (hbcarry0_1 : Bnd carry0_1 (-867902) 54983833) →
           (hbs1_3 : Bnd s1_3 (-1983067421742) 82046331879429) →
-          (hbs0_2 : Bnd s0_2 (-1048576) 1048575) → (blk.runBodyFrom E' 303 S >>= g) = K) :
-    (blk.runBodyFrom E 269 S >>= g) = K := by
+          (hbs0_2 : Bnd s0_2 (-1048576) 1048575) → (blk.runBodyFrom E' 304 S >>= g) = K) :
+    (blk.runBodyFrom E 270 S >>= g) = K := by
   step_pure
   -- s5 -= s14*997805L
   step_pure with s5_4
@@ -2020,8 +2112,8 @@ theorem fd_curve25519_scalar_reduce.run269 {β : Type} {out inp : Pointer}
   -- s6 += s14*136657L
   step_pure with s6_6
   bnd s6_6
-  step_pure with t273
-  bnd t273
+  step_pure with t1370
+  bnd t1370
   step_pure
   -- s1 += s13*666643L
   step_pure with s1_1
@@ -2082,38 +2174,38 @@ theorem fd_curve25519_scalar_reduce.run269 {β : Type} {out inp : Pointer}
   step_pure with s0_2
   bnd s0_2
   exact
-    hK _ s5_4 s6_6 t273 s1_1 s2_2 s3_3 s4_4 s5_5 s6_7 s0_1 s1_2 s2_3 s3_4 s4_5 s5_6 carry0_1 s1_3
+    hK _ s5_4 s6_6 t1370 s1_1 s2_2 s3_3 s4_4 s5_5 s6_7 s0_1 s1_2 s2_3 s3_4 s4_5 s5_6 carry0_1 s1_3
       s0_2 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
-      (by env_reads) (by bridge hs5_4) (by bridge hs6_6) ht273 (by bridge hs1_1) (by bridge hs2_2)
+      (by env_reads) (by bridge hs5_4) (by bridge hs6_6) ht1370 (by bridge hs1_1) (by bridge hs2_2)
       (by bridge hs3_3) (by bridge hs4_4) (by bridge hs5_5) (by bridge hs6_7) (by bridge hs0_1)
       (by bridge hs1_2) (by bridge hs2_3) (by bridge hs3_4) (by bridge hs4_5) (by bridge hs5_6)
-      (by bridge hcarry0_1) (by bridge hs1_3 hcarry0_1) (by bridge hs0_2) hbs5_4 hbs6_6 hbt273
+      (by bridge hcarry0_1) (by bridge hs1_3 hcarry0_1) (by bridge hs0_2) hbs5_4 hbs6_6 hbt1370
       hbs1_1 hbs2_2 hbs3_3 hbs4_4 hbs5_5 hbs6_7 hbs0_1 hbs1_2 hbs2_3 hbs3_4 hbs4_5 hbs5_6 hbcarry0_1
       hbs1_3 hbs0_2
 
-/-- From `%303`: `carry2 … carry10`. -/
-theorem fd_curve25519_scalar_reduce.run303 {β : Type} {out inp : Pointer}
+/-- From `%1400`: `carry2 … carry10`. -/
+theorem fd_curve25519_scalar_reduce.run304 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 303 = fd_curve25519_scalar_reduce.entry.body.drop 303)
+    (hbody : blk.body.drop 304 = fd_curve25519_scalar_reduce.entry.body.drop 304)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s7_3 s9_5 t210 t213 s11_8 t233 t235 s10_8 t246 t248 t257 s8_8 t273 s6_7 s2_3 s3_4 s4_5 s5_6
-      s1_3 s0_2 s17_1 s14_5 s16_3 s15_4 : BitVec 64}
+    {s7_3 s9_5 t1307 t1310 s11_8 t1330 t1332 s10_8 t1343 t1345 t1354 s8_8 t1370 s6_7 s2_3 s3_4 s4_5
+      s5_6 s1_3 s0_2 s17_1 s14_5 s16_3 s15_4 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%169 := s7_3, %178 := s9_5, %210 := t210, %213 := t213, %218 := s11_8, %233 := t233,
-        %235 := t235, %239 := s10_8, %246 := t246, %248 := t248, %257 := t257, %262 := s8_8, %273 :=
-        t273, %285 := s6_7, %291 := s2_3, %293 := s3_4, %295 := s4_5, %297 := s5_6, %300 := s1_3,
-        %302 := s0_2])
-    (ht210 : t210 = ((s7_3 + 1048576#64) &&& 18446744073707454464#64))
-    (ht213 : t213 = ((s9_5 + 1048576#64) &&& 18446744073707454464#64))
-    (ht233 : t233 = (s17_1 * 654183#64)) (ht235 : t235 = (s17_1 * 136657#64))
-    (ht246 : t246 = (s16_3 * 18446744073708553811#64))
-    (ht248 : t248 = (s16_3 * 18446744073708867715#64)) (ht257 : t257 = (s15_4 * 136657#64))
-    (ht273 : t273 = (s14_5 * 18446744073708867715#64)) (hbs7_3 : Bnd s7_3 0 2384335524584)
+      E ⊨ [%1266 := s7_3, %1275 := s9_5, %1307 := t1307, %1310 := t1310, %1315 := s11_8, %1330 :=
+        t1330, %1332 := t1332, %1336 := s10_8, %1343 := t1343, %1345 := t1345, %1354 := t1354,
+        %1359 := s8_8, %1370 := t1370, %1382 := s6_7, %1388 := s2_3, %1390 := s3_4, %1392 := s4_5,
+        %1394 := s5_6, %1397 := s1_3, %1399 := s0_2])
+    (ht1307 : t1307 = ((s7_3 + 1048576#64) &&& 9223372036852678656#64))
+    (ht1310 : t1310 = ((s9_5 + 1048576#64) &&& 18446744073707454464#64))
+    (ht1330 : t1330 = (s17_1 * 654183#64)) (ht1332 : t1332 = (s17_1 * 136657#64))
+    (ht1343 : t1343 = (s16_3 * 18446744073708553811#64))
+    (ht1345 : t1345 = (s16_3 * 18446744073708867715#64)) (ht1354 : t1354 = (s15_4 * 136657#64))
+    (ht1370 : t1370 = (s14_5 * 18446744073708867715#64)) (hbs7_3 : Bnd s7_3 0 2384335524584)
     (hbs9_5 : Bnd s9_5 (-2092547753555) 3756257181695) (hbs17_1 : Bnd s17_1 (-175078656) 2097152)
     (hbs11_8 : Bnd s11_8 (-1048576) 1048575) (hbs14_5 : Bnd s14_5 (-2730282) 168656138)
     (hbs16_3 : Bnd s16_3 (-1732599) 36032768) (hbs15_4 : Bnd s15_4 (-1048576) 1048575)
@@ -2131,9 +2223,9 @@ theorem fd_curve25519_scalar_reduce.run303 {β : Type} {out inp : Pointer}
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%300 := s1_3, %302 := s0_2, %305 := s3_5, %307 := s2_4, %310 := s5_7, %312 :=
-              s4_6, %320 := s7_9, %322 := s6_8, %328 := s9_9, %330 := s8_9, %333 := s11_9, %335 :=
-              s10_9]) →
+            E' ⊨ [%1397 := s1_3, %1399 := s0_2, %1402 := s3_5, %1404 := s2_4, %1407 := s5_7,
+              %1409 := s4_6, %1417 := s7_9, %1419 := s6_8, %1425 := s9_9, %1427 := s8_9, %1430 :=
+              s11_9, %1432 := s10_9]) →
           (hcarry2_1 : carry2_1 = (s2_3 + 1048576#64).sshiftRight 21) →
           (hs3_5 : s3_5 = s3_4 + ((s2_3 + 1048576#64).sshiftRight 21)) →
           (hs2_4 : s2_4 = s2_3 - ((s2_3 + 1048576#64).sshiftRight 21) <<< 21) →
@@ -2177,8 +2269,8 @@ theorem fd_curve25519_scalar_reduce.run303 {β : Type} {out inp : Pointer}
           (hbs8_9 : Bnd s8_9 (-1048576) 1048575) →
           (hbcarry10_2 : Bnd carry10_2 (-683902) 57094798) →
           (hbs11_9 : Bnd s11_9 (-1732478) 58143373) →
-          (hbs10_9 : Bnd s10_9 (-1048576) 1048575) → (blk.runBodyFrom E' 336 S >>= g) = K) :
-    (blk.runBodyFrom E 303 S >>= g) = K := by
+          (hbs10_9 : Bnd s10_9 (-1048576) 1048575) → (blk.runBodyFrom E' 337 S >>= g) = K) :
+    (blk.runBodyFrom E 304 S >>= g) = K := by
   step_pure
   -- long carry2 = (s2 + (1L << 20)) >> 21
   step_pure with carry2_1
@@ -2268,18 +2360,18 @@ theorem fd_curve25519_scalar_reduce.run303 {β : Type} {out inp : Pointer}
       hbs4_6 hbcarry6_2 hbs7_5 hbs7_6 hbs7_7 hbs7_8 hbs7_9 hbs6_8 hbcarry8_2 hbs9_7 hbs9_8 hbs9_9
       hbs8_9 hbcarry10_2 hbs11_9 hbs10_9
 
-/-- From `%336`: `carry1 … carry11`, the `s12` row, and the unrounded carries begun. -/
-theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
+/-- From `%1433`: `carry1 … carry11`, the `s12` row, and the unrounded carries begun. -/
+theorem fd_curve25519_scalar_reduce.run337 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 336 = fd_curve25519_scalar_reduce.entry.body.drop 336)
+    (hbody : blk.body.drop 337 = fd_curve25519_scalar_reduce.entry.body.drop 337)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {s1_3 s0_2 s3_5 s2_4 s5_7 s4_6 s7_9 s6_8 s9_9 s8_9 s11_9 s10_9 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%300 := s1_3, %302 := s0_2, %305 := s3_5, %307 := s2_4, %310 := s5_7, %312 := s4_6,
-        %320 := s7_9, %322 := s6_8, %328 := s9_9, %330 := s8_9, %333 := s11_9, %335 := s10_9])
+      E ⊨ [%1397 := s1_3, %1399 := s0_2, %1402 := s3_5, %1404 := s2_4, %1407 := s5_7, %1409 := s4_6,
+        %1417 := s7_9, %1419 := s6_8, %1425 := s9_9, %1427 := s8_9, %1430 := s11_9, %1432 := s10_9])
     (hbs1_3 : Bnd s1_3 (-1983067421742) 82046331879429) (hbs0_2 : Bnd s0_2 (-1048576) 1048575)
     (hbs3_5 : Bnd s3_5 (-175259679249579) 83427691131694) (hbs2_4 : Bnd s2_4 (-1048576) 1048575)
     (hbs5_7 : Bnd s5_7 (-404939565604765) 23764983201136)
@@ -2288,21 +2380,21 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
     (hbs11_9 : Bnd s11_9 (-1732478) 58143373) (hbs10_9 : Bnd s10_9 (-1048576) 1048575)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
-        (carry1_1 carry3_1 carry5_1 s6_9 t345 carry7_2 s8_10 s7_10 carry9_2 s10_10 s9_10 carry11_2
-          s11_10 s0_3 t365 t366 carry0_2 s1_5 s1_6 s0_4 carry1_2 s2_6 s2_7 s1_7 carry2_2 s3_7 :
+        (carry1_1 carry3_1 carry5_1 s6_9 t1442 carry7_2 s8_10 s7_10 carry9_2 s10_10 s9_10 carry11_2
+          s11_10 s0_3 t1462 t1463 carry0_2 s1_5 s1_6 s0_4 carry1_2 s2_6 s2_7 s1_7 carry2_2 s3_7 :
           BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%310 := s5_7, %312 := s4_6, %340 := carry3_1, %344 := s6_9, %345 := t345, %348 :=
-              s8_10, %350 := s7_10, %353 := s10_10, %355 := s9_10, %359 := s11_10, %365 := t365,
-              %366 := t366, %371 := s0_4, %375 := s2_7, %376 := s1_7, %377 := carry2_2, %379 :=
-              s3_7]) →
+            E' ⊨ [%1407 := s5_7, %1409 := s4_6, %1437 := carry3_1, %1441 := s6_9, %1442 := t1442,
+              %1445 := s8_10, %1447 := s7_10, %1450 := s10_10, %1452 := s9_10, %1456 := s11_10,
+              %1462 := t1462, %1463 := t1463, %1468 := s0_4, %1472 := s2_7, %1473 := s1_7, %1474 :=
+              carry2_2, %1476 := s3_7]) →
           (hcarry1_1 : carry1_1 = (s1_3 + 1048576#64).sshiftRight 21) →
           (hcarry3_1 : carry3_1 = (s3_5 + 1048576#64).sshiftRight 21) →
           (hcarry5_1 : carry5_1 = (s5_7 + 1048576#64).sshiftRight 21) →
           (hs6_9 : s6_9 = s6_8 + ((s5_7 + 1048576#64).sshiftRight 21)) →
-          (ht345 : t345 = ((s5_7 + 1048576#64) &&& 18446744073707454464#64)) →
+          (ht1442 : t1442 = ((s5_7 + 1048576#64) &&& 18446744073707454464#64)) →
           (hcarry7_2 : carry7_2 = (s7_9 + 1048576#64).sshiftRight 21) →
           (hs8_10 : s8_10 = s8_9 + ((s7_9 + 1048576#64).sshiftRight 21)) →
           (hs7_10 : s7_10 = s7_9 - ((s7_9 + 1048576#64).sshiftRight 21) <<< 21) →
@@ -2312,8 +2404,8 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
           (hcarry11_2 : carry11_2 = (s11_9 + 1048576#64).sshiftRight 21) →
           (hs11_10 : s11_10 = s11_9 - ((s11_9 + 1048576#64).sshiftRight 21) <<< 21) →
           (hs0_3 : s0_3 = s0_2 + ((0#64) + ((s11_9 + 1048576#64).sshiftRight 21)) * 666643#64) →
-          (ht365 : t365 = (carry11_2 * 136657#64)) →
-          (ht366 : t366 = (carry11_2 * 18446744073708867715#64)) →
+          (ht1462 : t1462 = (carry11_2 * 136657#64)) →
+          (ht1463 : t1463 = (carry11_2 * 18446744073708867715#64)) →
           (hcarry0_2 : carry0_2 = s0_3.sshiftRight 21) →
           (hs1_5 :
             s1_5 =
@@ -2337,7 +2429,7 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
           (hbcarry3_1 : Bnd carry3_1 (-83570327) 39781423) →
           (hbcarry5_1 : Bnd carry5_1 (-193090232) 11332027) →
           (hbs6_9 : Bnd s6_9 (-194138808) 12380602) →
-          (hbt345 : Bnd t345 (-404939566219264) 23764983087104) →
+          (hbt1442 : Bnd t1442 (-404939566219264) 23764983087104) →
           (hbcarry7_2 : Bnd carry7_2 (-126826570) 2437248) →
           (hbs8_10 : Bnd s8_10 (-127875146) 3485823) →
           (hbs7_10 : Bnd s7_10 (-1048576) 1048575) →
@@ -2347,8 +2439,8 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
           (hbcarry11_2 : Bnd carry11_2 (-1) 28) →
           (hbs11_10 : Bnd s11_10 (-1048576) 1048575) →
           (hbs0_3 : Bnd s0_3 (-1715219) 19714579) →
-          (hbt365 : Bnd t365 (-136657) 3826396) →
-          (hbt366 : Bnd t366 (-19149228) 683901) →
+          (hbt1462 : Bnd t1462 (-136657) 3826396) →
+          (hbt1463 : Bnd t1463 (-19149228) 683901) →
           (hbcarry0_2 : Bnd carry0_2 (-1) 9) →
           (hbs1_5 : Bnd s1_5 (-1518872) 14216863) →
           (hbs1_6 : Bnd s1_6 (-1518873) 14216872) →
@@ -2358,8 +2450,8 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
           (hbs2_7 : Bnd s2_7 (-2648360) 58488445) →
           (hbs1_7 : Bnd s1_7 0 2097151) →
           (hbcarry2_2 : Bnd carry2_2 (-2) 27) →
-          (hbs3_7 : Bnd s3_7 (-28987116) 2046380) → (blk.runBodyFrom E' 380 S >>= g) = K) :
-    (blk.runBodyFrom E 336 S >>= g) = K := by
+          (hbs3_7 : Bnd s3_7 (-28987116) 2046380) → (blk.runBodyFrom E' 381 S >>= g) = K) :
+    (blk.runBodyFrom E 337 S >>= g) = K := by
   step_pure
   -- long carry1 = (s1 + (1L << 20)) >> 21
   step_pure with carry1_1
@@ -2377,8 +2469,8 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
   -- s6 += carry5
   step_pure with s6_9
   bnd s6_9
-  step_pure with t345
-  bnd t345
+  step_pure with t1442
+  bnd t1442
   step_pure
   -- carry7 = (s7 + (1L << 20)) >> 21
   step_pure with carry7_2
@@ -2416,10 +2508,10 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
   step_pure [nswMul]
   step_pure [nswMul]
   step_pure [nswMul]
-  step_pure [nswMul] with t365
-  bnd t365
-  step_pure [nswMul] with t366
-  bnd t366
+  step_pure [nswMul] with t1462
+  bnd t1462
+  step_pure [nswMul] with t1463
+  bnd t1463
   -- carry0 = s0 >> 21
   step_pure with carry0_2
   bnd carry0_2
@@ -2454,39 +2546,41 @@ theorem fd_curve25519_scalar_reduce.run336 {β : Type} {out inp : Pointer}
   step_pure with s3_7
   bnd s3_7
   exact
-    hK _ carry1_1 carry3_1 carry5_1 s6_9 t345 carry7_2 s8_10 s7_10 carry9_2 s10_10 s9_10 carry11_2
-      s11_10 s0_3 t365 t366 carry0_2 s1_5 s1_6 s0_4 carry1_2 s2_6 s2_7 s1_7 carry2_2 s3_7 hArgs
+    hK _ carry1_1 carry3_1 carry5_1 s6_9 t1442 carry7_2 s8_10 s7_10 carry9_2 s10_10 s9_10 carry11_2
+      s11_10 s0_3 t1462 t1463 carry0_2 s1_5 s1_6 s0_4 carry1_2 s2_6 s2_7 s1_7 carry2_2 s3_7 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
       (by env_reads) (by bridge hcarry1_1) (by bridge hcarry3_1) (by bridge hcarry5_1)
-      (by bridge hs6_9 hcarry5_1) ht345 (by bridge hcarry7_2) (by bridge hs8_10 hcarry7_2)
+      (by bridge hs6_9 hcarry5_1) ht1442 (by bridge hcarry7_2) (by bridge hs8_10 hcarry7_2)
       (by bridge hs7_10) (by bridge hcarry9_2) (by bridge hs10_10 hcarry9_2) (by bridge hs9_10)
-      (by bridge hcarry11_2) (by bridge hs11_10) (by bridge hs0_3 hcarry11_2) ht365 ht366
+      (by bridge hcarry11_2) (by bridge hs11_10) (by bridge hs0_3 hcarry11_2) ht1462 ht1463
       (by bridge hcarry0_2) (by bridge hs1_5 hcarry11_2) (by bridge hs1_6 hcarry0_2)
       (by bridge hs0_4) (by bridge hcarry1_2) (by bridge hs2_6 hcarry11_2 hcarry1_1)
       (by bridge hs2_7 hcarry1_2) (by bridge hs1_7) (by bridge hcarry2_2)
-      (by bridge hs3_7 hcarry11_2) hbcarry1_1 hbcarry3_1 hbcarry5_1 hbs6_9 hbt345 hbcarry7_2 hbs8_10
-      hbs7_10 hbcarry9_2 hbs10_10 hbs9_10 hbcarry11_2 hbs11_10 hbs0_3 hbt365 hbt366 hbcarry0_2
-      hbs1_5 hbs1_6 hbs0_4 hbcarry1_2 hbs2_6 hbs2_7 hbs1_7 hbcarry2_2 hbs3_7
+      (by bridge hs3_7 hcarry11_2) hbcarry1_1 hbcarry3_1 hbcarry5_1 hbs6_9 hbt1442 hbcarry7_2
+      hbs8_10 hbs7_10 hbcarry9_2 hbs10_10 hbs9_10 hbcarry11_2 hbs11_10 hbs0_3 hbt1462 hbt1463
+      hbcarry0_2 hbs1_5 hbs1_6 hbs0_4 hbcarry1_2 hbs2_6 hbs2_7 hbs1_7 hbcarry2_2 hbs3_7
 
-/-- From `%380`: the unrounded carries up to `carry11`. -/
-theorem fd_curve25519_scalar_reduce.run380 {β : Type} {out inp : Pointer}
+/-- From `%1477`: the unrounded carries up to `carry11`. -/
+theorem fd_curve25519_scalar_reduce.run381 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 380 = fd_curve25519_scalar_reduce.entry.body.drop 380)
+    (hbody : blk.body.drop 381 = fd_curve25519_scalar_reduce.entry.body.drop 381)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s5_7 s4_6 carry3_1 s6_9 t345 s8_10 s7_10 s10_10 s9_10 s11_10 t365 t366 s0_4 s2_7 s1_7 carry2_2
-      s3_7 s3_5 s11_9 carry11_2 : BitVec 64}
+    {s5_7 s4_6 carry3_1 s6_9 t1442 s8_10 s7_10 s10_10 s9_10 s11_10 t1462 t1463 s0_4 s2_7 s1_7
+      carry2_2 s3_7 s3_5 s11_9 carry11_2 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%310 := s5_7, %312 := s4_6, %340 := carry3_1, %344 := s6_9, %345 := t345, %348 := s8_10,
-        %350 := s7_10, %353 := s10_10, %355 := s9_10, %359 := s11_10, %365 := t365, %366 := t366,
-        %371 := s0_4, %375 := s2_7, %376 := s1_7, %377 := carry2_2, %379 := s3_7])
+      E ⊨ [%1407 := s5_7, %1409 := s4_6, %1437 := carry3_1, %1441 := s6_9, %1442 := t1442, %1445 :=
+        s8_10, %1447 := s7_10, %1450 := s10_10, %1452 := s9_10, %1456 := s11_10, %1462 := t1462,
+        %1463 := t1463, %1468 := s0_4, %1472 := s2_7, %1473 := s1_7, %1474 := carry2_2, %1476 :=
+        s3_7])
     (hcarry3_1 : carry3_1 = (s3_5 + 1048576#64).sshiftRight 21)
-    (ht345 : t345 = ((s5_7 + 1048576#64) &&& 18446744073707454464#64))
+    (ht1442 : t1442 = ((s5_7 + 1048576#64) &&& 18446744073707454464#64))
     (hcarry11_2 : carry11_2 = (s11_9 + 1048576#64).sshiftRight 21)
-    (ht365 : t365 = (carry11_2 * 136657#64)) (ht366 : t366 = (carry11_2 * 18446744073708867715#64))
+    (ht1462 : t1462 = (carry11_2 * 136657#64))
+    (ht1463 : t1463 = (carry11_2 * 18446744073708867715#64))
     (hcarry2_2 : carry2_2 = s2_7.sshiftRight 21)
     (hbs3_5 : Bnd s3_5 (-175259679249579) 83427691131694) (hbs4_6 : Bnd s4_6 (-1048576) 1048575)
     (hbs11_9 : Bnd s11_9 (-1732478) 58143373) (hbs6_9 : Bnd s6_9 (-194138808) 12380602)
@@ -2503,9 +2597,9 @@ theorem fd_curve25519_scalar_reduce.run380 {β : Type} {out inp : Pointer}
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%381 := s2_8, %386 := s3_9, %391 := s4_10, %394 := s5_11, %397 := s6_11, %400 :=
-              s7_12, %403 := s8_12, %406 := s9_12, %409 := s10_12, %410 := carry11_3, %411 :=
-              s11_12, %413 := s0_5, %415 := s1_8]) →
+            E' ⊨ [%1478 := s2_8, %1483 := s3_9, %1488 := s4_10, %1491 := s5_11, %1494 := s6_11,
+              %1497 := s7_12, %1500 := s8_12, %1503 := s9_12, %1506 := s10_12, %1507 := carry11_3,
+              %1508 := s11_12, %1510 := s0_5, %1512 := s1_8]) →
           (hs3_8 : s3_8 = s3_7 + (s2_7.sshiftRight 21)) →
           (hs2_8 : s2_8 = s2_7 - (s2_7.sshiftRight 21) <<< 21) →
           (hcarry3_2 : carry3_2 = s3_8.sshiftRight 21) →
@@ -2575,8 +2669,8 @@ theorem fd_curve25519_scalar_reduce.run380 {β : Type} {out inp : Pointer}
           (hbcarry11_3 : Bnd carry11_3 (-1) 0) →
           (hbs11_12 : Bnd s11_12 0 2097151) →
           (hbs0_5 : Bnd s0_5 (-666643) 2097151) →
-          (hbs1_8 : Bnd s1_8 (-470296) 2097151) → (blk.runBodyFrom E' 416 S >>= g) = K) :
-    (blk.runBodyFrom E 380 S >>= g) = K := by
+          (hbs1_8 : Bnd s1_8 (-470296) 2097151) → (blk.runBodyFrom E' 417 S >>= g) = K) :
+    (blk.runBodyFrom E 381 S >>= g) = K := by
   -- s3 += carry2
   step_pure with s3_8
   bnd s3_8
@@ -2697,10 +2791,10 @@ theorem fd_curve25519_scalar_reduce.run380 {β : Type} {out inp : Pointer}
       hbs6_11 hbcarry7_3 hbs8_11 hbs7_12 hbcarry8_3 hbs9_11 hbs8_12 hbcarry9_3 hbs10_11 hbs9_12
       hbcarry10_3 hbs11_11 hbs10_12 hbcarry11_3 hbs11_12 hbs0_5 hbs1_8
 
-/-- From `%416`: the second `s12` row and the last carries. -/
-theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
+/-- From `%1513`: the second `s12` row and the last carries. -/
+theorem fd_curve25519_scalar_reduce.run417 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 416 = fd_curve25519_scalar_reduce.entry.body.drop 416)
+    (hbody : blk.body.drop 417 = fd_curve25519_scalar_reduce.entry.body.drop 417)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {s2_8 s3_9 s4_10 s5_11 s6_11 s7_12 s8_12 s9_12 s10_12 carry11_3 s11_12 s0_5 s1_8 s11_11 :
@@ -2708,9 +2802,9 @@ theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%381 := s2_8, %386 := s3_9, %391 := s4_10, %394 := s5_11, %397 := s6_11, %400 := s7_12,
-        %403 := s8_12, %406 := s9_12, %409 := s10_12, %410 := carry11_3, %411 := s11_12, %413 :=
-        s0_5, %415 := s1_8])
+      E ⊨ [%1478 := s2_8, %1483 := s3_9, %1488 := s4_10, %1491 := s5_11, %1494 := s6_11, %1497 :=
+        s7_12, %1500 := s8_12, %1503 := s9_12, %1506 := s10_12, %1507 := carry11_3, %1508 := s11_12,
+        %1510 := s0_5, %1512 := s1_8])
     (hcarry11_3 : carry11_3 = s11_11.sshiftRight 21) (hbs2_8 : Bnd s2_8 0 2097151)
     (hbs3_9 : Bnd s3_9 0 2097151) (hbs4_10 : Bnd s4_10 0 2097151) (hbs5_11 : Bnd s5_11 0 2097151)
     (hbs6_11 : Bnd s6_11 0 2097151) (hbs7_12 : Bnd s7_12 0 2097151) (hbs8_12 : Bnd s8_12 0 2097151)
@@ -2721,13 +2815,13 @@ theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫)
         (s2_9 s3_10 s4_11 s5_12 carry0_3 s1_9 s0_6 carry1_3 s2_10 carry2_3 s3_11 carry3_3 s4_12
           carry4_3 s5_13 carry5_3 s6_12 carry6_4 s7_13 carry7_4 s8_13 carry8_4 s9_13 carry9_4 s10_13
-          carry10_4 s11_13 : BitVec 64),
+          s11_13 t1543 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
           (hc : fd_curve25519_scalar_reduce.Consts E') →
           (hR :
-            E' ⊨ [%425 := s1_9, %426 := s0_6, %428 := s2_10, %430 := s3_11, %432 := s4_12, %434 :=
-              s5_13, %436 := s6_12, %438 := s7_13, %440 := s8_13, %442 := s9_13, %444 := s10_13,
-              %446 := s11_13]) →
+            E' ⊨ [%1522 := s1_9, %1523 := s0_6, %1525 := s2_10, %1527 := s3_11, %1529 := s4_12,
+              %1531 := s5_13, %1533 := s6_12, %1535 := s7_13, %1537 := s8_13, %1539 := s9_13,
+              %1541 := s10_13, %1543 := t1543]) →
           (hs2_9 : s2_9 = s2_8 + ((0#64) + (s11_11.sshiftRight 21)) * 654183#64) →
           (hs3_10 : s3_10 = s3_9 - ((0#64) + (s11_11.sshiftRight 21)) * 997805#64) →
           (hs4_11 : s4_11 = s4_10 + ((0#64) + (s11_11.sshiftRight 21)) * 136657#64) →
@@ -2753,8 +2847,8 @@ theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
           (hs9_13 : s9_13 = s9_12 + (s8_13.sshiftRight 21)) →
           (hcarry9_4 : carry9_4 = s9_13.sshiftRight 21) →
           (hs10_13 : s10_13 = s10_12 + (s9_13.sshiftRight 21)) →
-          (hcarry10_4 : carry10_4 = s10_13.sshiftRight 21) →
           (hs11_13 : s11_13 = s11_12 + (s10_13.sshiftRight 21)) →
+          (ht1543 : t1543 <<< 39 = s11_13 <<< 39) →
           (hbs2_9 : Bnd s2_9 (-654183) 2097151) →
           (hbs3_10 : Bnd s3_10 0 3094956) →
           (hbs4_11 : Bnd s4_11 (-136657) 2097151) →
@@ -2779,10 +2873,8 @@ theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
           (hbcarry8_4 : Bnd carry8_4 (-1) 1) →
           (hbs9_13 : Bnd s9_13 (-1) 2097152) →
           (hbcarry9_4 : Bnd carry9_4 (-1) 1) →
-          (hbs10_13 : Bnd s10_13 (-1) 2097152) →
-          (hbcarry10_4 : Bnd carry10_4 (-1) 1) →
-          (hbs11_13 : Bnd s11_13 (-1) 2097152) → (blk.runBodyFrom E' 447 S >>= g) = K) :
-    (blk.runBodyFrom E 416 S >>= g) = K := by
+          (hbs10_13 : Bnd s10_13 (-1) 2097152) → (blk.runBodyFrom E' 448 S >>= g) = K) :
+    (blk.runBodyFrom E 417 S >>= g) = K := by
   step_pure [nswMul]
   -- s2 += s12*654183L
   step_pure [nswAdd] with s2_9
@@ -2862,16 +2954,14 @@ theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
   -- s10 += carry9
   step_pure [nswAdd] with s10_13
   bnd s10_13
-  -- carry10 = s10 >> 21
-  step_pure with carry10_4
-  bnd carry10_4
+  -- carry10 = s10 >> 21, shifted logically: `s11 << 39` drops the bits where the shifts differ
+  step_pure
   -- s11 += carry10
-  step_pure [nswAdd] with s11_13
-  bnd s11_13
+  step_pure [nswAdd, nuwAdd] with t1543
   exact
     hK _ s2_9 s3_10 s4_11 s5_12 carry0_3 s1_9 s0_6 carry1_3 s2_10 carry2_3 s3_11 carry3_3 s4_12
       carry4_3 s5_13 carry5_3 s6_12 carry6_4 s7_13 carry7_4 s8_13 carry8_4 s9_13 carry9_4 s10_13
-      carry10_4 s11_13 hArgs
+      (s11_12 + s10_13.sshiftRight 21) t1543 hArgs
       (by
         unfold fd_curve25519_scalar_reduce.Consts; env_reads)
       (by env_reads) (by bridge hs2_9) (by bridge hs3_10) (by bridge hs4_11) (by bridge hs5_12)
@@ -2881,27 +2971,63 @@ theorem fd_curve25519_scalar_reduce.run416 {β : Type} {out inp : Pointer}
       (by bridge hs5_13 hcarry4_3) (by bridge hcarry5_3) (by bridge hs6_12 hcarry5_3)
       (by bridge hcarry6_4) (by bridge hs7_13 hcarry6_4) (by bridge hcarry7_4)
       (by bridge hs8_13 hcarry7_4) (by bridge hcarry8_4) (by bridge hs9_13 hcarry8_4)
-      (by bridge hcarry9_4) (by bridge hs10_13 hcarry9_4) (by bridge hcarry10_4)
-      (by bridge hs11_13 hcarry10_4) hbs2_9 hbs3_10 hbs4_11 hbs5_12 hbcarry0_3 hbs1_9 hbs0_6
-      hbcarry1_3 hbs2_10 hbcarry2_3 hbs3_11 hbcarry3_3 hbs4_12 hbcarry4_3 hbs5_13 hbcarry5_3 hbs6_12
-      hbcarry6_4 hbs7_13 hbcarry7_4 hbs8_13 hbcarry8_4 hbs9_13 hbcarry9_4 hbs10_13 hbcarry10_4
-      hbs11_13
+      (by bridge hcarry9_4) (by bridge hs10_13 hcarry9_4) rfl
+      (by rw [ht1543, Bnd.ushiftRight_add_shl39]) hbs2_9 hbs3_10 hbs4_11 hbs5_12 hbcarry0_3 hbs1_9
+      hbs0_6 hbcarry1_3 hbs2_10 hbcarry2_3 hbs3_11 hbcarry3_3 hbs4_12 hbcarry4_3 hbs5_13 hbcarry5_3
+      hbs6_12 hbcarry6_4 hbs7_13 hbcarry7_4 hbs8_13 hbcarry8_4 hbs9_13 hbcarry9_4 hbs10_13
 
-/-- From `%447`: the limbs packed into four words, stored at `out`. -/
-theorem fd_curve25519_scalar_reduce.run447 {β : Type} {out inp : Pointer}
+/-- `out0`'s `or disjoint`s hold: `s0` below `2^21`, the other limbs masked or shifted above it. -/
+theorem fd_curve25519_scalar_reduce.out0_disjoint (a b c d : BitVec 64) (hd : Bnd d 0 2097151) :
+    a <<< 21 &&& 4398044413952#64 &&& d = 0#64 ∧
+      (a <<< 21 &&& 4398044413952#64 ||| d) &&& (b <<< 42 &&& 9223367638808264704#64) = 0#64 ∧
+      (a <<< 21 &&& 4398044413952#64 ||| d ||| b <<< 42 &&& 9223367638808264704#64) &&& c <<< 63 =
+        0#64 := by
+  have := Bnd.toInt_eq_toNat hd (by decide)
+  have := hd.2
+  have hd' : d.ult 2097152#64 := by simp [BitVec.ult]; omega
+  bv_decide
+
+/-- `out1`'s `or disjoint`s hold: the limbs' bits are masked or shifted apart. -/
+theorem fd_curve25519_scalar_reduce.out1_disjoint (a b c d : BitVec 64) :
+    b <<< 20 &&& 2199022206976#64 &&& (a >>> 1 &&& 1048575#64) = 0#64 ∧
+      (b <<< 20 &&& 2199022206976#64 ||| a >>> 1 &&& 1048575#64) &&&
+          (c <<< 41 &&& 4611683819404132352#64) = 0#64 ∧
+      (b <<< 20 &&& 2199022206976#64 ||| a >>> 1 &&& 1048575#64 |||
+          c <<< 41 &&& 4611683819404132352#64) &&& d <<< 62 = 0#64 := by
+  bv_decide
+
+/-- `out2`'s `or disjoint`s hold: the limbs' bits are masked or shifted apart. -/
+theorem fd_curve25519_scalar_reduce.out2_disjoint (a b c d : BitVec 64) :
+    b <<< 19 &&& 1099511103488#64 &&& (a >>> 2 &&& 524287#64) = 0#64 ∧
+      (b <<< 19 &&& 1099511103488#64 ||| a >>> 2 &&& 524287#64) &&&
+          (c <<< 40 &&& 2305841909702066176#64) = 0#64 ∧
+      (b <<< 19 &&& 1099511103488#64 ||| a >>> 2 &&& 524287#64 |||
+          c <<< 40 &&& 2305841909702066176#64) &&& d <<< 61 = 0#64 := by
+  bv_decide
+
+/-- `out3`'s `or disjoint`s hold: the limbs' bits are masked or shifted apart. -/
+theorem fd_curve25519_scalar_reduce.out3_disjoint (a b c : BitVec 64) :
+    a >>> 3 &&& 262143#64 &&& (b <<< 18 &&& 549755551744#64) = 0#64 ∧
+      (a >>> 3 &&& 262143#64 ||| b <<< 18 &&& 549755551744#64) &&& c <<< 39 = 0#64 := by
+  bv_decide
+
+/-- From `%1544`: the limbs packed into four words, stored at `out`. -/
+theorem fd_curve25519_scalar_reduce.run448 {β : Type} {out inp : Pointer}
     {blk : BasicBlock fd_curve25519_scalar_reduce.Γ [Ty.ptr] fd_curve25519_scalar_reduce.blockTys}
-    (hbody : blk.body.drop 447 = fd_curve25519_scalar_reduce.entry.body.drop 447)
+    (hbody : blk.body.drop 448 = fd_curve25519_scalar_reduce.entry.body.drop 448)
     {E : ⟪fd_curve25519_scalar_reduce.Γ⟫} {S : GlobalState}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    {s1_9 s0_6 s2_10 s3_11 s4_12 s5_13 s6_12 s7_13 s8_13 s9_13 s10_13 s11_13 : BitVec 64}
+    {s1_9 s0_6 s2_10 s3_11 s4_12 s5_13 s6_12 s7_13 s8_13 s9_13 s10_13 s11_13 t1543 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
     (hout : Fits S.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
-      E ⊨ [%425 := s1_9, %426 := s0_6, %428 := s2_10, %430 := s3_11, %432 := s4_12, %434 := s5_13,
-        %436 := s6_12, %438 := s7_13, %440 := s8_13, %442 := s9_13, %444 := s10_13, %446 := s11_13])
+      E ⊨ [%1522 := s1_9, %1523 := s0_6, %1525 := s2_10, %1527 := s3_11, %1529 := s4_12, %1531 :=
+        s5_13, %1533 := s6_12, %1535 := s7_13, %1537 := s8_13, %1539 := s9_13, %1541 := s10_13,
+        %1543 := t1543])
+    (ht1543 : t1543 <<< 39 = s11_13 <<< 39) (hbs0_6 : Bnd s0_6 0 2097151)
     (hbs7_13 : Bnd s7_13 (-1) 2097152) (hbs8_13 : Bnd s8_13 (-1) 2097152)
-    (hbs10_13 : Bnd s10_13 (-1) 2097152) (hbs11_13 : Bnd s11_13 (-1) 2097152)
+    (hbs10_13 : Bnd s10_13 (-1) 2097152)
     (hK :
       ∀ (E' : ⟪fd_curve25519_scalar_reduce.Γ⟫) (out0 out1 out2 out3 : BitVec 64),
         (hArgs : E'.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) →
@@ -2927,7 +3053,7 @@ theorem fd_curve25519_scalar_reduce.run447 {β : Type} {out inp : Pointer}
               (s9_13 - (s9_13.sshiftRight 21) <<< 21) >>> 3 |||
                 (s10_13 - (s10_13.sshiftRight 21) <<< 21) <<< 18 |||
                 s11_13 <<< 39) →
-          (blk.runBodyFrom E' 489
+          (blk.runBodyFrom E' 490
                 { S with
                   mem :=
                     (((S.mem.storeAt out out0).storeAt (out.add 8#64) out1).storeAt (out.add 16#64)
@@ -2935,53 +3061,57 @@ theorem fd_curve25519_scalar_reduce.run447 {β : Type} {out inp : Pointer}
                       (out.add 24#64) out3 } >>=
               g) =
             K) :
-    (blk.runBodyFrom E 447 S >>= g) = K := by
+    (blk.runBodyFrom E 448 S >>= g) = K := by
+  have hd0 := fd_curve25519_scalar_reduce.out0_disjoint s1_9 s2_10 s3_11 s0_6 hbs0_6
+  have hd1 := fd_curve25519_scalar_reduce.out1_disjoint s3_11 s4_12 s5_13 s6_12
+  have hd2 := fd_curve25519_scalar_reduce.out2_disjoint s6_12 s7_13 s8_13 s9_13
+  have hd3 := fd_curve25519_scalar_reduce.out3_disjoint s9_13 s10_13 t1543
   step_pure
   step_pure
+  step_pure [hd0]
   step_pure
   step_pure
+  step_pure [hd0]
   step_pure
-  step_pure
-  step_pure
-  step_pure with out0
+  step_pure [hd0] with out0
   step_store
   step_pure
   step_pure
   step_pure
   step_pure
+  step_pure [hd1]
   step_pure
   step_pure
+  step_pure [hd1]
   step_pure
-  step_pure
-  step_pure
-  step_pure with out1
-  step_pure
-  step_store
-  step_pure
-  step_pure
-  step_pure [nswShl]
-  step_pure
-  step_pure
-  step_pure [nswShl]
-  step_pure
-  step_pure
-  step_pure
-  step_pure with out2
+  step_pure [hd1] with out1
   step_pure
   step_store
   step_pure
   step_pure
   step_pure [nswShl]
   step_pure
+  step_pure [hd2]
+  step_pure [nswShl]
+  step_pure
+  step_pure [hd2]
+  step_pure
+  step_pure [hd2] with out2
+  step_pure
+  step_store
+  step_pure
   step_pure
   step_pure [nswShl]
-  step_pure with out3
+  step_pure
+  step_pure [hd3]
+  step_pure
+  step_pure [hd3] with out3
   step_pure
   step_store
   subst hS
   exact
     hK _ out0 out1 out2 out3 hArgs (by bridge_bv hout0) (by bridge_bv hout1) (by bridge_bv hout2)
-      (by bridge_bv hout3)
+      (by bridge_bv hout3 ht1543)
 
 /-- `reduce` stores `spec` of the 64 bytes at `inp` as the 32 bytes at `out`, and returns `out`. The
 loads all come before the stores, so `out` may alias `inp`. -/
@@ -3000,18 +3130,18 @@ public theorem fd_curve25519_scalar_reduce.call_eq (out inp : Pointer) (s : Glob
   step_pattern using fd_curve25519_scalar_reduce.run0
   -- the loads' facts, about the entry state rather than the current one
   rw [hS] at hin0 hin1 hin2 hin3 hin4 hin5 hin6 hin7
-  step_pattern using fd_curve25519_scalar_reduce.run61
-  step_pattern using fd_curve25519_scalar_reduce.run107
-  step_pattern using fd_curve25519_scalar_reduce.run136
-  step_pattern using fd_curve25519_scalar_reduce.run181
-  step_pattern using fd_curve25519_scalar_reduce.run208
-  step_pattern using fd_curve25519_scalar_reduce.run234
-  step_pattern using fd_curve25519_scalar_reduce.run269
-  step_pattern using fd_curve25519_scalar_reduce.run303
-  step_pattern using fd_curve25519_scalar_reduce.run336
-  step_pattern using fd_curve25519_scalar_reduce.run380
-  step_pattern using fd_curve25519_scalar_reduce.run416
-  step_pattern using fd_curve25519_scalar_reduce.run447
+  step_pattern using fd_curve25519_scalar_reduce.run62
+  step_pattern using fd_curve25519_scalar_reduce.run108
+  step_pattern using fd_curve25519_scalar_reduce.run137
+  step_pattern using fd_curve25519_scalar_reduce.run182
+  step_pattern using fd_curve25519_scalar_reduce.run209
+  step_pattern using fd_curve25519_scalar_reduce.run235
+  step_pattern using fd_curve25519_scalar_reduce.run270
+  step_pattern using fd_curve25519_scalar_reduce.run304
+  step_pattern using fd_curve25519_scalar_reduce.run337
+  step_pattern using fd_curve25519_scalar_reduce.run381
+  step_pattern using fd_curve25519_scalar_reduce.run417
+  step_pattern using fd_curve25519_scalar_reduce.run448
   finish_block
   -- the four 8-byte stores as one 32-byte store
   have hov (k : Nat) (hk : k ≤ 32) : ¬out.offset.uaddOverflow (BitVec.ofNat 64 k) :=
