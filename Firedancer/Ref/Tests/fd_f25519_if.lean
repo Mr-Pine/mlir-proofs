@@ -49,18 +49,14 @@ private def selects (cond : BitVec 32) : Bool :=
 
 #guard selects 1#32
 
-#guard selects 256#32
-
--- `cond = 1` selects `a0`; `cond = 0` and `cond = 256` (low byte `0`) select `a1`
+-- `cond = 1` selects `a0`; `cond = 0` selects `a1`
 #guard
   match result (.value r) (.value 1#32) (.value a0) (.value a1) r,
-    result (.value r) (.value 0#32) (.value a0) (.value a1) r,
-    result (.value r) (.value 256#32) (.value a0) (.value a1) r with
-  | some (_, l, _), some (_, l', _), some (_, l'', _) =>
+    result (.value r) (.value 0#32) (.value a0) (.value a1) r with
+  | some (_, l, _), some (_, l', _) =>
     let s := state bytes0 bytes1
-    (List.finRange 5).all fun i =>
-      l i == s.mem.readLimbs a0 i && l' i == s.mem.readLimbs a1 i && l'' i == s.mem.readLimbs a1 i
-  | _, _, _ => false
+    (List.finRange 5).all fun i => l i == s.mem.readLimbs a0 i && l' i == s.mem.readLimbs a1 i
+  | _, _ => false
 
 -- `r` may be `a0`: the same limbs.
 #guard
@@ -74,5 +70,8 @@ private def selects (cond : BitVec 32) : Bool :=
 #guard (result (.value r) (.value 1#32) (.value a0) .poison r).isNone
 
 #guard (result (.value r) .poison (.value a0) (.value a1) r).isNone
+
+-- `cond = 256` breaks the `trunc nuw` of `(uchar)cond`: poison, so UB.
+#guard (result (.value r) (.value 256#32) (.value a0) (.value a1) r).isNone
 
 end MLIR.Firedancer.Ref
