@@ -292,6 +292,11 @@ theorem Ch_eq (x y z : BitVec 64) :
     z &&& (x ^^^ 18446744073709551615#64) ||| y &&& x = Ch x y z := by
   rw [Ch]; bv_decide
 
+/-- `Ch`'s `or disjoint` holds: `~x & z` and `x & y` do not overlap. -/
+theorem Ch_disjoint (x y z : BitVec 64) :
+    z &&& (x ^^^ 18446744073709551615#64) &&& (y &&& x) = 0#64 := by
+  bv_decide
+
 theorem Maj_eq (x y z : BitVec 64) : x &&& (y ^^^ z) ^^^ y &&& z = Maj x y z := by
   rw [Maj]; bv_decide
 
@@ -379,20 +384,21 @@ theorem fits_K {m : MemoryState} {Kp : Pointer} (hK : Kp.offset = 0) (h : Fits m
 
 /-- `^bb0`'s constants, which every later block reads. -/
 abbrev consts (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%0 := .value 80#64, %1 := .value 9#64, %2 := .value 61#32, %3 := .value 19#32, %4 :=
-    .value 8#32, %5 := .value 14#64, %6 := .value 15#64, %7 := .value 16#64, %8 := .value 39#32,
-    %9 := .value 34#32, %10 := .value 28#32, %11 := .value 1#32, %12 := .value 1#64, %13 :=
-    .value 6#64, %14 := .value 7#64, %15 := .value 0#64, %16 := .value 14#32, %17 := .value 18#32,
-    %18 := .value 41#32, %19 := .value 18446744073709551615#64]
+  E[%866 := .value 1#32, %867 := .value 16#64, %868 := .value 0#64, %869 := .value 14#32,
+    %870 := .value 18#32, %871 := .value 41#32, %872 := .value 18446744073709551615#64,
+    %874 := .value 28#32, %875 := .value 34#32, %876 := .value 39#32, %877 := .value 1#64,
+    %878 := .value 15#64, %879 := .value 14#64, %880 := .value 8#32, %881 := .value 7#64,
+    %882 := .value 19#32, %883 := .value 61#32, %884 := .value 6#64, %885 := .value 9#64,
+    %886 := .value 80#64]
 
 /-- `^bb1`, a block's start: the constants, `K`, `X`, `&state[1 … 7]`, the state words
 `h0 … h7` (also `a … h`), `W` and the blocks left. -/
 abbrev hdr1 (st X Kp Wp : Pointer) (h0 h1 h2 h3 h4 h5 h6 h7 cnt : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  (consts E)[%20 := .value Kp, %21 := .value X, %22 := .value (st.add 8#64), %23 :=
-    .value (st.add 16#64), %24 := .value (st.add 24#64), %25 := .value (st.add 32#64), %26 :=
-    .value (st.add 40#64), %27 := .value (st.add 48#64), %28 := .value (st.add 56#64), %37 :=
-    .value h7, %38 := .value h6, %39 := .value h5, %40 := .value h4, %41 := .value h3, %42 :=
-    .value h2, %43 := .value h1, %44 := .value h0, %45 := .value Wp, %46 := .value cnt]
+  (consts E)[%873 := .value Kp, %887 := .value X, %888 := .value (st.add 8#64), %889 :=
+    .value (st.add 16#64), %890 := .value (st.add 24#64), %891 := .value (st.add 32#64), %892 :=
+    .value (st.add 40#64), %893 := .value (st.add 48#64), %894 := .value (st.add 56#64), %903 :=
+    .value h7, %904 := .value h6, %905 := .value h5, %906 := .value h4, %907 := .value h3, %908 :=
+    .value h2, %909 := .value h1, %910 := .value h0, %911 := .value Wp, %912 := .value cnt]
 
 /-- `hdr1` with the state words `H`. -/
 abbrev hdr1v (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
@@ -413,22 +419,23 @@ abbrev xNew (x0 x1 x9 x14 : BitVec 64) : BitVec 64 :=
 /-- `^bb2`, the first loop at round `i`, on `a … h`. -/
 abbrev hdr2 (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) (i : Nat) : ⟪Γ⟫ :=
-  (hdr1v st X Kp Wp H cnt E)[%47 := .value a, %48 := .value b, %49 := .value c, %50 := .value d,
-    %51 := .value (BitVec.ofNat 64 i), %52 := .value h, %53 := .value g, %54 := .value f, %55 :=
-    .value e]
+  (hdr1v st X Kp Wp H cnt E)[%913 := .value a, %914 := .value b, %915 := .value c,
+    %916 := .value d, %917 := .value (BitVec.ofNat 64 i), %918 := .value h, %919 := .value g,
+    %920 := .value f, %921 := .value e]
 
 /-- `^bb3`, the second loop at round `i`, on `a … h`. -/
 abbrev hdr3 (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) (i : Nat) : ⟪Γ⟫ :=
-  (hdr1v st X Kp Wp H cnt E)[%89 := .value a, %90 := .value b, %91 := .value c, %92 := .value d,
-    %93 := .value (BitVec.ofNat 64 i), %94 := .value h, %95 := .value g, %96 := .value f, %97 :=
-    .value e]
+  (hdr1v st X Kp Wp H cnt E)[%955 := .value a, %956 := .value b, %957 := .value c,
+    %958 := .value d, %959 := .value (BitVec.ofNat 64 i), %960 := .value h, %961 := .value g,
+    %962 := .value f, %963 := .value e]
 
 /-- `^bb4`, after the last round, with `a … h`. -/
 abbrev exit3 (st X Kp Wp : Pointer) (h0 h1 h2 h3 h4 h5 h6 h7 cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) : ⟪Γ⟫ :=
-  (hdr1 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 cnt E)[%89 := .value b, %90 := .value c, %91 := .value d,
-    %95 := .value h, %96 := .value g, %97 := .value f, %150 := .value e, %152 := .value a]
+  (hdr1 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 cnt E)[%955 := .value b, %956 := .value c,
+    %957 := .value d, %961 := .value h, %962 := .value g, %963 := .value f, %1016 := .value e,
+    %1018 := .value a]
 
 /-- `hdr2` on `a … h = v`. -/
 abbrev hdr2v (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
@@ -729,9 +736,9 @@ theorem words_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitV
   step_pure
   step_pure
   step_pure
+  step_pure [Ch_disjoint, Ch_eq]
   step_pure [hi64, hi8, gep_of_offset_zero hKo i]
   step_load consuming hk
-  step_pure [Ch_eq]
   step_pure
   step_pure
   step_pure
@@ -906,9 +913,9 @@ theorem schedule_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : B
   step_pure
   step_pure
   step_pure
+  step_pure [Ch_disjoint, Ch_eq]
   step_pure [hi64, hi8, gep_of_offset_zero hKo i]
   step_load consuming hk
-  step_pure [Ch_eq]
   step_pure
   step_pure
   step_pure
@@ -1307,8 +1314,9 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
   func_init
   have hdata₀ : Fits S₀.mem data (1024 * n.toNat) := hS ▸ hdata
   block_init
-  iterate 20 step_pure
+  iterate 7 step_pure
   step_addressof fd_sha512_core_ref_K.value_eq with Kp
+  iterate 13 step_pure
   step_alloca with X
   iterate 7 step_pure
   -- ulong a = state[0]; … ulong h = state[7];
