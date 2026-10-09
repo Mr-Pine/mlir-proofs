@@ -1,6 +1,6 @@
 module
 
--- build/native/gcc/mlir_canonicalized/avx512/region/fd_r43x6_diagnose.mlir
+-- build/llvm23/mlir_canonicalized/avx512/op/fd_r43x6_diagnose.mlir
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
@@ -16,94 +16,94 @@ namespace MLIR.Firedancer.Avx512
 @[expose] public section
 
 mlir_def fd_r43x6_diagnose :=
-{
-  ^bb0(%arg0: vector<8xi64>):
-    %0 = "llvm.mlir.constant"() <{value = 0 : i64}> : () -> i64
-    %1 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
-    %2 = "llvm.mlir.constant"() <{value = 2 : i64}> : () -> i64
-    %3 = "llvm.mlir.constant"() <{value = 3 : i64}> : () -> i64
-    %4 = "llvm.mlir.constant"() <{value = 4 : i64}> : () -> i64
-    %5 = "llvm.mlir.constant"() <{value = 5 : i64}> : () -> i64
-    %6 = "llvm.mlir.constant"() <{value = -1048576 : i64}> : () -> i64
-    %7 = "llvm.mlir.constant"() <{value = 40 : i64}> : () -> i64
-    %8 = "llvm.mlir.constant"() <{value = 1099511627775 : i64}> : () -> i64
-    %9 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
-    %10 = "llvm.mlir.constant"() <{value = 43 : i64}> : () -> i64
-    %11 = "llvm.mlir.constant"() <{value = 8796093022207 : i64}> : () -> i64
-    %12 = "llvm.mlir.constant"() <{value = 1048576 : i64}> : () -> i64
-    %13 = "llvm.mlir.constant"() <{value = 1099511627776 : i64}> : () -> i64
-    %14 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
-    %15 = "llvm.extractelement"(%arg0, %0) : (vector<8xi64>, i64) -> i64
-    %16 = "llvm.extractelement"(%arg0, %1) : (vector<8xi64>, i64) -> i64
-    %17 = "llvm.extractelement"(%arg0, %2) : (vector<8xi64>, i64) -> i64
-    %18 = "llvm.extractelement"(%arg0, %3) : (vector<8xi64>, i64) -> i64
-    %19 = "llvm.extractelement"(%arg0, %4) : (vector<8xi64>, i64) -> i64
-    %20 = "llvm.extractelement"(%arg0, %5) : (vector<8xi64>, i64) -> i64
-    %21 = "llvm.add"(%20, %6) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %22 = "llvm.ashr"(%21, %7) : (i64, i64) -> i64
-    %23 = "llvm.and"(%21, %8) : (i64, i64) -> i64
-    %24 = "llvm.mul"(%22, %9) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %25 = "llvm.add"(%24, %15) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %26 = "llvm.ashr"(%25, %10) : (i64, i64) -> i64
-    %27 = "llvm.and"(%25, %11) : (i64, i64) -> i64
-    %28 = "llvm.add"(%26, %16) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %29 = "llvm.ashr"(%28, %10) : (i64, i64) -> i64
-    %30 = "llvm.and"(%28, %11) : (i64, i64) -> i64
-    %31 = "llvm.add"(%29, %17) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %32 = "llvm.ashr"(%31, %10) : (i64, i64) -> i64
-    %33 = "llvm.and"(%31, %11) : (i64, i64) -> i64
-    %34 = "llvm.add"(%32, %18) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %35 = "llvm.ashr"(%34, %10) : (i64, i64) -> i64
-    %36 = "llvm.and"(%34, %11) : (i64, i64) -> i64
-    %37 = "llvm.add"(%35, %19) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %38 = "llvm.ashr"(%37, %10) : (i64, i64) -> i64
-    %39 = "llvm.and"(%37, %11) : (i64, i64) -> i64
-    %40 = "llvm.add"(%27, %9) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %41 = "llvm.lshr"(%40, %10) : (i64, i64) -> i64
-    %42 = "llvm.and"(%40, %11) : (i64, i64) -> i64
-    %43 = "llvm.add"(%30, %41) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %44 = "llvm.lshr"(%43, %10) : (i64, i64) -> i64
-    %45 = "llvm.and"(%43, %11) : (i64, i64) -> i64
-    %46 = "llvm.add"(%33, %44) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %47 = "llvm.lshr"(%46, %10) : (i64, i64) -> i64
-    %48 = "llvm.and"(%46, %11) : (i64, i64) -> i64
-    %49 = "llvm.add"(%36, %47) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %50 = "llvm.lshr"(%49, %10) : (i64, i64) -> i64
-    %51 = "llvm.and"(%49, %11) : (i64, i64) -> i64
-    %52 = "llvm.add"(%39, %50) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %53 = "llvm.lshr"(%52, %10) : (i64, i64) -> i64
-    %54 = "llvm.and"(%52, %11) : (i64, i64) -> i64
-    %55 = "llvm.add"(%23, %12) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %56 = "llvm.add"(%55, %38) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %57 = "llvm.add"(%56, %53) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %58 = "llvm.and"(%57, %8) : (i64, i64) -> i64
-    %59 = "llvm.icmp"(%57, %13) <{predicate = 6 : i64}> : (i64, i64) -> i1
-    %60 = "llvm.zext"(%59) : (i1) -> i32
-    %61 = "llvm.call"(%60) <{CConv = #llvm.cconv<fastcc>, callee = @fd_long_if, fastmathFlags = #llvm.fastmath<none>}> : (i32) -> i64
-    %62 = "llvm.sub"(%42, %61) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %63 = "llvm.ashr"(%62, %10) : (i64, i64) -> i64
-    %64 = "llvm.add"(%63, %45) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %65 = "llvm.ashr"(%64, %10) : (i64, i64) -> i64
-    %66 = "llvm.add"(%65, %48) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %67 = "llvm.ashr"(%66, %10) : (i64, i64) -> i64
-    %68 = "llvm.add"(%67, %51) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %69 = "llvm.ashr"(%68, %10) : (i64, i64) -> i64
-    %70 = "llvm.add"(%69, %54) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %71 = "llvm.ashr"(%70, %10) : (i64, i64) -> i64
-    %72 = "llvm.add"(%71, %58) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %73 = "llvm.or"(%64, %62) : (i64, i64) -> i64
-    %74 = "llvm.or"(%73, %66) : (i64, i64) -> i64
-    %75 = "llvm.or"(%74, %68) : (i64, i64) -> i64
-    %76 = "llvm.or"(%75, %70) : (i64, i64) -> i64
-    %77 = "llvm.and"(%76, %11) : (i64, i64) -> i64
-    %78 = "llvm.or"(%77, %72) : (i64, i64) -> i64
-    %79 = "llvm.icmp"(%78, %0) <{predicate = 0 : i64}> : (i64, i64) -> i1
-    %80 = "llvm.zext"(%79) : (i1) -> i32
-    %81 = "llvm.trunc"(%62) : (i64) -> i32
-    %82 = "llvm.and"(%81, %14) : (i32, i32) -> i32
-    %83 = "llvm.call"(%80, %82) <{CConv = #llvm.cconv<fastcc>, callee = @fd_int_if, fastmathFlags = #llvm.fastmath<none>}> : (i32, i32) -> i32
-    "llvm.return"(%83) : (i32) -> ()
-}
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.noundef}], dso_local, function_type = !llvm.func<i32 (vector<8xi64>)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "512"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "icelake-server"]], res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, -1, 2>}], sym_name = "fd_r43x6_diagnose", target_cpu = "icelake-server", target_features = #llvm.target_features<["+adx", "+aes", "+avx", "+avx2", "+avx512bitalg", "+avx512bw", "+avx512cd", "+avx512dq", "+avx512f", "+avx512ifma", "+avx512vbmi", "+avx512vbmi2", "+avx512vl", "+avx512vnni", "+avx512vpopcntdq", "+bmi", "+bmi2", "+clflushopt", "+clwb", "+cmov", "+crc32", "+cx16", "+cx8", "+f16c", "+fma", "+fsgsbase", "+fxsr", "+gfni", "+invpcid", "+lzcnt", "+mmx", "+movbe", "+pclmul", "+pconfig", "+pku", "+popcnt", "+prfchw", "+rdpid", "+rdrnd", "+rdseed", "+sahf", "+sgx", "+sha", "+sse", "+sse2", "+sse3", "+sse4.1", "+sse4.2", "+ssse3", "+vaes", "+vpclmulqdq", "+wbnoinvd", "+x87", "+xsave", "+xsavec", "+xsaveopt", "+xsaves"]>, unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg23: vector<8xi64>):
+  %129 = "llvm.mlir.constant"() <{value = 0 : i64}> : () -> i64
+  %130 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
+  %131 = "llvm.mlir.constant"() <{value = 2 : i64}> : () -> i64
+  %132 = "llvm.mlir.constant"() <{value = 3 : i64}> : () -> i64
+  %133 = "llvm.mlir.constant"() <{value = 4 : i64}> : () -> i64
+  %134 = "llvm.mlir.constant"() <{value = 5 : i64}> : () -> i64
+  %135 = "llvm.mlir.constant"() <{value = -1048576 : i64}> : () -> i64
+  %136 = "llvm.mlir.constant"() <{value = 40 : i64}> : () -> i64
+  %137 = "llvm.mlir.constant"() <{value = 1099511627775 : i64}> : () -> i64
+  %138 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
+  %139 = "llvm.mlir.constant"() <{value = 43 : i64}> : () -> i64
+  %140 = "llvm.mlir.constant"() <{value = 8796093022207 : i64}> : () -> i64
+  %141 = "llvm.mlir.constant"() <{value = 1048576 : i64}> : () -> i64
+  %142 = "llvm.mlir.constant"() <{value = 1099511627776 : i64}> : () -> i64
+  %143 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+  %144 = "llvm.extractelement"(%arg23, %129) : (vector<8xi64>, i64) -> i64
+  %145 = "llvm.extractelement"(%arg23, %130) : (vector<8xi64>, i64) -> i64
+  %146 = "llvm.extractelement"(%arg23, %131) : (vector<8xi64>, i64) -> i64
+  %147 = "llvm.extractelement"(%arg23, %132) : (vector<8xi64>, i64) -> i64
+  %148 = "llvm.extractelement"(%arg23, %133) : (vector<8xi64>, i64) -> i64
+  %149 = "llvm.extractelement"(%arg23, %134) : (vector<8xi64>, i64) -> i64
+  %150 = "llvm.add"(%149, %135) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %151 = "llvm.ashr"(%150, %136) : (i64, i64) -> i64
+  %152 = "llvm.and"(%150, %137) : (i64, i64) -> i64
+  %153 = "llvm.mul"(%151, %138) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %154 = "llvm.add"(%153, %144) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %155 = "llvm.ashr"(%154, %139) : (i64, i64) -> i64
+  %156 = "llvm.and"(%154, %140) : (i64, i64) -> i64
+  %157 = "llvm.add"(%155, %145) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %158 = "llvm.ashr"(%157, %139) : (i64, i64) -> i64
+  %159 = "llvm.and"(%157, %140) : (i64, i64) -> i64
+  %160 = "llvm.add"(%158, %146) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %161 = "llvm.ashr"(%160, %139) : (i64, i64) -> i64
+  %162 = "llvm.and"(%160, %140) : (i64, i64) -> i64
+  %163 = "llvm.add"(%161, %147) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %164 = "llvm.ashr"(%163, %139) : (i64, i64) -> i64
+  %165 = "llvm.and"(%163, %140) : (i64, i64) -> i64
+  %166 = "llvm.add"(%164, %148) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %167 = "llvm.ashr"(%166, %139) : (i64, i64) -> i64
+  %168 = "llvm.and"(%166, %140) : (i64, i64) -> i64
+  %169 = "llvm.add"(%156, %138) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %170 = "llvm.lshr"(%169, %139) : (i64, i64) -> i64
+  %171 = "llvm.and"(%169, %140) : (i64, i64) -> i64
+  %172 = "llvm.add"(%159, %170) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %173 = "llvm.lshr"(%172, %139) : (i64, i64) -> i64
+  %174 = "llvm.and"(%172, %140) : (i64, i64) -> i64
+  %175 = "llvm.add"(%162, %173) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %176 = "llvm.lshr"(%175, %139) : (i64, i64) -> i64
+  %177 = "llvm.and"(%175, %140) : (i64, i64) -> i64
+  %178 = "llvm.add"(%165, %176) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %179 = "llvm.lshr"(%178, %139) : (i64, i64) -> i64
+  %180 = "llvm.and"(%178, %140) : (i64, i64) -> i64
+  %181 = "llvm.add"(%168, %179) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %182 = "llvm.lshr"(%181, %139) : (i64, i64) -> i64
+  %183 = "llvm.and"(%181, %140) : (i64, i64) -> i64
+  %184 = "llvm.add"(%152, %141) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %185 = "llvm.add"(%184, %167) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %186 = "llvm.add"(%185, %182) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %187 = "llvm.and"(%186, %137) : (i64, i64) -> i64
+  %188 = "llvm.icmp"(%186, %142) <{predicate = 6 : i64}> : (i64, i64) -> i1
+  %189 = "llvm.zext"(%188) : (i1) -> i32
+  %190 = "llvm.call"(%189) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}], callee = @fd_long_if, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (i32) -> i64
+  %191 = "llvm.sub"(%171, %190) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %192 = "llvm.ashr"(%191, %139) : (i64, i64) -> i64
+  %193 = "llvm.add"(%192, %174) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %194 = "llvm.ashr"(%193, %139) : (i64, i64) -> i64
+  %195 = "llvm.add"(%194, %177) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %196 = "llvm.ashr"(%195, %139) : (i64, i64) -> i64
+  %197 = "llvm.add"(%196, %180) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %198 = "llvm.ashr"(%197, %139) : (i64, i64) -> i64
+  %199 = "llvm.add"(%198, %183) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %200 = "llvm.ashr"(%199, %139) : (i64, i64) -> i64
+  %201 = "llvm.add"(%200, %187) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %202 = "llvm.or"(%193, %191) : (i64, i64) -> i64
+  %203 = "llvm.or"(%202, %195) : (i64, i64) -> i64
+  %204 = "llvm.or"(%203, %197) : (i64, i64) -> i64
+  %205 = "llvm.or"(%204, %199) : (i64, i64) -> i64
+  %206 = "llvm.and"(%205, %140) : (i64, i64) -> i64
+  %207 = "llvm.or"(%206, %201) : (i64, i64) -> i64
+  %208 = "llvm.icmp"(%207, %129) <{predicate = 0 : i64}> : (i64, i64) -> i1
+  %209 = "llvm.zext"(%208) : (i1) -> i32
+  %210 = "llvm.trunc"(%191) <{overflowFlags = 0 : i32}> : (i64) -> i32
+  %211 = "llvm.and"(%210, %143) : (i32, i32) -> i32
+  %212 = "llvm.call"(%209, %211) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_int_if, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i32, i32) -> i32
+  "llvm.return"(%212) : (i32) -> ()
+}) : () -> ()
   with @fd_int_if := fd_int_if, @fd_long_if := fd_long_if
 
 end

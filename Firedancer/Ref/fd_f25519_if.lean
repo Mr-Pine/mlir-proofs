@@ -22,11 +22,19 @@ end
 
 section Proof
 
+/-- `trunc nuw` of a byte-sized `cond` is defined. -/
+theorem setWidth_setWidth_of_lt {cond : BitVec 32} (hcond : cond.toNat < 256) :
+    (cond.setWidth 8).setWidth 32 = cond := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_setWidth]
+  omega
+
 /-- `fd_f25519_if` stores `spec cond a0 a1` at `r` and returns `r`; `r` may alias `a0` or `a1`.
-`selectznz`'s five temporaries are freed again: only the counter moves on. -/
+`selectznz`'s five temporaries are freed again: only the counter moves on.
+`hcond` is the `range(0, 256)` that makes `(uchar)cond` a `trunc nuw`. -/
 public theorem fd_f25519_if.call_eq (r : Pointer) (cond : BitVec 32) (a0 a1 : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hr : s.mem.LimbsFit r) (ha0 : s.mem.LimbsFit a0)
-    (ha1 : s.mem.LimbsFit a1) :
+    (hcond : cond.toNat < 256) (s : GlobalState) (hwf : s.WF) (hr : s.mem.LimbsFit r)
+    (ha0 : s.mem.LimbsFit a0) (ha1 : s.mem.LimbsFit a1) :
     fd_f25519_if.call (fd_f25519_if.args (.value r) (.value cond) (.value a0) (.value a1)) s =
       .value
         (.cons (.value r) .nil,
@@ -37,7 +45,7 @@ public theorem fd_f25519_if.call_eq (r : Pointer) (cond : BitVec 32) (a0 a1 : Po
   func_init
   block_init
   -- fiat_25519_selectznz( r->el, (uchar)cond, a1->el, a0->el );
-  step_pure
+  step_pure [setWidth_setWidth_of_lt hcond]
   step_call using fiat_25519_selectznz.call_eq
   finish_block
   clear_reads

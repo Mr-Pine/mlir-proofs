@@ -54,6 +54,7 @@ public theorem fiat_25519_addcarryx_u51.call_eq (out1 out2 : Pointer) (arg1 : Bi
   finish_block
   rw [hS]
   subst_vars
+  rw [BitVec.add_comm arg2]
   rfl
 
 end Proof

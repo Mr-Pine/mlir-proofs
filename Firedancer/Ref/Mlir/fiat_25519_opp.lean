@@ -1,6 +1,6 @@
 module
 
--- build/native/gcc/mlir_canonicalized/ref/region/fiat_25519_opp.mlir
+-- build/llvm23/mlir_canonicalized/ref/op/fiat_25519_opp.mlir
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
@@ -12,35 +12,39 @@ namespace MLIR.Firedancer.Ref
 @[expose] public section
 
 mlir_def fiat_25519_opp :=
-{
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-    %0 = "llvm.mlir.constant"() <{value = 4503599627370458 : i64}> : () -> i64
-    %1 = "llvm.mlir.constant"() <{value = 4503599627370494 : i64}> : () -> i64
-    %2 = "llvm.load"(%arg1) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %3 = "llvm.sub"(%0, %2) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %4 = "llvm.getelementptr"(%arg1) <{elem_type = i64, rawConstantIndices = array<i32: 1>}> : (!llvm.ptr) -> !llvm.ptr
-    %5 = "llvm.load"(%4) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %6 = "llvm.sub"(%1, %5) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %7 = "llvm.getelementptr"(%arg1) <{elem_type = i64, rawConstantIndices = array<i32: 2>}> : (!llvm.ptr) -> !llvm.ptr
-    %8 = "llvm.load"(%7) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %9 = "llvm.sub"(%1, %8) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %10 = "llvm.getelementptr"(%arg1) <{elem_type = i64, rawConstantIndices = array<i32: 3>}> : (!llvm.ptr) -> !llvm.ptr
-    %11 = "llvm.load"(%10) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %12 = "llvm.sub"(%1, %11) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %13 = "llvm.getelementptr"(%arg1) <{elem_type = i64, rawConstantIndices = array<i32: 4>}> : (!llvm.ptr) -> !llvm.ptr
-    %14 = "llvm.load"(%13) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %15 = "llvm.sub"(%1, %14) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%3, %arg0) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %16 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 1>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%6, %16) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %17 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 2>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%9, %17) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %18 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 3>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%12, %18) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %19 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 4>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%15, %19) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    "llvm.return"() : () -> ()
-}
+#tbaa_root = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "long", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag1 = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nofree, llvm.nonnull, llvm.noundef, llvm.writeonly}, {llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}], dso_local, function_type = !llvm.func<void (ptr, ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"]], sym_name = "fiat_25519_opp", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg24: !llvm.ptr, %arg25: !llvm.ptr):
+  %428 = "llvm.mlir.constant"() <{value = 4503599627370458 : i64}> : () -> i64
+  %429 = "llvm.mlir.constant"() <{value = 4503599627370494 : i64}> : () -> i64
+  %430 = "llvm.load"(%arg25) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %431 = "llvm.sub"(%428, %430) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %432 = "llvm.getelementptr"(%arg25) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %433 = "llvm.load"(%432) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %434 = "llvm.sub"(%429, %433) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %435 = "llvm.getelementptr"(%arg25) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %436 = "llvm.load"(%435) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %437 = "llvm.sub"(%429, %436) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %438 = "llvm.getelementptr"(%arg25) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %439 = "llvm.load"(%438) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %440 = "llvm.sub"(%429, %439) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %441 = "llvm.getelementptr"(%arg25) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %442 = "llvm.load"(%441) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %443 = "llvm.sub"(%429, %442) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%431, %arg24) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %444 = "llvm.getelementptr"(%arg24) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%434, %444) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %445 = "llvm.getelementptr"(%arg24) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%437, %445) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %446 = "llvm.getelementptr"(%arg24) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%440, %446) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %447 = "llvm.getelementptr"(%arg24) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%443, %447) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  "llvm.return"() : () -> ()
+}) : () -> ()
 
 end
 

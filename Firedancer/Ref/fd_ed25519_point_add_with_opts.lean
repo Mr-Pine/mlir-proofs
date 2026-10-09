@@ -127,8 +127,8 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
         (fd_ed25519_point_add_with_opts.args (.value r) (.value a) (.value b) (.value b_Z_is_one)
             (.value b_is_precomputed) (.value skip_last_mul)).get)
     (hR :
-      E ⊨ [%1 := 0#32, %3 := r1, %4 := r2, %5 := r3, %6 := r4, %7 := r5, %8 := r6, %9 := r7,
-        %10 := r8, %11 := t])
+      E ⊨ [%1886 := 0#32, %1888 := r1, %1889 := r2, %1890 := r3, %1891 := r4, %1892 := r5, %1893 := r6, %1894 := r7,
+        %1895 := r8, %1896 := t])
     (hwf : S.WF) (hr : S.mem.PointFit r) (hr1 : S.mem.LimbsFit r1) (hr2 : S.mem.LimbsFit r2)
     (hr3 : S.mem.LimbsFit r3) (hr4 : S.mem.LimbsFit r4) (hr5 : S.mem.LimbsFit r5)
     (hr6 : S.mem.LimbsFit r6) (hr7 : S.mem.LimbsFit r7) (hr8 : S.mem.LimbsFit r8)

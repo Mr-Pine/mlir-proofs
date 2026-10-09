@@ -1,6 +1,6 @@
 module
 
--- build/native/gcc/mlir_canonicalized/avx512/region/fd_curve25519_into_precomputed.mlir
+-- build/llvm23/mlir_canonicalized/avx512/op/fd_curve25519_into_precomputed.mlir
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
@@ -14,138 +14,138 @@ namespace MLIR.Firedancer.Avx512
 @[expose] public section
 
 mlir_def fd_curve25519_into_precomputed :=
-{
-  ^bb0(%arg0: !llvm.ptr):
-    %0 = "llvm.mlir.constant"() <{value = dense<[0, 0, 0, 15037786634, 0, 0, 0, 309467527341]> : vector<8xi64>}> : () -> vector<8xi64>
-    %1 = "llvm.mlir.constant"() <{value = dense<[0, 0, 0, 507525298899, 0, 0, 0, 6596238350568]> : vector<8xi64>}> : () -> vector<8xi64>
-    %2 = "llvm.mlir.constant"() <{value = dense<[1, 1, 1, 3934839304537, 0, 0, 0, 521695520920]> : vector<8xi64>}> : () -> vector<8xi64>
-    %3 = "llvm.mlir.constant"() <{value = dense<[8796093022207, 8796093022207, 8796093022207, 8796093022207, 1099511627775, 1099511627775, 1099511627775, 1099511627775]> : vector<8xi64>}> : () -> vector<8xi64>
-    %4 = "llvm.mlir.constant"() <{value = dense<1048576> : vector<8xi64>}> : () -> vector<8xi64>
-    %5 = "llvm.mlir.constant"() <{value = dense<[159383552, 159383552, 159383552, 159383552, 1048576, 1048576, 1048576, 1048576]> : vector<8xi64>}> : () -> vector<8xi64>
-    %6 = "llvm.mlir.constant"() <{value = dense<8796093022207> : vector<8xi64>}> : () -> vector<8xi64>
-    %7 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
-    %8 = "llvm.mlir.constant"() <{value = dense<[43, 43, 43, 43, 40, 40, 40, 40]> : vector<8xi64>}> : () -> vector<8xi64>
-    %9 = "llvm.mlir.constant"() <{value = dense<43> : vector<8xi64>}> : () -> vector<8xi64>
-    %10 = "llvm.mlir.constant"() <{value = dense<-1048576> : vector<8xi64>}> : () -> vector<8xi64>
-    %11 = "llvm.mlir.constant"() <{value = dense<[-159383552, -159383552, -159383552, -159383552, -1048576, -1048576, -1048576, -1048576]> : vector<8xi64>}> : () -> vector<8xi64>
-    %12 = "llvm.mlir.constant"() <{value = 1099511627775 : i64}> : () -> i64
-    %13 = "llvm.mlir.constant"() <{value = 7 : i32}> : () -> i32
-    %14 = "llvm.mlir.constant"() <{value = 6 : i32}> : () -> i32
-    %15 = "llvm.mlir.constant"() <{value = 5 : i32}> : () -> i32
-    %16 = "llvm.mlir.constant"() <{value = 4 : i32}> : () -> i32
-    %17 = "llvm.mlir.constant"() <{value = 3 : i32}> : () -> i32
-    %18 = "llvm.mlir.constant"() <{value = 0 : i32}> : () -> i32
-    %19 = "llvm.mlir.constant"() <{value = 8796093022189 : i64}> : () -> i64
-    %20 = "llvm.mlir.constant"() <{value = 8796093022207 : i64}> : () -> i64
-    %21 = "llvm.mlir.constant"() <{value = 2 : i32}> : () -> i32
-    %22 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
-    %23 = "llvm.mlir.poison"() : () -> vector<8xi64>
-    %24 = "llvm.mlir.poison"() : () -> i64
-    %25 = "llvm.mlir.undef"() : () -> vector<8xi64>
-    %26 = "llvm.insertelement"(%25, %19, %18) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %27 = "llvm.insertelement"(%26, %24, %22) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %28 = "llvm.insertelement"(%27, %24, %21) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %29 = "llvm.insertelement"(%28, %24, %17) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %30 = "llvm.insertelement"(%29, %20, %16) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %31 = "llvm.insertelement"(%30, %24, %15) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %32 = "llvm.insertelement"(%31, %24, %14) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %33 = "llvm.insertelement"(%32, %24, %13) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %34 = "llvm.mlir.undef"() : () -> vector<8xi64>
-    %35 = "llvm.insertelement"(%34, %20, %18) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %36 = "llvm.insertelement"(%35, %24, %22) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %37 = "llvm.insertelement"(%36, %24, %21) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %38 = "llvm.insertelement"(%37, %24, %17) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %39 = "llvm.insertelement"(%38, %20, %16) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %40 = "llvm.insertelement"(%39, %24, %15) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %41 = "llvm.insertelement"(%40, %24, %14) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %42 = "llvm.insertelement"(%41, %24, %13) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %43 = "llvm.mlir.undef"() : () -> vector<8xi64>
-    %44 = "llvm.insertelement"(%43, %20, %18) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %45 = "llvm.insertelement"(%44, %24, %22) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %46 = "llvm.insertelement"(%45, %24, %21) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %47 = "llvm.insertelement"(%46, %24, %17) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %48 = "llvm.insertelement"(%47, %12, %16) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %49 = "llvm.insertelement"(%48, %24, %15) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %50 = "llvm.insertelement"(%49, %24, %14) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %51 = "llvm.insertelement"(%50, %24, %13) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %52 = "llvm.mlir.undef"() : () -> vector<8xi64>
-    %53 = "llvm.insertelement"(%52, %24, %18) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %54 = "llvm.insertelement"(%53, %24, %22) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %55 = "llvm.insertelement"(%54, %24, %21) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %56 = "llvm.insertelement"(%55, %24, %17) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %57 = "llvm.insertelement"(%56, %7, %16) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %58 = "llvm.insertelement"(%57, %7, %15) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %59 = "llvm.insertelement"(%58, %7, %14) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %60 = "llvm.insertelement"(%59, %7, %13) : (vector<8xi64>, i64, i32) -> vector<8xi64>
-    %61 = "llvm.alloca"(%22) <{alignment = 64 : i64, elem_type = vector<8xi64>}> : (i32) -> !llvm.ptr
-    %62 = "llvm.alloca"(%22) <{alignment = 64 : i64, elem_type = vector<8xi64>}> : (i32) -> !llvm.ptr
-    %63 = "llvm.alloca"(%22) <{alignment = 64 : i64, elem_type = vector<8xi64>}> : (i32) -> !llvm.ptr
-    %64 = "llvm.load"(%arg0) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
-    %65 = "llvm.shufflevector"(%64, %23) <{mask = array<i32: 1, 0, 2, 3, 5, 4, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %66 = "llvm.getelementptr"(%arg0) <{elem_type = !llvm.struct<"struct.fd_curve25519_edwards", (vector<8xi64>, vector<8xi64>, vector<8xi64>)>, inbounds, rawConstantIndices = array<i32: 0, 1>}> : (!llvm.ptr) -> !llvm.ptr
-    %67 = "llvm.load"(%66) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
-    %68 = "llvm.shufflevector"(%67, %23) <{mask = array<i32: 1, 0, 2, 3, 5, 4, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %69 = "llvm.getelementptr"(%arg0) <{elem_type = !llvm.struct<"struct.fd_curve25519_edwards", (vector<8xi64>, vector<8xi64>, vector<8xi64>)>, inbounds, rawConstantIndices = array<i32: 0, 2>}> : (!llvm.ptr) -> !llvm.ptr
-    %70 = "llvm.load"(%69) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
-    %71 = "llvm.shufflevector"(%70, %23) <{mask = array<i32: 1, 0, 2, 3, 5, 4, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %72 = "llvm.sub"(%65, %64) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %73 = "llvm.add"(%72, %33) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %74 = "llvm.shufflevector"(%73, %65) <{mask = array<i32: 0, 9, 10, 11, 4, 13, 14, 15>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %75 = "llvm.sub"(%68, %67) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %76 = "llvm.add"(%75, %42) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %77 = "llvm.shufflevector"(%76, %68) <{mask = array<i32: 0, 9, 10, 11, 4, 13, 14, 15>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %78 = "llvm.sub"(%71, %70) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %79 = "llvm.add"(%78, %51) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %80 = "llvm.shufflevector"(%79, %71) <{mask = array<i32: 0, 9, 10, 11, 4, 13, 14, 15>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %81 = "llvm.add"(%74, %64) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %82 = "llvm.shufflevector"(%74, %81) <{mask = array<i32: 0, 9, 2, 3, 4, 13, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %83 = "llvm.add"(%77, %67) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %84 = "llvm.shufflevector"(%77, %83) <{mask = array<i32: 0, 9, 2, 3, 4, 13, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %85 = "llvm.add"(%80, %70) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %86 = "llvm.shufflevector"(%80, %85) <{mask = array<i32: 0, 9, 2, 3, 4, 13, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %87 = "llvm.add"(%82, %11) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %88 = "llvm.add"(%84, %10) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %89 = "llvm.add"(%86, %10) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %90 = "llvm.ashr"(%87, %9) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %91 = "llvm.ashr"(%88, %9) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %92 = "llvm.ashr"(%89, %8) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %93 = "llvm.mul"(%92, %60) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %94 = "llvm.and"(%87, %6) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %95 = "llvm.shufflevector"(%93, %92) <{mask = array<i32: 4, 5, 6, 7, 8, 9, 10, 11>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %96 = "llvm.add"(%94, %5) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %97 = "llvm.add"(%96, %95) <{overflowFlags = #llvm.overflow<none>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %98 = "llvm.and"(%88, %6) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %99 = "llvm.add"(%90, %4) <{overflowFlags = #llvm.overflow<nsw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %100 = "llvm.add"(%99, %98) <{overflowFlags = #llvm.overflow<nsw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %101 = "llvm.and"(%89, %3) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %102 = "llvm.add"(%91, %4) <{overflowFlags = #llvm.overflow<nsw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %103 = "llvm.add"(%102, %101) <{overflowFlags = #llvm.overflow<nsw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    "llvm.intr.lifetime.start"(%61) <{size = 64 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.start"(%62) <{size = 64 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.start"(%63) <{size = 64 : i64}> : (!llvm.ptr) -> ()
-    "llvm.call"(%61, %62, %63, %97, %100, %103, %2, %1, %0) <{CConv = #llvm.cconv<fastcc>, callee = @fd_r43x6_quad_mul_fast, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr, vector<8xi64>, vector<8xi64>, vector<8xi64>, vector<8xi64>, vector<8xi64>, vector<8xi64>) -> ()
-    %104 = "llvm.load"(%61) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
-    %105 = "llvm.load"(%62) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
-    %106 = "llvm.load"(%63) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
-    "llvm.intr.lifetime.end"(%63) <{size = 64 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%62) <{size = 64 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%61) <{size = 64 : i64}> : (!llvm.ptr) -> ()
-    %107 = "llvm.lshr"(%104, %9) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %108 = "llvm.lshr"(%105, %9) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %109 = "llvm.lshr"(%106, %8) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %110 = "llvm.mul"(%109, %60) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %111 = "llvm.and"(%104, %6) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %112 = "llvm.shufflevector"(%110, %109) <{mask = array<i32: 4, 5, 6, 7, 8, 9, 10, 11>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %113 = "llvm.add"(%112, %111) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    "llvm.store"(%113, %arg0) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (vector<8xi64>, !llvm.ptr) -> ()
-    %114 = "llvm.and"(%105, %6) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %115 = "llvm.add"(%114, %107) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    "llvm.store"(%115, %66) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (vector<8xi64>, !llvm.ptr) -> ()
-    %116 = "llvm.and"(%106, %3) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    %117 = "llvm.add"(%116, %108) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
-    "llvm.store"(%117, %69) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (vector<8xi64>, !llvm.ptr) -> ()
-    "llvm.return"() : () -> ()
-}
+#tbaa_root = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc, access_type = #tbaa_type_desc, offset = 0>
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nofree, llvm.nonnull, llvm.noundef}], dso_local, function_type = !llvm.func<void (ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "512"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "icelake-server"]], sym_name = "fd_curve25519_into_precomputed", target_cpu = "icelake-server", target_features = #llvm.target_features<["+adx", "+aes", "+avx", "+avx2", "+avx512bitalg", "+avx512bw", "+avx512cd", "+avx512dq", "+avx512f", "+avx512ifma", "+avx512vbmi", "+avx512vbmi2", "+avx512vl", "+avx512vnni", "+avx512vpopcntdq", "+bmi", "+bmi2", "+clflushopt", "+clwb", "+cmov", "+crc32", "+cx16", "+cx8", "+f16c", "+fma", "+fsgsbase", "+fxsr", "+gfni", "+invpcid", "+lzcnt", "+mmx", "+movbe", "+pclmul", "+pconfig", "+pku", "+popcnt", "+prfchw", "+rdpid", "+rdrnd", "+rdseed", "+sahf", "+sgx", "+sha", "+sse", "+sse2", "+sse3", "+sse4.1", "+sse4.2", "+ssse3", "+vaes", "+vpclmulqdq", "+wbnoinvd", "+x87", "+xsave", "+xsavec", "+xsaveopt", "+xsaves"]>, unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg120: !llvm.ptr):
+  %2810 = "llvm.mlir.constant"() <{value = dense<[0, 0, 0, 15037786634, 0, 0, 0, 309467527341]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2811 = "llvm.mlir.constant"() <{value = dense<[0, 0, 0, 507525298899, 0, 0, 0, 6596238350568]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2812 = "llvm.mlir.constant"() <{value = dense<[1, 1, 1, 3934839304537, 0, 0, 0, 521695520920]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2813 = "llvm.mlir.constant"() <{value = dense<[8796093022207, 8796093022207, 8796093022207, 8796093022207, 1099511627775, 1099511627775, 1099511627775, 1099511627775]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2814 = "llvm.mlir.constant"() <{value = dense<1048576> : vector<8xi64>}> : () -> vector<8xi64>
+  %2815 = "llvm.mlir.constant"() <{value = dense<[159383552, 159383552, 159383552, 159383552, 1048576, 1048576, 1048576, 1048576]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2816 = "llvm.mlir.constant"() <{value = dense<8796093022207> : vector<8xi64>}> : () -> vector<8xi64>
+  %2817 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
+  %2818 = "llvm.mlir.constant"() <{value = dense<[43, 43, 43, 43, 40, 40, 40, 40]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2819 = "llvm.mlir.constant"() <{value = dense<43> : vector<8xi64>}> : () -> vector<8xi64>
+  %2820 = "llvm.mlir.constant"() <{value = dense<-1048576> : vector<8xi64>}> : () -> vector<8xi64>
+  %2821 = "llvm.mlir.constant"() <{value = dense<[-159383552, -159383552, -159383552, -159383552, -1048576, -1048576, -1048576, -1048576]> : vector<8xi64>}> : () -> vector<8xi64>
+  %2822 = "llvm.mlir.constant"() <{value = 1099511627775 : i64}> : () -> i64
+  %2823 = "llvm.mlir.constant"() <{value = 7 : i32}> : () -> i32
+  %2824 = "llvm.mlir.constant"() <{value = 6 : i32}> : () -> i32
+  %2825 = "llvm.mlir.constant"() <{value = 5 : i32}> : () -> i32
+  %2826 = "llvm.mlir.constant"() <{value = 4 : i32}> : () -> i32
+  %2827 = "llvm.mlir.constant"() <{value = 3 : i32}> : () -> i32
+  %2828 = "llvm.mlir.constant"() <{value = 2 : i32}> : () -> i32
+  %2829 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+  %2830 = "llvm.mlir.poison"() : () -> vector<8xi64>
+  %2831 = "llvm.mlir.poison"() : () -> i64
+  %2832 = "llvm.mlir.constant"() <{value = 8796093022207 : i64}> : () -> i64
+  %2833 = "llvm.mlir.constant"() <{value = 8796093022189 : i64}> : () -> i64
+  %2834 = "llvm.mlir.undef"() : () -> vector<8xi64>
+  %2835 = "llvm.mlir.constant"() <{value = 0 : i32}> : () -> i32
+  %2836 = "llvm.insertelement"(%2834, %2833, %2835) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2837 = "llvm.insertelement"(%2836, %2831, %2829) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2838 = "llvm.insertelement"(%2837, %2831, %2828) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2839 = "llvm.insertelement"(%2838, %2831, %2827) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2840 = "llvm.insertelement"(%2839, %2832, %2826) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2841 = "llvm.insertelement"(%2840, %2831, %2825) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2842 = "llvm.insertelement"(%2841, %2831, %2824) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2843 = "llvm.insertelement"(%2842, %2831, %2823) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2844 = "llvm.insertelement"(%2834, %2832, %2835) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2845 = "llvm.insertelement"(%2844, %2831, %2829) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2846 = "llvm.insertelement"(%2845, %2831, %2828) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2847 = "llvm.insertelement"(%2846, %2831, %2827) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2848 = "llvm.insertelement"(%2847, %2832, %2826) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2849 = "llvm.insertelement"(%2848, %2831, %2825) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2850 = "llvm.insertelement"(%2849, %2831, %2824) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2851 = "llvm.insertelement"(%2850, %2831, %2823) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2852 = "llvm.insertelement"(%2834, %2832, %2835) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2853 = "llvm.insertelement"(%2852, %2831, %2829) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2854 = "llvm.insertelement"(%2853, %2831, %2828) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2855 = "llvm.insertelement"(%2854, %2831, %2827) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2856 = "llvm.insertelement"(%2855, %2822, %2826) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2857 = "llvm.insertelement"(%2856, %2831, %2825) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2858 = "llvm.insertelement"(%2857, %2831, %2824) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2859 = "llvm.insertelement"(%2858, %2831, %2823) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2860 = "llvm.insertelement"(%2834, %2831, %2835) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2861 = "llvm.insertelement"(%2860, %2831, %2829) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2862 = "llvm.insertelement"(%2861, %2831, %2828) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2863 = "llvm.insertelement"(%2862, %2831, %2827) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2864 = "llvm.insertelement"(%2863, %2817, %2826) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2865 = "llvm.insertelement"(%2864, %2817, %2825) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2866 = "llvm.insertelement"(%2865, %2817, %2824) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2867 = "llvm.insertelement"(%2866, %2817, %2823) : (vector<8xi64>, i64, i32) -> vector<8xi64>
+  %2868 = "llvm.alloca"(%2829) <{alignment = 64 : i64, elem_type = vector<8xi64>}> : (i32) -> !llvm.ptr
+  %2869 = "llvm.alloca"(%2829) <{alignment = 64 : i64, elem_type = vector<8xi64>}> : (i32) -> !llvm.ptr
+  %2870 = "llvm.alloca"(%2829) <{alignment = 64 : i64, elem_type = vector<8xi64>}> : (i32) -> !llvm.ptr
+  %2871 = "llvm.load"(%arg120) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
+  %2872 = "llvm.shufflevector"(%2871, %2830) <{mask = array<i32: 1, -1, -1, -1, 5, -1, -1, -1>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2873 = "llvm.getelementptr"(%arg120) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 64>}> : (!llvm.ptr) -> !llvm.ptr
+  %2874 = "llvm.load"(%2873) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
+  %2875 = "llvm.shufflevector"(%2874, %2830) <{mask = array<i32: 1, -1, -1, -1, 5, -1, -1, -1>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2876 = "llvm.getelementptr"(%arg120) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 128>}> : (!llvm.ptr) -> !llvm.ptr
+  %2877 = "llvm.load"(%2876) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
+  %2878 = "llvm.shufflevector"(%2877, %2830) <{mask = array<i32: 1, -1, -1, -1, 5, -1, -1, -1>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2879 = "llvm.sub"(%2872, %2871) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2880 = "llvm.add"(%2879, %2843) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2881 = "llvm.shufflevector"(%2880, %2871) <{mask = array<i32: 0, 8, 10, 11, 4, 12, 14, 15>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2882 = "llvm.sub"(%2875, %2874) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2883 = "llvm.add"(%2882, %2851) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2884 = "llvm.shufflevector"(%2883, %2874) <{mask = array<i32: 0, 8, 10, 11, 4, 12, 14, 15>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2885 = "llvm.sub"(%2878, %2877) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2886 = "llvm.add"(%2885, %2859) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2887 = "llvm.shufflevector"(%2886, %2877) <{mask = array<i32: 0, 8, 10, 11, 4, 12, 14, 15>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2888 = "llvm.add"(%2881, %2871) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2889 = "llvm.shufflevector"(%2881, %2888) <{mask = array<i32: 0, 9, 2, 3, 4, 13, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2890 = "llvm.add"(%2884, %2874) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2891 = "llvm.shufflevector"(%2884, %2890) <{mask = array<i32: 0, 9, 2, 3, 4, 13, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2892 = "llvm.add"(%2887, %2877) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2893 = "llvm.shufflevector"(%2887, %2892) <{mask = array<i32: 0, 9, 2, 3, 4, 13, 6, 7>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2894 = "llvm.add"(%2889, %2821) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2895 = "llvm.add"(%2891, %2820) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2896 = "llvm.add"(%2893, %2820) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2897 = "llvm.ashr"(%2894, %2819) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2898 = "llvm.ashr"(%2895, %2819) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2899 = "llvm.ashr"(%2896, %2818) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2900 = "llvm.mul"(%2899, %2867) <{overflowFlags = 1 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2901 = "llvm.and"(%2894, %2816) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2902 = "llvm.shufflevector"(%2900, %2899) <{mask = array<i32: 4, 5, 6, 7, 8, 9, 10, 11>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2903 = "llvm.add"(%2901, %2815) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2904 = "llvm.add"(%2903, %2902) <{overflowFlags = 0 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2905 = "llvm.and"(%2895, %2816) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2906 = "llvm.add"(%2897, %2814) <{overflowFlags = 1 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2907 = "llvm.add"(%2906, %2905) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2908 = "llvm.and"(%2896, %2813) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2909 = "llvm.add"(%2898, %2814) <{overflowFlags = 1 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2910 = "llvm.add"(%2909, %2908) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  "llvm.intr.lifetime.start"(%2868) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.start"(%2869) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.start"(%2870) : (!llvm.ptr) -> ()
+  "llvm.call"(%2868, %2869, %2870, %2904, %2907, %2910, %2812, %2811, %2810) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}], callee = @fd_r43x6_quad_mul_fast, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 9, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr, vector<8xi64>, vector<8xi64>, vector<8xi64>, vector<8xi64>, vector<8xi64>, vector<8xi64>) -> ()
+  %2911 = "llvm.load"(%2868) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
+  %2912 = "llvm.load"(%2869) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
+  %2913 = "llvm.load"(%2870) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> vector<8xi64>
+  "llvm.intr.lifetime.end"(%2870) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%2869) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%2868) : (!llvm.ptr) -> ()
+  %2914 = "llvm.lshr"(%2911, %2819) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2915 = "llvm.lshr"(%2912, %2819) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2916 = "llvm.lshr"(%2913, %2818) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2917 = "llvm.mul"(%2916, %2867) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2918 = "llvm.and"(%2911, %2816) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2919 = "llvm.shufflevector"(%2917, %2916) <{mask = array<i32: 4, 5, 6, 7, 8, 9, 10, 11>}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2920 = "llvm.add"(%2919, %2918) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  "llvm.store"(%2920, %arg120) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (vector<8xi64>, !llvm.ptr) -> ()
+  %2921 = "llvm.and"(%2912, %2816) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2922 = "llvm.add"(%2921, %2914) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  "llvm.store"(%2922, %2873) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (vector<8xi64>, !llvm.ptr) -> ()
+  %2923 = "llvm.and"(%2913, %2813) : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  %2924 = "llvm.add"(%2923, %2915) <{overflowFlags = 3 : i32}> : (vector<8xi64>, vector<8xi64>) -> vector<8xi64>
+  "llvm.store"(%2924, %2876) <{alignment = 64 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (vector<8xi64>, !llvm.ptr) -> ()
+  "llvm.return"() : () -> ()
+}) : () -> ()
   with @fd_r43x6_quad_mul_fast := fd_r43x6_quad_mul_fast
 
 end

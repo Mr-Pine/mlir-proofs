@@ -1,6 +1,6 @@
 module
 
--- build/native/gcc/mlir_canonicalized/ref/region/fd_curve25519_scalar_reduce.mlir
+-- build/llvm23/mlir_canonicalized/ref/op/fd_curve25519_scalar_reduce.mlir
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
@@ -14,499 +14,504 @@ namespace MLIR.Firedancer.Ref
 @[expose] public section
 
 mlir_def fd_curve25519_scalar_reduce :=
-{
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-    %0 = "llvm.mlir.constant"() <{value = 16 : i64}> : () -> i64
-    %1 = "llvm.mlir.constant"() <{value = 40 : i64}> : () -> i64
-    %2 = "llvm.mlir.constant"() <{value = 2097151 : i64}> : () -> i64
-    %3 = "llvm.mlir.constant"() <{value = 21 : i64}> : () -> i64
-    %4 = "llvm.mlir.constant"() <{value = 42 : i64}> : () -> i64
-    %5 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
-    %6 = "llvm.mlir.constant"() <{value = 20 : i64}> : () -> i64
-    %7 = "llvm.mlir.constant"() <{value = 41 : i64}> : () -> i64
-    %8 = "llvm.mlir.constant"() <{value = 2 : i64}> : () -> i64
-    %9 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
-    %10 = "llvm.mlir.constant"() <{value = 3 : i64}> : () -> i64
-    %11 = "llvm.mlir.constant"() <{value = 18 : i64}> : () -> i64
-    %12 = "llvm.mlir.constant"() <{value = 39 : i64}> : () -> i64
-    %13 = "llvm.mlir.constant"() <{value = 4 : i64}> : () -> i64
-    %14 = "llvm.mlir.constant"() <{value = 17 : i64}> : () -> i64
-    %15 = "llvm.mlir.constant"() <{value = 38 : i64}> : () -> i64
-    %16 = "llvm.mlir.constant"() <{value = 5 : i64}> : () -> i64
-    %17 = "llvm.mlir.constant"() <{value = 37 : i64}> : () -> i64
-    %18 = "llvm.mlir.constant"() <{value = 6 : i64}> : () -> i64
-    %19 = "llvm.mlir.constant"() <{value = 15 : i64}> : () -> i64
-    %20 = "llvm.mlir.constant"() <{value = 36 : i64}> : () -> i64
-    %21 = "llvm.mlir.constant"() <{value = 7 : i64}> : () -> i64
-    %22 = "llvm.mlir.constant"() <{value = 14 : i64}> : () -> i64
-    %23 = "llvm.mlir.constant"() <{value = 35 : i64}> : () -> i64
-    %24 = "llvm.mlir.constant"() <{value = 666643 : i64}> : () -> i64
-    %25 = "llvm.mlir.constant"() <{value = 470296 : i64}> : () -> i64
-    %26 = "llvm.mlir.constant"() <{value = 654183 : i64}> : () -> i64
-    %27 = "llvm.mlir.constant"() <{value = -997805 : i64}> : () -> i64
-    %28 = "llvm.mlir.constant"() <{value = 136657 : i64}> : () -> i64
-    %29 = "llvm.mlir.constant"() <{value = -683901 : i64}> : () -> i64
-    %30 = "llvm.mlir.constant"() <{value = 1048576 : i64}> : () -> i64
-    %31 = "llvm.mlir.constant"() <{value = 8796090925056 : i64}> : () -> i64
-    %32 = "llvm.mlir.constant"() <{value = -2097152 : i64}> : () -> i64
-    %33 = "llvm.mlir.constant"() <{value = 4398044413952 : i64}> : () -> i64
-    %34 = "llvm.mlir.constant"() <{value = 9223367638808264704 : i64}> : () -> i64
-    %35 = "llvm.mlir.constant"() <{value = 63 : i64}> : () -> i64
-    %36 = "llvm.mlir.constant"() <{value = 1048575 : i64}> : () -> i64
-    %37 = "llvm.mlir.constant"() <{value = 2199022206976 : i64}> : () -> i64
-    %38 = "llvm.mlir.constant"() <{value = 4611683819404132352 : i64}> : () -> i64
-    %39 = "llvm.mlir.constant"() <{value = 62 : i64}> : () -> i64
-    %40 = "llvm.mlir.constant"() <{value = 524287 : i64}> : () -> i64
-    %41 = "llvm.mlir.constant"() <{value = 1099511103488 : i64}> : () -> i64
-    %42 = "llvm.mlir.constant"() <{value = 2305841909702066176 : i64}> : () -> i64
-    %43 = "llvm.mlir.constant"() <{value = 61 : i64}> : () -> i64
-    %44 = "llvm.mlir.constant"() <{value = 262143 : i64}> : () -> i64
-    %45 = "llvm.mlir.constant"() <{value = 549755551744 : i64}> : () -> i64
-    %46 = "llvm.call"(%arg1) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %47 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-    %48 = "llvm.call"(%47) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %49 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    %50 = "llvm.call"(%49) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %51 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-    %52 = "llvm.call"(%51) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %53 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-    %54 = "llvm.call"(%53) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %55 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 40>}> : (!llvm.ptr) -> !llvm.ptr
-    %56 = "llvm.call"(%55) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %57 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 48>}> : (!llvm.ptr) -> !llvm.ptr
-    %58 = "llvm.call"(%57) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %59 = "llvm.getelementptr"(%arg1) <{elem_type = i8, rawConstantIndices = array<i32: 56>}> : (!llvm.ptr) -> !llvm.ptr
-    %60 = "llvm.call"(%59) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr) -> i64
-    %61 = "llvm.and"(%46, %2) : (i64, i64) -> i64
-    %62 = "llvm.lshr"(%46, %3) : (i64, i64) -> i64
-    %63 = "llvm.and"(%62, %2) : (i64, i64) -> i64
-    %64 = "llvm.lshr"(%46, %4) : (i64, i64) -> i64
-    %65 = "llvm.and"(%64, %2) : (i64, i64) -> i64
-    %66 = "llvm.intr.fshl"(%48, %46, %5) : (i64, i64, i64) -> i64
-    %67 = "llvm.and"(%66, %2) : (i64, i64) -> i64
-    %68 = "llvm.lshr"(%48, %6) : (i64, i64) -> i64
-    %69 = "llvm.and"(%68, %2) : (i64, i64) -> i64
-    %70 = "llvm.lshr"(%48, %7) : (i64, i64) -> i64
-    %71 = "llvm.and"(%70, %2) : (i64, i64) -> i64
-    %72 = "llvm.intr.fshl"(%50, %48, %8) : (i64, i64, i64) -> i64
-    %73 = "llvm.and"(%72, %2) : (i64, i64) -> i64
-    %74 = "llvm.lshr"(%50, %9) : (i64, i64) -> i64
-    %75 = "llvm.and"(%74, %2) : (i64, i64) -> i64
-    %76 = "llvm.lshr"(%50, %1) : (i64, i64) -> i64
-    %77 = "llvm.and"(%76, %2) : (i64, i64) -> i64
-    %78 = "llvm.intr.fshl"(%52, %50, %10) : (i64, i64, i64) -> i64
-    %79 = "llvm.and"(%78, %2) : (i64, i64) -> i64
-    %80 = "llvm.lshr"(%52, %11) : (i64, i64) -> i64
-    %81 = "llvm.and"(%80, %2) : (i64, i64) -> i64
-    %82 = "llvm.lshr"(%52, %12) : (i64, i64) -> i64
-    %83 = "llvm.and"(%82, %2) : (i64, i64) -> i64
-    %84 = "llvm.intr.fshl"(%54, %52, %13) : (i64, i64, i64) -> i64
-    %85 = "llvm.and"(%84, %2) : (i64, i64) -> i64
-    %86 = "llvm.lshr"(%54, %14) : (i64, i64) -> i64
-    %87 = "llvm.and"(%86, %2) : (i64, i64) -> i64
-    %88 = "llvm.lshr"(%54, %15) : (i64, i64) -> i64
-    %89 = "llvm.and"(%88, %2) : (i64, i64) -> i64
-    %90 = "llvm.intr.fshl"(%56, %54, %16) : (i64, i64, i64) -> i64
-    %91 = "llvm.and"(%90, %2) : (i64, i64) -> i64
-    %92 = "llvm.lshr"(%56, %0) : (i64, i64) -> i64
-    %93 = "llvm.and"(%92, %2) : (i64, i64) -> i64
-    %94 = "llvm.lshr"(%56, %17) : (i64, i64) -> i64
-    %95 = "llvm.and"(%94, %2) : (i64, i64) -> i64
-    %96 = "llvm.intr.fshl"(%58, %56, %18) : (i64, i64, i64) -> i64
-    %97 = "llvm.and"(%96, %2) : (i64, i64) -> i64
-    %98 = "llvm.lshr"(%58, %19) : (i64, i64) -> i64
-    %99 = "llvm.and"(%98, %2) : (i64, i64) -> i64
-    %100 = "llvm.lshr"(%58, %20) : (i64, i64) -> i64
-    %101 = "llvm.and"(%100, %2) : (i64, i64) -> i64
-    %102 = "llvm.intr.fshl"(%60, %58, %21) : (i64, i64, i64) -> i64
-    %103 = "llvm.and"(%102, %2) : (i64, i64) -> i64
-    %104 = "llvm.lshr"(%60, %22) : (i64, i64) -> i64
-    %105 = "llvm.and"(%104, %2) : (i64, i64) -> i64
-    %106 = "llvm.lshr"(%60, %23) : (i64, i64) -> i64
-    %107 = "llvm.mul"(%106, %24) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %108 = "llvm.add"(%107, %83) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %109 = "llvm.mul"(%106, %25) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %110 = "llvm.add"(%109, %85) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %111 = "llvm.mul"(%106, %26) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %112 = "llvm.add"(%111, %87) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %113 = "llvm.mul"(%106, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %114 = "llvm.add"(%113, %89) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %115 = "llvm.mul"(%106, %28) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %116 = "llvm.add"(%115, %91) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %117 = "llvm.mul"(%106, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %118 = "llvm.add"(%117, %93) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %119 = "llvm.mul"(%105, %24) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %120 = "llvm.mul"(%105, %25) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %121 = "llvm.mul"(%105, %26) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %122 = "llvm.mul"(%105, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %123 = "llvm.mul"(%105, %28) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %124 = "llvm.add"(%114, %123) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %125 = "llvm.mul"(%105, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %126 = "llvm.add"(%116, %125) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %127 = "llvm.mul"(%103, %24) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %128 = "llvm.mul"(%103, %25) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %129 = "llvm.mul"(%103, %26) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %130 = "llvm.mul"(%103, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %131 = "llvm.mul"(%103, %28) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %132 = "llvm.mul"(%103, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %133 = "llvm.add"(%124, %132) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %134 = "llvm.mul"(%101, %24) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %135 = "llvm.add"(%134, %77) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %136 = "llvm.mul"(%101, %25) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %137 = "llvm.mul"(%101, %26) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %138 = "llvm.mul"(%101, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %139 = "llvm.mul"(%101, %28) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %140 = "llvm.mul"(%101, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %141 = "llvm.mul"(%99, %24) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %142 = "llvm.add"(%141, %75) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %143 = "llvm.mul"(%99, %25) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %144 = "llvm.add"(%135, %143) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %145 = "llvm.mul"(%99, %26) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %146 = "llvm.mul"(%99, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %147 = "llvm.mul"(%99, %28) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %148 = "llvm.mul"(%99, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %149 = "llvm.add"(%110, %139) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %150 = "llvm.add"(%149, %148) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %151 = "llvm.add"(%150, %121) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %152 = "llvm.add"(%151, %130) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %153 = "llvm.mul"(%97, %24) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %154 = "llvm.add"(%153, %73) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %155 = "llvm.mul"(%97, %25) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %156 = "llvm.add"(%142, %155) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %157 = "llvm.mul"(%97, %26) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %158 = "llvm.add"(%144, %157) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %159 = "llvm.mul"(%97, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %160 = "llvm.mul"(%97, %28) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %161 = "llvm.add"(%137, %81) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %162 = "llvm.add"(%161, %146) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %163 = "llvm.add"(%162, %160) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %164 = "llvm.add"(%163, %119) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %165 = "llvm.add"(%164, %128) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %166 = "llvm.mul"(%97, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %167 = "llvm.add"(%154, %30) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %168 = "llvm.lshr"(%167, %3) : (i64, i64) -> i64
-    %169 = "llvm.add"(%156, %168) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %170 = "llvm.and"(%167, %31) : (i64, i64) -> i64
-    %171 = "llvm.sub"(%154, %170) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %172 = "llvm.add"(%158, %30) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %173 = "llvm.lshr"(%172, %3) : (i64, i64) -> i64
-    %174 = "llvm.add"(%136, %79) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %175 = "llvm.add"(%174, %145) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %176 = "llvm.add"(%175, %159) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %177 = "llvm.add"(%176, %127) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %178 = "llvm.add"(%177, %173) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %179 = "llvm.and"(%172, %32) : (i64, i64) -> i64
-    %180 = "llvm.sub"(%158, %179) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %181 = "llvm.add"(%165, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %182 = "llvm.ashr"(%181, %3) : (i64, i64) -> i64
-    %183 = "llvm.add"(%108, %138) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %184 = "llvm.add"(%183, %147) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %185 = "llvm.add"(%184, %166) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %186 = "llvm.add"(%185, %120) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %187 = "llvm.add"(%186, %129) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %188 = "llvm.add"(%187, %182) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %189 = "llvm.and"(%181, %32) : (i64, i64) -> i64
-    %190 = "llvm.add"(%152, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %191 = "llvm.ashr"(%190, %3) : (i64, i64) -> i64
-    %192 = "llvm.add"(%112, %140) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %193 = "llvm.add"(%192, %122) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %194 = "llvm.add"(%193, %131) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %195 = "llvm.add"(%194, %191) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %196 = "llvm.and"(%190, %32) : (i64, i64) -> i64
-    %197 = "llvm.sub"(%152, %196) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %198 = "llvm.add"(%133, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %199 = "llvm.ashr"(%198, %3) : (i64, i64) -> i64
-    %200 = "llvm.add"(%126, %199) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %201 = "llvm.and"(%198, %32) : (i64, i64) -> i64
-    %202 = "llvm.sub"(%133, %201) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %203 = "llvm.add"(%118, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %204 = "llvm.ashr"(%203, %3) : (i64, i64) -> i64
-    %205 = "llvm.add"(%204, %95) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %206 = "llvm.and"(%203, %32) : (i64, i64) -> i64
-    %207 = "llvm.sub"(%118, %206) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %208 = "llvm.add"(%169, %30) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %209 = "llvm.lshr"(%208, %3) : (i64, i64) -> i64
-    %210 = "llvm.and"(%208, %32) : (i64, i64) -> i64
-    %211 = "llvm.add"(%178, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %212 = "llvm.ashr"(%211, %3) : (i64, i64) -> i64
-    %213 = "llvm.and"(%211, %32) : (i64, i64) -> i64
-    %214 = "llvm.add"(%188, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %215 = "llvm.ashr"(%214, %3) : (i64, i64) -> i64
-    %216 = "llvm.add"(%215, %197) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %217 = "llvm.and"(%214, %32) : (i64, i64) -> i64
-    %218 = "llvm.sub"(%188, %217) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %219 = "llvm.add"(%195, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %220 = "llvm.ashr"(%219, %3) : (i64, i64) -> i64
-    %221 = "llvm.add"(%220, %202) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %222 = "llvm.and"(%219, %32) : (i64, i64) -> i64
-    %223 = "llvm.sub"(%195, %222) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %224 = "llvm.add"(%200, %30) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %225 = "llvm.ashr"(%224, %3) : (i64, i64) -> i64
-    %226 = "llvm.add"(%225, %207) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %227 = "llvm.and"(%224, %32) : (i64, i64) -> i64
-    %228 = "llvm.sub"(%200, %227) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %229 = "llvm.mul"(%205, %24) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %230 = "llvm.add"(%229, %71) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %231 = "llvm.mul"(%205, %25) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %232 = "llvm.add"(%171, %231) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %233 = "llvm.mul"(%205, %26) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %234 = "llvm.mul"(%205, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %235 = "llvm.mul"(%205, %28) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %236 = "llvm.mul"(%205, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %237 = "llvm.add"(%165, %236) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %238 = "llvm.sub"(%237, %189) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %239 = "llvm.add"(%238, %212) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %240 = "llvm.mul"(%226, %24) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %241 = "llvm.add"(%240, %69) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %242 = "llvm.mul"(%226, %25) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %243 = "llvm.add"(%230, %242) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %244 = "llvm.mul"(%226, %26) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %245 = "llvm.add"(%232, %244) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %246 = "llvm.mul"(%226, %27) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %247 = "llvm.mul"(%226, %28) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %248 = "llvm.mul"(%226, %29) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %249 = "llvm.mul"(%228, %24) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %250 = "llvm.add"(%249, %67) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %251 = "llvm.mul"(%228, %25) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %252 = "llvm.add"(%241, %251) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %253 = "llvm.mul"(%228, %26) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %254 = "llvm.add"(%243, %253) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %255 = "llvm.mul"(%228, %27) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %256 = "llvm.add"(%245, %255) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %257 = "llvm.mul"(%228, %28) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %258 = "llvm.mul"(%228, %29) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %259 = "llvm.add"(%180, %234) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %260 = "llvm.add"(%259, %209) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %261 = "llvm.add"(%260, %247) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %262 = "llvm.add"(%261, %258) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %263 = "llvm.mul"(%221, %24) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %264 = "llvm.add"(%263, %65) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %265 = "llvm.mul"(%221, %25) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %266 = "llvm.add"(%250, %265) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %267 = "llvm.mul"(%221, %26) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %268 = "llvm.add"(%252, %267) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %269 = "llvm.mul"(%221, %27) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %270 = "llvm.add"(%254, %269) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %271 = "llvm.mul"(%221, %28) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %272 = "llvm.add"(%256, %271) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %273 = "llvm.mul"(%221, %29) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %274 = "llvm.mul"(%223, %24) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %275 = "llvm.add"(%274, %63) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %276 = "llvm.mul"(%223, %25) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %277 = "llvm.add"(%264, %276) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %278 = "llvm.mul"(%223, %26) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %279 = "llvm.add"(%266, %278) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %280 = "llvm.mul"(%223, %27) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %281 = "llvm.add"(%268, %280) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %282 = "llvm.mul"(%223, %28) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %283 = "llvm.add"(%270, %282) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %284 = "llvm.mul"(%223, %29) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %285 = "llvm.add"(%272, %284) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %286 = "llvm.mul"(%216, %24) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %287 = "llvm.add"(%286, %61) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %288 = "llvm.mul"(%216, %25) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %289 = "llvm.add"(%275, %288) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %290 = "llvm.mul"(%216, %26) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %291 = "llvm.add"(%277, %290) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %292 = "llvm.mul"(%216, %27) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %293 = "llvm.add"(%279, %292) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %294 = "llvm.mul"(%216, %28) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %295 = "llvm.add"(%281, %294) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %296 = "llvm.mul"(%216, %29) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %297 = "llvm.add"(%283, %296) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %298 = "llvm.add"(%287, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %299 = "llvm.ashr"(%298, %3) : (i64, i64) -> i64
-    %300 = "llvm.add"(%289, %299) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %301 = "llvm.and"(%298, %32) : (i64, i64) -> i64
-    %302 = "llvm.sub"(%287, %301) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %303 = "llvm.add"(%291, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %304 = "llvm.ashr"(%303, %3) : (i64, i64) -> i64
-    %305 = "llvm.add"(%293, %304) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %306 = "llvm.and"(%303, %32) : (i64, i64) -> i64
-    %307 = "llvm.sub"(%291, %306) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %308 = "llvm.add"(%295, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %309 = "llvm.ashr"(%308, %3) : (i64, i64) -> i64
-    %310 = "llvm.add"(%297, %309) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %311 = "llvm.and"(%308, %32) : (i64, i64) -> i64
-    %312 = "llvm.sub"(%295, %311) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %313 = "llvm.add"(%285, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %314 = "llvm.ashr"(%313, %3) : (i64, i64) -> i64
-    %315 = "llvm.add"(%233, %169) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %316 = "llvm.sub"(%315, %210) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %317 = "llvm.add"(%316, %246) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %318 = "llvm.add"(%317, %257) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %319 = "llvm.add"(%318, %273) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %320 = "llvm.add"(%319, %314) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %321 = "llvm.and"(%313, %32) : (i64, i64) -> i64
-    %322 = "llvm.sub"(%285, %321) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %323 = "llvm.add"(%262, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %324 = "llvm.ashr"(%323, %3) : (i64, i64) -> i64
-    %325 = "llvm.add"(%178, %235) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %326 = "llvm.sub"(%325, %213) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %327 = "llvm.add"(%326, %248) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %328 = "llvm.add"(%327, %324) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %329 = "llvm.and"(%323, %32) : (i64, i64) -> i64
-    %330 = "llvm.sub"(%262, %329) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %331 = "llvm.add"(%239, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %332 = "llvm.ashr"(%331, %3) : (i64, i64) -> i64
-    %333 = "llvm.add"(%332, %218) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %334 = "llvm.and"(%331, %32) : (i64, i64) -> i64
-    %335 = "llvm.sub"(%239, %334) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %336 = "llvm.add"(%300, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %337 = "llvm.ashr"(%336, %3) : (i64, i64) -> i64
-    %338 = "llvm.and"(%336, %32) : (i64, i64) -> i64
-    %339 = "llvm.add"(%305, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %340 = "llvm.ashr"(%339, %3) : (i64, i64) -> i64
-    %341 = "llvm.and"(%339, %32) : (i64, i64) -> i64
-    %342 = "llvm.add"(%310, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %343 = "llvm.ashr"(%342, %3) : (i64, i64) -> i64
-    %344 = "llvm.add"(%322, %343) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %345 = "llvm.and"(%342, %32) : (i64, i64) -> i64
-    %346 = "llvm.add"(%320, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %347 = "llvm.ashr"(%346, %3) : (i64, i64) -> i64
-    %348 = "llvm.add"(%330, %347) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %349 = "llvm.and"(%346, %32) : (i64, i64) -> i64
-    %350 = "llvm.sub"(%320, %349) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %351 = "llvm.add"(%328, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %352 = "llvm.ashr"(%351, %3) : (i64, i64) -> i64
-    %353 = "llvm.add"(%335, %352) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %354 = "llvm.and"(%351, %32) : (i64, i64) -> i64
-    %355 = "llvm.sub"(%328, %354) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %356 = "llvm.add"(%333, %30) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %357 = "llvm.ashr"(%356, %3) : (i64, i64) -> i64
-    %358 = "llvm.and"(%356, %32) : (i64, i64) -> i64
-    %359 = "llvm.sub"(%333, %358) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %360 = "llvm.mul"(%357, %24) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %361 = "llvm.add"(%302, %360) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %362 = "llvm.mul"(%357, %25) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %363 = "llvm.mul"(%357, %26) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %364 = "llvm.mul"(%357, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %365 = "llvm.mul"(%357, %28) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %366 = "llvm.mul"(%357, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %367 = "llvm.ashr"(%361, %3) : (i64, i64) -> i64
-    %368 = "llvm.add"(%362, %300) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %369 = "llvm.sub"(%368, %338) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %370 = "llvm.add"(%369, %367) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %371 = "llvm.and"(%361, %2) : (i64, i64) -> i64
-    %372 = "llvm.ashr"(%370, %3) : (i64, i64) -> i64
-    %373 = "llvm.add"(%307, %363) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %374 = "llvm.add"(%373, %337) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %375 = "llvm.add"(%374, %372) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %376 = "llvm.and"(%370, %2) : (i64, i64) -> i64
-    %377 = "llvm.ashr"(%375, %3) : (i64, i64) -> i64
-    %378 = "llvm.add"(%305, %364) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %379 = "llvm.sub"(%378, %341) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %380 = "llvm.add"(%379, %377) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %381 = "llvm.and"(%375, %2) : (i64, i64) -> i64
-    %382 = "llvm.ashr"(%380, %3) : (i64, i64) -> i64
-    %383 = "llvm.add"(%312, %365) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %384 = "llvm.add"(%383, %340) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %385 = "llvm.add"(%384, %382) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %386 = "llvm.and"(%380, %2) : (i64, i64) -> i64
-    %387 = "llvm.ashr"(%385, %3) : (i64, i64) -> i64
-    %388 = "llvm.add"(%310, %366) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %389 = "llvm.sub"(%388, %345) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %390 = "llvm.add"(%389, %387) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %391 = "llvm.and"(%385, %2) : (i64, i64) -> i64
-    %392 = "llvm.ashr"(%390, %3) : (i64, i64) -> i64
-    %393 = "llvm.add"(%344, %392) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %394 = "llvm.and"(%390, %2) : (i64, i64) -> i64
-    %395 = "llvm.ashr"(%393, %3) : (i64, i64) -> i64
-    %396 = "llvm.add"(%395, %350) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %397 = "llvm.and"(%393, %2) : (i64, i64) -> i64
-    %398 = "llvm.ashr"(%396, %3) : (i64, i64) -> i64
-    %399 = "llvm.add"(%348, %398) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %400 = "llvm.and"(%396, %2) : (i64, i64) -> i64
-    %401 = "llvm.ashr"(%399, %3) : (i64, i64) -> i64
-    %402 = "llvm.add"(%401, %355) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %403 = "llvm.and"(%399, %2) : (i64, i64) -> i64
-    %404 = "llvm.ashr"(%402, %3) : (i64, i64) -> i64
-    %405 = "llvm.add"(%353, %404) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %406 = "llvm.and"(%402, %2) : (i64, i64) -> i64
-    %407 = "llvm.ashr"(%405, %3) : (i64, i64) -> i64
-    %408 = "llvm.add"(%407, %359) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %409 = "llvm.and"(%405, %2) : (i64, i64) -> i64
-    %410 = "llvm.ashr"(%408, %3) : (i64, i64) -> i64
-    %411 = "llvm.and"(%408, %2) : (i64, i64) -> i64
-    %412 = "llvm.mul"(%410, %24) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %413 = "llvm.add"(%412, %371) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %414 = "llvm.mul"(%410, %25) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %415 = "llvm.add"(%414, %376) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %416 = "llvm.mul"(%410, %26) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %417 = "llvm.add"(%416, %381) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %418 = "llvm.mul"(%410, %27) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %419 = "llvm.add"(%418, %386) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %420 = "llvm.mul"(%410, %28) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %421 = "llvm.add"(%420, %391) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %422 = "llvm.mul"(%410, %29) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %423 = "llvm.add"(%422, %394) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %424 = "llvm.ashr"(%413, %3) : (i64, i64) -> i64
-    %425 = "llvm.add"(%415, %424) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %426 = "llvm.and"(%413, %2) : (i64, i64) -> i64
-    %427 = "llvm.ashr"(%425, %3) : (i64, i64) -> i64
-    %428 = "llvm.add"(%417, %427) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %429 = "llvm.ashr"(%428, %3) : (i64, i64) -> i64
-    %430 = "llvm.add"(%419, %429) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %431 = "llvm.ashr"(%430, %3) : (i64, i64) -> i64
-    %432 = "llvm.add"(%421, %431) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %433 = "llvm.ashr"(%432, %3) : (i64, i64) -> i64
-    %434 = "llvm.add"(%423, %433) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %435 = "llvm.ashr"(%434, %3) : (i64, i64) -> i64
-    %436 = "llvm.add"(%435, %397) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %437 = "llvm.ashr"(%436, %3) : (i64, i64) -> i64
-    %438 = "llvm.add"(%437, %400) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %439 = "llvm.ashr"(%438, %3) : (i64, i64) -> i64
-    %440 = "llvm.add"(%439, %403) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %441 = "llvm.ashr"(%440, %3) : (i64, i64) -> i64
-    %442 = "llvm.add"(%441, %406) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %443 = "llvm.ashr"(%442, %3) : (i64, i64) -> i64
-    %444 = "llvm.add"(%443, %409) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %445 = "llvm.ashr"(%444, %3) : (i64, i64) -> i64
-    %446 = "llvm.add"(%445, %411) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %447 = "llvm.shl"(%425, %3) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %448 = "llvm.and"(%447, %33) : (i64, i64) -> i64
-    %449 = "llvm.or"(%448, %426) : (i64, i64) -> i64
-    %450 = "llvm.shl"(%428, %4) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %451 = "llvm.and"(%450, %34) : (i64, i64) -> i64
-    %452 = "llvm.or"(%449, %451) : (i64, i64) -> i64
-    %453 = "llvm.shl"(%430, %35) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %454 = "llvm.or"(%452, %453) : (i64, i64) -> i64
-    "llvm.store"(%454, %arg0) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %455 = "llvm.lshr"(%430, %5) : (i64, i64) -> i64
-    %456 = "llvm.and"(%455, %36) : (i64, i64) -> i64
-    %457 = "llvm.shl"(%432, %6) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %458 = "llvm.and"(%457, %37) : (i64, i64) -> i64
-    %459 = "llvm.or"(%458, %456) : (i64, i64) -> i64
-    %460 = "llvm.shl"(%434, %7) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %461 = "llvm.and"(%460, %38) : (i64, i64) -> i64
-    %462 = "llvm.or"(%459, %461) : (i64, i64) -> i64
-    %463 = "llvm.shl"(%436, %39) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %464 = "llvm.or"(%462, %463) : (i64, i64) -> i64
-    %465 = "llvm.getelementptr"(%arg0) <{elem_type = i8, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%464, %465) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %466 = "llvm.lshr"(%436, %8) : (i64, i64) -> i64
-    %467 = "llvm.and"(%466, %40) : (i64, i64) -> i64
-    %468 = "llvm.shl"(%438, %9) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %469 = "llvm.and"(%468, %41) : (i64, i64) -> i64
-    %470 = "llvm.or"(%469, %467) : (i64, i64) -> i64
-    %471 = "llvm.shl"(%440, %1) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %472 = "llvm.and"(%471, %42) : (i64, i64) -> i64
-    %473 = "llvm.or"(%470, %472) : (i64, i64) -> i64
-    %474 = "llvm.shl"(%442, %43) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %475 = "llvm.or"(%473, %474) : (i64, i64) -> i64
-    %476 = "llvm.getelementptr"(%arg0) <{elem_type = i8, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%475, %476) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %477 = "llvm.lshr"(%442, %10) : (i64, i64) -> i64
-    %478 = "llvm.and"(%477, %44) : (i64, i64) -> i64
-    %479 = "llvm.shl"(%444, %11) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %480 = "llvm.and"(%479, %45) : (i64, i64) -> i64
-    %481 = "llvm.or"(%478, %480) : (i64, i64) -> i64
-    %482 = "llvm.shl"(%446, %12) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %483 = "llvm.or"(%481, %482) : (i64, i64) -> i64
-    %484 = "llvm.getelementptr"(%arg0) <{elem_type = i8, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%483, %484) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    "llvm.return"(%arg0) : (!llvm.ptr) -> ()
-}
+#tbaa_root = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "long", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag1 = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+"llvm.func"() <{CConv = #llvm.cconv<ccc>, arg_attrs = [{llvm.nofree, llvm.noundef, llvm.returned, llvm.writeonly}, {llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}], dso_local, function_type = !llvm.func<ptr (ptr, ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"]], res_attrs = [{llvm.noundef}], sym_name = "fd_curve25519_scalar_reduce", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 1 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg71: !llvm.ptr, %arg72: !llvm.ptr):
+  %1096 = "llvm.mlir.constant"() <{value = 16 : i64}> : () -> i64
+  %1097 = "llvm.mlir.constant"() <{value = 40 : i64}> : () -> i64
+  %1098 = "llvm.mlir.constant"() <{value = 2097151 : i64}> : () -> i64
+  %1099 = "llvm.mlir.constant"() <{value = 21 : i64}> : () -> i64
+  %1100 = "llvm.mlir.constant"() <{value = 42 : i64}> : () -> i64
+  %1101 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
+  %1102 = "llvm.mlir.constant"() <{value = 20 : i64}> : () -> i64
+  %1103 = "llvm.mlir.constant"() <{value = 41 : i64}> : () -> i64
+  %1104 = "llvm.mlir.constant"() <{value = 2 : i64}> : () -> i64
+  %1105 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
+  %1106 = "llvm.mlir.constant"() <{value = 3 : i64}> : () -> i64
+  %1107 = "llvm.mlir.constant"() <{value = 18 : i64}> : () -> i64
+  %1108 = "llvm.mlir.constant"() <{value = 39 : i64}> : () -> i64
+  %1109 = "llvm.mlir.constant"() <{value = 4 : i64}> : () -> i64
+  %1110 = "llvm.mlir.constant"() <{value = 17 : i64}> : () -> i64
+  %1111 = "llvm.mlir.constant"() <{value = 38 : i64}> : () -> i64
+  %1112 = "llvm.mlir.constant"() <{value = 5 : i64}> : () -> i64
+  %1113 = "llvm.mlir.constant"() <{value = 37 : i64}> : () -> i64
+  %1114 = "llvm.mlir.constant"() <{value = 6 : i64}> : () -> i64
+  %1115 = "llvm.mlir.constant"() <{value = 15 : i64}> : () -> i64
+  %1116 = "llvm.mlir.constant"() <{value = 36 : i64}> : () -> i64
+  %1117 = "llvm.mlir.constant"() <{value = 7 : i64}> : () -> i64
+  %1118 = "llvm.mlir.constant"() <{value = 14 : i64}> : () -> i64
+  %1119 = "llvm.mlir.constant"() <{value = 35 : i64}> : () -> i64
+  %1120 = "llvm.mlir.constant"() <{value = 666643 : i64}> : () -> i64
+  %1121 = "llvm.mlir.constant"() <{value = 470296 : i64}> : () -> i64
+  %1122 = "llvm.mlir.constant"() <{value = 654183 : i64}> : () -> i64
+  %1123 = "llvm.mlir.constant"() <{value = -997805 : i64}> : () -> i64
+  %1124 = "llvm.mlir.constant"() <{value = 136657 : i64}> : () -> i64
+  %1125 = "llvm.mlir.constant"() <{value = -683901 : i64}> : () -> i64
+  %1126 = "llvm.mlir.constant"() <{value = 1048576 : i64}> : () -> i64
+  %1127 = "llvm.mlir.constant"() <{value = 8796090925056 : i64}> : () -> i64
+  %1128 = "llvm.mlir.constant"() <{value = 9223372036852678656 : i64}> : () -> i64
+  %1129 = "llvm.mlir.constant"() <{value = -2097152 : i64}> : () -> i64
+  %1130 = "llvm.mlir.constant"() <{value = 4398044413952 : i64}> : () -> i64
+  %1131 = "llvm.mlir.constant"() <{value = 9223367638808264704 : i64}> : () -> i64
+  %1132 = "llvm.mlir.constant"() <{value = 63 : i64}> : () -> i64
+  %1133 = "llvm.mlir.constant"() <{value = 1048575 : i64}> : () -> i64
+  %1134 = "llvm.mlir.constant"() <{value = 2199022206976 : i64}> : () -> i64
+  %1135 = "llvm.mlir.constant"() <{value = 4611683819404132352 : i64}> : () -> i64
+  %1136 = "llvm.mlir.constant"() <{value = 62 : i64}> : () -> i64
+  %1137 = "llvm.mlir.constant"() <{value = 524287 : i64}> : () -> i64
+  %1138 = "llvm.mlir.constant"() <{value = 1099511103488 : i64}> : () -> i64
+  %1139 = "llvm.mlir.constant"() <{value = 2305841909702066176 : i64}> : () -> i64
+  %1140 = "llvm.mlir.constant"() <{value = 61 : i64}> : () -> i64
+  %1141 = "llvm.mlir.constant"() <{value = 262143 : i64}> : () -> i64
+  %1142 = "llvm.mlir.constant"() <{value = 549755551744 : i64}> : () -> i64
+  %1143 = "llvm.call"(%arg72) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1144 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %1145 = "llvm.call"(%1144) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1146 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %1147 = "llvm.call"(%1146) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1148 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %1149 = "llvm.call"(%1148) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1150 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %1151 = "llvm.call"(%1150) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1152 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 40>}> : (!llvm.ptr) -> !llvm.ptr
+  %1153 = "llvm.call"(%1152) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1154 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 48>}> : (!llvm.ptr) -> !llvm.ptr
+  %1155 = "llvm.call"(%1154) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1156 = "llvm.getelementptr"(%arg72) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 56>}> : (!llvm.ptr) -> !llvm.ptr
+  %1157 = "llvm.call"(%1156) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fd_ulong_load_8, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> i64
+  %1158 = "llvm.and"(%1143, %1098) : (i64, i64) -> i64
+  %1159 = "llvm.lshr"(%1143, %1099) : (i64, i64) -> i64
+  %1160 = "llvm.and"(%1159, %1098) : (i64, i64) -> i64
+  %1161 = "llvm.lshr"(%1143, %1100) : (i64, i64) -> i64
+  %1162 = "llvm.and"(%1161, %1098) : (i64, i64) -> i64
+  %1163 = "llvm.intr.fshl"(%1145, %1143, %1101) : (i64, i64, i64) -> i64
+  %1164 = "llvm.and"(%1163, %1098) : (i64, i64) -> i64
+  %1165 = "llvm.lshr"(%1145, %1102) : (i64, i64) -> i64
+  %1166 = "llvm.and"(%1165, %1098) : (i64, i64) -> i64
+  %1167 = "llvm.lshr"(%1145, %1103) : (i64, i64) -> i64
+  %1168 = "llvm.and"(%1167, %1098) : (i64, i64) -> i64
+  %1169 = "llvm.intr.fshl"(%1147, %1145, %1104) : (i64, i64, i64) -> i64
+  %1170 = "llvm.and"(%1169, %1098) : (i64, i64) -> i64
+  %1171 = "llvm.lshr"(%1147, %1105) : (i64, i64) -> i64
+  %1172 = "llvm.and"(%1171, %1098) : (i64, i64) -> i64
+  %1173 = "llvm.lshr"(%1147, %1097) : (i64, i64) -> i64
+  %1174 = "llvm.and"(%1173, %1098) : (i64, i64) -> i64
+  %1175 = "llvm.intr.fshl"(%1149, %1147, %1106) : (i64, i64, i64) -> i64
+  %1176 = "llvm.and"(%1175, %1098) : (i64, i64) -> i64
+  %1177 = "llvm.lshr"(%1149, %1107) : (i64, i64) -> i64
+  %1178 = "llvm.and"(%1177, %1098) : (i64, i64) -> i64
+  %1179 = "llvm.lshr"(%1149, %1108) : (i64, i64) -> i64
+  %1180 = "llvm.and"(%1179, %1098) : (i64, i64) -> i64
+  %1181 = "llvm.intr.fshl"(%1151, %1149, %1109) : (i64, i64, i64) -> i64
+  %1182 = "llvm.and"(%1181, %1098) : (i64, i64) -> i64
+  %1183 = "llvm.lshr"(%1151, %1110) : (i64, i64) -> i64
+  %1184 = "llvm.and"(%1183, %1098) : (i64, i64) -> i64
+  %1185 = "llvm.lshr"(%1151, %1111) : (i64, i64) -> i64
+  %1186 = "llvm.and"(%1185, %1098) : (i64, i64) -> i64
+  %1187 = "llvm.intr.fshl"(%1153, %1151, %1112) : (i64, i64, i64) -> i64
+  %1188 = "llvm.and"(%1187, %1098) : (i64, i64) -> i64
+  %1189 = "llvm.lshr"(%1153, %1096) : (i64, i64) -> i64
+  %1190 = "llvm.and"(%1189, %1098) : (i64, i64) -> i64
+  %1191 = "llvm.lshr"(%1153, %1113) : (i64, i64) -> i64
+  %1192 = "llvm.and"(%1191, %1098) : (i64, i64) -> i64
+  %1193 = "llvm.intr.fshl"(%1155, %1153, %1114) : (i64, i64, i64) -> i64
+  %1194 = "llvm.and"(%1193, %1098) : (i64, i64) -> i64
+  %1195 = "llvm.lshr"(%1155, %1115) : (i64, i64) -> i64
+  %1196 = "llvm.and"(%1195, %1098) : (i64, i64) -> i64
+  %1197 = "llvm.lshr"(%1155, %1116) : (i64, i64) -> i64
+  %1198 = "llvm.and"(%1197, %1098) : (i64, i64) -> i64
+  %1199 = "llvm.intr.fshl"(%1157, %1155, %1117) : (i64, i64, i64) -> i64
+  %1200 = "llvm.and"(%1199, %1098) : (i64, i64) -> i64
+  %1201 = "llvm.lshr"(%1157, %1118) : (i64, i64) -> i64
+  %1202 = "llvm.and"(%1201, %1098) : (i64, i64) -> i64
+  %1203 = "llvm.lshr"(%1157, %1119) : (i64, i64) -> i64
+  %1204 = "llvm.mul"(%1203, %1120) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1205 = "llvm.add"(%1204, %1180) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1206 = "llvm.mul"(%1203, %1121) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1207 = "llvm.add"(%1206, %1182) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1208 = "llvm.mul"(%1203, %1122) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1209 = "llvm.add"(%1208, %1184) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1210 = "llvm.mul"(%1203, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1211 = "llvm.add"(%1210, %1186) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1212 = "llvm.mul"(%1203, %1124) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1213 = "llvm.add"(%1212, %1188) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1214 = "llvm.mul"(%1203, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1215 = "llvm.add"(%1214, %1190) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1216 = "llvm.mul"(%1202, %1120) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1217 = "llvm.mul"(%1202, %1121) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1218 = "llvm.mul"(%1202, %1122) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1219 = "llvm.mul"(%1202, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1220 = "llvm.mul"(%1202, %1124) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1221 = "llvm.add"(%1211, %1220) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1222 = "llvm.mul"(%1202, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1223 = "llvm.add"(%1213, %1222) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1224 = "llvm.mul"(%1200, %1120) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1225 = "llvm.mul"(%1200, %1121) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1226 = "llvm.mul"(%1200, %1122) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1227 = "llvm.mul"(%1200, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1228 = "llvm.mul"(%1200, %1124) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1229 = "llvm.mul"(%1200, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1230 = "llvm.add"(%1221, %1229) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1231 = "llvm.mul"(%1198, %1120) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1232 = "llvm.add"(%1231, %1174) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1233 = "llvm.mul"(%1198, %1121) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1234 = "llvm.mul"(%1198, %1122) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1235 = "llvm.mul"(%1198, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1236 = "llvm.mul"(%1198, %1124) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1237 = "llvm.mul"(%1198, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1238 = "llvm.mul"(%1196, %1120) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1239 = "llvm.add"(%1238, %1172) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1240 = "llvm.mul"(%1196, %1121) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1241 = "llvm.add"(%1232, %1240) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1242 = "llvm.mul"(%1196, %1122) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1243 = "llvm.mul"(%1196, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1244 = "llvm.mul"(%1196, %1124) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1245 = "llvm.mul"(%1196, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1246 = "llvm.add"(%1207, %1236) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1247 = "llvm.add"(%1246, %1245) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1248 = "llvm.add"(%1247, %1218) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1249 = "llvm.add"(%1248, %1227) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1250 = "llvm.mul"(%1194, %1120) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1251 = "llvm.add"(%1250, %1170) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1252 = "llvm.mul"(%1194, %1121) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1253 = "llvm.add"(%1239, %1252) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1254 = "llvm.mul"(%1194, %1122) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1255 = "llvm.add"(%1241, %1254) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1256 = "llvm.mul"(%1194, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1257 = "llvm.mul"(%1194, %1124) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1258 = "llvm.add"(%1234, %1178) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1259 = "llvm.add"(%1258, %1243) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1260 = "llvm.add"(%1259, %1257) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1261 = "llvm.add"(%1260, %1216) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1262 = "llvm.add"(%1261, %1225) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1263 = "llvm.mul"(%1194, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1264 = "llvm.add"(%1251, %1126) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1265 = "llvm.lshr"(%1264, %1099) : (i64, i64) -> i64
+  %1266 = "llvm.add"(%1253, %1265) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1267 = "llvm.and"(%1264, %1127) : (i64, i64) -> i64
+  %1268 = "llvm.sub"(%1251, %1267) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1269 = "llvm.add"(%1255, %1126) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1270 = "llvm.lshr"(%1269, %1099) : (i64, i64) -> i64
+  %1271 = "llvm.add"(%1233, %1176) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1272 = "llvm.add"(%1271, %1242) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1273 = "llvm.add"(%1272, %1256) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1274 = "llvm.add"(%1273, %1224) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1275 = "llvm.add"(%1274, %1270) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1276 = "llvm.and"(%1269, %1128) : (i64, i64) -> i64
+  %1277 = "llvm.sub"(%1255, %1276) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1278 = "llvm.add"(%1262, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1279 = "llvm.ashr"(%1278, %1099) : (i64, i64) -> i64
+  %1280 = "llvm.add"(%1205, %1235) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1281 = "llvm.add"(%1280, %1244) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1282 = "llvm.add"(%1281, %1263) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1283 = "llvm.add"(%1282, %1217) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1284 = "llvm.add"(%1283, %1226) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1285 = "llvm.add"(%1284, %1279) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1286 = "llvm.and"(%1278, %1129) : (i64, i64) -> i64
+  %1287 = "llvm.add"(%1249, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1288 = "llvm.ashr"(%1287, %1099) : (i64, i64) -> i64
+  %1289 = "llvm.add"(%1209, %1237) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1290 = "llvm.add"(%1289, %1219) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1291 = "llvm.add"(%1290, %1228) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1292 = "llvm.add"(%1291, %1288) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1293 = "llvm.and"(%1287, %1129) : (i64, i64) -> i64
+  %1294 = "llvm.sub"(%1249, %1293) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1295 = "llvm.add"(%1230, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1296 = "llvm.ashr"(%1295, %1099) : (i64, i64) -> i64
+  %1297 = "llvm.add"(%1223, %1296) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1298 = "llvm.and"(%1295, %1129) : (i64, i64) -> i64
+  %1299 = "llvm.sub"(%1230, %1298) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1300 = "llvm.add"(%1215, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1301 = "llvm.ashr"(%1300, %1099) : (i64, i64) -> i64
+  %1302 = "llvm.add"(%1301, %1192) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1303 = "llvm.and"(%1300, %1129) : (i64, i64) -> i64
+  %1304 = "llvm.sub"(%1215, %1303) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1305 = "llvm.add"(%1266, %1126) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1306 = "llvm.lshr"(%1305, %1099) : (i64, i64) -> i64
+  %1307 = "llvm.and"(%1305, %1128) : (i64, i64) -> i64
+  %1308 = "llvm.add"(%1275, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1309 = "llvm.ashr"(%1308, %1099) : (i64, i64) -> i64
+  %1310 = "llvm.and"(%1308, %1129) : (i64, i64) -> i64
+  %1311 = "llvm.add"(%1285, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1312 = "llvm.ashr"(%1311, %1099) : (i64, i64) -> i64
+  %1313 = "llvm.add"(%1312, %1294) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1314 = "llvm.and"(%1311, %1129) : (i64, i64) -> i64
+  %1315 = "llvm.sub"(%1285, %1314) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1316 = "llvm.add"(%1292, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1317 = "llvm.ashr"(%1316, %1099) : (i64, i64) -> i64
+  %1318 = "llvm.add"(%1317, %1299) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1319 = "llvm.and"(%1316, %1129) : (i64, i64) -> i64
+  %1320 = "llvm.sub"(%1292, %1319) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1321 = "llvm.add"(%1297, %1126) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1322 = "llvm.ashr"(%1321, %1099) : (i64, i64) -> i64
+  %1323 = "llvm.add"(%1322, %1304) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1324 = "llvm.and"(%1321, %1129) : (i64, i64) -> i64
+  %1325 = "llvm.sub"(%1297, %1324) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1326 = "llvm.mul"(%1302, %1120) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1327 = "llvm.add"(%1326, %1168) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1328 = "llvm.mul"(%1302, %1121) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1329 = "llvm.add"(%1268, %1328) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1330 = "llvm.mul"(%1302, %1122) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1331 = "llvm.mul"(%1302, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1332 = "llvm.mul"(%1302, %1124) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1333 = "llvm.mul"(%1302, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1334 = "llvm.add"(%1262, %1333) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1335 = "llvm.sub"(%1334, %1286) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1336 = "llvm.add"(%1335, %1309) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1337 = "llvm.mul"(%1323, %1120) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1338 = "llvm.add"(%1337, %1166) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1339 = "llvm.mul"(%1323, %1121) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1340 = "llvm.add"(%1327, %1339) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1341 = "llvm.mul"(%1323, %1122) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1342 = "llvm.add"(%1329, %1341) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1343 = "llvm.mul"(%1323, %1123) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1344 = "llvm.mul"(%1323, %1124) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1345 = "llvm.mul"(%1323, %1125) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1346 = "llvm.mul"(%1325, %1120) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1347 = "llvm.add"(%1346, %1164) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1348 = "llvm.mul"(%1325, %1121) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1349 = "llvm.add"(%1338, %1348) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1350 = "llvm.mul"(%1325, %1122) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1351 = "llvm.add"(%1340, %1350) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1352 = "llvm.mul"(%1325, %1123) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1353 = "llvm.add"(%1342, %1352) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1354 = "llvm.mul"(%1325, %1124) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1355 = "llvm.mul"(%1325, %1125) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1356 = "llvm.add"(%1277, %1331) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1357 = "llvm.add"(%1356, %1306) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1358 = "llvm.add"(%1357, %1344) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1359 = "llvm.add"(%1358, %1355) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1360 = "llvm.mul"(%1318, %1120) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1361 = "llvm.add"(%1360, %1162) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1362 = "llvm.mul"(%1318, %1121) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1363 = "llvm.add"(%1347, %1362) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1364 = "llvm.mul"(%1318, %1122) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1365 = "llvm.add"(%1349, %1364) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1366 = "llvm.mul"(%1318, %1123) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1367 = "llvm.add"(%1351, %1366) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1368 = "llvm.mul"(%1318, %1124) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1369 = "llvm.add"(%1353, %1368) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1370 = "llvm.mul"(%1318, %1125) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1371 = "llvm.mul"(%1320, %1120) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1372 = "llvm.add"(%1371, %1160) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1373 = "llvm.mul"(%1320, %1121) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1374 = "llvm.add"(%1361, %1373) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1375 = "llvm.mul"(%1320, %1122) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1376 = "llvm.add"(%1363, %1375) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1377 = "llvm.mul"(%1320, %1123) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1378 = "llvm.add"(%1365, %1377) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1379 = "llvm.mul"(%1320, %1124) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1380 = "llvm.add"(%1367, %1379) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1381 = "llvm.mul"(%1320, %1125) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1382 = "llvm.add"(%1369, %1381) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1383 = "llvm.mul"(%1313, %1120) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1384 = "llvm.add"(%1383, %1158) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1385 = "llvm.mul"(%1313, %1121) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1386 = "llvm.add"(%1372, %1385) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1387 = "llvm.mul"(%1313, %1122) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1388 = "llvm.add"(%1374, %1387) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1389 = "llvm.mul"(%1313, %1123) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1390 = "llvm.add"(%1376, %1389) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1391 = "llvm.mul"(%1313, %1124) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1392 = "llvm.add"(%1378, %1391) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1393 = "llvm.mul"(%1313, %1125) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1394 = "llvm.add"(%1380, %1393) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1395 = "llvm.add"(%1384, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1396 = "llvm.ashr"(%1395, %1099) : (i64, i64) -> i64
+  %1397 = "llvm.add"(%1386, %1396) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1398 = "llvm.and"(%1395, %1129) : (i64, i64) -> i64
+  %1399 = "llvm.sub"(%1384, %1398) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1400 = "llvm.add"(%1388, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1401 = "llvm.ashr"(%1400, %1099) : (i64, i64) -> i64
+  %1402 = "llvm.add"(%1390, %1401) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1403 = "llvm.and"(%1400, %1129) : (i64, i64) -> i64
+  %1404 = "llvm.sub"(%1388, %1403) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1405 = "llvm.add"(%1392, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1406 = "llvm.ashr"(%1405, %1099) : (i64, i64) -> i64
+  %1407 = "llvm.add"(%1394, %1406) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1408 = "llvm.and"(%1405, %1129) : (i64, i64) -> i64
+  %1409 = "llvm.sub"(%1392, %1408) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1410 = "llvm.add"(%1382, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1411 = "llvm.ashr"(%1410, %1099) : (i64, i64) -> i64
+  %1412 = "llvm.add"(%1330, %1266) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1413 = "llvm.sub"(%1412, %1307) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1414 = "llvm.add"(%1413, %1343) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1415 = "llvm.add"(%1414, %1354) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1416 = "llvm.add"(%1415, %1370) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1417 = "llvm.add"(%1416, %1411) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1418 = "llvm.and"(%1410, %1129) : (i64, i64) -> i64
+  %1419 = "llvm.sub"(%1382, %1418) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1420 = "llvm.add"(%1359, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1421 = "llvm.ashr"(%1420, %1099) : (i64, i64) -> i64
+  %1422 = "llvm.add"(%1275, %1332) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1423 = "llvm.sub"(%1422, %1310) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1424 = "llvm.add"(%1423, %1345) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1425 = "llvm.add"(%1424, %1421) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1426 = "llvm.and"(%1420, %1129) : (i64, i64) -> i64
+  %1427 = "llvm.sub"(%1359, %1426) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1428 = "llvm.add"(%1336, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1429 = "llvm.ashr"(%1428, %1099) : (i64, i64) -> i64
+  %1430 = "llvm.add"(%1429, %1315) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1431 = "llvm.and"(%1428, %1129) : (i64, i64) -> i64
+  %1432 = "llvm.sub"(%1336, %1431) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1433 = "llvm.add"(%1397, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1434 = "llvm.ashr"(%1433, %1099) : (i64, i64) -> i64
+  %1435 = "llvm.and"(%1433, %1129) : (i64, i64) -> i64
+  %1436 = "llvm.add"(%1402, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1437 = "llvm.ashr"(%1436, %1099) : (i64, i64) -> i64
+  %1438 = "llvm.and"(%1436, %1129) : (i64, i64) -> i64
+  %1439 = "llvm.add"(%1407, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1440 = "llvm.ashr"(%1439, %1099) : (i64, i64) -> i64
+  %1441 = "llvm.add"(%1419, %1440) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1442 = "llvm.and"(%1439, %1129) : (i64, i64) -> i64
+  %1443 = "llvm.add"(%1417, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1444 = "llvm.ashr"(%1443, %1099) : (i64, i64) -> i64
+  %1445 = "llvm.add"(%1427, %1444) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1446 = "llvm.and"(%1443, %1129) : (i64, i64) -> i64
+  %1447 = "llvm.sub"(%1417, %1446) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1448 = "llvm.add"(%1425, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1449 = "llvm.ashr"(%1448, %1099) : (i64, i64) -> i64
+  %1450 = "llvm.add"(%1432, %1449) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1451 = "llvm.and"(%1448, %1129) : (i64, i64) -> i64
+  %1452 = "llvm.sub"(%1425, %1451) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1453 = "llvm.add"(%1430, %1126) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1454 = "llvm.ashr"(%1453, %1099) : (i64, i64) -> i64
+  %1455 = "llvm.and"(%1453, %1129) : (i64, i64) -> i64
+  %1456 = "llvm.sub"(%1430, %1455) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1457 = "llvm.mul"(%1454, %1120) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1458 = "llvm.add"(%1399, %1457) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1459 = "llvm.mul"(%1454, %1121) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1460 = "llvm.mul"(%1454, %1122) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1461 = "llvm.mul"(%1454, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1462 = "llvm.mul"(%1454, %1124) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1463 = "llvm.mul"(%1454, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1464 = "llvm.ashr"(%1458, %1099) : (i64, i64) -> i64
+  %1465 = "llvm.add"(%1459, %1397) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1466 = "llvm.sub"(%1465, %1435) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1467 = "llvm.add"(%1466, %1464) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1468 = "llvm.and"(%1458, %1098) : (i64, i64) -> i64
+  %1469 = "llvm.ashr"(%1467, %1099) : (i64, i64) -> i64
+  %1470 = "llvm.add"(%1404, %1460) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1471 = "llvm.add"(%1470, %1434) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1472 = "llvm.add"(%1471, %1469) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1473 = "llvm.and"(%1467, %1098) : (i64, i64) -> i64
+  %1474 = "llvm.ashr"(%1472, %1099) : (i64, i64) -> i64
+  %1475 = "llvm.add"(%1402, %1461) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1476 = "llvm.sub"(%1475, %1438) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1477 = "llvm.add"(%1476, %1474) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1478 = "llvm.and"(%1472, %1098) : (i64, i64) -> i64
+  %1479 = "llvm.ashr"(%1477, %1099) : (i64, i64) -> i64
+  %1480 = "llvm.add"(%1409, %1462) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1481 = "llvm.add"(%1480, %1437) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1482 = "llvm.add"(%1481, %1479) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1483 = "llvm.and"(%1477, %1098) : (i64, i64) -> i64
+  %1484 = "llvm.ashr"(%1482, %1099) : (i64, i64) -> i64
+  %1485 = "llvm.add"(%1407, %1463) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1486 = "llvm.sub"(%1485, %1442) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1487 = "llvm.add"(%1486, %1484) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1488 = "llvm.and"(%1482, %1098) : (i64, i64) -> i64
+  %1489 = "llvm.ashr"(%1487, %1099) : (i64, i64) -> i64
+  %1490 = "llvm.add"(%1441, %1489) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1491 = "llvm.and"(%1487, %1098) : (i64, i64) -> i64
+  %1492 = "llvm.ashr"(%1490, %1099) : (i64, i64) -> i64
+  %1493 = "llvm.add"(%1492, %1447) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1494 = "llvm.and"(%1490, %1098) : (i64, i64) -> i64
+  %1495 = "llvm.ashr"(%1493, %1099) : (i64, i64) -> i64
+  %1496 = "llvm.add"(%1445, %1495) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1497 = "llvm.and"(%1493, %1098) : (i64, i64) -> i64
+  %1498 = "llvm.ashr"(%1496, %1099) : (i64, i64) -> i64
+  %1499 = "llvm.add"(%1498, %1452) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1500 = "llvm.and"(%1496, %1098) : (i64, i64) -> i64
+  %1501 = "llvm.ashr"(%1499, %1099) : (i64, i64) -> i64
+  %1502 = "llvm.add"(%1450, %1501) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1503 = "llvm.and"(%1499, %1098) : (i64, i64) -> i64
+  %1504 = "llvm.ashr"(%1502, %1099) : (i64, i64) -> i64
+  %1505 = "llvm.add"(%1504, %1456) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1506 = "llvm.and"(%1502, %1098) : (i64, i64) -> i64
+  %1507 = "llvm.ashr"(%1505, %1099) : (i64, i64) -> i64
+  %1508 = "llvm.and"(%1505, %1098) : (i64, i64) -> i64
+  %1509 = "llvm.mul"(%1507, %1120) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1510 = "llvm.add"(%1509, %1468) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1511 = "llvm.mul"(%1507, %1121) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1512 = "llvm.add"(%1511, %1473) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1513 = "llvm.mul"(%1507, %1122) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1514 = "llvm.add"(%1513, %1478) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1515 = "llvm.mul"(%1507, %1123) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1516 = "llvm.add"(%1515, %1483) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1517 = "llvm.mul"(%1507, %1124) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1518 = "llvm.add"(%1517, %1488) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1519 = "llvm.mul"(%1507, %1125) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1520 = "llvm.add"(%1519, %1491) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1521 = "llvm.ashr"(%1510, %1099) : (i64, i64) -> i64
+  %1522 = "llvm.add"(%1512, %1521) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1523 = "llvm.and"(%1510, %1098) : (i64, i64) -> i64
+  %1524 = "llvm.ashr"(%1522, %1099) : (i64, i64) -> i64
+  %1525 = "llvm.add"(%1514, %1524) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1526 = "llvm.ashr"(%1525, %1099) : (i64, i64) -> i64
+  %1527 = "llvm.add"(%1516, %1526) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1528 = "llvm.ashr"(%1527, %1099) : (i64, i64) -> i64
+  %1529 = "llvm.add"(%1518, %1528) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1530 = "llvm.ashr"(%1529, %1099) : (i64, i64) -> i64
+  %1531 = "llvm.add"(%1520, %1530) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1532 = "llvm.ashr"(%1531, %1099) : (i64, i64) -> i64
+  %1533 = "llvm.add"(%1532, %1494) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1534 = "llvm.ashr"(%1533, %1099) : (i64, i64) -> i64
+  %1535 = "llvm.add"(%1534, %1497) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1536 = "llvm.ashr"(%1535, %1099) : (i64, i64) -> i64
+  %1537 = "llvm.add"(%1536, %1500) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1538 = "llvm.ashr"(%1537, %1099) : (i64, i64) -> i64
+  %1539 = "llvm.add"(%1538, %1503) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1540 = "llvm.ashr"(%1539, %1099) : (i64, i64) -> i64
+  %1541 = "llvm.add"(%1540, %1506) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1542 = "llvm.lshr"(%1541, %1099) : (i64, i64) -> i64
+  %1543 = "llvm.add"(%1542, %1508) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %1544 = "llvm.shl"(%1522, %1099) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1545 = "llvm.and"(%1544, %1130) : (i64, i64) -> i64
+  %1546 = "llvm.or"(%1545, %1523) <{isDisjoint}> : (i64, i64) -> i64
+  %1547 = "llvm.shl"(%1525, %1100) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1548 = "llvm.and"(%1547, %1131) : (i64, i64) -> i64
+  %1549 = "llvm.or"(%1546, %1548) <{isDisjoint}> : (i64, i64) -> i64
+  %1550 = "llvm.shl"(%1527, %1132) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1551 = "llvm.or"(%1549, %1550) <{isDisjoint}> : (i64, i64) -> i64
+  "llvm.store"(%1551, %arg71) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1552 = "llvm.lshr"(%1527, %1101) : (i64, i64) -> i64
+  %1553 = "llvm.and"(%1552, %1133) : (i64, i64) -> i64
+  %1554 = "llvm.shl"(%1529, %1102) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1555 = "llvm.and"(%1554, %1134) : (i64, i64) -> i64
+  %1556 = "llvm.or"(%1555, %1553) <{isDisjoint}> : (i64, i64) -> i64
+  %1557 = "llvm.shl"(%1531, %1103) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1558 = "llvm.and"(%1557, %1135) : (i64, i64) -> i64
+  %1559 = "llvm.or"(%1556, %1558) <{isDisjoint}> : (i64, i64) -> i64
+  %1560 = "llvm.shl"(%1533, %1136) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1561 = "llvm.or"(%1559, %1560) <{isDisjoint}> : (i64, i64) -> i64
+  %1562 = "llvm.getelementptr"(%arg71) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%1561, %1562) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1563 = "llvm.lshr"(%1533, %1104) : (i64, i64) -> i64
+  %1564 = "llvm.and"(%1563, %1137) : (i64, i64) -> i64
+  %1565 = "llvm.shl"(%1535, %1105) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1566 = "llvm.and"(%1565, %1138) : (i64, i64) -> i64
+  %1567 = "llvm.or"(%1566, %1564) <{isDisjoint}> : (i64, i64) -> i64
+  %1568 = "llvm.shl"(%1537, %1097) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1569 = "llvm.and"(%1568, %1139) : (i64, i64) -> i64
+  %1570 = "llvm.or"(%1567, %1569) <{isDisjoint}> : (i64, i64) -> i64
+  %1571 = "llvm.shl"(%1539, %1140) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1572 = "llvm.or"(%1570, %1571) <{isDisjoint}> : (i64, i64) -> i64
+  %1573 = "llvm.getelementptr"(%arg71) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%1572, %1573) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1574 = "llvm.lshr"(%1539, %1106) : (i64, i64) -> i64
+  %1575 = "llvm.and"(%1574, %1141) : (i64, i64) -> i64
+  %1576 = "llvm.shl"(%1541, %1107) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1577 = "llvm.and"(%1576, %1142) : (i64, i64) -> i64
+  %1578 = "llvm.or"(%1575, %1577) <{isDisjoint}> : (i64, i64) -> i64
+  %1579 = "llvm.shl"(%1543, %1108) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1580 = "llvm.or"(%1578, %1579) <{isDisjoint}> : (i64, i64) -> i64
+  %1581 = "llvm.getelementptr"(%arg71) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%1580, %1581) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  "llvm.return"(%arg71) : (!llvm.ptr) -> ()
+}) : () -> ()
   with @fd_ulong_load_8 := fd_ulong_load_8
 
 end

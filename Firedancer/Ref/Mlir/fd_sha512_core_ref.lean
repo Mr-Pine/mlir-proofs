@@ -1,6 +1,6 @@
 module
 
--- build/native/gcc/mlir_canonicalized/ref/region/fd_sha512_core_ref.mlir
+-- build/llvm23/mlir_canonicalized/ref/op/fd_sha512_core_ref.mlir
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
@@ -18,169 +18,175 @@ namespace MLIR.Firedancer.Ref
 @[expose] public section
 
 mlir_def fd_sha512_core_ref :=
-{
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i64):
-    %0 = "llvm.mlir.constant"() <{value = 80 : i64}> : () -> i64
-    %1 = "llvm.mlir.constant"() <{value = 9 : i64}> : () -> i64
-    %2 = "llvm.mlir.constant"() <{value = 61 : i32}> : () -> i32
-    %3 = "llvm.mlir.constant"() <{value = 19 : i32}> : () -> i32
-    %4 = "llvm.mlir.constant"() <{value = 8 : i32}> : () -> i32
-    %5 = "llvm.mlir.constant"() <{value = 14 : i64}> : () -> i64
-    %6 = "llvm.mlir.constant"() <{value = 15 : i64}> : () -> i64
-    %7 = "llvm.mlir.constant"() <{value = 16 : i64}> : () -> i64
-    %8 = "llvm.mlir.constant"() <{value = 39 : i32}> : () -> i32
-    %9 = "llvm.mlir.constant"() <{value = 34 : i32}> : () -> i32
-    %10 = "llvm.mlir.constant"() <{value = 28 : i32}> : () -> i32
-    %11 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
-    %12 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
-    %13 = "llvm.mlir.constant"() <{value = 6 : i64}> : () -> i64
-    %14 = "llvm.mlir.constant"() <{value = 7 : i64}> : () -> i64
-    %15 = "llvm.mlir.constant"() <{value = 0 : i64}> : () -> i64
-    %16 = "llvm.mlir.constant"() <{value = 14 : i32}> : () -> i32
-    %17 = "llvm.mlir.constant"() <{value = 18 : i32}> : () -> i32
-    %18 = "llvm.mlir.constant"() <{value = 41 : i32}> : () -> i32
-    %19 = "llvm.mlir.constant"() <{value = -1 : i64}> : () -> i64
-    %20 = "llvm.mlir.addressof"() <{global_name = @fd_sha512_core_ref.K}> : () -> !llvm.ptr
-    %21 = "llvm.alloca"(%11) <{alignment = 16 : i64, elem_type = !llvm.array<16 x i64>}> : (i32) -> !llvm.ptr
-    %22 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 1>}> : (!llvm.ptr) -> !llvm.ptr
-    %23 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 2>}> : (!llvm.ptr) -> !llvm.ptr
-    %24 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 3>}> : (!llvm.ptr) -> !llvm.ptr
-    %25 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 4>}> : (!llvm.ptr) -> !llvm.ptr
-    %26 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 5>}> : (!llvm.ptr) -> !llvm.ptr
-    %27 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 6>}> : (!llvm.ptr) -> !llvm.ptr
-    %28 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 7>}> : (!llvm.ptr) -> !llvm.ptr
-    %29 = "llvm.load"(%arg0) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %30 = "llvm.load"(%22) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %31 = "llvm.load"(%23) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %32 = "llvm.load"(%24) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %33 = "llvm.load"(%25) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %34 = "llvm.load"(%26) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %35 = "llvm.load"(%27) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %36 = "llvm.load"(%28) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.br"(%36, %35, %34, %33, %32, %31, %30, %29, %arg1, %arg2)[^bb1] : (i64, i64, i64, i64, i64, i64, i64, i64, !llvm.ptr, i64) -> ()
-  ^bb1(%37: i64, %38: i64, %39: i64, %40: i64, %41: i64, %42: i64, %43: i64, %44: i64, %45: !llvm.ptr, %46: i64):  // 2 preds: ^bb0, ^bb4
-    "llvm.intr.lifetime.start"(%21) <{size = 128 : i64}> : (!llvm.ptr) -> ()
-    "llvm.br"(%44, %43, %42, %41, %15, %37, %38, %39, %40)[^bb2] : (i64, i64, i64, i64, i64, i64, i64, i64, i64) -> ()
-  ^bb2(%47: i64, %48: i64, %49: i64, %50: i64, %51: i64, %52: i64, %53: i64, %54: i64, %55: i64):  // 2 preds: ^bb1, ^bb2
-    %56 = "llvm.getelementptr"(%45, %51) <{elem_type = i64, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %57 = "llvm.load"(%56) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %58 = "llvm.call"(%57) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_bswap, fastmathFlags = #llvm.fastmath<none>}> : (i64) -> i64
-    %59 = "llvm.getelementptr"(%21, %51) <{elem_type = !llvm.array<16 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    "llvm.store"(%58, %59) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %60 = "llvm.call"(%55, %16) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %61 = "llvm.call"(%55, %17) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %62 = "llvm.xor"(%61, %60) : (i64, i64) -> i64
-    %63 = "llvm.call"(%55, %18) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %64 = "llvm.xor"(%62, %63) : (i64, i64) -> i64
-    %65 = "llvm.and"(%54, %55) : (i64, i64) -> i64
-    %66 = "llvm.xor"(%55, %19) : (i64, i64) -> i64
-    %67 = "llvm.and"(%53, %66) : (i64, i64) -> i64
-    %68 = "llvm.getelementptr"(%20, %51) <{elem_type = !llvm.array<80 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %69 = "llvm.load"(%68) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %70 = "llvm.or"(%67, %65) : (i64, i64) -> i64
-    %71 = "llvm.add"(%70, %52) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %72 = "llvm.add"(%71, %58) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %73 = "llvm.add"(%72, %64) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %74 = "llvm.add"(%73, %69) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %75 = "llvm.call"(%47, %10) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %76 = "llvm.call"(%47, %9) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %77 = "llvm.xor"(%76, %75) : (i64, i64) -> i64
-    %78 = "llvm.call"(%47, %8) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %79 = "llvm.xor"(%77, %78) : (i64, i64) -> i64
-    %80 = "llvm.xor"(%48, %49) : (i64, i64) -> i64
-    %81 = "llvm.and"(%47, %80) : (i64, i64) -> i64
-    %82 = "llvm.and"(%48, %49) : (i64, i64) -> i64
-    %83 = "llvm.xor"(%81, %82) : (i64, i64) -> i64
-    %84 = "llvm.add"(%74, %50) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %85 = "llvm.add"(%74, %83) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %86 = "llvm.add"(%85, %79) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %87 = "llvm.add"(%51, %12) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %88 = "llvm.icmp"(%87, %7) <{predicate = 0 : i64}> : (i64, i64) -> i1
-    "llvm.cond_br"(%88, %86, %47, %48, %49, %7, %53, %54, %55, %84, %86, %47, %48, %49, %87, %53, %54, %55, %84)[^bb3, ^bb2] <{loop_annotation = #loop_annotation, operandSegmentSizes = array<i32: 1, 9, 9>}> : (i1, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> ()
-  ^bb3(%89: i64, %90: i64, %91: i64, %92: i64, %93: i64, %94: i64, %95: i64, %96: i64, %97: i64):  // 2 preds: ^bb2, ^bb3
-    %98 = "llvm.add"(%93, %12) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %99 = "llvm.and"(%98, %6) : (i64, i64) -> i64
-    %100 = "llvm.getelementptr"(%21, %99) <{elem_type = !llvm.array<16 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %101 = "llvm.load"(%100) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %102 = "llvm.add"(%93, %5) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %103 = "llvm.and"(%102, %6) : (i64, i64) -> i64
-    %104 = "llvm.getelementptr"(%21, %103) <{elem_type = !llvm.array<16 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %105 = "llvm.load"(%104) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %106 = "llvm.call"(%101, %11) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %107 = "llvm.call"(%101, %4) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %108 = "llvm.lshr"(%101, %14) : (i64, i64) -> i64
-    %109 = "llvm.xor"(%106, %108) : (i64, i64) -> i64
-    %110 = "llvm.xor"(%109, %107) : (i64, i64) -> i64
-    %111 = "llvm.call"(%105, %3) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %112 = "llvm.call"(%105, %2) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %113 = "llvm.lshr"(%105, %13) : (i64, i64) -> i64
-    %114 = "llvm.xor"(%111, %113) : (i64, i64) -> i64
-    %115 = "llvm.xor"(%114, %112) : (i64, i64) -> i64
-    %116 = "llvm.add"(%93, %1) <{overflowFlags = #llvm.overflow<nsw, nuw>}> : (i64, i64) -> i64
-    %117 = "llvm.and"(%116, %6) : (i64, i64) -> i64
-    %118 = "llvm.getelementptr"(%21, %117) <{elem_type = !llvm.array<16 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %119 = "llvm.load"(%118) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %120 = "llvm.and"(%93, %6) : (i64, i64) -> i64
-    %121 = "llvm.getelementptr"(%21, %120) <{elem_type = !llvm.array<16 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %122 = "llvm.load"(%121) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %123 = "llvm.add"(%119, %110) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %124 = "llvm.add"(%123, %115) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %125 = "llvm.add"(%124, %122) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%125, %121) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %126 = "llvm.call"(%97, %16) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %127 = "llvm.call"(%97, %17) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %128 = "llvm.xor"(%127, %126) : (i64, i64) -> i64
-    %129 = "llvm.call"(%97, %18) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %130 = "llvm.xor"(%128, %129) : (i64, i64) -> i64
-    %131 = "llvm.and"(%96, %97) : (i64, i64) -> i64
-    %132 = "llvm.xor"(%97, %19) : (i64, i64) -> i64
-    %133 = "llvm.and"(%95, %132) : (i64, i64) -> i64
-    %134 = "llvm.getelementptr"(%20, %93) <{elem_type = !llvm.array<80 x i64>, rawConstantIndices = array<i32: 0, -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
-    %135 = "llvm.load"(%134) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %136 = "llvm.or"(%133, %131) : (i64, i64) -> i64
-    %137 = "llvm.add"(%136, %94) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %138 = "llvm.add"(%137, %125) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %139 = "llvm.add"(%138, %130) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %140 = "llvm.add"(%139, %135) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %141 = "llvm.call"(%89, %10) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %142 = "llvm.call"(%89, %9) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %143 = "llvm.xor"(%142, %141) : (i64, i64) -> i64
-    %144 = "llvm.call"(%89, %8) <{CConv = #llvm.cconv<fastcc>, callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>}> : (i64, i32) -> i64
-    %145 = "llvm.xor"(%143, %144) : (i64, i64) -> i64
-    %146 = "llvm.xor"(%90, %91) : (i64, i64) -> i64
-    %147 = "llvm.and"(%89, %146) : (i64, i64) -> i64
-    %148 = "llvm.and"(%90, %91) : (i64, i64) -> i64
-    %149 = "llvm.xor"(%147, %148) : (i64, i64) -> i64
-    %150 = "llvm.add"(%140, %92) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %151 = "llvm.add"(%140, %149) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %152 = "llvm.add"(%151, %145) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    %153 = "llvm.icmp"(%98, %0) <{predicate = 0 : i64}> : (i64, i64) -> i1
-    "llvm.cond_br"(%153, %152, %89, %90, %91, %98, %95, %96, %97, %150)[^bb4, ^bb3] <{loop_annotation = #loop_annotation, operandSegmentSizes = array<i32: 1, 0, 9>}> : (i1, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> ()
-  ^bb4:  // pred: ^bb3
-    %154 = "llvm.add"(%152, %44) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%154, %arg0) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %155 = "llvm.add"(%89, %43) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%155, %22) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %156 = "llvm.add"(%90, %42) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%156, %23) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %157 = "llvm.add"(%91, %41) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%157, %24) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %158 = "llvm.add"(%150, %40) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%158, %25) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %159 = "llvm.add"(%97, %39) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%159, %26) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %160 = "llvm.add"(%96, %38) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%160, %27) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %161 = "llvm.add"(%95, %37) <{overflowFlags = #llvm.overflow<none>}> : (i64, i64) -> i64
-    "llvm.store"(%161, %28) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %162 = "llvm.getelementptr"(%45) <{elem_type = i64, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.intr.lifetime.end"(%21) <{size = 128 : i64}> : (!llvm.ptr) -> ()
-    %163 = "llvm.add"(%46, %19) <{overflowFlags = #llvm.overflow<nsw>}> : (i64, i64) -> i64
-    %164 = "llvm.icmp"(%163, %15) <{predicate = 0 : i64}> : (i64, i64) -> i1
-    "llvm.cond_br"(%164, %161, %160, %159, %158, %157, %156, %155, %154, %162, %163)[^bb5, ^bb1] <{loop_annotation = #loop_annotation, operandSegmentSizes = array<i32: 1, 0, 10>}> : (i1, i64, i64, i64, i64, i64, i64, i64, i64, !llvm.ptr, i64) -> ()
-  ^bb5:  // pred: ^bb4
-    "llvm.return"() : () -> ()
-}
+#loop_unroll = #llvm.loop_unroll<disable = true>
+#tbaa_root = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+#loop_annotation = #llvm.loop_annotation<unroll = #loop_unroll, mustProgress = true>
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "long", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag1 = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nofree, llvm.noundef}, {llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}, {llvm.noundef, llvm.range = #llvm.constant_range<i64, 1, 144115188075855872>}], dso_local, function_type = !llvm.func<void (ptr, ptr, i64)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["nofree", "norecurse", "nosync", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"]], sym_name = "fd_sha512_core_ref", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64}> ({
+^bb0(%arg57: !llvm.ptr, %arg58: !llvm.ptr, %arg59: i64):
+  %866 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+  %867 = "llvm.mlir.constant"() <{value = 16 : i64}> : () -> i64
+  %868 = "llvm.mlir.constant"() <{value = 0 : i64}> : () -> i64
+  %869 = "llvm.mlir.constant"() <{value = 14 : i32}> : () -> i32
+  %870 = "llvm.mlir.constant"() <{value = 18 : i32}> : () -> i32
+  %871 = "llvm.mlir.constant"() <{value = 41 : i32}> : () -> i32
+  %872 = "llvm.mlir.constant"() <{value = -1 : i64}> : () -> i64
+  %873 = "llvm.mlir.addressof"() <{global_name = @fd_sha512_core_ref.K}> : () -> !llvm.ptr
+  %874 = "llvm.mlir.constant"() <{value = 28 : i32}> : () -> i32
+  %875 = "llvm.mlir.constant"() <{value = 34 : i32}> : () -> i32
+  %876 = "llvm.mlir.constant"() <{value = 39 : i32}> : () -> i32
+  %877 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
+  %878 = "llvm.mlir.constant"() <{value = 15 : i64}> : () -> i64
+  %879 = "llvm.mlir.constant"() <{value = 14 : i64}> : () -> i64
+  %880 = "llvm.mlir.constant"() <{value = 8 : i32}> : () -> i32
+  %881 = "llvm.mlir.constant"() <{value = 7 : i64}> : () -> i64
+  %882 = "llvm.mlir.constant"() <{value = 19 : i32}> : () -> i32
+  %883 = "llvm.mlir.constant"() <{value = 61 : i32}> : () -> i32
+  %884 = "llvm.mlir.constant"() <{value = 6 : i64}> : () -> i64
+  %885 = "llvm.mlir.constant"() <{value = 9 : i64}> : () -> i64
+  %886 = "llvm.mlir.constant"() <{value = 80 : i64}> : () -> i64
+  %887 = "llvm.alloca"(%866) <{alignment = 16 : i64, elem_type = !llvm.array<16 x i64>}> : (i32) -> !llvm.ptr
+  %888 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %889 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %890 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %891 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %892 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 40>}> : (!llvm.ptr) -> !llvm.ptr
+  %893 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 48>}> : (!llvm.ptr) -> !llvm.ptr
+  %894 = "llvm.getelementptr"(%arg57) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 56>}> : (!llvm.ptr) -> !llvm.ptr
+  %895 = "llvm.load"(%arg57) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %896 = "llvm.load"(%888) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %897 = "llvm.load"(%889) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %898 = "llvm.load"(%890) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %899 = "llvm.load"(%891) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %900 = "llvm.load"(%892) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %901 = "llvm.load"(%893) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %902 = "llvm.load"(%894) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.br"(%902, %901, %900, %899, %898, %897, %896, %895, %arg58, %arg59)[^bb1] : (i64, i64, i64, i64, i64, i64, i64, i64, !llvm.ptr, i64) -> ()
+^bb1(%903: i64, %904: i64, %905: i64, %906: i64, %907: i64, %908: i64, %909: i64, %910: i64, %911: !llvm.ptr, %912: i64):  // 2 preds: ^bb0, ^bb4
+  "llvm.intr.lifetime.start"(%887) : (!llvm.ptr) -> ()
+  "llvm.br"(%910, %909, %908, %907, %868, %903, %904, %905, %906)[^bb2] : (i64, i64, i64, i64, i64, i64, i64, i64, i64) -> ()
+^bb2(%913: i64, %914: i64, %915: i64, %916: i64, %917: i64, %918: i64, %919: i64, %920: i64, %921: i64):  // 2 preds: ^bb1, ^bb2
+  %922 = "llvm.getelementptr"(%911, %917) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %923 = "llvm.load"(%922) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %924 = "llvm.call"(%923) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}], callee = @fd_ulong_bswap, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (i64) -> i64
+  %925 = "llvm.getelementptr"(%887, %917) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  "llvm.store"(%924, %925) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %926 = "llvm.call"(%921, %869) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %927 = "llvm.call"(%921, %870) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %928 = "llvm.xor"(%927, %926) : (i64, i64) -> i64
+  %929 = "llvm.call"(%921, %871) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %930 = "llvm.xor"(%928, %929) : (i64, i64) -> i64
+  %931 = "llvm.and"(%920, %921) : (i64, i64) -> i64
+  %932 = "llvm.xor"(%921, %872) : (i64, i64) -> i64
+  %933 = "llvm.and"(%919, %932) : (i64, i64) -> i64
+  %934 = "llvm.or"(%933, %931) <{isDisjoint}> : (i64, i64) -> i64
+  %935 = "llvm.getelementptr"(%873, %917) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %936 = "llvm.load"(%935) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %937 = "llvm.add"(%934, %918) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %938 = "llvm.add"(%937, %924) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %939 = "llvm.add"(%938, %930) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %940 = "llvm.add"(%939, %936) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %941 = "llvm.call"(%913, %874) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %942 = "llvm.call"(%913, %875) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %943 = "llvm.xor"(%942, %941) : (i64, i64) -> i64
+  %944 = "llvm.call"(%913, %876) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %945 = "llvm.xor"(%943, %944) : (i64, i64) -> i64
+  %946 = "llvm.xor"(%914, %915) : (i64, i64) -> i64
+  %947 = "llvm.and"(%913, %946) : (i64, i64) -> i64
+  %948 = "llvm.and"(%914, %915) : (i64, i64) -> i64
+  %949 = "llvm.xor"(%947, %948) : (i64, i64) -> i64
+  %950 = "llvm.add"(%940, %916) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %951 = "llvm.add"(%940, %949) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %952 = "llvm.add"(%951, %945) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %953 = "llvm.add"(%917, %877) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %954 = "llvm.icmp"(%953, %867) <{predicate = 0 : i64}> : (i64, i64) -> i1
+  "llvm.cond_br"(%954, %952, %913, %914, %915, %867, %919, %920, %921, %950, %952, %913, %914, %915, %953, %919, %920, %921, %950)[^bb3, ^bb2] <{loop_annotation = #loop_annotation, operandSegmentSizes = array<i32: 1, 9, 9>}> : (i1, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> ()
+^bb3(%955: i64, %956: i64, %957: i64, %958: i64, %959: i64, %960: i64, %961: i64, %962: i64, %963: i64):  // 2 preds: ^bb2, ^bb3
+  %964 = "llvm.add"(%959, %877) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %965 = "llvm.and"(%964, %878) : (i64, i64) -> i64
+  %966 = "llvm.getelementptr"(%887, %965) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %967 = "llvm.load"(%966) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %968 = "llvm.add"(%959, %879) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %969 = "llvm.and"(%968, %878) : (i64, i64) -> i64
+  %970 = "llvm.getelementptr"(%887, %969) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %971 = "llvm.load"(%970) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %972 = "llvm.call"(%967, %866) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %973 = "llvm.call"(%967, %880) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %974 = "llvm.lshr"(%967, %881) : (i64, i64) -> i64
+  %975 = "llvm.xor"(%972, %974) : (i64, i64) -> i64
+  %976 = "llvm.xor"(%975, %973) : (i64, i64) -> i64
+  %977 = "llvm.call"(%971, %882) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %978 = "llvm.call"(%971, %883) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %979 = "llvm.lshr"(%971, %884) : (i64, i64) -> i64
+  %980 = "llvm.xor"(%977, %979) : (i64, i64) -> i64
+  %981 = "llvm.xor"(%980, %978) : (i64, i64) -> i64
+  %982 = "llvm.add"(%959, %885) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %983 = "llvm.and"(%982, %878) : (i64, i64) -> i64
+  %984 = "llvm.getelementptr"(%887, %983) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %985 = "llvm.load"(%984) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %986 = "llvm.and"(%959, %878) : (i64, i64) -> i64
+  %987 = "llvm.getelementptr"(%887, %986) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %988 = "llvm.load"(%987) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %989 = "llvm.add"(%985, %976) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %990 = "llvm.add"(%989, %981) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %991 = "llvm.add"(%990, %988) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%991, %987) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %992 = "llvm.call"(%963, %869) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %993 = "llvm.call"(%963, %870) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %994 = "llvm.xor"(%993, %992) : (i64, i64) -> i64
+  %995 = "llvm.call"(%963, %871) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %996 = "llvm.xor"(%994, %995) : (i64, i64) -> i64
+  %997 = "llvm.and"(%962, %963) : (i64, i64) -> i64
+  %998 = "llvm.xor"(%963, %872) : (i64, i64) -> i64
+  %999 = "llvm.and"(%961, %998) : (i64, i64) -> i64
+  %1000 = "llvm.or"(%999, %997) <{isDisjoint}> : (i64, i64) -> i64
+  %1001 = "llvm.getelementptr"(%873, %959) <{elem_type = !llvm.array<8 x i8>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  %1002 = "llvm.load"(%1001) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %1003 = "llvm.add"(%1000, %960) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1004 = "llvm.add"(%1003, %991) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1005 = "llvm.add"(%1004, %996) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1006 = "llvm.add"(%1005, %1002) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1007 = "llvm.call"(%955, %874) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %1008 = "llvm.call"(%955, %875) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %1009 = "llvm.xor"(%1008, %1007) : (i64, i64) -> i64
+  %1010 = "llvm.call"(%955, %876) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @fd_ulong_rotate_right, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (i64, i32) -> i64
+  %1011 = "llvm.xor"(%1009, %1010) : (i64, i64) -> i64
+  %1012 = "llvm.xor"(%956, %957) : (i64, i64) -> i64
+  %1013 = "llvm.and"(%955, %1012) : (i64, i64) -> i64
+  %1014 = "llvm.and"(%956, %957) : (i64, i64) -> i64
+  %1015 = "llvm.xor"(%1013, %1014) : (i64, i64) -> i64
+  %1016 = "llvm.add"(%1006, %958) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1017 = "llvm.add"(%1006, %1015) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1018 = "llvm.add"(%1017, %1011) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %1019 = "llvm.icmp"(%964, %886) <{predicate = 0 : i64}> : (i64, i64) -> i1
+  "llvm.cond_br"(%1019, %1018, %955, %956, %957, %964, %961, %962, %963, %1016)[^bb4, ^bb3] <{loop_annotation = #loop_annotation, operandSegmentSizes = array<i32: 1, 0, 9>}> : (i1, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> ()
+^bb4:  // pred: ^bb3
+  %1020 = "llvm.add"(%1018, %910) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1020, %arg57) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1021 = "llvm.add"(%955, %909) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1021, %888) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1022 = "llvm.add"(%956, %908) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1022, %889) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1023 = "llvm.add"(%957, %907) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1023, %890) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1024 = "llvm.add"(%1016, %906) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1024, %891) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1025 = "llvm.add"(%963, %905) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1025, %892) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1026 = "llvm.add"(%962, %904) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1026, %893) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1027 = "llvm.add"(%961, %903) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  "llvm.store"(%1027, %894) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %1028 = "llvm.getelementptr"(%911) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 128>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.intr.lifetime.end"(%887) : (!llvm.ptr) -> ()
+  %1029 = "llvm.add"(%912, %872) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  %1030 = "llvm.icmp"(%1029, %868) <{predicate = 0 : i64}> : (i64, i64) -> i1
+  "llvm.cond_br"(%1030, %1027, %1026, %1025, %1024, %1023, %1022, %1021, %1020, %1028, %1029)[^bb5, ^bb1] <{loop_annotation = #loop_annotation, operandSegmentSizes = array<i32: 1, 0, 10>}> : (i1, i64, i64, i64, i64, i64, i64, i64, i64, !llvm.ptr, i64) -> ()
+^bb5:  // pred: ^bb4
+  "llvm.return"() : () -> ()
+}) : () -> ()
   with @fd_ulong_bswap := fd_ulong_bswap, @fd_ulong_rotate_right := fd_ulong_rotate_right,
     @fd_sha512_core_ref.K := fd_sha512_core_ref_K
 

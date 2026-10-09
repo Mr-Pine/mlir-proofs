@@ -1,6 +1,6 @@
 module
 
--- build/native/gcc/mlir_canonicalized/ref/region/fiat_25519_selectznz.mlir
+-- build/llvm23/mlir_canonicalized/ref/op/fiat_25519_selectznz.mlir
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
@@ -14,63 +14,67 @@ namespace MLIR.Firedancer.Ref
 @[expose] public section
 
 mlir_def fiat_25519_selectznz :=
-{
-  ^bb0(%arg0: !llvm.ptr, %arg1: i8, %arg2: !llvm.ptr, %arg3: !llvm.ptr):
-    %0 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
-    %1 = "llvm.alloca"(%0) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
-    %2 = "llvm.alloca"(%0) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
-    %3 = "llvm.alloca"(%0) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
-    %4 = "llvm.alloca"(%0) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
-    %5 = "llvm.alloca"(%0) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
-    "llvm.intr.lifetime.start"(%1) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.start"(%2) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.start"(%3) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.start"(%4) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.start"(%5) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    %6 = "llvm.load"(%arg2) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %7 = "llvm.load"(%arg3) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.call"(%1, %arg1, %6, %7) <{CConv = #llvm.cconv<fastcc>, callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, i8, i64, i64) -> ()
-    %8 = "llvm.getelementptr"(%arg2) <{elem_type = i64, rawConstantIndices = array<i32: 1>}> : (!llvm.ptr) -> !llvm.ptr
-    %9 = "llvm.load"(%8) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %10 = "llvm.getelementptr"(%arg3) <{elem_type = i64, rawConstantIndices = array<i32: 1>}> : (!llvm.ptr) -> !llvm.ptr
-    %11 = "llvm.load"(%10) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.call"(%2, %arg1, %9, %11) <{CConv = #llvm.cconv<fastcc>, callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, i8, i64, i64) -> ()
-    %12 = "llvm.getelementptr"(%arg2) <{elem_type = i64, rawConstantIndices = array<i32: 2>}> : (!llvm.ptr) -> !llvm.ptr
-    %13 = "llvm.load"(%12) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %14 = "llvm.getelementptr"(%arg3) <{elem_type = i64, rawConstantIndices = array<i32: 2>}> : (!llvm.ptr) -> !llvm.ptr
-    %15 = "llvm.load"(%14) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.call"(%3, %arg1, %13, %15) <{CConv = #llvm.cconv<fastcc>, callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, i8, i64, i64) -> ()
-    %16 = "llvm.getelementptr"(%arg2) <{elem_type = i64, rawConstantIndices = array<i32: 3>}> : (!llvm.ptr) -> !llvm.ptr
-    %17 = "llvm.load"(%16) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %18 = "llvm.getelementptr"(%arg3) <{elem_type = i64, rawConstantIndices = array<i32: 3>}> : (!llvm.ptr) -> !llvm.ptr
-    %19 = "llvm.load"(%18) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.call"(%4, %arg1, %17, %19) <{CConv = #llvm.cconv<fastcc>, callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, i8, i64, i64) -> ()
-    %20 = "llvm.getelementptr"(%arg2) <{elem_type = i64, rawConstantIndices = array<i32: 4>}> : (!llvm.ptr) -> !llvm.ptr
-    %21 = "llvm.load"(%20) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %22 = "llvm.getelementptr"(%arg3) <{elem_type = i64, rawConstantIndices = array<i32: 4>}> : (!llvm.ptr) -> !llvm.ptr
-    %23 = "llvm.load"(%22) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.call"(%5, %arg1, %21, %23) <{CConv = #llvm.cconv<fastcc>, callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>}> : (!llvm.ptr, i8, i64, i64) -> ()
-    %24 = "llvm.load"(%1) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    "llvm.store"(%24, %arg0) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %25 = "llvm.load"(%2) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %26 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 1>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%25, %26) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %27 = "llvm.load"(%3) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %28 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 2>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%27, %28) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %29 = "llvm.load"(%4) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %30 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 3>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%29, %30) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    %31 = "llvm.load"(%5) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
-    %32 = "llvm.getelementptr"(%arg0) <{elem_type = i64, rawConstantIndices = array<i32: 4>}> : (!llvm.ptr) -> !llvm.ptr
-    "llvm.store"(%31, %32) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%5) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%4) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%3) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%2) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.intr.lifetime.end"(%1) <{size = 8 : i64}> : (!llvm.ptr) -> ()
-    "llvm.return"() : () -> ()
-}
+#tbaa_root = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "long", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag1 = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nofree, llvm.noundef, llvm.writeonly}, {llvm.noundef, llvm.zeroext}, {llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}, {llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}], dso_local, function_type = !llvm.func<void (ptr, i8, ptr, ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"]], sym_name = "fiat_25519_selectznz", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg2: !llvm.ptr, %arg3: i8, %arg4: !llvm.ptr, %arg5: !llvm.ptr):
+  %9 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+  %10 = "llvm.alloca"(%9) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
+  %11 = "llvm.alloca"(%9) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
+  %12 = "llvm.alloca"(%9) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
+  %13 = "llvm.alloca"(%9) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
+  %14 = "llvm.alloca"(%9) <{alignment = 8 : i64, elem_type = i64}> : (i32) -> !llvm.ptr
+  "llvm.intr.lifetime.start"(%10) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.start"(%11) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.start"(%12) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.start"(%13) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.start"(%14) : (!llvm.ptr) -> ()
+  %15 = "llvm.load"(%arg4) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %16 = "llvm.load"(%arg5) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.call"(%10, %arg3, %15, %16) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.noundef, llvm.zeroext}, {llvm.noundef}, {llvm.noundef}], callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 4, 0>}> : (!llvm.ptr, i8, i64, i64) -> ()
+  %17 = "llvm.getelementptr"(%arg4) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %18 = "llvm.load"(%17) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %19 = "llvm.getelementptr"(%arg5) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %20 = "llvm.load"(%19) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.call"(%11, %arg3, %18, %20) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.noundef, llvm.zeroext}, {llvm.noundef}, {llvm.noundef}], callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 4, 0>}> : (!llvm.ptr, i8, i64, i64) -> ()
+  %21 = "llvm.getelementptr"(%arg4) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %22 = "llvm.load"(%21) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %23 = "llvm.getelementptr"(%arg5) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %24 = "llvm.load"(%23) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.call"(%12, %arg3, %22, %24) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.noundef, llvm.zeroext}, {llvm.noundef}, {llvm.noundef}], callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 4, 0>}> : (!llvm.ptr, i8, i64, i64) -> ()
+  %25 = "llvm.getelementptr"(%arg4) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %26 = "llvm.load"(%25) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %27 = "llvm.getelementptr"(%arg5) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %28 = "llvm.load"(%27) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.call"(%13, %arg3, %26, %28) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.noundef, llvm.zeroext}, {llvm.noundef}, {llvm.noundef}], callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 4, 0>}> : (!llvm.ptr, i8, i64, i64) -> ()
+  %29 = "llvm.getelementptr"(%arg4) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %30 = "llvm.load"(%29) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %31 = "llvm.getelementptr"(%arg5) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %32 = "llvm.load"(%31) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.call"(%14, %arg3, %30, %32) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.noundef, llvm.zeroext}, {llvm.noundef}, {llvm.noundef}], callee = @fiat_25519_cmovznz_u64, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 4, 0>}> : (!llvm.ptr, i8, i64, i64) -> ()
+  %33 = "llvm.load"(%10) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  "llvm.store"(%33, %arg2) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %34 = "llvm.load"(%11) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %35 = "llvm.getelementptr"(%arg2) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%34, %35) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %36 = "llvm.load"(%12) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %37 = "llvm.getelementptr"(%arg2) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%36, %37) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %38 = "llvm.load"(%13) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %39 = "llvm.getelementptr"(%arg2) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%38, %39) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  %40 = "llvm.load"(%14) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (!llvm.ptr) -> i64
+  %41 = "llvm.getelementptr"(%arg2) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%40, %41) <{alignment = 8 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag1]}> : (i64, !llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%14) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%13) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%12) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%11) : (!llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%10) : (!llvm.ptr) -> ()
+  "llvm.return"() : () -> ()
+}) : () -> ()
   with @fiat_25519_cmovznz_u64 := fiat_25519_cmovznz_u64
 
 end
