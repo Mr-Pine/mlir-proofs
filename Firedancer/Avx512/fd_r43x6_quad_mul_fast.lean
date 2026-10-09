@@ -114,7 +114,6 @@ public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
   step_pure with p5_q8
   step_pure with a26
   step_pure with p6_q9
-  step_pure with p7_qa
   step_pure with h29
   step_pure with s30
   step_pure with p1_q4'
@@ -200,7 +199,6 @@ public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
   have e_p5_q8 : p5_q8 = wwl_madd52lo a24 x33 y25 := by lanes hp5_q8
   have e_a26 : a26 = wwl_madd52lo wwl_zero x55 y14 := by lanes ha26
   have e_p6_q9 : p6_q9 = wwl_madd52lo a26 x44 y25 := by lanes hp6_q9
-  have e_p7_qa : p7_qa = wwl_madd52lo wwl_zero x55 y25 := by lanes hp7_qa
   have e_h29 : h29 = wwl_madd52hi wwl_zero x00 y03 := by lanes hh29
   have e_s30 : s30 = wwl_shl h29 9 := by lanes hs30
   have e_p1_q4' : p1_q4' = wwl_add p1_q4 s30 := by lanes hp1_q4'
@@ -231,7 +229,7 @@ public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
   have e_h56 : h56 = wwl_madd52hi wwl_zero x55 y14 := by lanes hh56
   have e_h57 : h57 = wwl_madd52hi h56 x44 y25 := by lanes hh57
   have e_s58 : s58 = wwl_shl h57 9 := by lanes hs58
-  have e_p7_qa' : p7_qa' = wwl_add p7_qa s58 := by lanes hp7_qa'
+  have e_p7_qa' : p7_qa' = wwl_add (wwl_madd52lo wwl_zero x55 y25) s58 := by lanes hp7_qa'
   have e_h60 : h60 = wwl_madd52hi wwl_zero x55 y25 := by lanes hh60
   have e_p8_qb : p8_qb = wwl_shl h60 9 := by lanes hp8_qb
   have e_q6_p3 : q6_p3 = wwl_pack_halves p3_q6' 1 p3_q6' 0 := by lanes hq6_p3
@@ -253,7 +251,7 @@ public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
       wwl_add (wwl_add za25 (wwl_shl zb25 7)) (wwl_add (wwl_shl zb25 4) (wwl_shl zb25 3)) := by
     lanes hz25
   clear hArgs hE hx00 hx11 hx22 hx33 hx44 hx55 hp0_q3 ha12 hp1_q4 ha14 ha15 hp2_q5 ha17 ha18 hp3_q6
-    ha20 ha21 hp4_q7 ha23 ha24 hp5_q8 ha26 hp6_q9 hp7_qa hh29 hs30 hp1_q4' hh32 hh33 hs34 hp2_q5'
+    ha20 ha21 hp4_q7 ha23 ha24 hp5_q8 ha26 hp6_q9 hh29 hs30 hp1_q4' hh32 hh33 hs34 hp2_q5'
     hh36 hh37 hh38 hs39 hp3_q6' hh41 hh42 hh43 hs44 hp4_q7' hh46 hh47 hh48 hs49 hp5_q8' hh51 hh52
     hh53 hs54 hp6_q9' hh56 hh57 hs58 hp7_qa' hh60 hp8_qb hq6_p3 hq7_p4 hq8_p5 hza03 hza14 hza25
     hzb03 hzb14 hzb25 hz03 hz14 hz25
