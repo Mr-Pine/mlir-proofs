@@ -109,7 +109,7 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
       E.args =
         (fd_ed25519_verify.args (.value msg) (.value msgSz) (.value sig) (.value pk)
             (.value sha)).get)
-    (hR : E ⊨ [%5 := 32#64, %9 := k]) (hwf : S.WF) (hsha : S.mem.ShaFit sha)
+    (hR : E ⊨ [%775 := 32#64, %783 := k]) (hwf : S.WF) (hsha : S.mem.ShaFit sha)
     (hsig : Fits S.mem sig (8 * 32)) (hsig_off : ¬sig.offset.uaddOverflow 32#64)
     (hpk : Fits S.mem pk (8 * 32)) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
     (hmsg : Fits S.mem msg (8 * msgSz.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgSz)
@@ -117,7 +117,7 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
     (hmsg_sha : msg.id ≠ sha.id) (hk_sha : k.id ≠ sha.id)
     (hK :
       (fd_ed25519_verify.bb5.runBodyFrom
-            E[%22 := .value sha, %23 := .value sha, %24 := .value sha, %25 := .value sha, %26 :=
+            E[%796 := .value sha, %797 := .value sha, %798 := .value sha, %799 := .value sha, %800 :=
               .value k]
             6
             {
