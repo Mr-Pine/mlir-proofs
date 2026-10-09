@@ -48,7 +48,7 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
   -- _1111, _2222, _2224
   step_pattern using runBodyFrom_permuteRun 0 0 0 0 inline
   step_pattern using runBodyFrom_permuteRun 1 1 1 1 inline
-  step_pattern using runBodyFrom_laneIfMaskRun 0 0 0 1 inline
+  step_pattern using runBodyFrom_laneIfMaskFirstRun 0 0 0 1 inline
   step_pattern using runBodyFrom_negateLazyRun inline
   -- FD_R52X5_QUAD_ADD_FAST( _ta, _ta, _ta ) up to FD_R52X5_QUAD_REDUCE( _ta, _ta )
   step_pattern using runBodyFrom_addSelfRun inline
@@ -62,7 +62,7 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
   -- _tb, _ta, FD_R52X5_QUAD_MUL_FAST( P2, _ta, _tb ), FD_R52X5_QUAD_REDUCE( P2, P2 )
   step_pattern using runBodyFrom_permuteRun 3 1 1 3 inline
   step_pattern using runBodyFrom_permuteRun 2 0 2 0 inline
-  step_pattern using runBodyFrom_qpMulGepRun inline
+  step_pattern using runBodyFrom_qpMulGepTailRun inline
   step_pattern using runBodyFrom_reduceStoreRun inline
   finish_block
   subst hS

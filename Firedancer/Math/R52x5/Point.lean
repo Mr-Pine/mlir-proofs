@@ -81,6 +81,10 @@ public theorem proj_iff {Q : Quad5} {x y : ZMod p} :
     Q.Proj x y ↔ Q.val 2 ≠ 0 ∧ Q.val 0 = x * Q.val 2 ∧ Q.val 1 = y * Q.val 2 :=
   Iff.rfl
 
+/-- Extended coordinates are projective ones. -/
+public theorem Ext.proj {Q : Quad5} {x y : ZMod p} (h : Q.Ext x y) : Q.Proj x y :=
+  ⟨h.1, h.2.1, h.2.2.1⟩
+
 public theorem elem_0 (Q : Quad5) (j : Fin 4) : Q.elem j 0 = Q.P0[j] :=
   rfl
 

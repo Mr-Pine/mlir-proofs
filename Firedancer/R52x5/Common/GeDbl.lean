@@ -84,7 +84,7 @@ theorem runBodyFrom_blendBackRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets 
 
 /-- `FD_R52X5_QUAD_LANE_IF( d, i0,i1,i2,i3, s, t )` with the mask's bytes `mb` at hand (an
 earlier `LANE_IF`'s, or hoisted): per limb `blendLimbRun`. -/
-def laneIfMaskRun (mb : Dst Γ Ty32x8) (t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 : Dst Γ Ty4x64)
+def laneIfMaskFirstRun (mb : Dst Γ Ty32x8) (t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 : Dst Γ Ty4x64)
     (tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3 tb4 sb4 q4 : Dst Γ Ty32x8)
     (r0 r1 r2 r3 r4 : Dst Γ Ty4x64) : List (Instr Γ) :=
   blendLimbRun t0 s0 mb tb0 sb0 q0 r0 ++ blendLimbRun t1 s1 mb tb1 sb1 q1 r1 ++
@@ -92,18 +92,18 @@ def laneIfMaskRun (mb : Dst Γ Ty32x8) (t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 : Dst Γ T
     blendLimbRun t3 s3 mb tb3 sb3 q3 r3 ++
     blendLimbRun t4 s4 mb tb4 sb4 q4 r4
 
-/-- Where the body at `pos` is `laneIfMaskRun`, `mb` holds the bytes of `laneMask i0 i1 i2 i3`,
+/-- Where the body at `pos` is `laneIfMaskFirstRun`, `mb` holds the bytes of `laneMask i0 i1 i2 i3`,
 `t0 … t4` hold `T` and `s0 … s4` hold `X`: running on from `pos` then `g` gives `K` if it does
 from `pos + 20` with `Quad5.laneIf i0 i1 i2 i3 X T` in `r0 … r4`, and the operands' and the
 results' bytes in the others. -/
-theorem runBodyFrom_laneIfMaskRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
+theorem runBodyFrom_laneIfMaskFirstRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
     {pos : Nat} {mb : Dst Γ Ty32x8} {t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 : Dst Γ Ty4x64}
     {tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3 tb4 sb4 q4 : Dst Γ Ty32x8}
     {r0 r1 r2 r3 r4 : Dst Γ Ty4x64} {rest : List (Instr Γ)} {X T : Quad5} {S : GlobalState}
     {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        laneIfMaskRun mb t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3
+        laneIfMaskFirstRun mb t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3
             tb4 sb4 q4 r0 r1 r2 r3 r4 ++
           rest)
     (hR :
@@ -404,7 +404,7 @@ theorem runBodyFrom_addSelfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
 
 /-- `FD_R52X5_QUAD_MUL_FAST( q, x, y )` into the point at `p` as compiled: `qpMulRun` with the
 point's `getelementptr`s (`p + 32 k` into `g1 … g4`) among the loads. -/
-def qpMulGepRun (z0 z1 z2 z3 z4 : Dst Γ .ptr)
+def qpMulGepTailRun (z0 z1 z2 z3 z4 : Dst Γ .ptr)
     (x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64) (p : Reg Γ .ptr)
     (g1 g2 g3 g4 : Dst Γ .ptr) : List (Instr Γ) :=
   [.lifetimeStart (.val z0.i z0.h) 32, .lifetimeStart (.val z1.i z1.h) 32,
@@ -433,16 +433,16 @@ def qpMulGepRun (z0 z1 z2 z3 z4 : Dst Γ .ptr)
     .lifetimeEnd (.val z2.i z2.h) 32, .lifetimeEnd (.val z1.i z1.h) 32,
     .lifetimeEnd (.val z0.i z0.h) 32]
 
-/-- `runBodyFrom_qpMulRun` for `qpMulGepRun`, `p` holding the point `P`: from `pos + 20`, with
+/-- `runBodyFrom_qpMulRun` for `qpMulGepTailRun`, `p` holding the point `P`: from `pos + 20`, with
 `P + 32 k` in `gk`. -/
-theorem runBodyFrom_qpMulGepRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
+theorem runBodyFrom_qpMulGepTailRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {z0 z1 z2 z3 z4 : Dst Γ .ptr} {x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64}
     {p : Reg Γ .ptr} {g1 g2 g3 g4 : Dst Γ .ptr} {rest : List (Instr Γ)} {X Y : Quad5}
     {Z0 Z1 Z2 Z3 Z4 P : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
     {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        qpMulGepRun z0 z1 z2 z3 z4 x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 p g1 g2 g3 g4 ++
+        qpMulGepTailRun z0 z1 z2 z3 z4 x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 p g1 g2 g3 g4 ++
           rest)
     (hR :
       E ⊨ [x0 := X.P0, x1 := X.P1, x2 := X.P2, x3 := X.P3, x4 := X.P4, y0 := Y.P0, y1 := Y.P1, y2 :=
