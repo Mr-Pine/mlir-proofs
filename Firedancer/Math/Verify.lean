@@ -1,5 +1,6 @@
 module
 
+public import Firedancer.Math.VerifySpec
 public import Ed25519.Decode
 public import Ed25519.BasePoint
 public import Ed25519.Group
@@ -17,32 +18,6 @@ import Mathlib.Tactic.LinearCombination
 namespace LeanMLIR.RIR.Firedancer.Ref
 
 open _root_.Ed25519
-
-/-! ## Definitions -/
-
-@[expose] public section
-
-namespace Ed25519
-
-/-- Ed25519 verification of `S`, `r` against the key `A` and message `msg`, in
-`fd_ed25519_verify`'s order and error codes: `S < ℓ`; `A`, `R` decode and are not of small order;
-then `[S]B = R + [k]A` for `k` the SHA-512 digest of `r ‖ A ‖ msg`, mod `ℓ`. -/
-noncomputable def verify (msg : List (BitVec 8)) (r S A : BitVec 256) : BitVec 32 :=
-  if ell ≤ S.toNat then -1#32
-  else
-    match decode A, decode r with
-    | some PA, some PR =>
-      if 8 • PA = 0 then -2#32
-      else if 8 • PR = 0 then -1#32
-      else
-        let k := natLE (Sha512.digest (bytesLE r ++ bytesLE A ++ msg)) % ell
-        if S.toNat • basePoint = PR + k • PA then 0#32 else -3#32
-    | none, _ => -2#32
-    | some _, none => -1#32
-
-end Ed25519
-
-end
 
 /-! ## Decoding -/
 
