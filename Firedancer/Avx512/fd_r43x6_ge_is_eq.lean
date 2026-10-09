@@ -36,8 +36,6 @@ attribute [-mlir_operation] zipWith_eq_ofFn
 attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
   zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
   zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
--- `vpermi2var` stays folded until its index is a literal, for `reduceVpermi2var`
-attribute [-mlir_operation] Operation.vpermi2var
 
 theorem Quad.permute_2021 (P : Quad) : P.permute 2 0 2 1 = P.perm4 2 0 2 1 := by
   quad_lanes
@@ -69,8 +67,7 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
         { s with alloc := ⟨s.alloc.nextFreeBlock + 3⟩ }) := by
   func_init
   block_init
-  iterate 15 step_pure
-  iterate 2 step_pattern using runBodyFrom_vecRun
+  iterate 30 step_pure
   iterate 3 step_alloca
   -- FD_R43X6_QUAD_PERMUTE( X, 2,0,2,1, X ); FD_R43X6_QUAD_PERMUTE( Y, 0,2,1,2, Y )
   step_pure with xa03
@@ -84,10 +81,10 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
   have e3 := _hm
   -- FD_R43X6_QUAD_UNPACK( xn2, xn1, yn2, yn1, X )
   iterate 4 step_pure
-  step_pure [reduceVpermi2var] with xn2
-  step_pure [reduceVpermi2var] with xn1
-  step_pure [reduceVpermi2var] with yn2
-  step_pure [reduceVpermi2var] with yn1
+  step_pure with xn2
+  step_pure with xn1
+  step_pure with yn2
+  step_pure with yn1
   -- !fd_r43x6_is_nonzero( fd_r43x6_sub_fast( xn1, xn2 ) ) & …( yn1, yn2 )
   step_pure
   step_pure with dx
