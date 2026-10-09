@@ -159,14 +159,14 @@ theorem Ed25519.one_sub_ne (x y : ZMod p) : 1 - Ed25519.d * x ^ 2 * y ^ 2 ≠ 0 
   linear_combination h1
 
 /-- Doubling's `y² - x²`, nonzero on the curve. -/
-theorem Ed25519.dbl_den₁ (hc : Ed25519.OnCurve x y) : y ^ 2 - x ^ 2 ≠ 0 := by
+public theorem Ed25519.dbl_den₁ (hc : Ed25519.OnCurve x y) : y ^ 2 - x ^ 2 ≠ 0 := by
   have := Ed25519.one_add_ne x y
   unfold Ed25519.OnCurve at hc
   intro h
   exact this (by linear_combination -hc + h)
 
 /-- Doubling's `2 - y² + x²`, nonzero on the curve. -/
-theorem Ed25519.dbl_den₂ (hc : Ed25519.OnCurve x y) : 2 - y ^ 2 + x ^ 2 ≠ 0 := by
+public theorem Ed25519.dbl_den₂ (hc : Ed25519.OnCurve x y) : 2 - y ^ 2 + x ^ 2 ≠ 0 := by
   have := Ed25519.one_sub_ne x y
   unfold Ed25519.OnCurve at hc
   intro h
@@ -244,7 +244,7 @@ public theorem Ed25519.add_den₂ {x₁ y₁ x₂ y₂ : ZMod p} (h1 : Ed25519.O
 
 /-- Addition from extended coordinates, as `add_with_opts` computes it before its last
 multiplications: `(r₆ - r₅, r₈ - r₇, r₈ + r₇, r₆ + r₅)` is the sum as a completed point. -/
-theorem Ed25519.add_compl {x₁ y₁ X₁ Y₁ T₁ Z₁ x₂ y₂ X₂ Y₂ T₂ Z₂ : ZMod p}
+public theorem Ed25519.add_compl {x₁ y₁ X₁ Y₁ T₁ Z₁ x₂ y₂ X₂ Y₂ T₂ Z₂ : ZMod p}
     (hA : Ed25519.IsExt x₁ y₁ X₁ Y₁ T₁ Z₁) (hB : Ed25519.IsExt x₂ y₂ X₂ Y₂ T₂ Z₂)
     (h1 : Ed25519.OnCurve x₁ y₁) (h2 : Ed25519.OnCurve x₂ y₂) :
     let r₅ := (Y₁ - X₁) * (Y₂ - X₂)

@@ -103,7 +103,7 @@ public theorem fd_f25519_abs.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.Tigh
     omega
 
 /-- `c² = 1` exactly at `±1`. -/
-theorem sq_eq_one_iff' {c : ZMod p} : c ^ 2 = 1 ↔ c = 1 ∨ c = -1 := by
+public theorem sq_eq_one_iff' {c : ZMod p} : c ^ 2 = 1 ↔ c = 1 ∨ c = -1 := by
   constructor
   · intro h
     have : (c - 1) * (c + 1) = 0 := by linear_combination h
@@ -113,7 +113,7 @@ theorem sq_eq_one_iff' {c : ZMod p} : c ^ 2 = 1 ↔ c = 1 ∨ c = -1 := by
   · rintro (rfl | rfl) <;> ring
 
 /-- `(u / v)` is a square exactly when `u v⁷` is. -/
-theorem isSquare_div_iff {u v : ZMod p} (hv : v ≠ 0) :
+public theorem isSquare_div_iff {u v : ZMod p} (hv : v ≠ 0) :
     IsSquare (u / v) ↔ IsSquare (u * v ^ 7) := by
   have h4 : v ^ 4 ≠ 0 := pow_ne_zero _ hv
   constructor

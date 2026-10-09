@@ -147,7 +147,7 @@ public theorem decode_eq_none {buf : BitVec 256} : decode buf = none ↔ ∀ P, 
   · next h => simpa using h
 
 /-- A point with `buf`'s `y` exists exactly when one decodes: `x` or `-x` has the right parity. -/
-theorem exists_decodes_iff (buf : BitVec 256) :
+public theorem exists_decodes_iff (buf : BitVec 256) :
     (∃ P, Decodes buf P) ↔ ∃ x, OnCurve x ((buf.toNat % 2 ^ 255 : ℕ) : ZMod p) := by
   constructor
   · rintro ⟨P, hy, -⟩
