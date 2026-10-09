@@ -32,14 +32,14 @@ section Proof
 /-- `^bb1`'s env: the constants, the loop's `xa xb` and its counter `k`. -/
 abbrev fd_r43x6_repsqr_mul2.hdr (E : ⟪fd_r43x6_repsqr_mul2.Γ⟫) (k : Nat)
     (xa xb : Vector (BitVec 64) 8) : ⟪fd_r43x6_repsqr_mul2.Γ⟫ :=
-  E[%0 := 18446744073709551615#64, %1 := foldK, %2 := 0#64, %3 := foldMask, %4 := foldShifts, %5 :=
-    (Ty.vec 8 64).poisoned, %7 := xa, %8 := xb, %9 := BitVec.ofNat 64 k]
+  E[%448 := 0#64, %449 := foldMask, %450 := foldShifts, %451 := (Ty.vec 8 64).poisoned, %452 := foldK,
+    %453 := 18446744073709551615#64, %455 := xa, %456 := xb, %457 := BitVec.ofNat 64 k]
 
-/-- `^bb2`'s env on leaving the loop: the constants, and the squarings `xa xb` in `%23 %22`. -/
+/-- `^bb2`'s env on leaving the loop: the constants, and the squarings `xa xb` in `%471 %470`. -/
 abbrev fd_r43x6_repsqr_mul2.exit (E : ⟪fd_r43x6_repsqr_mul2.Γ⟫) (xa xb : Vector (BitVec 64) 8) :
     ⟪fd_r43x6_repsqr_mul2.Γ⟫ :=
-  E[%1 := foldK, %3 := foldMask, %4 := foldShifts, %5 := (Ty.vec 8 64).poisoned, %22 := xb, %23 :=
-    xa]
+  E[%449 := foldMask, %450 := foldShifts, %451 := (Ty.vec 8 64).poisoned, %452 := foldK, %470 := xb,
+    %471 := xa]
 
 /-- The counter's `n - 1` (`add nsw n, -1`) does not overflow. -/
 theorem dec_nsw (k : Nat) (h0 : 0 < k) (h : k < 2 ^ 63) :
@@ -60,7 +60,7 @@ theorem dec_eq (k : Nat) (h0 : 0 < k) (h : k < 2 ^ 63) :
   omega
 
 /-- The loop from `^bb1` with counter `k`, in continuation form: after `k` iterations, `^bb2` runs
-with `%23`, `%22` holding `k` folded squarings of `xa`, `xb`. -/
+with `%471`, `%470` holding `k` folded squarings of `xa`, `xb`. -/
 theorem fd_r43x6_repsqr_mul2.loop (S : GlobalState) (hwf : S.WF)
     (K : PoisonOr (Vals [] × GlobalState)) :
     ∀ k (xa xb : Vector (BitVec 64) 8) E,
@@ -115,12 +115,12 @@ public theorem fd_r43x6_repsqr_mul2.call_eq (za zb : Pointer) (xa ya xb yb : Wwl
                 (fd_r43x6_repsqr_mul2.spec xb yb n.toNat) }) := by
   func_init
   block_init
-  step_pure with m1
-  step_pure with k19
   step_pure with zero
   step_pure with m
   step_pure with sh
   step_pure
+  step_pure with k19
+  step_pure with m1
   step_pure
   finish_block
   case isTrue =>
