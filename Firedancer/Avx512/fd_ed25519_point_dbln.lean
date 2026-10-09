@@ -1,8 +1,7 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Avx512.Common.Point
-public import Firedancer.Avx512.fd_ed25519_partial_dbl
+public import Firedancer.Avx512.Common.QuadOps
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_dbln
 
 namespace LeanMLIR.RIR.Firedancer.Avx512
@@ -20,11 +19,6 @@ end
 /-! ## Proof -/
 
 section Proof
-
-attribute [-mlir_operation] zipWith_eq_ofFn
-attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
-  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
-  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
 
 namespace fd_ed25519_point_dbln
 
@@ -132,37 +126,30 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
     (fd_ed25519_point_dbln.runFrom (hdr E P k) 3 S >>= g) = K := by
   block_init
   -- FD_R43X6_QUAD_PERMUTE( _ta, 1,1,2,0, r->P ); its lanes stay below `2^44`
-  step_pure with ta03
-  step_pure with ta14
-  step_pure with ta25
+  step_pattern using runBodyFrom_permuteRun 1 1 2 0
+  have d1 := _hp
+  have d1' := (Quad.permute_1120 _).symm.trans d1
   obtain ⟨hP03, hP14, hP25⟩ := hP
-  have hk03 := add_lt_ok
-    (wwl_perm4_lt_of_eq hP03 (i0 := 1) (i1 := 1) (i2 := 2) (i3 := 0) (v := ta03)
-      (by rw [hta03]; rfl)) hP03
-  have hk14 := add_lt_ok
-    (wwl_perm4_lt_of_eq hP14 (i0 := 1) (i1 := 1) (i2 := 2) (i3 := 0) (v := ta14)
-      (by rw [hta14]; rfl)) hP14
-  have hk25 := add_lt_ok
-    (wwl_perm4_lt_of_eq hP25 (i0 := 1) (i1 := 1) (i2 := 2) (i3 := 0) (v := ta25)
-      (by rw [hta25]; rfl)) hP25
-  -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, r->P )
-  step_pure
-  step_pure with tb03
-  step_pure
-  step_pure with tb14
-  step_pure
-  step_pure with tb25
+  have hk03 := add_lt_ok (wwl_perm4_lt_of_eq hP03 (congrArg Quad.P03 d1')) hP03
+  have hk14 := add_lt_ok (wwl_perm4_lt_of_eq hP14 (congrArg Quad.P14 d1')) hP14
+  have hk25 := add_lt_ok (wwl_perm4_lt_of_eq hP25 (congrArg Quad.P25 d1')) hP25
+  -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, r->P ): the code's `nsw` holds
+  step_pattern using runBodyFrom_laneAddRun' 1 0 0 0 (ho03 := fun _ => hk03)
+    (ho14 := fun _ => hk14) (ho25 := fun _ => hk25)
+  have d2 := _hl
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )
-  step_pattern using runBodyFrom_dblRun
+  step_pattern using runBodyFrom_dblMidRun
+  have d3 := _hdbl
   -- FD_R43X6_QUAD_FOLD_UNSIGNED( r->P, _ta ), kept in registers
   step_pattern using runBodyFrom_foldUnsignedRun
+  have d15 := _hu
   -- `i++`, `i<n`
   step_pure
   step_pure
   step_pure
-  have e1 : (P.perm4 1 1 2 0).addSel true false false false P = ⟨tb03, tb14, tb25⟩ := by
-    rw [htb03, htb14, htb25, hta03, hta14, hta25]; rfl
-  have hQ : geDbl quadMul quadSqr P = ⟨u03, u14, u25⟩ := by rw [geDbl_eq, e1, _hdbl, _hu]
+  have hQ : geDbl quadMul quadSqr P = ⟨u03, u14, u25⟩ := by
+    rw [geDbl_eq_mid, show P = ⟨P.P03, P.P14, P.P25⟩ from rfl, d1, d2, d3, Quad.foldUnsigned_eq,
+      d15]
   finish_block
   · rw [hQ] at hback
     step_loop using hback
@@ -251,36 +238,27 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
         { alloc := ⟨s.alloc.nextFreeBlock + 12⟩,
           mem := s.mem.storeQuad r (fd_ed25519_point_dbln.spec (s.mem.readQuad a) n.toNat) }) := by
   func_init
+  have hra : S.mem.readQuad a = S₀.mem.readQuad a := by rw [hS]
   block_init
-  iterate 87 step_pure
+  iterate 24 step_pure
+  iterate 7 step_pattern using runBodyFrom_vecRun
   iterate 12 step_alloca
   -- FD_R43X6_QUAD_PERMUTE( _ta, 1,1,2,0, a->P )
-  step_load with x03
-  step_pure with ta03
-  step_pure
-  step_load with x14
-  step_pure with ta14
-  step_pure
-  step_load with x25
-  step_pure with ta25
+  step_pattern using runBodyFrom_permuteLoadRun 1 1 2 0
+  have d0 := hra ▸ _hx
+  have d1 := _hp
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, a->P )
-  step_pure
-  step_pure with tb03
-  step_pure
-  step_pure with tb14
-  step_pure
-  step_pure with tb25
+  step_pattern using runBodyFrom_laneAddRun' 1 0 0 0
+  have d2 := _hl
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )
-  step_pattern using runBodyFrom_dblRun
+  step_pattern using runBodyFrom_dblMidRun
+  have d3 := _hdbl
   -- FD_R43X6_QUAD_FOLD_UNSIGNED( r->P, _ta )
   step_pattern using runBodyFrom_foldUnsignedStoreRun
+  have d15 := _hu
   step_pure
-  have e0 : S₀.mem.readQuad a = ⟨x03, x14, x25⟩ := by rw [hx03, hx14, hx25]; rfl
-  have e1 : Quad.addSel true false false false (Quad.perm4 1 1 2 0 ⟨x03, x14, x25⟩)
-      ⟨x03, x14, x25⟩ = ⟨tb03, tb14, tb25⟩ := by
-    rw [htb03, htb14, htb25, hta03, hta14, hta25]; rfl
   have hA : geDbl quadMul quadSqr (S₀.mem.readQuad a) = ⟨u03, u14, u25⟩ := by
-    rw [geDbl_eq, e0, e1, _hdbl, _hu]
+    rw [geDbl_eq_mid, d0, d1, d2, d3, Quad.foldUnsigned_eq, d15]
   finish_block
   · -- `n > 1`: the loop, `n - 1` trips
     have hn2 : 2 ≤ n.toNat := by

@@ -1,7 +1,7 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Avx512.Common.Point
+public import Firedancer.Avx512.Common.QuadOps
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_neg
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
@@ -63,7 +63,8 @@ public theorem fd_ed25519_point_neg.call_eq (r a : Pointer) (s : GlobalState) (h
   all_goals
     func_init
     block_init
-    iterate 53 step_pure
+    iterate 17 step_pure
+    iterate 4 step_pattern using runBodyFrom_vecRun
     step_load with transparent a03
     step_pure
     step_load with transparent a14

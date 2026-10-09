@@ -1,7 +1,7 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Avx512.Common.Point
+public import Firedancer.Avx512.Common.QuadOps
 public import Firedancer.Avx512.fd_r43x6_is_nonzero
 public import Firedancer.Avx512.Mlir.fd_r43x6_ge_is_eq
 import Std.Tactic.BVDecide
@@ -69,7 +69,8 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
         { s with alloc := ⟨s.alloc.nextFreeBlock + 3⟩ }) := by
   func_init
   block_init
-  iterate 33 step_pure
+  iterate 15 step_pure
+  iterate 2 step_pattern using runBodyFrom_vecRun
   iterate 3 step_alloca
   -- FD_R43X6_QUAD_PERMUTE( X, 2,0,2,1, X ); FD_R43X6_QUAD_PERMUTE( Y, 0,2,1,2, Y )
   step_pure with xa03
@@ -79,12 +80,8 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
   step_pure with ya14
   step_pure with ya25
   -- FD_R43X6_QUAD_MUL_FAST( X, X, Y )
-  iterate 3 step_pure
-  step_call using fd_r43x6_quad_mul_fast.call_eq
-  step_load with m03
-  step_load with m14
-  step_load with m25
-  iterate 3 step_pure
+  step_pattern using runBodyFrom_mulRun
+  have e3 := _hm
   -- FD_R43X6_QUAD_UNPACK( xn2, xn1, yn2, yn1, X )
   iterate 4 step_pure
   step_pure [reduceVpermi2var] with xn2
@@ -108,8 +105,6 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
     rw [hxa03, hxa14, hxa25]; rfl
   have e2 : Quad.perm4 0 2 1 2 ⟨Y03, Y14, Y25⟩ = ⟨ya03, ya14, ya25⟩ := by
     rw [hya03, hya14, hya25]; rfl
-  have e3 : quadMul ⟨xa03, xa14, xa25⟩ ⟨ya03, ya14, ya25⟩ = ⟨m03, m14, m25⟩ := by
-    rw [hm03, hm14, hm25]; rfl
   have e4 : fd_r43x6_sub_fast (Quad.Y ⟨m03, m14, m25⟩) (Quad.X ⟨m03, m14, m25⟩) = dx := by
     rw [fd_r43x6_sub_fast_eq, hdx, hxn1, hxn2]; rfl
   have e5 : fd_r43x6_sub_fast (Quad.T ⟨m03, m14, m25⟩) (Quad.Z ⟨m03, m14, m25⟩) = dy := by

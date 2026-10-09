@@ -1,7 +1,7 @@
 module
 
 public import SSA.Projects.RIR.Run.Tactic
-public import Firedancer.Avx512.Common.Point
+public import Firedancer.Avx512.Common.QuadOps
 public import Firedancer.Avx512.Mlir.fd_ed25519_point_neg_precomputed
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
@@ -67,7 +67,9 @@ public theorem fd_ed25519_point_neg_precomputed.call_eq (r a : Pointer) (s : Glo
             s.mem.storeQuad r (fd_ed25519_point_neg_precomputed.spec (s.mem.readQuad a)) }) := by
   func_init
   block_init
-  iterate 40 step_pure
+  iterate 12 step_pure
+  iterate 3 step_pattern using runBodyFrom_vecRun
+  step_pure
   step_load with transparent a03
   step_pure
   step_load with transparent a14
