@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
+import Std.Tactic.BVDecide
 public import Firedancer.Avx512.Mlir.fd_f25519_sub
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
@@ -37,6 +38,11 @@ end
 
 section Proof
 
+/-- Below `2^44`, a masked lane plus a small bias overflows neither way: the `nsw nuw` add. -/
+private theorem and_add_no_overflow (a m b : BitVec 64) (hm : m < 0x100000000000#64)
+    (hb : b < 0x100000000000#64) :
+    (a &&& m).saddOverflow b = false ∧ (a &&& m).uaddOverflow b = false := by bv_decide
+
 /-- `sub` stores `spec a b` at `r` and returns `r`. `r` may alias `a` or `b`. -/
 public theorem fd_f25519_sub.call_eq (r a b : Pointer) (s : GlobalState) (hwf : s.WF)
     (hr : Fits s.mem r 512) (ha : Fits s.mem a 512) (hb : Fits s.mem b 512) :
@@ -49,26 +55,45 @@ public theorem fd_f25519_sub.call_eq (r a b : Pointer) (s : GlobalState) (hwf : 
   rw [MemoryState.storeVec]
   func_init
   block_init
-  step_pure with p
-  step_pure with reduced_mask
-  step_pure with shift_amounts
-  step_pure with rotl_idxs
-  step_pure with zero
-  step_pure with eightteen
-  step_pure with first_elem_mask
-  step_pure with b
+  step_pure with _b
+  step_pure with d_mask
+  step_pure with eighteen
+  -- lane indices `7 … 1`
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure with pb
+  step_pure with m
+  step_pure with sh
+  -- `wwl_zero()` as `#v[0, poison, …]`: the rotation reads only its lane 0
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
+  step_pure
   step_load with x
   step_load with y
-  step_pure opaque
-  step_pure with sub_fast
-  -- fold_signed
-  step_pure opaque named transparent
-  step_pure opaque [hshift_amounts] named transparent
-  step_pure [hrotl_idxs, hzero, expandOfFn, Ty.wrap_vec] named transparent
-  step_pure [heightteen] with multiplied
-  step_pure opaque [hfirst_elem_mask, hmultiplied, expandOfFn, List.getElem_cons_zero,
-    List.getElem_cons_succ, BitVec.and_zero] named
+  -- `fd_r43x6_sub_fast`
   step_pure
+  step_pure with _x
+  -- `fd_r43x6_fold_signed`
+  step_pure with _xl
+  step_pure opaque [hsh, expandOfFn] with _xh
+  step_pure with _c
+  step_pure [heighteen]
+  step_pure [hd_mask] with _d
+  step_pure opaque [h_xl, hm, h_b, expandOfFn, and_add_no_overflow] with _xl_b
   step_pure
   step_pure
   step_store
@@ -80,9 +105,10 @@ public theorem fd_f25519_sub.call_eq (r a b : Pointer) (s : GlobalState) (hwf : 
   intro i
   fin_cases i
   all_goals try simp [spec, MemoryState.readVec, Ty.extractVecElem_eq]
-  -- lane 0: `(c * 18) &&& -1 = 18 * c`
-  rw [show (18446744073709551615#64) = BitVec.allOnes 64 by decide, BitVec.and_allOnes,
-    BitVec.mul_comm]
+  -- the compiled sum is `_xl + _b + _c + _d`; lane 0: `(c * 18) &&& -1 = 18 * c`
+  · rw [show (18446744073709551615#64) = BitVec.allOnes 64 by decide, BitVec.and_allOnes]
+    ac_rfl
+  all_goals ac_rfl
 
 end Proof
 
