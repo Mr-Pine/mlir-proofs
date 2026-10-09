@@ -1,0 +1,135 @@
+# Zig's Ed25519 `verify`, proved
+
+Zig's `std.crypto.sign.Ed25519.Signature.verify` (`lib/std/crypto` at ziglang/zig `738d2be9d6b6`),
+lifted from LLVM IR into the register-based IR (the `MLIR` package, branch `new-semantics-mlir`)
+and proved against Ed25519 as mathematics. Build with `lake build Ed25519 Common Zig`.
+
+## What is proved
+
+**The program.** `zig-build/verify.zig` exports `zig_ed25519_verify(msg, len, sig, pk)`, which
+calls `Signature.verify` and maps its errors to codes: `NonCanonical` -1, `InvalidEncoding` -2,
+`IdentityElement` -3, `WeakPublicKey` -4, `SignatureVerificationFailed` -5, success 0.
+
+**`MLIR.Zig.zig_ed25519_verify.correct`** (`Zig/Math/Final.lean`): from any well-formed state in
+which the message (`len` bytes), the signature (64 bytes) and the key (32 bytes) are readable and
+do not wrap the address space (`len + 128 < 2^64`), the lifted program returns a value, with no
+undefined behaviour and no poison. That value is `Zig.verify msg r S A`, where `r`, `S` are the
+signature's halves and `A` the key, read little-endian. Memory comes back unchanged; only the
+allocation counter advances.
+
+**`Zig.verify`** (`Zig/Math/Verify.lean`) is the specification in Zig's order of checks and with
+its codes:
+1. `S < ℓ`;
+2. `A` decodes and its `x ≠ 0`;
+3. `r` is canonical (`y < p`), decodes, and its `x ≠ 0`;
+4. `(32·A).x ≠ 0`, the weak-key check;
+5. `k = SHA-512(r ‖ A ‖ M) mod ℓ`, and the cofactored equation `[8][S]B = [8]R + [8][k]A` holds.
+
+**Relation to RFC 8032** (`Ed25519/Verify.lean`, shared with Firedancer):
+- **The variants:** `Variant.Accepts` is §5.1.7 Verify, parameterized by four choices:
+  - strict or lax decoding of `R` and of `A`;
+  - `k` reduced mod `ℓ` or not;
+  - the cofactored or cofactorless equation;
+  - which decoded points are rejected besides.
+
+  `Variant.rfc8032` is the RFC as written, and `Variant.zig` and `Variant.firedancer` are the two
+  implementations.
+- **`verify_eq_zero_iff`:** `Zig.verify … = 0 ↔ Variant.zig.Accepts …`. Firedancer has the same
+  link for its own `verify`.
+- **`Variant.zig_iff_rfc8032`:** for a canonical `A`, Zig accepts exactly what RFC 8032 accepts,
+  minus its extra rejections (`x = 0` for `A` or `R`, `(32·A).x = 0`). It assumes `CurveOrder`
+  (`8ℓ·P = 0` for every point), which is true but not proved here: the curve's points are not
+  counted.
+- **`verify_of_firedancer`** (`Zig/Math/VerifyFiredancer.lean`): what Firedancer accepts with a
+  canonical `r`, Zig accepts.
+
+**Axioms.** `zig_ed25519_verify.correct` depends on `propext`, `Classical.choice`, `Quot.sound`
+and the certificate axioms of 429 `bv_decide` calls. There is no `sorry` and no `native_decide`.
+The RFC 8032 relation and the Firedancer comparison use the three standard axioms only.
+
+## What is trusted
+
+- **The pipeline** (`zig-build/build.sh`):
+  - Zig 0.15.2 emits unoptimized LLVM IR, and Zig's own clang optimizes it at `-Os`;
+  - LLVM 20's `mlir-translate` imports it, and `mlir-opt` canonicalizes it;
+  - the scripts reshape it: `noinline.py`, `globals.py`, the `sed` renames, `rewrite.py`,
+    `extract_region.py` and `lift.py`.
+- **The build configuration**, which is not a default release build:
+  - `ReleaseSmall`, for x86-64 without SSE;
+  - ten functions marked `noinline` (`noinline.py`) so the proof splits along Zig's own
+    functions. The proved IR is Zig's optimizer output for this configuration, not `ReleaseFast`
+    with full inlining.
+- **`rewrite.py`'s transformations:**
+  - `llvm.intr.assume(c)` becomes a branch on `select c, true, poison`. It is undefined behaviour
+    exactly when `c` is false, so this is sound, and the proofs show `c`.
+  - `freeze x` becomes `x`. Zig's IR has no `freeze`, so this never applies.
+  - Alias scopes and call attributes, which are hints, are dropped.
+  - `undef` in global initializers becomes zeros: the `[7 x i8]` padding of the `Edwards25519`
+    globals. This holds for the object file, which stores zeros there, but not under LLVM's
+    semantics, where those bytes are undefined.
+- **RIR's memory model**, where it is more defined than LLVM's:
+  - `alloca` returns zeroed memory;
+  - alignment padding flattens to zeros;
+  - each `addressof` makes a fresh copy of its constant global (`extract_region.py` rejects
+    mutable globals).
+
+  Storing poison is undefined behaviour in RIR, which is stricter than LLVM and therefore safe.
+- **The specifications**: `Ed25519.Sha512.digest`, the field, the curve and decoding in
+  `Ed25519/`, taken as definitions.
+
+## Workarounds in the proofs
+
+- **`Sha512_round`: the 80 rounds unrolled.** Zig's round loop is an `inline for`, which is always
+  unrolled, so `^bb5` is one block of 2,140 instructions, and stepping costs more per instruction
+  the deeper it goes.
+  - **Chunking:** the rounds are 20 four-round lemmas (`chunk0` … `chunk76`), each with
+    `maxHeartbeats 0`, so they check in parallel. They are generated by
+    `zig-build/sha-gen/build.py` (`info.py`, `final.py`, `compose.py`; the other scripts there
+    were exploration).
+  - **`read_write_same`** (local, `mlir_env 1100`): a read of a register right after its write
+    would otherwise reduce a cast by walking `Γ`'s 2,240 register types.
+  - **`bb5_done` by `decide +kernel`:** plain `decide` walks the instruction list.
+  - **High registers** in statements are written `rir_reg% hty k`, not `%k`.
+- **`maxHeartbeats 0`** is also used in `Sha512_update`, `Sha512_final` and `scalar_reduce64`
+  (long straight-line code).
+- **`Edwards25519_mulDoubleBasePublic`:** the framework's `getelementptr` step writes table offsets
+  as `k * 168`, so each of the four table calls is preceded by `rw [Nat.mul_comm 168] at hTf hTr`.
+  The offset facts `hbpo` and `htbo` must stay, because the calls do not unify without them.
+- **Globals** (`identityElement`, `basePointPc`, `Sha512_iv`, the `Fe` constants): their literals
+  are checked with `decide +kernel`, as the framework's skill describes for global initializers.
+- **`Scalar_fromBytes`:** one `bv_decide` can time out under a fully parallel build. It passes
+  when the module is built alone.
+
+## Framework changes I'd like
+
+1. **`step_pattern` deep in long blocks.** This is written and tested on the old layout in
+   `~/lean-mlir-nightly-port-zig`, and needs porting to `MLIR/`.
+   - **The bug:** on a concrete block, `step_pattern` unfolds `body.drop pos` and each register's
+     `Γ.ty i` in the elaborator. Both overflow the recursion limit past a few hundred instructions
+     or registers.
+   - **The fix:** read the pattern's instructions off the block, as `step_pure` reads one, behind
+     a body fact the kernel checks, and take the registers' type proofs from those instructions.
+     Add `Env.read_write_same` (`mlir_env 1100`), and the test `Tests/Syntax/PatternsDeep.lean`.
+   - **The payoff:** with these, rounds 4–78 of `Sha512_round` become one 26-instruction pattern.
+     Four rounds at position 1887 take 6 s instead of 47 s, and the hand-made chunking and
+     `sha-gen` can go.
+2. **Position-independent steps.** Every step on a concrete block has the kernel check
+   `body[pos]`, which costs time proportional to `pos`, so a long block costs time quadratic in
+   its length. That kernel time reaches 70 s per chunk in `Sha512_round`. Carrying a body fact
+   `body.drop pos = x :: xs` from step to step, as abstract blocks already do, would make each
+   check constant-time.
+3. **`step_pattern … with` for continuation binders.** It names only values the pattern computes.
+   A pattern whose continuation binds its results (`∀ A' E', …`) needs `rename'` after every
+   site.
+4. **Undefined bytes.** Add a per-bit `defined` mask beside each block's bytes:
+   - `flatten` marks poison leaves and padding undefined;
+   - storing poison writes undefined bits instead of being undefined behaviour;
+   - `alloca` and padding start undefined, and `memcpy` copies the mask;
+   - a load is poison wherever a leaf has an undefined bit;
+   - proofs carry a `Defined` predicate, maintained like `Fits`.
+
+   That makes RIR as defined as LLVM, no more and no less, and lets `rewrite.py` stop zeroing
+   `undef`. For `identityElement`, the global's last 63 bits would be undefined, and the proofs'
+   `readRest p = 0#64` would become a statement about its flag bit alone.
+5. **Globals as blocks.** Set each global up once at program start, instead of making a fresh copy
+   per `addressof`, so that mutable globals and pointer equality on globals can be handled.
