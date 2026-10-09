@@ -5,7 +5,6 @@ public import MLIR.Run.BasicBlock
 public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Wwl
-import Std.Tactic.BVDecide
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
@@ -72,11 +71,6 @@ def neg18 : Vector (BitVec 64) 8 :=
 @[mlir_const]
 def negSel : Vector (BitVec 64) 8 :=
   #v[18446744073709551615, 0, 0, 0, 0, 0, 0, 0]
-
-/-- Below `2^44`, a masked value plus a small bias overflows neither way. -/
-theorem and_add_no_overflow (a m b : BitVec 64) (hm : m < 0x100000000000#64)
-    (hb : b < 0x100000000000#64) :
-    (a &&& m).saddOverflow b = false ∧ (a &&& m).uaddOverflow b = false := by bv_decide
 
 /-- The all-ones mask, as the constant spells it. -/
 theorem allOnes_64 : (18446744073709551615#64) = BitVec.allOnes 64 := by

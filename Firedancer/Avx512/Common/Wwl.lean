@@ -1,6 +1,8 @@
 module
 
 public import MLIR.Ty
+import Std.Tactic.BVDecide
+meta import Std.Tactic.BVDecide.Reflect
 
 /-! The AVX-512 `wwl_t` operations of `fd_avx512_wwl.h` and `wv_t` of `fd_avx_wv.h`, lane by lane,
 as the specs use them. Each operation is a `Vector.ofFn`, so `expandOfFn` splits it into lanes. -/
@@ -150,6 +152,11 @@ def permutexvarBytes (perm x : Wwl) : Vector (BitVec 8) 64 :=
 /-- `_mm512_permutexvar_epi8(perm, x)`: `permutexvarBytes` regrouped into lanes. -/
 def mm512_permutexvar_epi8 (perm x : Wwl) : Wwl :=
   Vector.ofFn fun j => (BitVec.packLanes (permutexvarBytes perm x)).extractLsb' (j.1 * 64) 64
+
+/-- Below `2^44`, a masked lane plus a small bias overflows neither way. -/
+theorem and_add_no_overflow (a m b : BitVec 64) (hm : m < 0x100000000000#64)
+    (hb : b < 0x100000000000#64) :
+    (a &&& m).saddOverflow b = false ∧ (a &&& m).uaddOverflow b = false := by bv_decide
 
 end
 

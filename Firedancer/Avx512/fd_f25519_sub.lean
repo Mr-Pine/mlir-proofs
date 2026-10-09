@@ -2,7 +2,6 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
-import Std.Tactic.BVDecide
 public import Firedancer.Avx512.Mlir.fd_f25519_sub
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
@@ -37,11 +36,6 @@ end
 /-! ## Proof -/
 
 section Proof
-
-/-- Below `2^44`, a masked lane plus a small bias overflows neither way: the `nsw nuw` add. -/
-private theorem and_add_no_overflow (a m b : BitVec 64) (hm : m < 0x100000000000#64)
-    (hb : b < 0x100000000000#64) :
-    (a &&& m).saddOverflow b = false ∧ (a &&& m).uaddOverflow b = false := by bv_decide
 
 /-- `sub` stores `spec a b` at `r` and returns `r`. `r` may alias `a` or `b`. -/
 public theorem fd_f25519_sub.call_eq (r a b : Pointer) (s : GlobalState) (hwf : s.WF)

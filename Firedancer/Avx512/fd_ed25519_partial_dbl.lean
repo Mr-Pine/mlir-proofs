@@ -29,8 +29,8 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
   func_init
   have hra : S.mem.readQuad a = S₀.mem.readQuad a := by rw [hS]
   block_init
-  iterate 23 step_pure
-  iterate 7 step_pattern using runBodyFrom_vecRun
+  iterate 24 step_pure
+  iterate 7 step_pattern using runBodyFrom_insertRun
   iterate 6 step_alloca
   -- FD_R43X6_QUAD_PERMUTE( _ta, 1,1,2,0, a->P )
   step_pattern using runBodyFrom_permuteLoadRun 1 1 2 0

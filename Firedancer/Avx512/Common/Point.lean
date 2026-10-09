@@ -595,19 +595,21 @@ theorem shr_add_bias_ok (d s : Wwl) (hs : s = Vector.replicate 8 43#64 ∨ s = s
     | wwl_lanes
       bv_decide
 
-/-- A signed carry plus `_bias`, plus the next limb's low bits: no signed overflow. -/
-theorem shr_add_bias_add_mask_ok (d e s m : Wwl) (hs : s = Vector.replicate 8 43#64 ∨ s = s4340)
+/-- A signed carry by 43 plus `_bias`, plus the next limb's low bits: no overflow either way. -/
+theorem shr43_add_bias_add_mask_ok (d e m : Wwl)
     (hm : m = Vector.replicate 8 8796093022207#64 ∨ m = m4340) :
     ∀ i : Fin 8,
-      (wwl_add (wwl_shr_vector d s) (Vector.replicate 8 1048576#64))[i].saddOverflow
-          (wwl_and e m)[i] = false := by
+      (wwl_add (wwl_shr_vector d (Vector.replicate 8 43#64))
+            (Vector.replicate 8 1048576#64))[i].saddOverflow (wwl_and e m)[i] = false ∧
+        (wwl_add (wwl_shr_vector d (Vector.replicate 8 43#64))
+            (Vector.replicate 8 1048576#64))[i].uaddOverflow (wwl_and e m)[i] = false := by
   intro ⟨i, hi⟩
-  rcases hs with rfl | rfl <;> rcases hm with rfl | rfl <;> obtain _|_|_|_|_|_|_|_|i := i
+  rcases hm with rfl | rfl <;> obtain _|_|_|_|_|_|_|_|i := i
   all_goals
     first
     | omega
     | wwl_lanes
-      bv_decide
+      constructor <;> bv_decide
 
 theorem wwl_add_add_swap (x b y : Wwl) : wwl_add (wwl_add x b) y = wwl_add (wwl_add y b) x := by
   ext i hi : 1
@@ -878,6 +880,11 @@ theorem sub_sel_add_ok {x y z v : Wwl} {p q : BitVec 64} {b0 b1 b2 b3 : Bool}
 
 theorem shr40_mul19_no_overflow (x : BitVec 64) :
     (x >>> 40).smulOverflow 19#64 = false ∧ (x >>> 40).umulOverflow 19#64 = false := by
+  bv_decide
+
+/-- A signed carry by 40 times `19`: no signed overflow. -/
+theorem sshr40_mul19_no_overflow (x : BitVec 64) :
+    (x.sshiftRight 40).smulOverflow 19#64 = false := by
   bv_decide
 
 
@@ -1469,7 +1476,7 @@ def foldSignedRun (x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 : Dst �
     .binop (.vector (.ashr false)) h03 (.val d03.i d03.h) (.val sh43.i sh43.h),
     .binop (.vector (.ashr false)) h14 (.val d14.i d14.h) (.val sh43.i sh43.h),
     .binop (.vector (.ashr false)) h25 (.val d25.i d25.h) (.val sh4340.i sh4340.h),
-    .binop (.vector (.mul {})) p (.val h25.i h25.h) (.val k19.i k19.h),
+    .binop (.vector (.mul { nsw := true })) p (.val h25.i h25.h) (.val k19.i k19.h),
     .binop (.vector .and) l03 (.val d03.i d03.h) (.val mk43.i mk43.h),
     .binop (.shufflevector #v[some 4, some 5, some 6, some 7, some 8, some 9, some 10, some 11]) c
       (.val p.i p.h) (.val h25.i h25.h),
@@ -1477,10 +1484,10 @@ def foldSignedRun (x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 : Dst �
     .binop (.vector (.add {})) r03 (.val e03.i e03.h) (.val c.i c.h),
     .binop (.vector .and) l14 (.val d14.i d14.h) (.val mk43.i mk43.h),
     .binop (.vector (.add { nsw := true })) e14 (.val h03.i h03.h) (.val b.i b.h),
-    .binop (.vector (.add { nsw := true })) r14 (.val e14.i e14.h) (.val l14.i l14.h),
+    .binop (.vector (.add { nsw := true, nuw := true })) r14 (.val e14.i e14.h) (.val l14.i l14.h),
     .binop (.vector .and) l25 (.val d25.i d25.h) (.val mk4340.i mk4340.h),
     .binop (.vector (.add { nsw := true })) e25 (.val h14.i h14.h) (.val b.i b.h),
-    .binop (.vector (.add { nsw := true })) r25 (.val e25.i e25.h) (.val l25.i l25.h)]
+    .binop (.vector (.add { nsw := true, nuw := true })) r25 (.val e25.i e25.h) (.val l25.i l25.h)]
 
 /-- `foldSignedRun` with the sums in `Quad.foldSignedC'`'s order: `(c + b03) + l03`,
 `(l14 + b) + h03`, `(h14 + b) + l25`. -/
@@ -1493,7 +1500,7 @@ def foldSignedRun' (x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 : Dst 
     .binop (.vector (.ashr false)) h03 (.val d03.i d03.h) (.val sh43.i sh43.h),
     .binop (.vector (.ashr false)) h14 (.val d14.i d14.h) (.val sh43.i sh43.h),
     .binop (.vector (.ashr false)) h25 (.val d25.i d25.h) (.val sh4340.i sh4340.h),
-    .binop (.vector (.mul {})) p (.val h25.i h25.h) (.val k19.i k19.h),
+    .binop (.vector (.mul { nsw := true })) p (.val h25.i h25.h) (.val k19.i k19.h),
     .binop (.vector .and) l03 (.val d03.i d03.h) (.val mk43.i mk43.h),
     .binop (.shufflevector #v[some 4, some 5, some 6, some 7, some 8, some 9, some 10, some 11]) c
       (.val p.i p.h) (.val h25.i h25.h),
@@ -1504,7 +1511,7 @@ def foldSignedRun' (x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 : Dst 
     .binop (.vector (.add { nsw := true })) r14 (.val e14.i e14.h) (.val h03.i h03.h),
     .binop (.vector .and) l25 (.val d25.i d25.h) (.val mk4340.i mk4340.h),
     .binop (.vector (.add { nsw := true })) e25 (.val h14.i h14.h) (.val b.i b.h),
-    .binop (.vector (.add { nsw := true })) r25 (.val e25.i e25.h) (.val l25.i l25.h)]
+    .binop (.vector (.add { nsw := true, nuw := true })) r25 (.val e25.i e25.h) (.val l25.i l25.h)]
 
 /-- `FD_R43X6_QUAD_FOLD_SIGNED`'s constants in `nb03 … mk4340`: the biases subtracted and added
 back, the carry shifts and the low-bit masks. -/
@@ -1553,7 +1560,8 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
   step_pure with sh03
   step_pure with sh14
   step_pure with transparent sh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector] with transparent sp
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector, sshr40_mul19_no_overflow]
+    with transparent sp
   step_pure with sl03
   step_pure with sc03
   have hsc03' : sc03 =
@@ -1571,14 +1579,14 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
   have hok14 := shr_add_bias_ok sd03 _ (.inl rfl)
   rw [← hsh03] at hok14
   step_pure with se14
-  have hok14' := shr_add_bias_add_mask_ok sd03 sd14 _ _ (.inl rfl) (.inl rfl)
+  have hok14' := shr43_add_bias_add_mask_ok sd03 sd14 _ (.inl rfl)
   rw [← hsh03, ← hse14, ← hsl14] at hok14'
   step_pure with sf14
   step_pure with sl25
   have hok25 := shr_add_bias_ok sd14 _ (.inl rfl)
   rw [← hsh14] at hok25
   step_pure with se25
-  have hok25' := shr_add_bias_add_mask_ok sd14 sd25 _ _ (.inl rfl) (.inr rfl)
+  have hok25' := shr43_add_bias_add_mask_ok sd14 sd25 _ (.inr rfl)
   rw [← hsh14, ← hse25, ← hsl25] at hok25'
   step_pure with sf25
   have e : Quad.foldSignedC ⟨X03, X14, X25⟩ = ⟨sf03, sf14, sf25⟩ := by
@@ -1587,7 +1595,6 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
     rfl
   rw [hE]
   exact hK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ e
-
 
 /-- `runBodyFrom_foldSignedRun` for `foldSignedRun'`: `Quad.foldSignedC' X` in `r03 r14 r25`. -/
 theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
@@ -1623,7 +1630,8 @@ theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
   step_pure with sh03
   step_pure with sh14
   step_pure with transparent sh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector] with transparent sp
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector, sshr40_mul19_no_overflow]
+    with transparent sp
   step_pure with sl03
   step_pure with sc03
   have hsc03' : sc03 =
@@ -1646,7 +1654,7 @@ theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
   have hok25 := shr_add_bias_ok sd14 _ (.inl rfl)
   rw [← hsh14] at hok25
   step_pure with se25
-  have hok25' := shr_add_bias_add_mask_ok sd14 sd25 _ _ (.inl rfl) (.inr rfl)
+  have hok25' := shr43_add_bias_add_mask_ok sd14 sd25 _ (.inr rfl)
   rw [← hsh14, ← hse25, ← hsl25] at hok25'
   step_pure with sf25
   have e : Quad.foldSignedC' ⟨X03, X14, X25⟩ = ⟨sf03, sf14, sf25⟩ := by
