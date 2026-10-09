@@ -119,18 +119,6 @@ open Firedancer.Ref
 
 /-! ### Tables in memory -/
 
-/-- A non-negative `int` counter's sign bit is clear. -/
-theorem msb_ofNat32 {i : Nat} (h : i < 2 ^ 31) : (BitVec.ofNat 32 i).msb = false := by
-  simp only [BitVec.msb_eq_decide, BitVec.toNat_ofNat, decide_eq_false_iff_not]
-  omega
-
-/-- Entry `i - 1`'s offset, `192` bytes back from entry `i`'s. -/
-theorem off_prev {i : Nat} (h1 : 1 ≤ i) (h : 192 * i < 2 ^ 64) :
-    BitVec.ofNat 64 (192 * i) + 18446744073709551424#64 = BitVec.ofNat 64 (192 * (i - 1)) := by
-  apply BitVec.eq_of_toNat_eq
-  rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
-  omega
-
 /-- `n` points `f 0, …, f (n - 1)` at `p`, 192 bytes apart. -/
 def TableAt (m : MemoryState) (p : Pointer) (n : Nat) (f : Nat → Quad) : Prop :=
   ∀ k < n,
@@ -748,7 +736,7 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
   block_init
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), Nat.mul_comm i 192,
     show 192 * i < 2 ^ 64 by omega]
-  step_pure [off_prev hi1 (show 192 * i < 2 ^ 64 by omega)]
+  step_pure [off_prev (c := 18446744073709551424) rfl hi1 (show 192 * i < 2 ^ 64 by omega)]
   step_call using fd_ed25519_point_add_with_opts.call_eq
   step_call using fd_ed25519_point_add_final_mul.call_eq
   step_call using fd_curve25519_into_precomputed.call_eq

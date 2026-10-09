@@ -1,6 +1,7 @@
 module
 
 public import MLIR.Run.Tactic
+public import Firedancer.Common.Counter
 public import Firedancer.Common.Tactics
 public import Firedancer.Ref.fd_int_min
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_wnaf
@@ -139,19 +140,6 @@ theorem storeAt_readAt_self {m : MemoryState} {p : Pointer} (h : Fits m p w) :
     exact hblk.symm
   · rfl
 
-/-- The loop counter's `+ 1` does not wrap, signed. -/
-theorem saddOverflow_ofNat64_one {i : Nat} (h : i + 1 < 2 ^ 63) :
-    (BitVec.ofNat 64 i).saddOverflow 1#64 = false := by
-  have : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, this]
-  omega
-
-/-- Nor unsigned. -/
-theorem uaddOverflow_ofNat64_one {i : Nat} (h : i + 1 < 2 ^ 63) :
-    (BitVec.ofNat 64 i).uaddOverflow 1#64 = false := by
-  simp [BitVec.uaddOverflow]
-  omega
-
 /-- Two small counters are equal as 64-bit values exactly when they are. -/
 theorem eq_of_ofNat64_eq {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
     (h : BitVec.ofNat 64 a = BitVec.ofNat 64 b) : a = b := by
@@ -161,13 +149,8 @@ theorem eq_of_ofNat64_eq {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
 /-- A small `int` sign-extends to the same `long`. -/
 theorem signExtend_ofNat32 {a : Nat} (h : a < 2 ^ 31) :
     (BitVec.ofNat 32 a).signExtend 64 = BitVec.ofNat 64 a := by
-  have hmsb : (BitVec.ofNat 32 a).msb = false := by
-    simp [BitVec.msb_eq_decide]
-    omega
-  rw [BitVec.signExtend_eq_setWidth_of_msb_false hmsb]
-  apply BitVec.eq_of_toNat_eq
-  simp
-  omega
+  rw [BitVec.signExtend_eq_setWidth_of_msb_false (msb_ofNat32 h)]
+  exact setWidth_ofNat32 (by omega)
 
 /-- A small `int` read back. -/
 theorem toInt_ofInt32 {a : Int} (h : -2 ^ 31 ≤ a ∧ a < 2 ^ 31) : (BitVec.ofInt 32 a).toInt = a :=
@@ -195,13 +178,6 @@ theorem setWidth_ofInt32 (a : Int) : (BitVec.ofInt 32 a).setWidth 16 = BitVec.of
 theorem ofInt_sub16 (a b : Int) :
     BitVec.ofInt 16 a - BitVec.ofInt 16 b = BitVec.ofInt 16 (a - b) := by
   rw [Int.sub_eq_add_neg, BitVec.ofInt_add, BitVec.ofInt_neg, BitVec.sub_eq_add_neg]
-
-/-- A small `int` zero-extends to the same `long`. -/
-theorem setWidth64_ofNat32 {a : Nat} (h : a < 2 ^ 32) :
-    (BitVec.ofNat 32 a).setWidth 64 = BitVec.ofNat 64 a := by
-  apply BitVec.eq_of_toNat_eq
-  simp
-  omega
 
 /-- Unsigned comparison of small counters. -/
 theorem ult_ofNat64 {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
@@ -394,8 +370,8 @@ theorem fd_curve25519_scalar_wnaf.nonzero_loop (slides scalar : Pointer) (w mx :
       have h : t[i] = 0 := (ofInt_eq_zero_iff (ht i hi)).1 hbr
       rw [firstNonzero_of_eq_zero hi h] at hK5 hK20
       block_init
-      step_pure [saddOverflow_ofNat64_one (i := i) (by omega),
-        uaddOverflow_ofNat64_one (i := i) (by omega), ← BitVec.ofNat_add]
+      step_pure [saddOverflow_one64 (i := i) (by omega), uaddOverflow_one64 (i := i) (by omega),
+        ← BitVec.ofNat_add]
       step_pure
       finish_block
       · obtain rfl : n = 0 := by
@@ -718,7 +694,7 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
     block_init
     seal_env
     -- `short tj = _t[j]; if( !tj ) continue;`
-    step_pure [saddOverflow_ofNat64_one (i := k) (by omega), ← BitVec.ofNat_add]
+    step_pure [saddOverflow_one64 (i := k) (by omega), ← BitVec.ofNat_add]
     step_pure [Nat.mod_eq_of_lt (show k + 1 < 2 ^ 64 by omega), show 2 * (k + 1) < 2 ^ 64 by omega,
       show (k + 1) * 2 = 2 * (k + 1) by omega]
     step_load
@@ -1169,8 +1145,8 @@ theorem fd_curve25519_scalar_wnaf.unpack_loop (slides scalar : Pointer) (w : Bit
     clear hfb hfi
     rw [storeAt_shorts hso hi' (v := if x[i] then 1 else 0) rfl] at hS
     -- `i++`, `i<255`
-    step_pure [saddOverflow_ofNat64_one (i := i) (by omega),
-      uaddOverflow_ofNat64_one (i := i) (by omega), ← BitVec.ofNat_add]
+    step_pure [saddOverflow_one64 (i := i) (by omega), uaddOverflow_one64 (i := i) (by omega),
+      ← BitVec.ofNat_add]
     step_pure
     finish_block
     · obtain rfl : n = 0 := by
@@ -1344,7 +1320,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
     step_pure [ult_ofNat64 (a := i) (b := 256) (by omega) (by omega)]
     finish_block
     · block_init
-      step_pure [setWidth64_ofNat32 (show i < 2 ^ 32 by omega),
+      step_pure [setWidth_ofNat32 (show i < 2 ^ 32 by omega),
         signExtend_ofNat32 (show i < 2 ^ 31 by omega)]
       step_pure
       step_pure [extractLsb'_shiftLeft_16, max_short (b := bits.toNat) (by omega)]

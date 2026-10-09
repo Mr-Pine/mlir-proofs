@@ -26,11 +26,15 @@ def negP : Vector (BitVec 64) 8 :=
 def negBias : Vector (BitVec 64) 8 :=
   #v[159383552, 1048576, 1048576, 1048576, 1048576, 1048576, 0, 0]
 
-/-- The carries' rotation: lane `i` takes the carry of lane `i - 1`, lane 0 lane 5's; lanes 6 and 7
-the second operand's lane 0 (zero). -/
+/-- The carries' rotation, a shuffle mask: lane `i` takes lane `i - 1`, lane 0 lane 5; lanes 6 and
+7 the second operand's lane 0. -/
+abbrev negRotMask : Vector (Option (Fin (2 * 8))) 8 :=
+  #v[some 5, some 0, some 1, some 2, some 3, some 4, some 8, some 8]
+
+/-- Zero in lane 0, the other lanes undefined: the rotation's second operand. -/
 @[mlir_const]
-def negIdx : Vector (BitVec 64) 8 :=
-  #v[5, 0, 1, 2, 3, 4, 8, 8]
+abbrev zeroLo : Vector (PoisonOr (BitVec 64)) 8 :=
+  #v[.value 0, .poison, .poison, .poison, .poison, .poison, .poison, .poison]
 
 /-- `fd_r43x6_neg(x)` as compiled: `d = 2p - x`, then each lane's low bits plus the bias plus the
 carry from the lane below, and lane 0 also `18 ×` the carry it takes from lane 5 (`19 ×` in all). -/
@@ -42,18 +46,18 @@ def negFold (x : Vector (BitVec 64) 8) : Vector (BitVec 64) 8 :=
     (d[i] &&& foldMask[i]) + negBias[i] + c[i] + (if i.val = 0 then c[0] * 18 else 0)
 
 /-- The sign fix-up as thirteen instructions: `xmod == x0` in `e`, as a byte mask in `m`; `negFold
-x` through `d lo hi c t u s1 s2` into `n` (`p b k z o m18` hold `2p`, `_b`, the rotation, zero,
+x` through `d lo hi c t u s1 s2` into `n` (`p b z o m18` hold `2p`, `_b`, `zeroLo` for the rotation,
 `18` and `[-1, 0, …]`, `mask shifts` the fold's constants); then `x` where the mask is set, `n`
 elsewhere, into `r`. -/
 def negIfRun (xmod x0 : Dst Γ (.bv 32)) (e : Dst Γ (.bv 1)) (m : Dst Γ (.bv 8))
-    (p x mask shifts b k z o m18 d lo hi c t u s1 s2 n : Dst Γ V) (mk : Dst Γ (.vec 8 1))
+    (p x mask shifts b z o m18 d lo hi c t u s1 s2 n : Dst Γ V) (mk : Dst Γ (.vec 8 1))
     (r : Dst Γ V) : List (Instr Γ) :=
   [.binop (.icmp .eq) e (.val xmod.i xmod.h) (.val x0.i x0.h),
     .unop (.sext (w := 1) (w' := 8)) m (.val e.i e.h),
     .binop (.vector (.sub {})) d (.val p.i p.h) (.val x.i x.h),
     .binop (.vector .and) lo (.val d.i d.h) (.val mask.i mask.h),
     .binop (.vector (.ashr false)) hi (.val d.i d.h) (.val shifts.i shifts.h),
-    .ternop .vpermi2var c (.val hi.i hi.h) (.val k.i k.h) (.val z.i z.h),
+    .binop (.shufflevector negRotMask) c (.val hi.i hi.h) (.val z.i z.h),
     .binop (.vector (.mul {})) t (.val c.i c.h) (.val o.i o.h),
     .binop (.vector .and) u (.val t.i t.h) (.val m18.i m18.h),
     .binop (.vector (.add { nsw := true, nuw := true })) s1 (.val lo.i lo.h) (.val b.i b.h),
@@ -91,17 +95,17 @@ constants: running on from `pos` then `g` gives `K` if it does from `pos + 13` w
 `if XM = X0 then X else negFold X` in `r`, whatever the intermediates hold. -/
 theorem runBodyFrom_negIfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {xmod x0 : Dst Γ (.bv 32)} {e : Dst Γ (.bv 1)} {m : Dst Γ (.bv 8)}
-    {p x mask shifts b k z o m18 d lo hi c t u s1 s2 n : Dst Γ V} {mk : Dst Γ (.vec 8 1)}
+    {p x mask shifts b z o m18 d lo hi c t u s1 s2 n : Dst Γ V} {mk : Dst Γ (.vec 8 1)}
     {r : Dst Γ V} {rest : List (Instr Γ)} {XM X0 : BitVec 32} {X : Vector (BitVec 64) 8}
     {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        negIfRun xmod x0 e m p x mask shifts b k z o m18 d lo hi c t u s1 s2 n mk r ++ rest)
+        negIfRun xmod x0 e m p x mask shifts b z o m18 d lo hi c t u s1 s2 n mk r ++ rest)
     (hR :
       E ⊨ [xmod := XM, x0 := X0, x := X, p := negP, mask := foldMask, shifts := foldShifts, b :=
-        negBias, k := negIdx, z := Vector.replicate 8 0, o := neg18, m18 := negSel])
+        negBias, z := zeroLo, o := neg18, m18 := negSel])
     (hd :
-      [x.i, p.i, mask.i, shifts.i, b.i, k.i, z.i, o.i, m18.i, e.i, m.i, d.i, lo.i, hi.i, c.i, t.i,
+      [x.i, p.i, mask.i, shifts.i, b.i, z.i, o.i, m18.i, e.i, m.i, d.i, lo.i, hi.i, c.i, t.i,
           u.i, s1.i, s2.i, n.i, mk.i].Nodup)
     (hK :
       ∀ (ve : ⟦.bv 1⟧) (vm : ⟦.bv 8⟧) (vd vlo vhi vc vt vu vs1 vs2 vn : ⟦V⟧) (vmk : ⟦.vec 8 1⟧),
@@ -144,7 +148,7 @@ theorem runBodyFrom_negIfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
       all_goals
         first
         | omega
-        | simp [negFold, negIdx, negP, foldMask, foldShifts, negBias, neg18, negSel]
+        | simp [negFold, negP, foldMask, foldShifts, negBias, neg18, negSel]
       simp only [allOnes_64, BitVec.and_allOnes]
 
 end

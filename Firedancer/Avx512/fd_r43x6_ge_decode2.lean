@@ -4,6 +4,7 @@ public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Point
 public import Firedancer.Avx512.Common.Callees
 public import Firedancer.Avx512.Common.QuadOps
+public import Firedancer.Avx512.Common.If
 public import Firedancer.Avx512.Common.Inl
 public import Firedancer.Avx512.Common.Neg
 public import Firedancer.Avx512.Common.Quad
@@ -16,299 +17,22 @@ public import Firedancer.Avx512.fd_r43x6_unpack
 public import Firedancer.Avx512.fd_r43x6_pow22523_2
 public import Firedancer.Avx512.wv_ld
 public import Firedancer.Avx512.Mlir.fd_r43x6_ge_decode2
-import Mathlib.Tactic.FinCases
 import Std.Tactic.BVDecide
 import Mathlib.Data.Fintype.Basic
 
 namespace MLIR.Firedancer.Avx512
 
-/-! ## Runs as LLVM 23 compiles them -/
-
 namespace fd_r43x6_ge_decode2
 
 @[expose] public section
 
-/-- `fd_r43x6_if` as `ifRun` with LLVM 23's `trunc nsw nuw` of the flag. -/
-def ifNuwRun (c : Dst Γ (.bv 32)) (m1 b t : Dst Γ (.bv 8)) (mask : Dst Γ (.vec 8 1))
-    (x y r : Dst Γ V) : List (Instr Γ) :=
-  [.unop (.trunc { nsw := true, nuw := true }) b (.val c.i c.h),
-    .binop (.add { nsw := true }) t (.val b.i b.h) (.val m1.i m1.h),
-    .unop (.bitcast (t := .bv 8) (t' := .vec 8 1) rfl) mask (.val t.i t.h),
-    .ternop (.vector (.select (τ := .bv 64))) r (.val mask.i mask.h) (.val y.i y.h) (.val x.i x.h)]
-
-/-- A flag `0` or `1` truncates to a byte losslessly. -/
-theorem trunc_01 {C : BitVec 32} (hC : C = 0 ∨ C = 1) :
-    (C.setWidth 8).setWidth 32 = C ∧ (C.setWidth 8).signExtend 32 = C := by
-  rcases hC with rfl | rfl <;> decide
-
-/-- `runBodyFrom_ifRun` for `ifNuwRun`. -/
-theorem runBodyFrom_ifNuwRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {c : Dst Γ (.bv 32)} {m1 b t : Dst Γ (.bv 8)} {mask : Dst Γ (.vec 8 1)} {x y r : Dst Γ V}
-    {rest : List (Instr Γ)} {C : BitVec 32} {X Y : Vector (BitVec 64) 8} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody : blk.body.drop pos = ifNuwRun c m1 b t mask x y r ++ rest)
-    (hR : E ⊨ [c := C, m1 := 255#8, x := X, y := Y]) (hC : C = 0 ∨ C = 1)
-    (hd : [m1.i, x.i, y.i, b.i, t.i, mask.i].Nodup)
-    (hK :
-      ∀ (vb vt : ⟦.bv 8⟧) (vm : ⟦.vec 8 1⟧),
-        (blk.runBodyFrom E[b := vb, t := vt, mask := vm, r := Ty.wrap (if C = 0 then Y else X)]
-              (pos + 4) S >>=
-            g) =
-          K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  have htr := trunc_01 hC
-  step_pure [htr.1, htr.2] with transparent vb
-  step_pure with transparent vt
-  step_pure with transparent vm
-  step_pure with vr
-  rw [hE, ← hK (.value vb) vt vm]
-  congr
-  subst hvr
-  rcases hC with rfl | rfl <;> ext i hi : 1 <;> simp +decide [Ty.wrap_vec, Ty.extractVecElem_eq] <;>
-    intro h <;>
-    exfalso <;>
-    revert i <;>
-    decide
-
-/-- The carries' rotation as LLVM 23's shuffle: lanes 6 and 7 take the second operand's lane 0. -/
-abbrev negRotMask : Vector (Option (Fin (2 * 8))) 8 :=
-  #v[some 5, some 0, some 1, some 2, some 3, some 4, some 8, some 8]
-
-/-- Zero in lane 0, the other lanes undefined: the rotation's second operand. -/
-@[mlir_const]
-abbrev zeroLo : Vector (PoisonOr (BitVec 64)) 8 :=
-  #v[.value 0, .poison, .poison, .poison, .poison, .poison, .poison, .poison]
-
-/-- `subRun` with LLVM 23's rotation, a shuffle with `zeroLo` in `z`. -/
-def subShuffleRun (x k mask shifts z o sel b d lo hi c t u s1 s2 r : Dst Γ V) :
-    List (Instr Γ) :=
-  [.binop (.vector (.add {})) d (.val x.i x.h) (.val k.i k.h),
-    .binop (.vector .and) lo (.val d.i d.h) (.val mask.i mask.h),
-    .binop (.vector (.ashr false)) hi (.val d.i d.h) (.val shifts.i shifts.h),
-    .binop (.shufflevector negRotMask) c (.val hi.i hi.h) (.val z.i z.h),
-    .binop (.vector (.mul {})) t (.val c.i c.h) (.val o.i o.h),
-    .binop (.vector .and) u (.val t.i t.h) (.val sel.i sel.h),
-    .binop (.vector (.add {})) s1 (.val c.i c.h) (.val lo.i lo.h),
-    .binop (.vector (.add {})) s2 (.val s1.i s1.h) (.val u.i u.h),
-    .binop (.vector (.add {})) r (.val s2.i s2.h) (.val b.i b.h)]
-
-/-- `runBodyFrom_subRun` for `subShuffleRun`. -/
-theorem runBodyFrom_subShuffleRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {x k mask shifts z o sel b d lo hi c t u s1 s2 r : Dst Γ V} {rest : List (Instr Γ)}
-    {X K : Vector (BitVec 64) 8} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
-    {K' : PoisonOr β}
-    (hbody :
-      blk.body.drop pos = subShuffleRun x k mask shifts z o sel b d lo hi c t u s1 s2 r ++ rest)
-    (hR :
-      E ⊨ [x := X, k := K, mask := foldMask, shifts := foldShifts, z := zeroLo, o := neg18,
-        sel := negSel, b := negBias])
-    (hd :
-      [x.i, k.i, mask.i, shifts.i, z.i, o.i, sel.i, b.i, d.i, lo.i, hi.i, c.i, t.i, u.i,
-          s1.i, s2.i].Nodup)
-    (hK :
-      ∀ vd vlo vhi vc vt vu vs1 : ⟦V⟧,
-        (blk.runBodyFrom
-              E[d := vd, lo := vlo, hi := vhi, c := vc, t := vt, u := vu, s1 := vs1, s2 :=
-                Ty.wrap (foldSignedPre (vadd X K)), r :=
-                Ty.wrap (vadd (foldSignedPre (vadd X K)) negBias)]
-              (pos + 9) S >>=
-            g) =
-          K') :
-    (blk.runBodyFrom E pos S >>= g) = K' := by
-  step_pure with vd
-  step_pure with vlo
-  step_pure [foldShifts_lt] with vhi
-  step_pure with vc
-  step_pure with vt
-  step_pure with vu
-  step_pure with vs1
-  step_pure with vs2
-  step_pure with vr
-  have e : vs2 = foldSignedPre (vadd X K) := by
-    subst_vars
-    delta foldSignedPre
-    rfl
-  subst hvr e
-  rw [hE]
-  exact hK _ _ _ _ _ _ _
-
-/-- `negIfRun` with LLVM 23's rotation, a shuffle with `zeroLo` in `z`. -/
-def negIfShuffleRun (xmod x0 : Dst Γ (.bv 32)) (e : Dst Γ (.bv 1)) (m : Dst Γ (.bv 8))
-    (p x mask shifts b z o m18 d lo hi c t u s1 s2 n : Dst Γ V) (mk : Dst Γ (.vec 8 1))
-    (r : Dst Γ V) : List (Instr Γ) :=
-  [.binop (.icmp .eq) e (.val xmod.i xmod.h) (.val x0.i x0.h),
-    .unop (.sext (w := 1) (w' := 8)) m (.val e.i e.h),
-    .binop (.vector (.sub {})) d (.val p.i p.h) (.val x.i x.h),
-    .binop (.vector .and) lo (.val d.i d.h) (.val mask.i mask.h),
-    .binop (.vector (.ashr false)) hi (.val d.i d.h) (.val shifts.i shifts.h),
-    .binop (.shufflevector negRotMask) c (.val hi.i hi.h) (.val z.i z.h),
-    .binop (.vector (.mul {})) t (.val c.i c.h) (.val o.i o.h),
-    .binop (.vector .and) u (.val t.i t.h) (.val m18.i m18.h),
-    .binop (.vector (.add { nsw := true, nuw := true })) s1 (.val lo.i lo.h) (.val b.i b.h),
-    .binop (.vector (.add {})) s2 (.val s1.i s1.h) (.val c.i c.h),
-    .binop (.vector (.add {})) n (.val s2.i s2.h) (.val u.i u.h),
-    .unop (.bitcast (t := .bv 8) (t' := .vec 8 1) rfl) mk (.val m.i m.h),
-    .ternop (.vector (.select (τ := .bv 64))) r (.val mk.i mk.h) (.val x.i x.h) (.val n.i n.h)]
-
-/-- `runBodyFrom_negIfRun` for `negIfShuffleRun`. -/
-theorem runBodyFrom_negIfShuffleRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {xmod x0 : Dst Γ (.bv 32)} {e : Dst Γ (.bv 1)} {m : Dst Γ (.bv 8)}
-    {p x mask shifts b z o m18 d lo hi c t u s1 s2 n : Dst Γ V} {mk : Dst Γ (.vec 8 1)}
-    {r : Dst Γ V} {rest : List (Instr Γ)} {XM X0 : BitVec 32} {X : Vector (BitVec 64) 8}
-    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody :
-      blk.body.drop pos =
-        negIfShuffleRun xmod x0 e m p x mask shifts b z o m18 d lo hi c t u s1 s2 n mk r ++ rest)
-    (hR :
-      E ⊨ [xmod := XM, x0 := X0, x := X, p := negP, mask := foldMask, shifts := foldShifts, b :=
-        negBias, z := zeroLo, o := neg18, m18 := negSel])
-    (hd :
-      [x.i, p.i, mask.i, shifts.i, b.i, z.i, o.i, m18.i, e.i, m.i, d.i, lo.i, hi.i, c.i, t.i,
-          u.i, s1.i, s2.i, n.i, mk.i].Nodup)
-    (hK :
-      ∀ (ve : ⟦.bv 1⟧) (vm : ⟦.bv 8⟧) (vd vlo vhi vc vt vu vs1 vs2 vn : ⟦V⟧) (vmk : ⟦.vec 8 1⟧),
-        (blk.runBodyFrom
-              E[e := ve, m := vm, d := vd, lo := vlo, hi := vhi, c := vc, t := vt, u := vu, s1 :=
-                vs1, s2 := vs2, n := vn, mk := vmk, r := Ty.wrap (if XM = X0 then X else negFold X)]
-              (pos + 13) S >>=
-            g) =
-          K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  step_pure with transparent ve
-  step_pure with transparent vm
-  step_pure with transparent vd
-  step_pure with transparent vlo
-  step_pure [foldShifts_lt] with transparent vhi
-  step_pure with transparent vc
-  step_pure with transparent vt
-  step_pure with transparent vu
-  step_pure with transparent vs1
-  step_pure with transparent vs2
-  step_pure with transparent vn
-  step_pure with transparent vmk
-  step_pure with vr
-  rw [hE, ← hK]
-  congr
-  subst hvr
-  by_cases hXM : XM = X0 <;> apply vec_ext_fin <;> intro i <;>
-    simp [hXM, Ty.wrap_vec, Ty.extractVecElem_eq, negBias_no_overflow _ i.1 i.2,
-      show (XM == X0) = decide (XM = X0) from rfl]
-  · intro h
-    exfalso
-    revert i
-    decide
-  · split
-    · exfalso
-      rename_i h
-      revert i
-      decide
-    · fin_cases i
-      all_goals
-        first
-        | omega
-        | simp [negFold, negP, foldMask, foldShifts, negBias, neg18, negSel]
-      simp only [allOnes_64, BitVec.and_allOnes]
-
-/-- `fd_r43x6_one()`. -/
-@[mlir_const]
-def one : Vector (BitVec 64) 8 :=
-  #v[1, 0, 0, 0, 0, 0, 0, 0]
-
-/-- `one`'s lanes `0 1 4 5`, the others undefined: `QUAD_PACK`'s low pairing operand. -/
-@[mlir_const]
-abbrev oneLo : Vector (PoisonOr (BitVec 64)) 8 :=
-  #v[.value 1, .value 0, .poison, .poison, .value 0, .value 0, .poison, .poison]
-
-/-- `one`'s lanes `2 3 4 5`, the others undefined: `QUAD_PACK`'s high pairing operand. -/
-@[mlir_const]
-abbrev oneHi : Vector (PoisonOr (BitVec 64)) 8 :=
-  #v[.poison, .poison, .value 0, .value 0, .value 0, .value 0, .poison, .poison]
-
-/-- `FD_R43X6_QUAD_PACK( *_P, x, y, one, t )` as LLVM 23 compiles it, fourteen instructions: `x`
-paired with `one` (through `zlo zhi`) and `y` with `t` into `a b c d`, transposed through
-`e f g h` into `q03 q14 q25`, each stored as soon as it is formed at `p03 p14 p25`. -/
-def quadPackOneRun (x y zlo zhi t a b c d e f g h q03 q14 q25 : Dst Γ V)
-    (p03 p14 p25 : Fin Γ.args.length) (h03 : Γ.args[p03] = .ptr) (h14 : Γ.args[p14] = .ptr)
-    (h25 : Γ.args[p25] = .ptr) : List (Instr Γ) :=
-  [.binop (.shufflevector #v[some 0, some 1, some 8, some 9, some 4, some 5, some 12, some 13]) a
-      (.val x.i x.h) (.val zlo.i zlo.h),
-    .binop (.shufflevector #v[some 0, some 1, some 8, some 9, some 4, some 5, some 12, some 13]) b
-      (.val y.i y.h) (.val t.i t.h),
-    .binop (.shufflevector #v[some 2, some 3, some 10, some 11, some 6, some 7, some 12, some 13])
-      c (.val x.i x.h) (.val zhi.i zhi.h),
-    .binop (.shufflevector #v[some 2, some 3, some 10, some 11, some 6, some 7, some 12, some 13])
-      d (.val y.i y.h) (.val t.i t.h),
-    .binop (.shufflevector #v[some 0, some 8, some 2, some 10, none, none, none, none]) e
-      (.val a.i a.h) (.val b.i b.h),
-    .binop (.shufflevector #v[none, none, none, none, some 5, some 13, some 7, some 15]) f
-      (.val a.i a.h) (.val b.i b.h),
-    .binop (.shufflevector #v[some 0, some 8, some 2, some 10, none, none, none, none]) g
-      (.val c.i c.h) (.val d.i d.h),
-    .binop (.shufflevector #v[some 1, some 9, some 3, some 11, none, none, none, none]) h
-      (.val c.i c.h) (.val d.i d.h),
-    .binop (.shufflevector #v[some 0, some 1, some 2, some 3, some 8, some 9, some 10, some 11])
-      q03 (.val e.i e.h) (.val h.i h.h),
-    .store (.arg p03 h03) (.val q03.i q03.h),
-    .binop (.shufflevector #v[some 1, some 9, some 3, some 11, some 4, some 12, some 6, some 14])
-      q14 (.val a.i a.h) (.val b.i b.h),
-    .store (.arg p14 h14) (.val q14.i q14.h),
-    .binop (.shufflevector #v[some 0, some 1, some 2, some 3, some 12, some 13, some 14, some 15])
-      q25 (.val g.i g.h) (.val f.i f.h),
-    .store (.arg p25 h25) (.val q25.i q25.h)]
-
-/-- `runBodyFrom_quadPackRun` for `quadPackOneRun`: the QUAD `(X, Y, one, T)` stored. -/
-theorem runBodyFrom_quadPackOneRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {x y zlo zhi t a b c d e f g h q03 q14 q25 : Dst Γ V} {p03 p14 p25 : Fin Γ.args.length}
-    {h03 : Γ.args[p03] = .ptr} {h14 : Γ.args[p14] = .ptr} {h25 : Γ.args[p25] = .ptr}
-    {rest : List (Instr Γ)} {X Y T : Vector (BitVec 64) 8} {P03 P14 P25 : Pointer}
-    {S : GlobalState} {k : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody :
-      blk.body.drop pos =
-        quadPackOneRun x y zlo zhi t a b c d e f g h q03 q14 q25 p03 p14 p25 h03 h14 h25 ++ rest)
-    (hR :
-      E ⊨ [x := X, y := Y, zlo := oneLo, zhi := oneHi, t := T, .arg p03 h03 := P03,
-        .arg p14 h14 := P14, .arg p25 h25 := P25])
-    (hf03 : Fits S.mem P03 512) (hf14 : Fits S.mem P14 512) (hf25 : Fits S.mem P25 512)
-    (hd : [x.i, y.i, zlo.i, zhi.i, t.i, a.i, b.i, c.i, d.i, e.i, f.i, g.i, h.i, q03.i, q14.i].Nodup)
-    (hK :
-      ∀ va vb vc vd ve vf vg vh vq03 vq14 vq25 : ⟦V⟧,
-        (blk.runBodyFrom
-              E[a := va, b := vb, c := vc, d := vd, e := ve, f := vf, g := vg, h := vh, q03 := vq03,
-                q14 := vq14, q25 := vq25]
-              (pos + 14)
-              { S with
-                mem :=
-                  ((S.mem.storeAt P03 (BitVec.packLanes (quadLanes 0 X Y one T))).storeAt P14
-                        (BitVec.packLanes (quadLanes 1 X Y one T))).storeAt
-                    P25 (BitVec.packLanes (quadLanes 2 X Y one T)) } >>=
-            k) =
-          K) :
-    (blk.runBodyFrom E pos S >>= k) = K := by
-  -- the shuffles `a … h` only feed the stored ones: left inline
-  iterate 8 step_pure
-  step_pure with vq03
-  step_store
-  step_pure with vq14
-  step_store
-  step_pure with vq25
-  step_store
-  have e03 : vq03 = quadLanes 0 X Y one T := by
-    rw [hvq03]; rfl
-  have e14 : vq14 = quadLanes 1 X Y one T := by
-    rw [hvq14]; rfl
-  have e25 : vq25 = quadLanes 2 X Y one T := by
-    rw [hvq25]; rfl
-  subst hE hS
-  rw [e03, e14, e25]
-  exact hK _ _ _ _ _ _ _ _ _ _ _
+/-! ## The blocks -/
 
 /-- The sign bit `y3 >>> 63` truncates to `int` losslessly. -/
 theorem shr63_trunc (y : BitVec 64) :
     ((y >>> 63).setWidth 32).setWidth 64 = y >>> 63 ∧
       ((y >>> 63).setWidth 32).signExtend 64 = y >>> 63 := by
   bv_decide
-
-/-! ## The blocks -/
 
 variable {a03 a14 a25 sa b03 b14 b25 sb : Pointer}
 
@@ -634,8 +358,8 @@ theorem bb2_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   have hdiag := fd_r43x6_diagnose.call_eq
   block_init
   -- `t3a = fd_r43x6_if( t1nza, sqrt_m1, one )`, `t3b` likewise
-  step_pattern using runBodyFrom_ifNuwRun with t3a
-  step_pattern using runBodyFrom_ifNuwRun with t3b
+  step_pattern using runBodyFrom_ifRun with t3a
+  step_pattern using runBodyFrom_ifRun with t3b
   -- `FD_R43X6_MUL2_INL( xa, xa, t3a, xb, xb, t3b )`
   step_pattern using runBodyFrom_mulInlRun with xa'
   step_pattern using runBodyFrom_mulInlRun with xb'
@@ -643,14 +367,14 @@ theorem bb2_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   step_call using hdiag with xmod2a
   step_call using hdiag with xmod2b
   -- `xa = fd_r43x6_if( x_0a!=x_mod_2a, fd_r43x6_neg( xa ), xa )`, `xb` likewise
-  step_pattern using runBodyFrom_negIfShuffleRun with xa''
-  step_pattern using runBodyFrom_negIfShuffleRun with xb''
+  step_pattern using runBodyFrom_negIfRun with xa''
+  step_pattern using runBodyFrom_negIfRun with xb''
   -- `FD_R43X6_MUL2_INL( xya, xa, ya, xyb, xb, yb )`
   step_pattern using runBodyFrom_mulInlRun with xya
   step_pattern using runBodyFrom_mulInlRun with xyb
   -- `FD_R43X6_QUAD_PACK( a, xa, ya, one, xya )`, `b` likewise
-  step_pattern using runBodyFrom_quadPackOneRun
-  step_pattern using runBodyFrom_quadPackOneRun
+  step_pattern using runBodyFrom_quadPackRun
+  step_pattern using runBodyFrom_quadPackRun
   -- `FD_R43X6_QUAD_FOLD_UNSIGNED( *_Pa, a )`, `b` likewise; `b`'s limbs `2 5` stored in `^bb5`
   step_pattern using runBodyFrom_quadFoldRun with a'
   step_store
@@ -770,8 +494,8 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   step_pattern using runBodyFrom_sqrInlRun with ysqa
   step_pattern using runBodyFrom_sqrInlRun with ysqb
   -- `ua = fd_r43x6_sub( ysqa, one )`, `ub` likewise
-  step_pattern using runBodyFrom_subShuffleRun with ua
-  step_pattern using runBodyFrom_subShuffleRun with ub
+  step_pattern using runBodyFrom_subRun with ua
+  step_pattern using runBodyFrom_subRun with ub
   -- `va = fd_r43x6_add_fast( fd_r43x6_mul( d, ysqa ), one )`, `vb` likewise
   step_pattern using runBodyFrom_mulInlRun with dysqa
   step_pure with va

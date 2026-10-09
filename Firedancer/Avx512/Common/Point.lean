@@ -259,33 +259,6 @@ attribute [mlir_mem] MemoryState.QuadFit
 
 /-! ### Lanes -/
 
-open Lean Meta in
-/-- `vpermi2var` with a literal index vector, to its lanes: `a[k]` or `b[k - 8]`. -/
-dsimproc ↓ [simp, mlir_operation] reduceVpermi2var (Operation.vpermi2var _ _ _) := fun e => do
-  let_expr Operation.vpermi2var l _ a idx b := e | return .continue
-  let some n ← (evalNat l).run | return .continue
-  -- the index lanes, `Ty.wrap #v[k₀, …]`
-  let_expr Ty.wrap _ v := idx | return .continue
-  let_expr Vector.mk _ _ arr _ := ← whnfR v | return .continue
-  let_expr List.toArray _ lst := arr | return .continue
-  let some (_, entries) := lst.listLit? | return .continue
-  unless entries.length == n do
-    return .continue
-  let mut lanes := #[]
-  for entry in entries do
-    let some k := (← whnfD (← mkAppM ``BitVec.toNat #[entry])).rawNatLit? | return .continue
-    let j := k % (2 * n)
-    let some lane ←
-      if j < n then
-        mkVecGetElem a j
-      else
-        mkVecGetElem b (j - n) | return .continue
-    lanes := lanes.push lane
-  let β ← inferType lanes[0]!
-  let arr ← mkAppM ``List.toArray #[← mkListLit β lanes.toList]
-  let nE := mkNatLit n
-  return .visit (mkApp4 (mkConst ``Vector.mk [← getDecLevel β]) β nE arr (← mkEqRefl nE))
-
 set_option hygiene false in
 /-- `wwl_lanes`: the lanes of `wwl` operations at literal indices, by `simp only`; a full `simp`,
 `rw` or `rfl` on such lanes can unfold the `BitVec` literals for minutes. -/
@@ -489,16 +462,7 @@ theorem fold_ok (m a b : Wwl) (hm : m = Vector.replicate 8 8796093022207#64 ∨ 
 
 /-! ### The signed fold as compiled -/
 
-theorem foldSigned_lane (x : BitVec 64) : x + ((x <<< 1) + (x <<< 4)) = x * 19#64 :=
-  foldUnsigned_lane x
-
-theorem sub_bias03 (x : BitVec 64) : x - 159383552#64 = x + 18446744073550168064#64 := by
-  bv_decide
-
 theorem sub_bias (x : BitVec 64) : x - 1048576#64 = x + 18446744073708503040#64 := by
-  bv_decide
-
-theorem add_add_comm' (a b c : BitVec 64) : a + (b + c) = a + c + b := by
   bv_decide
 
 /-! The signed fold's lanes, C's against the compiled. -/
@@ -621,9 +585,6 @@ theorem Quad.foldSignedC_eq' (P : Quad) : P.foldSignedC = P.foldSignedC' := by
   simp only [Quad.foldSignedC, Quad.foldSignedC', Quad.mk.injEq]
   exact ⟨wwl_add_add_swap _ _ _, wwl_add_add_swap _ _ _, trivial⟩
 
-theorem Quad.foldSigned_eq' (P : Quad) : P.foldSigned = P.foldSignedC' := by
-  rw [Quad.foldSigned_eq, Quad.foldSignedC_eq']
-
 /-- The low bits plus `_bias`: no overflow either way. -/
 theorem mask_add_bias_ok (d : Wwl) :
     ∀ i : Fin 8,
@@ -707,30 +668,6 @@ theorem add_self_eq_shl (x : BitVec 64) : x + x = x <<< 1 := by
 theorem Quad.permute_1120 (P : Quad) : P.permute 1 1 2 0 = P.perm4 1 1 2 0 := by
   quad_lanes
 
-theorem Quad.permute_3333 (P : Quad) : P.permute 3 3 3 3 = P.perm4 3 3 3 3 := by
-  quad_lanes
-
-theorem Quad.permute_1111 (P : Quad) : P.permute 1 1 1 1 = P.perm4 1 1 1 1 := by
-  quad_lanes
-
-theorem Quad.permute_0110 (P : Quad) : P.permute 0 1 1 0 = P.perm4 0 1 1 0 := by
-  quad_lanes
-
-theorem Quad.permute_2323 (P : Quad) : P.permute 2 3 2 3 = P.perm4 2 3 2 3 := by
-  quad_lanes
-
-theorem Quad.laneAddFast_1000 (P Q : Quad) :
-    P.laneAddFast 1 0 0 0 P Q = P.addSel true false false false Q := by
-  quad_lanes
-
-theorem Quad.laneAddFast_0010 (P Q : Quad) :
-    P.laneAddFast 0 0 1 0 P Q = P.addSel false false true false Q := by
-  quad_lanes
-
-theorem Quad.laneAddFast_1001 (P Q : Quad) :
-    P.laneAddFast 1 0 0 1 P Q = P.addSel true false false true Q := by
-  quad_lanes
-
 /-- `Z` doubled, as the code does it: shifted left by one. -/
 theorem Quad.laneAddFast_0010_self (P : Quad) :
     P.laneAddFast 0 0 1 0 P P =
@@ -739,36 +676,7 @@ theorem Quad.laneAddFast_0010_self (P : Quad) :
         wwl_shl_vector P.P25 #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64]⟩ := by
   quad_lanes
 
-theorem Quad.permute_1023 (P : Quad) : P.permute 1 0 2 3 = P.perm4 1 0 2 3 := by
-  quad_lanes
-
 theorem Quad.permute_1032 (P : Quad) : P.permute 1 0 3 2 = P.perm4 1 0 3 2 := by
-  quad_lanes
-
-theorem Quad.permute_0220 (P : Quad) : P.permute 0 2 2 0 = P.perm4 0 2 2 0 := by
-  quad_lanes
-
-theorem Quad.permute_3131 (P : Quad) : P.permute 3 1 3 1 = P.perm4 3 1 3 1 := by
-  quad_lanes
-
-theorem Quad.laneAddFast_0110 (P Q : Quad) :
-    P.laneAddFast 0 1 1 0 P Q = P.addSel false true true false Q := by
-  quad_lanes
-
-theorem Quad.laneAddFast_0100 (P Q : Quad) :
-    P.laneAddFast 0 1 0 0 P Q = P.addSel false true false false Q := by
-  quad_lanes
-
-theorem Quad.laneSubFast_1001 (P Q : Quad) :
-    P.laneSubFast 1 0 0 1 P Q = P.subSel true false false true Q := by
-  quad_lanes
-
-theorem Quad.laneSubFast_0110 (P Q : Quad) :
-    P.laneSubFast 0 1 1 0 P Q = P.subSel false true true false Q := by
-  quad_lanes
-
-theorem Quad.laneSubFast_1000 (P Q : Quad) :
-    P.laneSubFast 1 0 0 0 P Q = P.subSel true false false false Q := by
   quad_lanes
 
 /-! ### Bounds on folded lanes -/
@@ -832,51 +740,9 @@ theorem sub_lt_ok {x y : Wwl} (hx : ∀ i : Fin 8, x[i] < 17592186044416#64)
     (hy : ∀ i : Fin 8, y[i] < 17592186044416#64) : ∀ i : Fin 8, x[i].ssubOverflow y[i] = false :=
   fun i => sub_lane_ok (hx i) (hy i)
 
-/-- Folded lanes less folded lanes, plus `p` in lanes 0, 3 and `q` in lanes 4, 7 (constants below
-`2^44`): no signed overflow. -/
-theorem sub_add_lt_ok1001 {x y : Wwl} (hx : ∀ i : Fin 8, x[i] < 17592186044416#64)
-    (hy : ∀ i : Fin 8, y[i] < 17592186044416#64) (p q : BitVec 64) (hp : p < 17592186044416#64)
-    (hq : q < 17592186044416#64) :
-    (wwl_sub x y)[0].saddOverflow p = false ∧ (wwl_sub x y)[3].saddOverflow p = false ∧
-      (wwl_sub x y)[4].saddOverflow q = false ∧ (wwl_sub x y)[7].saddOverflow q = false := by
-  simp only [wwl_sub, Vector.getElem_ofFn]
-  exact ⟨sub_add_lane_ok (hx 0) (hy 0) hp, sub_add_lane_ok (hx 3) (hy 3) hp,
-    sub_add_lane_ok (hx 4) (hy 4) hq, sub_add_lane_ok (hx 7) (hy 7) hq⟩
-
 theorem add_lane_ok {a c : BitVec 64} (ha : a < 17592186044416#64) (hc : c < 17592186044416#64) :
     a.saddOverflow c = false := by
   bv_decide
-
-theorem sub_add_add_lane_ok {a b p c : BitVec 64} (ha : a < 17592186044416#64)
-    (hb : b < 17592186044416#64) (hp : p < 17592186044416#64) (hc : c < 17592186044416#64) :
-    (a - b + p).saddOverflow c = false := by
-  bv_decide
-
-theorem cond_saddOverflow {b : Bool} {u w z : BitVec 64} (hu : u.saddOverflow z = false)
-    (hw : w.saddOverflow z = false) : (cond b u w).saddOverflow z = false := by
-  cases b <;> assumption
-
-/-- A `wwl_sub_sel` of folded lanes, plus folded lanes: no signed overflow. -/
-theorem sub_sel_add_ok {x y z v : Wwl} {p q : BitVec 64} {b0 b1 b2 b3 : Bool}
-    (hx : ∀ i : Fin 8, x[i] < 17592186044416#64) (hy : ∀ i : Fin 8, y[i] < 17592186044416#64)
-    (hz : ∀ i : Fin 8, z[i] < 17592186044416#64) (hp : p < 17592186044416#64)
-    (hq : q < 17592186044416#64) (hv : wwl_sub_sel b0 b1 b2 b3 x y p q = v) :
-    ∀ i : Fin 8, v[i].saddOverflow z[i] = false := by
-  subst hv
-  intro ⟨i, hi⟩
-  have h1 := hx ⟨i, hi⟩
-  have h2 := hy ⟨i, hi⟩
-  have h3 := hz ⟨i, hi⟩
-  simp only [Fin.getElem_fin] at h1 h2 h3 ⊢
-  obtain _|_|_|_|_|_|_|_|i := i
-  all_goals
-    first
-    | omega
-    | simp only [wwl_sub_sel, wwl_sub, Vector.getElem_mk, Vector.getElem_ofFn, Fin.getElem_fin,
-        List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
-      first
-      | exact cond_saddOverflow (sub_add_add_lane_ok h1 h2 hp h3) (add_lane_ok h1 h3)
-      | exact cond_saddOverflow (sub_add_add_lane_ok h1 h2 hq h3) (add_lane_ok h1 h3)
 
 theorem shr40_mul19_no_overflow (x : BitVec 64) :
     (x >>> 40).smulOverflow 19#64 = false ∧ (x >>> 40).umulOverflow 19#64 = false := by
@@ -886,8 +752,6 @@ theorem shr40_mul19_no_overflow (x : BitVec 64) :
 theorem sshr40_mul19_no_overflow (x : BitVec 64) :
     (x.sshiftRight 40).smulOverflow 19#64 = false := by
   bv_decide
-
-
 
 /-! ### Fit -/
 
@@ -1267,8 +1131,6 @@ theorem runBodyFrom_foldUnsignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫
     rfl
   rw [hE]
   exact hK _ _ _ _ _ _ _ _ _ _ _ e
-
-
 
 /-- `foldUnsignedRun` with each result stored as it is formed: `r03` at `q`, `r14` at `g1`
 (`q + 64`, by a `getelementptr`), `r25` at `g2` (`q + 128`). -/

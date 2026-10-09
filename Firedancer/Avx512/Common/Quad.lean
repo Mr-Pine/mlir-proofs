@@ -10,7 +10,7 @@ import Std.Tactic.BVDecide
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
 
-/-! `FD_R43X6_QUAD_PACK( *_P, x, y, z, t )`: four field elements transposed into the QUAD layout,
+/-! `FD_R43X6_QUAD_PACK( *_P, x, y, one, t )`: four field elements transposed into the QUAD layout,
 limbs `0 3`, `1 4` and `2 5` of all four in one vector each, and stored.
 `FD_R43X6_QUAD_FOLD_UNSIGNED` on such a QUAD in memory. -/
 
@@ -23,82 +23,70 @@ same at `k + 3`. -/
 def quadLanes (k : Nat) (x y z t : Vector (BitVec 64) 8) : Vector (BitVec 64) 8 :=
   #v[x[k]!, y[k]!, z[k]!, t[k]!, x[k + 3]!, y[k + 3]!, z[k + 3]!, t[k + 3]!]
 
-/-- `vpermi2var`'s indices pairing lanes `0 1` and `4 5` of both operands. -/
+/-- `fd_r43x6_one()`. -/
 @[mlir_const]
-abbrev quadIdxLo : Vector (BitVec 64) 8 :=
-  #v[0, 1, 8, 9, 4, 5, 12, 13]
+def one : Vector (BitVec 64) 8 :=
+  #v[1, 0, 0, 0, 0, 0, 0, 0]
 
-/-- `vpermi2var`'s indices pairing lanes `2 3` and `6 7` of both operands. -/
+/-- `one`'s lanes `0 1 4 5`, the others undefined: `QUAD_PACK`'s low pairing operand. -/
 @[mlir_const]
-abbrev quadIdxHi : Vector (BitVec 64) 8 :=
-  #v[2, 3, 10, 11, 6, 7, 12, 13]
+abbrev oneLo : Vector (PoisonOr (BitVec 64)) 8 :=
+  #v[.value 1, .value 0, .poison, .poison, .value 0, .value 0, .poison, .poison]
 
-/-- `FD_R43X6_QUAD_PACK` as fourteen instructions: `x y z t` (indices in `lo hi`) through
-`a b c d e f g h` into `q03 q14 q25`, each stored as soon as it is formed, at the pointer arguments
-`p03 p14 p25`. -/
-def quadPackRun (x y z t lo hi a b c d e f g h q03 q14 q25 : Dst Γ V)
+/-- `one`'s lanes `2 3 4 5`, the others undefined: `QUAD_PACK`'s high pairing operand. -/
+@[mlir_const]
+abbrev oneHi : Vector (PoisonOr (BitVec 64)) 8 :=
+  #v[.poison, .poison, .value 0, .value 0, .value 0, .value 0, .poison, .poison]
+
+/-- `FD_R43X6_QUAD_PACK( *_P, x, y, one, t )` as fourteen instructions: `x` paired with `one`
+(through `zlo zhi`) and `y` with `t` into `a b c d`, transposed through `e f g h` into
+`q03 q14 q25`, each stored as soon as it is formed, at the pointer arguments `p03 p14 p25`. -/
+def quadPackRun (x y zlo zhi t a b c d e f g h q03 q14 q25 : Dst Γ V)
     (p03 p14 p25 : Fin Γ.args.length) (h03 : Γ.args[p03] = .ptr) (h14 : Γ.args[p14] = .ptr)
     (h25 : Γ.args[p25] = .ptr) : List (Instr Γ) :=
-  [.ternop .vpermi2var a (.val x.i x.h) (.val lo.i lo.h) (.val z.i z.h),
-    .ternop .vpermi2var b (.val y.i y.h) (.val lo.i lo.h) (.val t.i t.h),
-    .ternop .vpermi2var c (.val x.i x.h) (.val hi.i hi.h) (.val z.i z.h),
-    .ternop .vpermi2var d (.val y.i y.h) (.val hi.i hi.h) (.val t.i t.h),
-    .binop
-      (.shufflevector
-        (#v[some 0, some 8, some 2, some 10, some 4, some 12, some 6, some 14] :
-          Vector (Option (Fin (2 * 8))) 8))
-      e (.val a.i a.h) (.val b.i b.h),
-    .binop
-      (.shufflevector
-        (#v[some 1, some 9, some 3, some 11, some 5, some 13, some 7, some 15] :
-          Vector (Option (Fin (2 * 8))) 8))
-      f (.val a.i a.h) (.val b.i b.h),
-    .binop
-      (.shufflevector
-        (#v[some 0, some 8, some 2, some 10, none, none, none, none] :
-          Vector (Option (Fin (2 * 8))) 8))
-      g (.val c.i c.h) (.val d.i d.h),
-    .binop
-      (.shufflevector
-        (#v[some 1, some 9, some 3, some 11, none, none, none, none] :
-          Vector (Option (Fin (2 * 8))) 8))
-      h (.val c.i c.h) (.val d.i d.h),
-    .binop
-      (.shufflevector
-        (#v[some 0, some 1, some 2, some 3, some 8, some 9, some 10, some 11] :
-          Vector (Option (Fin (2 * 8))) 8))
-      q03 (.val e.i e.h) (.val h.i h.h),
+  [.binop (.shufflevector #v[some 0, some 1, some 8, some 9, some 4, some 5, some 12, some 13]) a
+      (.val x.i x.h) (.val zlo.i zlo.h),
+    .binop (.shufflevector #v[some 0, some 1, some 8, some 9, some 4, some 5, some 12, some 13]) b
+      (.val y.i y.h) (.val t.i t.h),
+    .binop (.shufflevector #v[some 2, some 3, some 10, some 11, some 6, some 7, some 12, some 13]) c
+      (.val x.i x.h) (.val zhi.i zhi.h),
+    .binop (.shufflevector #v[some 2, some 3, some 10, some 11, some 6, some 7, some 12, some 13]) d
+      (.val y.i y.h) (.val t.i t.h),
+    .binop (.shufflevector #v[some 0, some 8, some 2, some 10, none, none, none, none]) e
+      (.val a.i a.h) (.val b.i b.h),
+    .binop (.shufflevector #v[none, none, none, none, some 5, some 13, some 7, some 15]) f
+      (.val a.i a.h) (.val b.i b.h),
+    .binop (.shufflevector #v[some 0, some 8, some 2, some 10, none, none, none, none]) g
+      (.val c.i c.h) (.val d.i d.h),
+    .binop (.shufflevector #v[some 1, some 9, some 3, some 11, none, none, none, none]) h
+      (.val c.i c.h) (.val d.i d.h),
+    .binop (.shufflevector #v[some 0, some 1, some 2, some 3, some 8, some 9, some 10, some 11]) q03
+      (.val e.i e.h) (.val h.i h.h),
     .store (.arg p03 h03) (.val q03.i q03.h),
-    .binop
-      (.shufflevector
-        (#v[some 0, some 1, some 2, some 3, some 12, some 13, some 14, some 15] :
-          Vector (Option (Fin (2 * 8))) 8))
-      q14 (.val f.i f.h) (.val e.i e.h),
+    .binop (.shufflevector #v[some 1, some 9, some 3, some 11, some 4, some 12, some 6, some 14])
+      q14 (.val a.i a.h) (.val b.i b.h),
     .store (.arg p14 h14) (.val q14.i q14.h),
-    .binop
-      (.shufflevector
-        (#v[some 0, some 1, some 2, some 3, some 12, some 13, some 14, some 15] :
-          Vector (Option (Fin (2 * 8))) 8))
+    .binop (.shufflevector #v[some 0, some 1, some 2, some 3, some 12, some 13, some 14, some 15])
       q25 (.val g.i g.h) (.val f.i f.h),
     .store (.arg p25 h25) (.val q25.i q25.h)]
 
-/-- Where the body at `pos` is `quadPackRun`, `x y z t` hold `X Y Z T` and `p03 p14 p25` point at
-`P03 P14 P25`, each with room for a vector: running on from `pos` then `g` gives `K` if it does from
-`pos + 14` with the three QUAD vectors stored there, whatever the intermediates hold. -/
+/-- Where the body at `pos` is `quadPackRun`, `x y t` hold `X Y T`, `zlo zhi` hold `oneLo oneHi` and
+`p03 p14 p25` point at `P03 P14 P25`, each with room for a vector: running on from `pos` then `k`
+gives `K` if it does from `pos + 14` with the QUAD `(X, Y, one, T)` stored there, whatever the
+intermediates hold. -/
 theorem runBodyFrom_quadPackRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {x y z t lo hi a b c d e f g h q03 q14 q25 : Dst Γ V} {p03 p14 p25 : Fin Γ.args.length}
+    {x y zlo zhi t a b c d e f g h q03 q14 q25 : Dst Γ V} {p03 p14 p25 : Fin Γ.args.length}
     {h03 : Γ.args[p03] = .ptr} {h14 : Γ.args[p14] = .ptr} {h25 : Γ.args[p25] = .ptr}
-    {rest : List (Instr Γ)} {X Y Z T : Vector (BitVec 64) 8} {P03 P14 P25 : Pointer}
-    {S : GlobalState} {k : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    {rest : List (Instr Γ)} {X Y T : Vector (BitVec 64) 8} {P03 P14 P25 : Pointer} {S : GlobalState}
+    {k : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        quadPackRun x y z t lo hi a b c d e f g h q03 q14 q25 p03 p14 p25 h03 h14 h25 ++ rest)
+        quadPackRun x y zlo zhi t a b c d e f g h q03 q14 q25 p03 p14 p25 h03 h14 h25 ++ rest)
     (hR :
-      E ⊨ [x := X, y := Y, z := Z, t := T, lo := quadIdxLo, hi := quadIdxHi, .arg p03 h03 := P03,
-        .arg p14 h14 := P14, .arg p25 h25 := P25])
+      E ⊨ [x := X, y := Y, zlo := oneLo, zhi := oneHi, t := T, .arg p03 h03 := P03, .arg p14 h14 :=
+        P14, .arg p25 h25 := P25])
     (hf03 : Fits S.mem P03 512) (hf14 : Fits S.mem P14 512) (hf25 : Fits S.mem P25 512)
-    (hd :
-      [x.i, y.i, z.i, t.i, lo.i, hi.i, a.i, b.i, c.i, d.i, e.i, f.i, g.i, h.i, q03.i, q14.i].Nodup)
+    (hd : [x.i, y.i, zlo.i, zhi.i, t.i, a.i, b.i, c.i, d.i, e.i, f.i, g.i, h.i, q03.i, q14.i].Nodup)
     (hK :
       ∀ va vb vc vd ve vf vg vh vq03 vq14 vq25 : ⟦V⟧,
         (blk.runBodyFrom
@@ -107,9 +95,9 @@ theorem runBodyFrom_quadPackRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
               (pos + 14)
               { S with
                 mem :=
-                  ((S.mem.storeAt P03 (BitVec.packLanes (quadLanes 0 X Y Z T))).storeAt P14
-                        (BitVec.packLanes (quadLanes 1 X Y Z T))).storeAt
-                    P25 (BitVec.packLanes (quadLanes 2 X Y Z T)) } >>=
+                  ((S.mem.storeAt P03 (BitVec.packLanes (quadLanes 0 X Y one T))).storeAt P14
+                        (BitVec.packLanes (quadLanes 1 X Y one T))).storeAt
+                    P25 (BitVec.packLanes (quadLanes 2 X Y one T)) } >>=
             k) =
           K) :
     (blk.runBodyFrom E pos S >>= k) = K := by
@@ -121,11 +109,11 @@ theorem runBodyFrom_quadPackRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
   step_store
   step_pure with vq25
   step_store
-  have e03 : vq03 = quadLanes 0 X Y Z T := by
+  have e03 : vq03 = quadLanes 0 X Y one T := by
     rw [hvq03]; rfl
-  have e14 : vq14 = quadLanes 1 X Y Z T := by
+  have e14 : vq14 = quadLanes 1 X Y one T := by
     rw [hvq14]; rfl
-  have e25 : vq25 = quadLanes 2 X Y Z T := by
+  have e25 : vq25 = quadLanes 2 X Y one T := by
     rw [hvq25]; rfl
   subst hE hS
   rw [e03, e14, e25]

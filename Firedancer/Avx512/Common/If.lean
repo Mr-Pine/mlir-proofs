@@ -13,14 +13,20 @@ namespace MLIR.Firedancer.Avx512
 
 @[expose] public section
 
-/-- `fd_r43x6_if(c, x, y)` as four instructions: `c`'s low byte in `b`, minus one (`m1` holds `-1`)
-in `t`, as a lane mask in `mask`, selecting `y` where set and `x` elsewhere into `r`. -/
+/-- `fd_r43x6_if(c, x, y)` as four instructions: `c`'s low byte in `b` (a `trunc nsw nuw`), minus
+one (`m1` holds `-1`) in `t`, as a lane mask in `mask`, selecting `y` where set and `x` elsewhere
+into `r`. -/
 def ifRun (c : Dst Γ (.bv 32)) (m1 b t : Dst Γ (.bv 8)) (mask : Dst Γ (.vec 8 1))
     (x y r : Dst Γ V) : List (Instr Γ) :=
-  [.unop (.trunc {}) b (.val c.i c.h),
+  [.unop (.trunc { nsw := true, nuw := true }) b (.val c.i c.h),
     .binop (.add { nsw := true }) t (.val b.i b.h) (.val m1.i m1.h),
     .unop (.bitcast (t := .bv 8) (t' := .vec 8 1) rfl) mask (.val t.i t.h),
     .ternop (.vector (.select (τ := .bv 64))) r (.val mask.i mask.h) (.val y.i y.h) (.val x.i x.h)]
+
+/-- A flag `0` or `1` truncates to a byte losslessly. -/
+theorem trunc_01 {C : BitVec 32} (hC : C = 0 ∨ C = 1) :
+    (C.setWidth 8).setWidth 32 = C ∧ (C.setWidth 8).signExtend 32 = C := by
+  rcases hC with rfl | rfl <;> decide
 
 /-- Where the body at `pos` is `ifRun`, `c` holds `0` or `1`, and `x y` hold `X Y`: running on from
 `pos` then `g` gives `K` if it does from `pos + 4` with `if C = 0 then Y else X` in `r`, whatever
@@ -39,13 +45,13 @@ theorem runBodyFrom_ifRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : N
             g) =
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
-  step_pure with transparent vb
+  have htr := trunc_01 hC
+  step_pure [htr.1, htr.2] with transparent vb
   step_pure with transparent vt
   step_pure with transparent vm
   step_pure with vr
   rw [hE, ← hK (.value vb) vt vm]
   congr
-  -- lane by lane: the mask bits are all set exactly when `C = 0`
   subst hvr
   rcases hC with rfl | rfl <;> ext i hi : 1 <;> simp +decide [Ty.wrap_vec, Ty.extractVecElem_eq] <;>
     intro h <;>

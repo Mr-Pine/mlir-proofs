@@ -1,6 +1,7 @@
 module
 
 public import MLIR.Run.Tactic
+public import Firedancer.Common.Counter
 public import Firedancer.Ref.fd_curve25519_scalar_wnaf
 
 /-! What the implementations of `fd_ed25519_double_scalar_mul_base` share: the slides in memory,
@@ -98,19 +99,6 @@ theorem add_neg_one64 {i : Nat} (h1 : 1 ≤ i) (h : i < 2 ^ 64) :
   rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
   omega
 
-/-- `i + 1` on a small `long` counter does not overflow, signed. -/
-theorem saddOverflow_one64 {i : Nat} (h : i + 1 < 2 ^ 63) :
-    (BitVec.ofNat 64 i).saddOverflow 1#64 = false := by
-  have : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, this]
-  omega
-
-/-- Nor unsigned. -/
-theorem uaddOverflow_one64 {i : Nat} (h : i + 1 < 2 ^ 64) :
-    (BitVec.ofNat 64 i).uaddOverflow 1#64 = false := by
-  simp [BitVec.uaddOverflow]
-  omega
-
 /-- `i==1` as an `int`. -/
 theorem flag64_one {i : Nat} (h : i < 2 ^ 64) :
     BitVec.setWidth 32 (BitVec.ofBool (BitVec.ofNat 64 i == 1#64)) =
@@ -125,11 +113,13 @@ theorem flag64_one {i : Nat} (h : i < 2 ^ 64) :
       exact hi this
     simp [hi, this]
 
-/-- A small `int` counter zero-extends to the same `long`. -/
-theorem setWidth_ofNat32 {i : Nat} (h : i < 2 ^ 32) :
-    BitVec.setWidth 64 (BitVec.ofNat 32 i) = BitVec.ofNat 64 i := by
+/-- Entry `i - 1`'s offset, `k` bytes back from entry `i`'s: `c` is `-k`. -/
+theorem off_prev {k c i : Nat} (hc : k + c = 2 ^ 64) (h1 : 1 ≤ i) (h : k * i < 2 ^ 64) :
+    BitVec.ofNat 64 (k * i) + BitVec.ofNat 64 c = BitVec.ofNat 64 (k * (i - 1)) := by
   apply BitVec.eq_of_toNat_eq
-  simp only [BitVec.toNat_setWidth, BitVec.toNat_ofNat]
+  have hk : k ≤ k * i := Nat.le_mul_of_pos_right k h1
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mul_sub_one]
+  generalize k * i = n at *
   omega
 
 /-- `i - 1` on a small `int` counter does not overflow. -/
