@@ -33,8 +33,6 @@ public theorem fd_ed25519_point_from.call_eq (r x y z t : Pointer) (s : GlobalSt
             (s.mem.readVec z) (s.mem.readVec t)) }) := by
   func_init
   block_init
-  step_pure
-  step_pure
   step_load with transparent vx
   step_load with transparent vy
   step_load with transparent vz
