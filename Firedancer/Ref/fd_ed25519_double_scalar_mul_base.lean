@@ -403,7 +403,7 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
     step_pure
     step_pure with idx
     have hidx : idx.toNat = k := by rw [hidx, idx_pos (by omega), hk]
-    step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega, gep_entry haio hk8]
+    step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega]
     step_pure
     step_pure [flag_one (d := w1[i]) (by omega)]
     step_call using fd_ed25519_point_add_with_opts.call_eq
@@ -432,7 +432,7 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
       step_pure
       step_pure with idx
       have hidx : idx.toNat = k := by rw [hidx, idx_neg (by omega), hk]
-      step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega, gep_entry haio hk8]
+      step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega]
       step_pure
       step_pure [flag_neg_one (d := w1[i]) (by omega)]
       step_call using fd_ed25519_point_sub_with_opts.call_eq
@@ -494,7 +494,7 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
     step_pure
     step_pure with idx
     have hidx : idx.toNat = k := by rw [hidx, idx_pos (by omega), hk]
-    step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega, gep_entry htbo hk8]
+    step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega]
     step_call using fd_ed25519_point_add_with_opts.call_eq
     finish_block
     refine hK E S hArgs (by env_reads) (by env_reads) ?_
@@ -521,7 +521,7 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
       step_pure
       step_pure with idx
       have hidx : idx.toNat = k := by rw [hidx, idx_neg (by omega), hk]
-      step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega, gep_entry htbo hk8]
+      step_pure [hidx, Nat.mul_comm k 160, show 160 * k < 2 ^ 64 by omega]
       step_call using fd_ed25519_point_sub_with_opts.call_eq
       finish_block
       refine hK E S hArgs (by env_reads) (by env_reads) ?_
@@ -845,12 +845,12 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : PointLimbs
   block_init
   step_pure [saddOverflow_neg_one64 hi1 (by omega), add_neg_one64 hi1 (by omega)]
   step_pure [Nat.mod_eq_of_lt (show i - 1 < 2 ^ 64 by omega), Nat.mul_comm (i - 1) 160,
-    show 160 * (i - 1) < 2 ^ 64 by omega, gep_entry haio (show i - 1 < 8 by omega)]
+    show 160 * (i - 1) < 2 ^ 64 by omega]
   step_pure
   step_pure [flag64_one (show i < 2 ^ 64 by omega)]
   step_call using fd_ed25519_point_add_with_opts.call_eq
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), Nat.mul_comm i 160,
-    show 160 * i < 2 ^ 64 by omega, gep_entry haio hi]
+    show 160 * i < 2 ^ 64 by omega]
   step_call using fd_ed25519_point_add_final_mul.call_eq
   step_call using fd_curve25519_into_precomputed.call_eq
   step_pure [saddOverflow_one64 (show i + 1 < 2 ^ 63 by omega),
@@ -1089,11 +1089,9 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   -- fd_ed25519_point_set( &ai[0], a ); fd_ed25519_point_dbln( a2, a, 1 );
   -- fd_curve25519_into_precomputed( &ai[0] );
   step_call using fd_ed25519_point_set.call_eq
-  have hai_A : S.mem.readPoint ai = A := by
-    simp only [MemoryState.readPoint, hread_ai, hread_ai_40, hread_ai_80, hread_ai_120]
-  clear hread_ai hread_ai_40 hread_ai_80 hread_ai_120
+  clear hread_ai_readLimbs hread_ai_40 hread_ai_80 hread_ai_120
   step_call using fd_ed25519_point_dbln.call_eq consuming hA
-  step_call using fd_curve25519_into_precomputed.call_eq consuming hai_A
+  step_call using fd_curve25519_into_precomputed.call_eq consuming hread_ai
   have hsl1 : SlidesAt S.mem n1s (fd_curve25519_scalar_wnaf.wnaf x1 4) :=
     SlidesAt.of_readAt hn1s_fits (by rw [hn1s_off]; decide) hread_n1s
   have hsl2 : SlidesAt S.mem n2s (fd_curve25519_scalar_wnaf.wnaf x2 8) :=

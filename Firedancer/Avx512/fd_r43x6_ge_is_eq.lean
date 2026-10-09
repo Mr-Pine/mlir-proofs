@@ -33,6 +33,9 @@ end
 section Proof
 
 attribute [-mlir_operation] zipWith_eq_ofFn
+attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
+  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
+  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
 -- `vpermi2var` stays folded until its index is a literal, for `reduceVpermi2var`
 attribute [-mlir_operation] Operation.vpermi2var
 
@@ -89,12 +92,12 @@ public theorem fd_r43x6_ge_is_eq.call_eq (X03 X14 X25 Y03 Y14 Y25 : Wwl) (s : Gl
   step_pure [reduceVpermi2var] with yn2
   step_pure [reduceVpermi2var] with yn1
   -- !fd_r43x6_is_nonzero( fd_r43x6_sub_fast( xn1, xn2 ) ) & …( yn1, yn2 )
-  step_pure [wrapZipWith]
-  step_pure [wrapZipWith] with dx
+  step_pure
+  step_pure with dx
   step_call using fd_r43x6_is_nonzero.call_eq
   step_pure
-  step_pure [wrapZipWith]
-  step_pure [wrapZipWith] with dy
+  step_pure
+  step_pure with dy
   step_call using fd_r43x6_is_nonzero.call_eq
   step_pure
   step_pure

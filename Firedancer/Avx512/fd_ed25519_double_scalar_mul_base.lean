@@ -254,13 +254,11 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
     step_pure
     step_pure with idx
     have hidx : idx.toNat = k := by rw [hidx, idx_pos (by omega), hk]
-    step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry haio hk8]
+    step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega]
     step_call using fd_ed25519_point_add_with_opts.call_eq
     finish_block
     refine hK E S hArgs (by env_reads) (by env_reads) ?_
-    rw [hS] at hr ⊢
-    rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
-      storeQuad_swap htp.1 hrt.symm]
+    rw [hS, storeQuad_swap htp.1 hrt.symm]
     simp only [add1, addDigit, hpos, ite_true, hk, digitBlocks]
   case
     isFalse =>
@@ -285,13 +283,11 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
       step_pure
       step_pure with idx
       have hidx : idx.toNat = k := by rw [hidx, idx_neg (by omega), hk]
-      step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry haio hk8]
+      step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega]
       step_call using fd_ed25519_point_sub_with_opts.call_eq
       finish_block
       refine hK E S hArgs (by env_reads) (by env_reads) ?_
-      rw [hS] at hr ⊢
-      rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
-        storeQuad_swap htp.1 hrt.symm]
+      rw [hS, storeQuad_swap htp.1 hrt.symm]
       simp only [add1, addDigit, hneg, show ¬0 < w1[i] by omega, ite_true, ite_false, hk,
         digitBlocks]
     case
@@ -351,13 +347,11 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
     step_pure
     step_pure with idx
     have hidx : idx.toNat = k := by rw [hidx, idx_pos (by omega), hk]
-    step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry htbo hk8]
+    step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega]
     step_call using fd_ed25519_point_add_with_opts.call_eq
     finish_block
     refine hK E S hArgs (by env_reads) (by env_reads) ?_
-    rw [hS] at hr ⊢
-    rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
-      MemoryState.storeQuad_comm hrt]
+    rw [hS, MemoryState.storeQuad_comm hrt]
     simp only [addDigit, hpos, ite_true, hk, digitBlocks]
   case
     isFalse =>
@@ -382,13 +376,11 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
       step_pure
       step_pure with idx
       have hidx : idx.toNat = k := by rw [hidx, idx_neg (by omega), hk]
-      step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega, gep_entry htbo hk8]
+      step_pure [hidx, Nat.mul_comm k 192, show 192 * k < 2 ^ 64 by omega]
       step_call using fd_ed25519_point_sub_with_opts.call_eq
       finish_block
       refine hK E S hArgs (by env_reads) (by env_reads) ?_
-      rw [hS] at hr ⊢
-      rw [MemoryState.readQuad_storeQuad_self hr.of_storeQuad.of_storeQuad,
-        MemoryState.storeQuad_comm hrt]
+      rw [hS, MemoryState.storeQuad_comm hrt]
       simp only [addDigit, hneg, show ¬0 < w2[i] by omega, ite_true, ite_false, hk, digitBlocks]
     case
       isFalse =>
@@ -742,10 +734,10 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
   block_init
   step_pure [saddOverflow_neg_one64 hi1 (by omega), add_neg_one64 hi1 (by omega)]
   step_pure [Nat.mod_eq_of_lt (show i - 1 < 2 ^ 64 by omega), Nat.mul_comm (i - 1) 192,
-    show 192 * (i - 1) < 2 ^ 64 by omega, gep_entry haio (show i - 1 < 8 by omega)]
+    show 192 * (i - 1) < 2 ^ 64 by omega]
   step_call using fd_ed25519_point_add_with_opts.call_eq
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), Nat.mul_comm i 192,
-    show 192 * i < 2 ^ 64 by omega, gep_entry haio hi]
+    show 192 * i < 2 ^ 64 by omega]
   step_call using fd_ed25519_point_add_final_mul.call_eq
   step_call using fd_curve25519_into_precomputed.call_eq
   step_pure [saddOverflow_one64 (show i + 1 < 2 ^ 63 by omega),
@@ -760,8 +752,7 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
       omega
     refine hexit h8 E S hArgs (by env_reads) ?_
     subst hS
-    rw [MemoryState.readQuad_storeQuad_self hQ.of_storeQuad.of_storeQuad,
-      MemoryState.storeQuad_storeQuad_self hQ.1]
+    rw [MemoryState.storeQuad_storeQuad_self hQ.1]
   case
     isFalse =>
     have h8 : i + 1 < 8 := by
@@ -769,8 +760,7 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
       exact hbr (by rw [show i + 1 = 8 by omega])
     refine hback h8 E S hArgs (by env_reads) (by env_reads) ?_
     subst hS
-    rw [MemoryState.readQuad_storeQuad_self hQ.of_storeQuad.of_storeQuad,
-      MemoryState.storeQuad_storeQuad_self hQ.1]
+    rw [MemoryState.storeQuad_storeQuad_self hQ.1]
 
 /-- The table loop's objects: `t` and `ai` apart from what they must not touch. -/
 structure TableLayout (tp n1s n2s ai tbl a2 : Pointer) : Prop where
@@ -1014,12 +1004,8 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   -- fd_ed25519_point_set( &ai[0], a ); fd_ed25519_point_dbln( a2, a, 1 );
   -- fd_curve25519_into_precomputed( &ai[0] );
   step_call using fd_ed25519_point_set.call_eq
-  have hai_A : S.mem.readQuad ai = A := by
-    have h := hai_pt
-    rw [hS] at h ⊢
-    exact MemoryState.readQuad_storeQuad_self h.of_storeQuad
   step_call using fd_ed25519_point_dbln.call_eq consuming hA
-  step_call using fd_curve25519_into_precomputed.call_eq consuming hai_A
+  step_call using fd_curve25519_into_precomputed.call_eq consuming hread_ai
   have hsl1 : SlidesAt S.mem n1s (fd_curve25519_scalar_wnaf.wnaf x1 4) :=
     SlidesAt.of_readAt hn1s_fits
       (by

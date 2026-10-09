@@ -25,6 +25,9 @@ end
 section Proof
 
 attribute [-mlir_operation] zipWith_eq_ofFn
+attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
+  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
+  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
 
 public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
     (hr : s.mem.QuadFit r) :
@@ -33,10 +36,6 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
         { alloc := ⟨s.alloc.nextFreeBlock + 3⟩,
           mem := s.mem.storeQuad r (fd_curve25519_into_precomputed.spec (s.mem.readQuad r)) }) := by
   func_init
-  -- the point's vectors as the entry state holds them, carried past the temporaries
-  have hr03 : S.mem.readAt r 512 = S₀.mem.readAt r 512 := by rw [hS]
-  have hr14 : S.mem.readAt (r.add 64#64) 512 = S₀.mem.readAt (r.add 64#64) 512 := by rw [hS]
-  have hr25 : S.mem.readAt (r.add 128#64) 512 = S₀.mem.readAt (r.add 128#64) 512 := by rw [hS]
   block_init
   iterate 61 step_pure
   step_alloca with z03
@@ -52,21 +51,21 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
   step_load with x25
   step_pure with ta25
   -- FD_R43X6_QUAD_LANE_SUB_FAST( _ta, _ta, 1,0,0,0, _ta, r->P )
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with tb03
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with tb14
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with tb25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 0,1,0,0, _ta, r->P )
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tc03
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tc14
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tc25
   -- FD_R43X6_QUAD_FOLD_SIGNED( r->P, _ta )
   step_pattern using runBodyFrom_foldSignedRun

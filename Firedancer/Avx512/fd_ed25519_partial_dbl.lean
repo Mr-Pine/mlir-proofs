@@ -23,6 +23,9 @@ end
 section Proof
 
 attribute [-mlir_operation] zipWith_eq_ofFn
+attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
+  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
+  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
 
 /-- `FD_R43X6_GE_DBL` as compiled from the squaring to the multiplication: `T` is `_ta` before
 `QUAD_SQR_FAST`, the result `_ta` before the last fold. -/
@@ -183,32 +186,19 @@ public theorem runBodyFrom_dblRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
         s0010 := #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64], z0 := Z0, z1 := Z1,
         z2 := Z2, z3 := Z3, z4 := Z4, z5 := Z5])
     (hk :
-      E.read (.val k32.i k32.h) =
-          #v[.poison, .value 8796093022189#64, .value 8796093022189#64, .poison, .poison,
-            .value 8796093022207#64, .value 8796093022207#64, .poison] ∧
-        E.read (.val k41.i k41.h) =
-          #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
-            .value 8796093022207#64, .value 8796093022207#64, .poison] ∧
-        E.read (.val k50.i k50.h) =
-          #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
-            .value 1099511627775#64, .value 1099511627775#64, .poison] ∧
-        E.read (.val k59.i k59.h) =
-          #v[.value 8796093022189#64, .poison, .poison, .poison, .value 8796093022207#64,
-            .poison, .poison, .poison] ∧
-        E.read (.val k68.i k68.h) =
-          #v[.value 8796093022207#64, .poison, .poison, .poison, .value 8796093022207#64,
-            .poison, .poison, .poison] ∧
-        E.read (.val k77.i k77.h) =
-          #v[.value 8796093022207#64, .poison, .poison, .poison, .value 1099511627775#64,
-            .poison, .poison, .poison])
-    (hC :
-      E ⊨ [nb03 := negBias03, nb := Vector.replicate 8 18446744073708503040#64,
-        sh43 := Vector.replicate 8 43#64,
-        sh4340 := #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
-        mk43 := Vector.replicate 8 8796093022207#64, b03 := bias03,
-        b := Vector.replicate 8 1048576#64,
-        mk4340 := #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
-          1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64]])
+      E ⊨ [k32 := #v[.poison, .value 8796093022189#64, .value 8796093022189#64, .poison, .poison,
+          .value 8796093022207#64, .value 8796093022207#64, .poison],
+        k41 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
+          .value 8796093022207#64, .value 8796093022207#64, .poison],
+        k50 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
+          .value 1099511627775#64, .value 1099511627775#64, .poison],
+        k59 := #v[.value 8796093022189#64, .poison, .poison, .poison, .value 8796093022207#64,
+          .poison, .poison, .poison],
+        k68 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 8796093022207#64,
+          .poison, .poison, .poison],
+        k77 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 1099511627775#64,
+          .poison, .poison, .poison]])
+    (hC : FoldSignedConsts E nb03 nb sh43 sh4340 mk43 b03 b mk4340)
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes)
     (hwf : S.WF)
     (hZ :
@@ -226,6 +216,10 @@ public theorem runBodyFrom_dblRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
           yb03.i, y03.i, ya14.i, yb14.i, y14.i, ya25.i, yb25.i, y25.i, fd03.i, fd14.i, fd25.i,
           fh03.i, fh14.i, fh25.i, fp.i, fl03.i, fc.i, fe03.i, f03.i, fl14.i, fe14.i, f14.i, fl25.i,
           fe25.i, f25.i, ma03.i, ma14.i, ma25.i, mb03.i, mb14.i, mb25.i, g03.i, g14.i].Nodup)
+    (hdf :
+      [y03.i, y14.i, y25.i, nb03.i, nb.i, sh43.i, sh4340.i, k19.i, mk43.i, b03.i, b.i, mk4340.i,
+          fd03.i, fd14.i, fd25.i, fh03.i, fh14.i, fh25.i, fp.i, fl03.i, fc.i, fe03.i, f03.i, fl14.i,
+          fe14.i, f14.i, fl25.i, fe25.i].Nodup)
     (hK :
       ∀ (vq03 vq14 vq25 vc03 vc14 vc25 vpa03 vpa14 vpa25 vpb03 vpb14 vpb25 : ⟦.vec 8 64⟧)
         (vua03 vu03 vua14 vu14 vua25 vu25 vva03 vvb03 vv03 vva14 vvb14 vv14 : ⟦.vec 8 64⟧)
@@ -271,9 +265,9 @@ public theorem runBodyFrom_dblRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
   step_load with q25
   iterate 3 step_pure
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 0,0,1,0, _ta, _ta ): `Z` doubled
-  step_pure [wrapZipWith] with tc03
-  step_pure [wrapZipWith] with tc14
-  step_pure [wrapZipWith] with tc25
+  step_pure with tc03
+  step_pure with tc14
+  step_pure with tc25
   -- FD_R43X6_QUAD_PERMUTE( _tb, 3,3,3,3, _ta ); FD_R43X6_QUAD_PERMUTE( _BB, 1,1,1,1, _ta )
   step_pure with pa03
   step_pure with pa14
@@ -282,74 +276,41 @@ public theorem runBodyFrom_dblRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
   step_pure with pb14
   step_pure with pb25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _tb, _tb, 1,0,0,1, _tb, _BB )
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with u03
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with u14
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with u25
   -- FD_R43X6_QUAD_LANE_SUB_FAST( _tb, _tb, 0,1,1,0, _tb, _BB )
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with v03
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with v14
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with v25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _tb, _tb, 0,0,1,0, _tb, _ta )
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with w03
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with w14
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with w25
   -- FD_R43X6_QUAD_LANE_SUB_FAST( _tb, _tb, 1,0,0,0, _tb, _ta )
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with y03
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with y14
-  step_pure [wrapZipWith]
-  step_pure [expandOfFn]
+  step_pure
+  step_pure
   step_pure with y25
   -- FD_R43X6_QUAD_FOLD_SIGNED( _tb, _tb )
-  step_pure [wrapZipWith] with sd03
-  step_pure [wrapZipWith] with sd14
-  step_pure [wrapZipWith] with sd25
-  step_pure [wrapZipWith] with sh03
-  step_pure [wrapZipWith] with sh14
-  step_pure [wrapZipWith] with transparent sh25
-  step_pure [expandOfFn, wwl_shr_vector] with transparent sp
-  step_pure [wrapZipWith] with sl03
-  step_pure with sc03
-  have hsc03' : sc03 =
-      wwl_pack_halves (wwl_mul (wwl_shr_vector sd25 s4340) (wwl_bcast 19#64)) 1
-        (wwl_shr_vector sd25 s4340) 0 := by
-    rw [hsc03]
-    ext i hi : 1
-    obtain _|_|_|_|_|_|_|_|i := i
-    all_goals first | omega | wwl_lanes
-  have hok03 := mask_add_bias03_ok sd03
-  rw [← hsl03] at hok03
-  step_pure [wrapZipWith] with se03
-  step_pure [hsc03', wrapZipWith] with sf03
-  step_pure [wrapZipWith] with sl14
-  have hok14 := shr_add_bias_ok sd03 _ (.inl rfl)
-  rw [← hsh03] at hok14
-  step_pure [wrapZipWith] with se14
-  have hok14' := shr_add_bias_add_mask_ok sd03 sd14 _ _ (.inl rfl) (.inl rfl)
-  rw [← hsh03, ← hse14, ← hsl14] at hok14'
-  step_pure [wrapZipWith] with sf14
-  step_pure [wrapZipWith] with sl25
-  have hok25 := shr_add_bias_ok sd14 _ (.inl rfl)
-  rw [← hsh14] at hok25
-  step_pure [wrapZipWith] with se25
-  have hok25' := shr_add_bias_add_mask_ok sd14 sd25 _ _ (.inl rfl) (.inr rfl)
-  rw [← hsh14, ← hse25, ← hsl25] at hok25'
-  step_pure [wrapZipWith] with sf25
+  step_pattern using runBodyFrom_foldSignedRun
   -- FD_R43X6_QUAD_PERMUTE( _ta, 0,1,1,0, _tb ); FD_R43X6_QUAD_PERMUTE( _tb, 2,3,2,3, _tb )
   step_pure with ma03
   step_pure with ma14
@@ -388,13 +349,10 @@ public theorem runBodyFrom_dblRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
     have dm9 : Quad.subSel true false false false ⟨w03, w14, w25⟩ ⟨tc03, tc14, tc25⟩ =
         ⟨y03, y14, y25⟩ := by
       rw [hy03, hy14, hy25]; rfl
-    have dm10 : Quad.foldSignedC ⟨y03, y14, y25⟩ = ⟨sf03, sf14, sf25⟩ := by
-      rw [hsf03, hsf14, hsf25, hse03, hse14, hse25, hsl03, hsl14, hsl25, hsh03, hsh14, hsd03,
-        hsd14, hsd25]
-      rfl
-    have dm11 : Quad.perm4 0 1 1 0 ⟨sf03, sf14, sf25⟩ = ⟨ma03, ma14, ma25⟩ := by
+    have dm10 : Quad.foldSignedC ⟨y03, y14, y25⟩ = ⟨s03, s14, s25⟩ := _hs
+    have dm11 : Quad.perm4 0 1 1 0 ⟨s03, s14, s25⟩ = ⟨ma03, ma14, ma25⟩ := by
       rw [hma03, hma14, hma25]; rfl
-    have dm12 : Quad.perm4 2 3 2 3 ⟨sf03, sf14, sf25⟩ = ⟨mb03, mb14, mb25⟩ := by
+    have dm12 : Quad.perm4 2 3 2 3 ⟨s03, s14, s25⟩ = ⟨mb03, mb14, mb25⟩ := by
       rw [hmb03, hmb14, hmb25]; rfl
     have dm13 : quadMul ⟨ma03, ma14, ma25⟩ ⟨mb03, mb14, mb25⟩ = ⟨g03, g14, g25⟩ := by
       rw [hg03, hg14, hg25]; rfl
@@ -422,10 +380,6 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
         { alloc := ⟨s.alloc.nextFreeBlock + 6⟩,
           mem := s.mem.storeQuad r (fd_ed25519_partial_dbl.spec (s.mem.readQuad a)) }) := by
   func_init
-  -- the point's vectors as the entry state holds them, carried past the temporaries
-  have ha03 : S.mem.readAt a 512 = S₀.mem.readAt a 512 := by rw [hS]
-  have ha14 : S.mem.readAt (a.add 64#64) 512 = S₀.mem.readAt (a.add 64#64) 512 := by rw [hS]
-  have ha25 : S.mem.readAt (a.add 128#64) 512 = S₀.mem.readAt (a.add 128#64) 512 := by rw [hS]
   block_init
   iterate 86 step_pure
   step_alloca with z03
@@ -444,11 +398,11 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
   step_load with x25
   step_pure with ta25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, a->P )
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb03
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb14
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb25
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )

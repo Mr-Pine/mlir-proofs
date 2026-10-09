@@ -71,15 +71,6 @@ theorem SlidesAt.of_readAt {m : MemoryState} {p : Pointer} {w : Vector Int 256} 
 
 /-! ### Counters and digits -/
 
-/-- `getelementptr` to entry `k` of a table of `n` entries of `c` bytes. -/
-theorem gep_entry {p : Pointer} {c n k : Nat} (hp : p.offset.toNat + c * n < 2 ^ 64) (hk : k < n) :
-    Operation.gep (.value (BitVec.ofNat 64 (c * k))) (.value p) =
-      .value (p.add (BitVec.ofNat 64 (c * k))) := by
-  apply gep_value
-  have : c * k ≤ c * n := Nat.mul_le_mul_left c hk.le
-  simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq, not_le]
-  omega
-
 /-- A small counter is `0` as a `long` exactly when it is. -/
 theorem eq_zero_of_ofNat64 {i : Nat} (hi : i < 2 ^ 64) (h : BitVec.ofNat 64 i = 0#64) : i = 0 := by
   have := congrArg BitVec.toNat h

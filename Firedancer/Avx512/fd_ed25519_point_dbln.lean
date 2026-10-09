@@ -22,6 +22,9 @@ end
 section Proof
 
 attribute [-mlir_operation] zipWith_eq_ofFn
+attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
+  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
+  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
 
 namespace fd_ed25519_point_dbln
 
@@ -143,11 +146,11 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
     (wwl_perm4_lt_of_eq hP25 (i0 := 1) (i1 := 1) (i2 := 2) (i3 := 0) (v := ta25)
       (by rw [hta25]; rfl)) hP25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, r->P )
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb03
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb14
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb25
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )
   step_pattern using runBodyFrom_dblRun
@@ -235,29 +238,6 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
       simp [BitVec.ult, this] at hbr
       omega
 
-/-- The exit `^bb1` then `^bb2`: `Q` from the registers stored at `r`, and `r` returned. -/
-theorem leave (r a : Pointer) (n : BitVec 32) (Q : Quad) (S : GlobalState) (E : ⟪Γ⟫)
-    (hArgs : E.args = (args (.value r) (.value a) (.value n)).get)
-    (hR :
-      E ⊨ [%190 := r.add 64#64, %193 := r.add 128#64, %282 := Ty.wrap Q.P03,
-        %284 := Ty.wrap Q.P14, %286 := Ty.wrap Q.P25])
-    (hwf : S.WF) (hr : S.mem.QuadFit r) :
-    fd_ed25519_point_dbln.runFrom E 1 S =
-      .value (.cons (.value r) .nil,
-        { alloc := S.alloc,
-          mem :=
-            ((S.mem.storeAt r (BitVec.packLanes Q.P03)).storeAt (r.add 64#64)
-                (BitVec.packLanes Q.P14)).storeAt
-              (r.add 128#64) (BitVec.packLanes Q.P25) }) := by
-  block_init
-  step_store
-  step_store
-  step_store
-  finish_block
-  block_init
-  finish_block
-  rw [hS]
-
 end fd_ed25519_point_dbln
 
 -- the first doubling inline: about 150 instructions
@@ -271,10 +251,6 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
         { alloc := ⟨s.alloc.nextFreeBlock + 12⟩,
           mem := s.mem.storeQuad r (fd_ed25519_point_dbln.spec (s.mem.readQuad a) n.toNat) }) := by
   func_init
-  -- the point's vectors as the entry state holds them, carried past the temporaries
-  have ha03 : S.mem.readAt a 512 = S₀.mem.readAt a 512 := by rw [hS]
-  have ha14 : S.mem.readAt (a.add 64#64) 512 = S₀.mem.readAt (a.add 64#64) 512 := by rw [hS]
-  have ha25 : S.mem.readAt (a.add 128#64) 512 = S₀.mem.readAt (a.add 128#64) 512 := by rw [hS]
   block_init
   iterate 87 step_pure
   iterate 12 step_alloca
@@ -288,11 +264,11 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
   step_load with x25
   step_pure with ta25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, a->P )
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb03
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb14
-  step_pure [wrapZipWith]
+  step_pure
   step_pure with tb25
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )
   step_pattern using runBodyFrom_dblRun
@@ -315,16 +291,22 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     · dsimp only [fd_ed25519_point_dbln.LoopEnv]
       env_reads
     · exact Quad.foldUnsignedC_lt _hu
-    · intro hA' hR' hwf' hr' hal hm
-      rw [fd_ed25519_point_dbln.leave r a n _ S E₀ hA' hR' hwf' hr']
+    · intro hR' hwf' hr' hal hm
+      block_init
+      step_store
+      step_store
+      step_store
+      finish_block
+      block_init
+      finish_block
       have hiter :
           fd_ed25519_point_dbln.iter (n.toNat - 2 + 1) ⟨u03, u14, u25⟩ =
             fd_ed25519_point_dbln.spec (S₀.mem.readQuad a) n.toNat := by
         rw [fd_ed25519_point_dbln.spec, fd_ed25519_point_dbln.repeat_eq_iter, hA,
           show n.toNat - 1 = n.toNat - 2 + 1 by omega]
       have hro := hr'.1
-      rw [hiter, PoisonOr.value_bind]
-      simp only [MemoryState.eraseFrom_storeAt]
+      subst hS
+      simp only [hiter, MemoryState.eraseFrom_storeAt]
       rw [hm, hal]
       subst_vars
       erase_frame

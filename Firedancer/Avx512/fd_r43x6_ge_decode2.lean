@@ -146,12 +146,6 @@ theorem fits_slot1 {S : GlobalState} (hwf : S.WF) : Fits (slots4 S).mem (S.slot 
   rw [GlobalState.allocaPtr_eq_slot, GlobalState.alloca_slot] at h
   exact (h.alloca (n := 64) hwf.alloca.alloca).alloca (n := 64) hwf.alloca.alloca.alloca
 
-/-- The top word of the copy at a slot. -/
-theorem readAt_y3 {m : MemoryState} {p : Pointer} (hf : Fits m p 256) (ho : p.offset = 0)
-    (x : BitVec 256) : (m.storeAt p x).readAt (p.add 24#64) 64 = x.extractLsb' 192 64 := by
-  rw [MemoryState.readAt_storeAt_add hf (by simp [ho, BitVec.uaddOverflow]) (by decide)]
-  rfl
-
 /-- The copy at `pa`, its top word replaced, read back as four lanes. -/
 theorem readWv_copy_a {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id)
     (ha : Fits m pa 256) (ho : pa.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
@@ -453,9 +447,6 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   have hpow := fd_r43x6_pow22523_2.call_eq
   have hnz := fd_r43x6_is_nonzero.call_eq
   -- the copies' reads, about the entry state
-  have hy3a := readAt_y3 (fits_slot0 hwf) rfl (S₀.mem.readAt sa 256)
-  have hy3b := readAt_y3 ((fits_slot1 hwf).storeAt (q := S₀.slot 0) (x := S₀.mem.readAt sa 256))
-    rfl (S₀.mem.readAt sb 256)
   have hwva := readWv_copy_a (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide))
     (fits_slot0 hwf) rfl (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)
   have hwvb := readWv_copy_b (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide))
@@ -549,7 +540,7 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
     subst_vars
     simp only [dec, vadd, vsub, one, d, pSubOne, Vector.getElem_ofFn, Vector.getElem_mk,
       List.getElem_toArray]
-    simp only [hy3a, hwva]
+    simp only [hwva]
     rfl
   have hB :
     dec (S₀.mem.readAt sb 256) =
@@ -559,7 +550,7 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
     subst_vars
     simp only [dec, vadd, vsub, one, d, pSubOne, Vector.getElem_ofFn, Vector.getElem_mk,
       List.getElem_toArray]
-    simp only [hy3a, hy3b, hwvb]
+    simp only [hwvb]
     rfl
   have hF : frame S₀ sa sb (dec (S₀.mem.readAt sa 256)) (dec (S₀.mem.readAt sb 256)) = S := by
     rw [hA, hB]

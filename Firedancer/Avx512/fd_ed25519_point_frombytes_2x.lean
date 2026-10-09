@@ -59,24 +59,6 @@ theorem fits_slot {S : GlobalState} (hwf : S.WF) (k : Nat) (hk : k < 6) :
     exact h
   · omega
 
-/-- A read below six `alloca`s: the read before them. -/
-theorem readAt_allocas6 {S : GlobalState} (hwf : S.WF) (h : Fits S.mem q w') :
-    ((((((S.alloca 64).alloca 64).alloca 64).alloca 64).alloca 64).alloca 64).mem.readAt q w =
-      S.mem.readAt q w := by
-  have w1 := hwf.alloca (n := 64)
-  have w2 := w1.alloca (n := 64)
-  have w3 := w2.alloca (n := 64)
-  have w4 := w3.alloca (n := 64)
-  have w5 := w4.alloca (n := 64)
-  have f1 := h.alloca (n := 64) hwf
-  have f2 := f1.alloca (n := 64) w1
-  have f3 := f2.alloca (n := 64) w2
-  have f4 := f3.alloca (n := 64) w3
-  have f5 := f4.alloca (n := 64) w4
-  rw [MemoryState.readAt_alloca w5 f5, MemoryState.readAt_alloca w4 f4,
-    MemoryState.readAt_alloca w3 f3, MemoryState.readAt_alloca w2 f2,
-    MemoryState.readAt_alloca w1 f1, MemoryState.readAt_alloca hwf h]
-
 /-- `fd_ed25519_point_frombytes_2x` stores `spec`'s points of the encodings at `buf1` and `buf2` at
 `r1`, then `r2`, and returns its value; six temporaries and the decoder's frames count `30`
 blocks. -/
@@ -110,7 +92,6 @@ public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer)
   finish_block
   subst hS
   erase_frame
-  simp only [readAt_allocas6 hwf₀ hb1₀, readAt_allocas6 hwf₀ hb2₀]
   subst hv1 hv2 hv3 hv4 hv5 hv6
   have hids : [(S₀.slot 0).id, (S₀.slot 1).id, (S₀.slot 2).id, (S₀.slot 3).id, (S₀.slot 4).id,
       (S₀.slot 5).id].Nodup := by

@@ -1305,7 +1305,6 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
                 (fd_sha512_core_ref.spec (s.mem.readWords8 st)
                   (s.mem.readAt data (1024 * n.toNat))) }) := by
   func_init
-  have hst₀ : S₀.mem.Words8Fit st := hS ▸ hst
   have hdata₀ : Fits S₀.mem data (1024 * n.toNat) := hS ▸ hdata
   block_init
   iterate 20 step_pure
@@ -1313,7 +1312,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
   step_alloca with X
   iterate 7 step_pure
   -- ulong a = state[0]; … ulong h = state[7];
-  iterate 8 step_load [readAt_frame hwf₀] inline
+  iterate 8 step_load inline
   finish_block
   have hD : S.mem.readAt data (1024 * n.toNat) = S₀.mem.readAt data (1024 * n.toNat) := by
     rw [hS]

@@ -22,6 +22,9 @@ end
 section Proof
 
 attribute [-mlir_operation] zipWith_eq_ofFn
+attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
+  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
+  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
 
 -- both branches' 250-300 instructions of vector code in one proof
 set_option maxHeartbeats 2000000 in
@@ -69,36 +72,36 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
     step_load with y25
     step_pure with tb25
     -- FD_R43X6_QUAD_LANE_SUB_FAST( _ta, _ta, 1,0,0,0, _ta, P1 ); the same for `_tb`, `P2`
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with tc03
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with tc14
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with tc25
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with td03
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with td14
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with td25
     -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 0,1,1,0, _ta, P1 ); `( _tb, _tb, 0,1,0,0, _tb, P2 )`
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with te03
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with te14
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with te25
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with tf03
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with tf14
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with tf25
     -- FD_R43X6_QUAD_FOLD_SIGNED( _ta, _ta ); FD_R43X6_QUAD_FOLD_SIGNED( _tb, _tb )
     step_pattern using runBodyFrom_foldSignedRun
@@ -131,21 +134,21 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
     step_pure with pa14
     step_pure with pa25
     -- FD_R43X6_QUAD_LANE_SUB_FAST( _tb, _tb, 1,0,0,1, _tb, _ta )
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with pb03
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with pb14
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with pb25
     -- FD_R43X6_QUAD_LANE_ADD_FAST( _tb, _tb, 0,1,1,0, _tb, _ta )
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with pc03
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with pc14
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with pc25
     have e6 : Quad.perm4 1 0 3 2 ⟨h03, h14, h25⟩ = ⟨pa03, pa14, pa25⟩ := by
       rw [hpa03, hpa14, hpa25]; rfl
@@ -226,21 +229,21 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
     step_load with x25
     step_pure with ta25
     -- FD_R43X6_QUAD_LANE_SUB_FAST( _tb, _tb, 1,0,0,0, _tb, P1 )
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with tb03
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with tb14
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure with tb25
     -- FD_R43X6_QUAD_LANE_ADD_FAST( _tb, _tb, 0,1,1,0, _tb, P1 )
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with tc03
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with tc14
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with tc25
     -- FD_R43X6_QUAD_FOLD_SIGNED( _tb, _tb )
     step_pattern using runBodyFrom_foldSignedRun
@@ -272,32 +275,32 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
     have hs03 := sub_lt_ok hpa03' hu03
     have ho03 := sub_add_lt_ok1001 hpa03' hu03 8796093022189#64 8796093022207#64
       (by decide) (by decide)
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure [ho03.1, ho03.2.1, ho03.2.2.1, ho03.2.2.2] with pb03
     have hs14 := sub_lt_ok hpa14' hu14
     have ho14 := sub_add_lt_ok1001 hpa14' hu14 8796093022207#64 8796093022207#64
       (by decide) (by decide)
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure [ho14.1, ho14.2.1, ho14.2.2.1, ho14.2.2.2] with pb14
     have hs25 := sub_lt_ok hpa25' hu25
     have ho25 := sub_add_lt_ok1001 hpa25' hu25 8796093022207#64 1099511627775#64
       (by decide) (by decide)
-    step_pure [wrapZipWith]
-    step_pure [expandOfFn]
+    step_pure
+    step_pure
     step_pure [ho25.1, ho25.2.1, ho25.2.2.1, ho25.2.2.2] with pb25
     have e6 : Quad.subSel true false false true ⟨pa03, pa14, pa25⟩ ⟨u03, u14, u25⟩ =
         ⟨pb03, pb14, pb25⟩ := by
       rw [hpb03, hpb14, hpb25]; rfl
     -- FD_R43X6_QUAD_LANE_ADD_FAST( _tb, _tb, 0,1,1,0, _tb, _ta )
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with pc03
     have hc14 := sub_sel_add_ok hpa14' hu14 hu14 (by decide) (by decide) (congrArg Quad.P14 e6)
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with pc14
     have hc25 := sub_sel_add_ok hpa25' hu25 hu25 (by decide) (by decide) (congrArg Quad.P25 e6)
-    step_pure [wrapZipWith]
+    step_pure
     step_pure with pc25
     have e7 : Quad.addSel false true true false ⟨pb03, pb14, pb25⟩ ⟨u03, u14, u25⟩ =
         ⟨pc03, pc14, pc25⟩ := by
