@@ -88,7 +88,7 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
                 (fd_r43x6_quad_sqr_fast.spec x03 x14 x25).2.2 }) := by
   func_init
   block_init
-  iterate 34 step_pure
+  iterate 33 step_pure
   step_pure with x05
   step_pure with x12
   step_pure with x34
