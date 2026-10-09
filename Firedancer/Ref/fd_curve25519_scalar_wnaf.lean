@@ -196,6 +196,24 @@ theorem ofInt_sub16 (a b : Int) :
     BitVec.ofInt 16 a - BitVec.ofInt 16 b = BitVec.ofInt 16 (a - b) := by
   rw [Int.sub_eq_add_neg, BitVec.ofInt_add, BitVec.ofInt_neg, BitVec.sub_eq_add_neg]
 
+/-- A small `int` zero-extends to the same `long`. -/
+theorem setWidth64_ofNat32 {a : Nat} (h : a < 2 ^ 32) :
+    (BitVec.ofNat 32 a).setWidth 64 = BitVec.ofNat 64 a := by
+  apply BitVec.eq_of_toNat_eq
+  simp
+  omega
+
+/-- Unsigned comparison of small counters. -/
+theorem ult_ofNat64 {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
+    (BitVec.ofNat 64 a).ult (BitVec.ofNat 64 b) = decide (a < b) := by
+  simp [BitVec.ult, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb]
+
+/-- `x << 16` has its low 16 bits clear: an `exact` shift right by 15 or 16 drops no set bit. -/
+theorem extractLsb'_shiftLeft_16 (x : BitVec 32) :
+    (x <<< 16).extractLsb' 0 16 = 0#16 ∧ (x <<< 16).extractLsb' 0 15 = 0#15 := by
+  constructor <;> apply BitVec.eq_of_getLsbD_eq <;> intro j hj <;>
+    simp [BitVec.getLsbD_extractLsb', BitVec.getLsbD_shiftLeft] <;> omega
+
 /-- Signed comparison of small counters. -/
 theorem slt_ofNat32 (ha : a < 2 ^ 31) (hb : b < 2 ^ 31) :
     (BitVec.ofNat 32 a).slt (BitVec.ofNat 32 b) = decide (a < b) := by
@@ -321,21 +339,13 @@ theorem lt_of_ne_256 (hi : i < 256) (h : ¬BitVec.ofNat 64 (i + 1) = 256#64) : i
   · exact hlt
   · exact absurd (by rw [show i + 1 = 256 by omega]) h
 
-/-- The live registers at `^bb3`, "find first non-zero t", at `i`. -/
+/-- The live registers at `^bb3`, "find first non-zero t", at `i`, and at `^bb5`, `i` found. -/
 abbrev hdr3 (mx : BitVec 32) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i : Nat) :
     ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16, %9 :=
-    .value 256#32, %10 := .value 16#32, %11 := .value 15#32, %12 := .value 0#32, %13 :=
-    .value 255#32, %14 := .value 65536#32, %15 := .value 2#32, %16 := .value 1#32, %17 :=
-    .value 256#64, %19 := .value mx, %34 := .value (BitVec.ofNat 64 i)]
-
-/-- The live registers at `^bb5`, the first non-zero `i` found. -/
-abbrev hdr5 (mx : BitVec 32) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i : Nat) :
-    ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16, %9 :=
-    .value 256#32, %10 := .value 16#32, %11 := .value 15#32, %12 := .value 0#32, %13 :=
-    .value 255#32, %14 := .value 65536#32, %15 := .value 2#32, %16 := .value 1#32, %19 := .value mx,
-    %34 := .value (BitVec.ofNat 64 i)]
+  E[%1675 := .value 1#16, %1676 := .value 1#64, %1677 := .value 255#64, %1679 := .value 0#16,
+    %1680 := .value 256#64, %1681 := .value 16#32, %1682 := .value 15#32, %1683 := .value 0#32,
+    %1684 := .value 255#32, %1685 := .value 65536#32, %1686 := .value 2#32, %1687 := .value 1#32,
+    %1688 := .value 256#32, %1690 := .value mx, %1705 := .value (BitVec.ofNat 64 i)]
 
 /-- `^bb3`, "find first non-zero t", from `i` with fuel `n`: on to `^bb5` at the first non-zero,
 or to `^bb20` if there is none. -/
@@ -350,7 +360,7 @@ theorem fd_curve25519_scalar_wnaf.nonzero_loop (slides scalar : Pointer) (w mx :
         (∀ E' : ⟪fd_curve25519_scalar_wnaf.Γ⟫,
           E'.args = E.args →
             firstNonzero t n i < 256 →
-            fd_curve25519_scalar_wnaf.runFrom (hdr5 mx E' (firstNonzero t n i)) ^bb5
+            fd_curve25519_scalar_wnaf.runFrom (hdr3 mx E' (firstNonzero t n i)) ^bb5
                 (withT slides t S) =
               K) →
         (∀ E' : ⟪fd_curve25519_scalar_wnaf.Γ⟫,
@@ -467,25 +477,25 @@ theorem carryT_inv {t : Vector Int 256} (hk : k < 255) (hn : 255 ≤ k + n) (h25
           (hbits.set (by omega) (by omega))
       exact ⟨by omega, this.2⟩
 
-/-- The live registers at `^bb16`, the carry loop, at `k`: `%76` is `&_t[k]`. -/
+/-- The live registers at `^bb16`, the carry loop, at `k`: `%1747` is `&_t[k]`. -/
 abbrev hdr16 (max : Int) (slides : Pointer) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i : Nat)
     (tim : Int) (k : Nat) : ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16, %9 :=
-    .value 256#32, %10 := .value 16#32, %13 := .value 255#32, %14 := .value 65536#32, %15 :=
-    .value 2#32, %16 := .value 1#32, %43 := .value (BitVec.ofInt 32 max), %44 :=
-    .value (BitVec.ofInt 32 (2 * max)), %45 := .value (BitVec.ofInt 32 (-max)), %48 :=
-    .value (BitVec.ofNat 64 i), %65 := .value (BitVec.ofInt 16 tim), %76 :=
-    .value (slides.add (BitVec.ofNat 64 (2 * k))), %77 := .value (BitVec.ofNat 32 k)]
+  E[%1675 := .value 1#16, %1676 := .value 1#64, %1677 := .value 255#64, %1679 := .value 0#16,
+    %1681 := .value 16#32, %1684 := .value 255#32, %1685 := .value 65536#32, %1686 := .value 2#32,
+    %1687 := .value 1#32, %1688 := .value 256#32, %1714 := .value (BitVec.ofInt 32 max),
+    %1715 := .value (BitVec.ofInt 32 (2 * max)), %1716 := .value (BitVec.ofInt 32 (-max)),
+    %1719 := .value (BitVec.ofNat 64 i), %1736 := .value (BitVec.ofInt 16 tim),
+    %1747 := .value (slides.add (BitVec.ofNat 64 (2 * k))), %1748 := .value (BitVec.ofNat 32 k)]
 
 /-- The live registers at `^bb19`: `_t[i] = ti`, then on at `j`. -/
 abbrev hdr19 (max : Int) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i j : Nat) (ti : Int) :
     ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16, %9 :=
-    .value 256#32, %10 := .value 16#32, %13 := .value 255#32, %14 := .value 65536#32, %15 :=
-    .value 2#32, %16 := .value 1#32, %43 := .value (BitVec.ofInt 32 max), %44 :=
-    .value (BitVec.ofInt 32 (2 * max)), %45 := .value (BitVec.ofInt 32 (-max)), %48 :=
-    .value (BitVec.ofNat 64 i), %88 := .value (BitVec.ofNat 32 j), %89 :=
-    .value (BitVec.ofInt 16 ti)]
+  E[%1675 := .value 1#16, %1676 := .value 1#64, %1677 := .value 255#64, %1679 := .value 0#16,
+    %1681 := .value 16#32, %1684 := .value 255#32, %1685 := .value 65536#32, %1686 := .value 2#32,
+    %1687 := .value 1#32, %1688 := .value 256#32, %1714 := .value (BitVec.ofInt 32 max),
+    %1715 := .value (BitVec.ofInt 32 (2 * max)), %1716 := .value (BitVec.ofInt 32 (-max)),
+    %1719 := .value (BitVec.ofNat 64 i), %1759 := .value (BitVec.ofNat 32 j),
+    %1760 := .value (BitVec.ofInt 16 ti)]
 
 /-- `^bb16`, the carry loop, at `k` with fuel `n`: `_t[k] = 0`, then on to the first zero after
 `k`, set to one in `^bb15`, then `^bb19` with `tim`. -/
@@ -579,16 +589,33 @@ theorem shift_lt (hik : i ≤ k) (hk : k < 255) :
   rw [min_spec hik hk, BitVec.toNat_ofNat]
   omega
 
-/-- `delta`, as the code computes it: `(short)(1 << m)` sign-extended. -/
+/-- `delta`, as the code computes it: `1 << m` as `(65536 << m) >> 16`, both shifts defined. -/
 theorem delta_eq (hik : i ≤ k) (hk : k < 255) :
-    (65536#32 <<< (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat).sshiftRight
-        16 =
-      BitVec.ofInt 32 (2 ^ min (k + 1 - i) 14) := by
+    65536#32 <<< (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat >>>
+        (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat = 65536#32 ∧
+      BitVec.sshiftRight
+          (65536#32 <<< (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat)
+          (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat = 65536#32 ∧
+      BitVec.extractLsb' 0 16
+          (65536#32 <<< (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat) =
+        0#16 ∧
+      65536#32 <<< (fd_int_min.spec (BitVec.ofNat 32 (k + 1) - BitVec.ofNat 32 i)).toNat >>> 16 =
+        BitVec.ofInt 32 (2 ^ min (k + 1 - i) 14) := by
   have h :
-    ∀ m < 15,
-      (65536#32 <<< (BitVec.ofNat 32 m).toNat).sshiftRight 16 = BitVec.ofInt 32 (2 ^ m) := by
+    ∀ m : Nat, m < 15 →
+      65536#32 <<< m >>> m = 65536#32 ∧ (65536#32 <<< m).sshiftRight m = 65536#32 ∧
+        (65536#32 <<< m).extractLsb' 0 16 = 0#16 ∧
+        65536#32 <<< m >>> 16 = BitVec.ofInt 32 (2 ^ m) := by
     decide
-  rw [min_spec hik hk, h _ (by omega)]
+  rw [min_spec hik hk, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  exact h _ (by omega)
+
+/-- A non-negative `short` zero-extends to the same `int`. -/
+theorem setWidth_ofInt16 {a : Int} (h : 0 ≤ a ∧ a < 2 ^ 15) :
+    (BitVec.ofInt 16 a).setWidth 32 = BitVec.ofInt 32 a := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_setWidth, BitVec.toNat_ofInt]
+  omega
 
 /-- `delta` is `2 … 2^14` for `j > i`. -/
 theorem delta_bounds (hd : 1 ≤ d) : 2 ≤ (2 : Int) ^ min d 14 ∧ (2 : Int) ^ min d 14 ≤ 16384 := by
@@ -629,20 +656,20 @@ theorem absorbT_of_stuck {max ti : Int} {t : Vector Int 256} (hj : j < 256) (h :
 theorem absorbT_end {max ti : Int} {t : Vector Int 256} :
     absorbT max i n t ti 256 = (t, ti, 256) := by cases n <;> simp [absorbT]
 
-/-- The live registers at `^bb9`, the absorb loop, after `j = k`: `%50` is `ti`. -/
+/-- The live registers at `^bb9`, the absorb loop, after `j = k`: `%1721` is `ti`. -/
 abbrev hdr9 (max : Int) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i k : Nat) (ti : Int) :
     ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16, %9 :=
-    .value 256#32, %10 := .value 16#32, %13 := .value 255#32, %14 := .value 65536#32, %15 :=
-    .value 2#32, %16 := .value 1#32, %43 := .value (BitVec.ofInt 32 max), %44 :=
-    .value (BitVec.ofInt 32 (2 * max)), %45 := .value (BitVec.ofInt 32 (-max)), %46 :=
-    .value (BitVec.ofNat 32 i), %48 := .value (BitVec.ofNat 64 i), %49 :=
-    .value (BitVec.ofNat 64 k), %50 := .value (BitVec.ofInt 16 ti)]
+  E[%1675 := .value 1#16, %1676 := .value 1#64, %1677 := .value 255#64, %1679 := .value 0#16,
+    %1681 := .value 16#32, %1684 := .value 255#32, %1685 := .value 65536#32, %1686 := .value 2#32,
+    %1687 := .value 1#32, %1688 := .value 256#32, %1714 := .value (BitVec.ofInt 32 max),
+    %1715 := .value (BitVec.ofInt 32 (2 * max)), %1716 := .value (BitVec.ofInt 32 (-max)),
+    %1717 := .value (BitVec.ofNat 32 i), %1719 := .value (BitVec.ofNat 64 i),
+    %1720 := .value (BitVec.ofNat 64 k), %1721 := .value (BitVec.ofInt 16 ti)]
 
 /-- The live registers at `^bb18`: `_t[i] = ti`, then return. -/
 abbrev hdr18 (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i : Nat) (ti : Int) :
     ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%85 := .value (BitVec.ofNat 64 i), %86 := .value (BitVec.ofInt 16 ti)]
+  E[%1756 := .value (BitVec.ofNat 64 i), %1757 := .value (BitVec.ofInt 16 ti)]
 
 /-- `^bb9`, the absorb loop, after `j = k` with fuel `n`: on to `^bb19` with the `ti` and `j` it
 stops at, or to `^bb18` at the end of `_t`. -/
@@ -721,10 +748,10 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
       have hd := delta_bounds (d := k + 1 - i) (by omega)
       -- `short delta = (short)(1 << fd_int_min( j-i, 14 )); if( delta>(2*max) ) break;`
       block_init
-      step_pure
+      step_pure [signExtend_ofNat32 (show k + 1 < 2 ^ 31 by omega)]
       step_pure
       step_call using fd_int_min.call_eq
-      step_pure [shift_lt hik hk]
+      step_pure [shift_lt hik hk, delta_eq hik hk]
       step_pure [delta_eq hik hk]
       step_pure [slt_ofInt32 (a := 2 * max) (b := 2 ^ min (k + 1 - i) 14) (by omega) (by omega)]
       finish_block
@@ -735,7 +762,8 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
         have hfar := of_decide_eq_false (Bool.of_not_eq_true hbr)
         clear hbr
         block_init
-        step_pure [setWidth_ofInt32]
+        step_pure [setWidth_ofInt32, setWidth_ofInt16 (a := 2 ^ min (k + 1 - i) 14) (by omega),
+          signExtend_ofInt16 (a := 2 ^ min (k + 1 - i) 14) (by omega)]
         step_pure [← BitVec.ofInt_add]
         step_pure [signExtend_ofInt16 (a := ti + 2 ^ min (k + 1 - i) 14) (by omega)]
         step_pure [slt_ofInt32 (a := max) (b := ti + 2 ^ min (k + 1 - i) 14) (by omega) (by omega)]
@@ -763,7 +791,7 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
             rw [absorbT_of_sub hk1 hne hfar hsub hm] at hK19
             dsimp only at hK19
             block_init
-            step_pure
+            step_pure [signExtend_ofNat32 (show k < 2 ^ 31 by omega)]
             step_store
             rw [storeAt_shorts hso hk1 (v := 0) (by decide)] at hS
             -- `j++; if( !_t[j] )`
@@ -897,11 +925,11 @@ theorem outerT_end {max : Int} {t : Vector Int 256} : outerT max n t 256 = t := 
 /-- The live registers at `^bb7`, the `while( i<256 )` loop, at `i`. -/
 abbrev hdr7 (max : Int) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (i : Nat) :
     ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16, %9 :=
-    .value 256#32, %10 := .value 16#32, %13 := .value 255#32, %14 := .value 65536#32, %15 :=
-    .value 2#32, %16 := .value 1#32, %43 := .value (BitVec.ofInt 32 max), %44 :=
-    .value (BitVec.ofInt 32 (2 * max)), %45 := .value (BitVec.ofInt 32 (-max)), %46 :=
-    .value (BitVec.ofNat 32 i)]
+  E[%1675 := .value 1#16, %1676 := .value 1#64, %1677 := .value 255#64, %1679 := .value 0#16,
+    %1681 := .value 16#32, %1684 := .value 255#32, %1685 := .value 65536#32, %1686 := .value 2#32,
+    %1687 := .value 1#32, %1688 := .value 256#32, %1714 := .value (BitVec.ofInt 32 max),
+    %1715 := .value (BitVec.ofInt 32 (2 * max)), %1716 := .value (BitVec.ofInt 32 (-max)),
+    %1717 := .value (BitVec.ofNat 32 i)]
 
 /-- `^bb7`, the `while( i<256 )` loop, at `i` with fuel `n`: `_t` made sparse from `i` on, then
 `^bb20`. -/
@@ -1075,13 +1103,13 @@ theorem bit_eq {x : BitVec 256} :
       Bool.true_and, Bool.and_true, show (0 : Nat) < 16 by decide]
   · simp [hk0]
 
-/-- The live registers at `^bb2`, the unpack loop: `bb0`'s constants and `%18 = -1 << bits`. -/
-abbrev consts (w : BitVec 32) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) : ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
-  E[%0 := .value 4294967295#32, %1 := .value 0#64, %2 := .value 3#64, %3 := .value 536870911#64,
-    %4 := .value 7#16, %5 := .value 1#16, %6 := .value 1#64, %7 := .value 255#64, %8 := .value 0#16,
-    %9 := .value 256#32, %10 := .value 16#32, %11 := .value 15#32, %12 := .value 0#32, %13 :=
-    .value 255#32, %14 := .value 65536#32, %15 := .value 2#32, %16 := .value 1#32, %17 :=
-    .value 256#64, %18 := .value (4294967295#32 <<< w.toNat)]
+/-- The live registers at `^bb2`, the unpack loop: `bb0`'s constants. -/
+abbrev consts (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) : ⟪fd_curve25519_scalar_wnaf.Γ⟫ :=
+  E[%1671 := .value 0#64, %1672 := .value 3#64, %1673 := .value 536870911#64, %1674 := .value 7#16,
+    %1675 := .value 1#16, %1676 := .value 1#64, %1677 := .value 255#64,
+    %1678 := .value 4294967295#32, %1679 := .value 0#16, %1680 := .value 256#64,
+    %1681 := .value 16#32, %1682 := .value 15#32, %1683 := .value 0#32, %1684 := .value 255#32,
+    %1685 := .value 65536#32, %1686 := .value 2#32, %1687 := .value 1#32, %1688 := .value 256#32]
 
 /-- `^bb2`, "unpack s bits into _t", from `i` with `n` iterations left: `_t[i … 254]` set, then
 `^bb1`. -/
@@ -1096,10 +1124,10 @@ theorem fd_curve25519_scalar_wnaf.unpack_loop (slides scalar : Pointer) (w : Bit
         i + n = 255 →
         (∀ E' : ⟪fd_curve25519_scalar_wnaf.Γ⟫,
           E'.args = E.args →
-            fd_curve25519_scalar_wnaf.runFrom (consts w E') ^bb1
+            fd_curve25519_scalar_wnaf.runFrom (consts E') ^bb1
                 (withT slides (unpackFrom x i n t) S) =
               K) →
-        fd_curve25519_scalar_wnaf.runFrom ((consts w E)[%21 := .value (BitVec.ofNat 64 i)]) ^bb2
+        fd_curve25519_scalar_wnaf.runFrom ((consts E)[%1692 := .value (BitVec.ofNat 64 i)]) ^bb2
             (withT slides t S) =
           K := by
   have hso' : slides.offset.toNat + 512 < 2 ^ 64 := by
@@ -1288,17 +1316,17 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
       hso S₀ (hS ▸ hwf) (hS ▸ hslides)
   block_init
   iterate 18 step_pure
-  -- `short max = (short)((1 << bits) - 1);` (`-1 << bits` here, its `~` in `^bb1`)
-  step_pure [show ¬32 ≤ bits.toNat by omega, allOnes_shl_sshiftRight (b := bits.toNat) (by omega)]
   finish_block
   -- "unpack s bits into _t"
   rw [← withT_tOf hslides]
   step_loop using
     fd_curve25519_scalar_wnaf.unpack_loop slides scalar bits hso hco hsep _ hslides hscalar _ hx _
       255 0 (tOf S.mem slides)
-  -- `_t[255] = 0;`
+  -- `short max = (short)((1 << bits) - 1);` as `~(-1 << bits)`
   block_init
+  step_pure [show ¬32 ≤ bits.toNat by omega, allOnes_shl_sshiftRight (b := bits.toNat) (by omega)]
   step_pure [max_eq (b := bits.toNat) (by omega)]
+  -- `_t[255] = 0;`
   step_pure
   step_store
   rw [storeAt_shorts hso (j := 255) (by decide) (y := 0#16) (v := 0) (by decide),
@@ -1313,13 +1341,14 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
     obtain ⟨i, hi⟩ : ∃ i, firstNonzero (unpackT (S₀.mem.readAt scalar 256)) 256 0 = i := ⟨_, rfl⟩
     rw [hi] at hlt hE
     block_init
-    step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega)]
-    step_pure [slt_ofNat32 (a := i) (b := 256) (by omega) (by omega)]
+    step_pure [ult_ofNat64 (a := i) (b := 256) (by omega) (by omega)]
     finish_block
     · block_init
+      step_pure [setWidth64_ofNat32 (show i < 2 ^ 32 by omega),
+        signExtend_ofNat32 (show i < 2 ^ 31 by omega)]
       step_pure
-      step_pure [max_short (b := bits.toNat) (by omega)]
-      step_pure [max_twice (b := bits.toNat) (by omega)]
+      step_pure [extractLsb'_shiftLeft_16, max_short (b := bits.toNat) (by omega)]
+      step_pure [extractLsb'_shiftLeft_16, max_twice (b := bits.toNat) (by omega)]
       step_pure [max_neg_ssubOverflow (b := bits.toNat) (by omega), max_neg]
       finish_block
       step_loop using
