@@ -42,16 +42,6 @@ end
 
 section Proof
 
-/-- The five limbs at `p` lie in one block: a 320-bit read there fits. -/
-public theorem MemoryState.LimbsFit.fits {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
-    Fits m p 320 := by
-  obtain ⟨ho, -, -, -, -, ⟨blk, hblk, hsz⟩⟩ := h
-  refine ⟨blk, hblk, ?_⟩
-  rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
-    Pointer.offsetInBits_add_limb ho (by omega)] at hsz
-  unfold Pointer.offsetInBits
-  omega
-
 /-- `fd_r52x5_reduce( x )` replaces the limbs at `x` by `spec` of them. -/
 public theorem fd_r52x5_reduce.call_eq (x : Pointer) (s : GlobalState) (hwf : s.WF)
     (hx : s.mem.LimbsFit x) :
@@ -59,7 +49,7 @@ public theorem fd_r52x5_reduce.call_eq (x : Pointer) (s : GlobalState) (hwf : s.
       .value
         (.nil,
           { s with mem := s.mem.storeLimbs x (fd_r52x5_reduce.spec (s.mem.readLimbs x)) }) := by
-  have hx256 : Fits s.mem x 256 := (MemoryState.LimbsFit.fits hx).mono (by omega)
+  have hx256 : Fits s.mem x 256 := hx.fits.mono (by omega)
   rw [← MemoryState.storeLimbsV_eq hx]
   func_init
   block_init

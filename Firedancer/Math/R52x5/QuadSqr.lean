@@ -3,7 +3,6 @@ module
 public import Firedancer.Math.R52x5.QuadMul
 public import Firedancer.R52x5.fd_r52x5_quad_sqr_fast
 import Firedancer.Math.Avx512.Mul
-import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.Ring
 
 /-! `fd_r52x5_quad_sqr_fast` in `ZMod p`: lane by lane, the square's 52-bit halves summed by
@@ -13,40 +12,7 @@ namespace MLIR.Firedancer.R52x5
 
 open MLIR.Firedancer.Ref (p)
 open Firedancer.Avx512 (madd52lo madd52hi)
-open Firedancer.Avx512.R43x6 (madd52lo_lt madd52_split p_int)
-
-/-! ## Columns -/
-
--- `ring` multiplies out `2^51` powers up to `2^408`
-set_option exponentiation.threshold 512 in
-/-- The columns of `X ^ 2`, `za + 19 zb`, are `X ^ 2` in `ZMod p`. -/
-theorem quad_sqr_core {X : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
-    (h : ∀ i j, i ≤ j → j < 5 → X i * X j = L i j + 2 ^ 52 * H i j) :
-    ((limbs5 fun n => scol L H n + 19 * scol L H (n + 5) : ℕ) : ZMod p) =
-      (limbs5 X : ZMod p) * limbs5 X := by
-  have e : ∀ i j, i ≤ j → j < 5 → (X i : ℤ) * X j = L i j + 2 ^ 52 * H i j := fun i j hi hj => by
-    exact_mod_cast h i j hi hj
-  have hz :
-    ((limbs5 fun n => scol L H n + 19 * scol L H (n + 5) : ℕ) : ℤ) +
-        p * limbs5 (fun n => scol L H (n + 5)) =
-      limbs5 X * limbs5 X := by
-    simp only [limbs5, scol, Nat.reduceAdd]
-    rw [p_int]
-    push_cast
-    linear_combination
-      -(e 0 0 (by decide) (by decide) + 2 ^ 51 * 2 * e 0 1 (by decide) (by decide) +
-          2 ^ 102 * (2 * e 0 2 (by decide) (by decide) + e 1 1 (by decide) (by decide)) +
-          2 ^ 153 * (2 * e 0 3 (by decide) (by decide) + 2 * e 1 2 (by decide) (by decide)) +
-          2 ^ 204 *
-            (2 * e 0 4 (by decide) (by decide) + 2 * e 1 3 (by decide) (by decide) +
-              e 2 2 (by decide) (by decide)) +
-          2 ^ 255 * (2 * e 1 4 (by decide) (by decide) + 2 * e 2 3 (by decide) (by decide)) +
-          2 ^ 306 * (2 * e 2 4 (by decide) (by decide) + e 3 3 (by decide) (by decide)) +
-          2 ^ 357 * 2 * e 3 4 (by decide) (by decide) +
-          2 ^ 408 * e 4 4 (by decide) (by decide))
-  have := congrArg (Int.cast : ℤ → ZMod p) hz
-  simpa only [Int.cast_add, Int.cast_mul, Int.cast_natCast, ZMod.natCast_self, zero_mul, add_zero,
-    Nat.cast_mul] using this
+open Firedancer.Avx512.R43x6 (madd52lo_lt madd52_split)
 
 /-! ## `fd_r52x5_quad_sqr_fast` -/
 
@@ -148,9 +114,10 @@ public theorem fd_r52x5_quad_sqr_fast.spec_lane {X : Quad5} (hX : X.Below 52) (j
       simp only [Fin.getElem_fin, scol, lsq, hsq, Quad5.laneN]
       madd_bounds
       omega
-  · rw [quad_sqr_core (L := lsq X j) (H := hsq X j) fun i k _ hk =>
-        madd52_split (X.laneN_lt hX j (by omega)) (X.laneN_lt hX j hk),
-      Quad5.val, Ref.Limbs.val_nat, Quad5.nat_elem, sq]
+  · rw [cast_of_core
+        (sqr_core (L := lsq X j) (H := hsq X j) fun i k _ hk =>
+          madd52_split (X.laneN_lt hX j (by omega)) (X.laneN_lt hX j hk)),
+      Quad5.val, Ref.Limbs.val_nat, Quad5.nat_elem, Nat.cast_mul, sq]
 
 /-- `fd_r52x5_quad_sqr_fast` of a QUAD with limbs below `2^52`: the four squares, limbs at most
 `2^56 - 2^52`. -/

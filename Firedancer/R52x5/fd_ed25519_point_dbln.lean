@@ -127,14 +127,14 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
   step_pattern using runBodyFrom_addFastRun inline
   -- FD_R52X5_QUAD_PERMUTE( _ta, 0,1,0,1, _ta ), FD_R52X5_QUAD_LANE_IF( _ta, 0,0,0,1, _ta, P1 )
   step_pattern using runBodyFrom_permuteRun 0 1 0 1 inline
-  step_pattern using runBodyFrom_laneIfMaskFirstRun 0 0 0 1 inline
+  step_pattern using runBodyFrom_laneIfMaskRun 0 0 0 1 inline
   -- FD_R52X5_QUAD_REDUCE( _ta, _ta ), FD_R52X5_QUAD_SQR_FAST( _ta, _ta )
   step_pattern using runBodyFrom_reduceCastRun inline
   step_pattern using runBodyFrom_qpSqrRun inline
   -- _1111, _2222, _2224
   step_pattern using runBodyFrom_permuteRun 0 0 0 0 inline
   step_pattern using runBodyFrom_permuteRun 1 1 1 1 inline
-  step_pattern using runBodyFrom_laneIfMaskFirstRun 0 0 0 1 inline
+  step_pattern using runBodyFrom_laneIfMaskRun 0 0 0 1 inline
   step_pattern using runBodyFrom_negateLazyRun inline
   -- FD_R52X5_QUAD_ADD_FAST( _ta, _ta, _ta ) up to FD_R52X5_QUAD_REDUCE( _ta, _ta )
   step_pattern using runBodyFrom_addSelfRun inline
@@ -262,7 +262,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
   step_pattern using runBodyFrom_qpSqrRun inline
   step_pattern using runBodyFrom_permuteRun 0 0 0 0 inline
   step_pattern using runBodyFrom_permuteRun 1 1 1 1 inline
-  step_pattern using runBodyFrom_laneIfMaskFirstRun 0 0 0 1 inline
+  step_pattern using runBodyFrom_laneIfMaskRun 0 0 0 1 inline
   step_pattern using runBodyFrom_negateLazyRun inline
   step_pattern using runBodyFrom_addSelfRun inline
   step_pattern using runBodyFrom_laneIfZeroRun 0 0 1 0 inline
@@ -274,7 +274,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
   step_pattern using runBodyFrom_reduceRun inline
   step_pattern using runBodyFrom_permuteRun 3 1 1 3 inline
   step_pattern using runBodyFrom_permuteRun 2 0 2 0 inline
-  step_pattern using runBodyFrom_qpMulGepTailRun inline
+  step_pattern using runBodyFrom_qpMulGepRun inline
   step_pattern using runBodyFrom_reduceStoreRun_as inline
   have hD : geDbl A = D := by
     rw [← _hD]

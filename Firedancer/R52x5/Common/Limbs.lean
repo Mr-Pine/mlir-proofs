@@ -171,6 +171,16 @@ theorem MemoryState.readWv_add_of_readAt {m : MemoryState} {p : Pointer} {x : Bi
 
 /-! ### `storeLimbsV` -/
 
+/-- The five limbs at `p` lie in one block: a 320-bit read there fits. -/
+theorem MemoryState.LimbsFit.fits {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
+    Fits m p 320 := by
+  obtain ⟨ho, -, -, -, -, ⟨blk, hblk, hsz⟩⟩ := h
+  refine ⟨blk, hblk, ?_⟩
+  rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
+    Pointer.offsetInBits_add_limb ho (by omega)] at hsz
+  unfold Pointer.offsetInBits
+  omega
+
 /-- A store of a value cast to an equal width is a store of the value. -/
 theorem MemoryState.storeAt_cast {m : MemoryState} {x : BitVec w} (h : w = w') :
     m.storeAt p (x.cast h) = m.storeAt p x := by
@@ -244,6 +254,19 @@ theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsFit p) :
     storeAt_storeAt_append (hov 16 (by omega)) rfl (by omega),
     storeAt_storeAt_append (hov 24 (by omega)) rfl (by omega)]
 
+/-- Limbs 0-3 stored and read back as one `<4 x i64>`. -/
+theorem MemoryState.readAt_storeLimbs_wv {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
+    (m.storeLimbs p l).readAt p 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
+  have hf : Fits m p 256 := h.fits.mono (by omega)
+  rw [← MemoryState.storeLimbsV_eq h, MemoryState.storeLimbsV, MemoryState.readAt_storeAt_disjoint,
+    MemoryState.readAt_storeWv_self hf]
+  simp only [Range.Disjoint, Range.of]
+  right; right
+  rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
+    Pointer.offsetInBits_add_limb h.1 (by omega)]
+  unfold Pointer.offsetInBits
+  omega
+
 /-- `storeLimbsV` keeps the set of blocks, so the state stays `WF`. -/
 @[mlir_transport]
 theorem GlobalState.WF.storeLimbsV {s : GlobalState} (h : s.WF) :
@@ -268,6 +291,11 @@ theorem Fits.storeLimbsV {m : MemoryState} (h : Fits m p w) : Fits (m.storeLimbs
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.storeWv (h : MemoryState.LimbsFit m p) :
     MemoryState.LimbsFit (m.storeWv q v) p :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsFit.storeVec (h : MemoryState.LimbsFit m p) :
+    MemoryState.LimbsFit (m.storeVec q v) p :=
   h.storeAt
 
 @[mlir_mem, mlir_transport]

@@ -15,7 +15,7 @@ public import Firedancer.R52x5.fd_ed25519_point_add_final_mul
 public import Firedancer.R52x5.fd_ed25519_point_add_final_mul_projective
 public import Firedancer.R52x5.fd_ed25519_point_set
 public import Firedancer.R52x5.Mlir.fd_ed25519_double_scalar_mul_base
-import Firedancer.R52x5.Dsmb.Tactics
+import Firedancer.R52x5.Common.Tactics
 
 namespace MLIR.Firedancer.R52x5
 

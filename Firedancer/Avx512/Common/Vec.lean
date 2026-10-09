@@ -127,6 +127,30 @@ theorem MemoryState.readVec_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr
     (s.alloca n).mem.readVec p = s.mem.readVec p := by
   simp only [readVec, readAt, GlobalState.getElem?_alloca hne]
 
+/-- Lane `k` of a field-element global's bits: lane `k` of its vector. -/
+theorem extractVecElem_flatBits (lit : ⟦Ty.array 1 (.struct [.vec 8 64])⟧ᵣ)
+    {hw : (Ty.array 1 (.struct [.vec 8 64])).width = 512} (k : Fin 8) :
+    Ty.extractVecElem 8 64 k (Ty.flatBits lit (hw := hw)) = (lit[0] : Wwl)[k] := by
+  have hs : (Ty.struct [Ty.vec 8 64]).stride = 512 := by decide
+  have hw' : (Ty.struct [Ty.vec 8 64]).width = 512 := by decide
+  have hk := k.isLt
+  rw [Ty.extractVecElem_eq, Ty.flatBits_eq, BitVec.extractLsb'_cast,
+    Ty.extractLsb'_flattenRaw_array (s := k.val * 64) (w := 64) lit
+      (by
+        rw [hs]; omega)
+      (by
+        rw [hs, hw']; omega)]
+  have h1 : k.val * 64 / (Ty.struct [Ty.vec 8 64]).stride = 0 := by
+    rw [hs]; omega
+  have h2 : k.val * 64 % (Ty.struct [Ty.vec 8 64]).stride = k.val * 64 := by
+    rw [hs]; omega
+  simp only [h1, h2]
+  rw [Ty.extractLsb'_flattenRaw_struct_singleton _
+      (by
+        rw [show (Ty.vec 8 64).width = 512 from rfl]; omega),
+    Ty.flattenRaw_vec]
+  exact BitVec.extractLsb'_packLanes _ _ k.isLt
+
 end
 
 end MLIR

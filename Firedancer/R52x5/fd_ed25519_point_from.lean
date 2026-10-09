@@ -12,15 +12,6 @@ namespace MLIR.Firedancer.R52x5
 
 section Proof
 
-open Firedancer.Avx512 (Wwl)
-
-/-- A point fits past a field element's store. -/
-theorem Quad5Fit_storeVec {m : MemoryState} {v : Wwl} (h : m.Quad5Fit q) :
-    (m.storeVec p v).Quad5Fit q :=
-  h.storeAt
-
-attribute [local mlir_mem, local mlir_transport] Quad5Fit_storeVec
-
 /-- `fd_ed25519_point_from` stores `Quad5.pack` of the field elements at `x, y, z, t` at `r` and
 returns `r`; its four `long[8]` arrays are freed. -/
 public theorem fd_ed25519_point_from.call_eq (r x y z t : Pointer) (s : GlobalState) (hwf : s.WF)

@@ -90,6 +90,11 @@ theorem MemoryState.Quad5Fit.storeWv {m : MemoryState} (h : m.Quad5Fit q) :
   h.storeAt
 
 @[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Fit.storeVec {m : MemoryState} (h : m.Quad5Fit q) :
+    (m.storeVec p v).Quad5Fit q :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
 theorem MemoryState.Quad5Fit.storeLimbs {m : MemoryState} (h : m.Quad5Fit q) :
     (m.storeLimbs p l).Quad5Fit q :=
   h.storeAt.storeAt.storeAt.storeAt.storeAt

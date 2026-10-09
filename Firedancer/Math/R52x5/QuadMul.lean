@@ -15,8 +15,7 @@ namespace MLIR.Firedancer.R52x5
 
 open MLIR.Firedancer.Ref (p)
 open Firedancer.Avx512 (madd52lo madd52hi)
-open Firedancer.Avx512.R43x6 (madd52lo_lt madd52hi_lt madd52lo_toNat madd52hi_toNat madd52_split
-  p_int)
+open Firedancer.Avx512.R43x6 (madd52lo_lt madd52lo_toNat madd52hi_toNat madd52_split)
 
 /-! ## The fold -/
 
@@ -215,11 +214,6 @@ public theorem quadFold_is {z0_1 z1_1 z2_1 z3_1 z4_1 z1_2 z2_2 z3_2 z4_2 z5 z6 z
 
 /-! ## Columns -/
 
-/-- `madd52hi` of 52-bit operands is below `2^52`. -/
-public theorem madd52hi_lt_52 {a b : BitVec 64} (ha : a.toNat < 2 ^ 52) (hb : b.toNat < 2 ^ 52) :
-    (madd52hi a b).toNat < 2 ^ 52 :=
-  madd52hi_lt (m := 52) (n := 52) ha hb le_rfl le_rfl
-
 /-- Limb `k`'s lane `j` of `Q`, zero past limb 4. -/
 @[expose]
 public def Quad5.laneN (Q : Quad5) (j : Fin 4) : ℕ → BitVec 64
@@ -271,53 +265,9 @@ elab "madd_bounds" : tactic =>
         evalTactic
             (←
               `(tactic|
-                  try have := madd52hi_lt_52 (a := $a) (b := $b) (by assumption) (by assumption)))
+                  try have := madd52hi_lt52 (a := $a) (b := $b) (by assumption) (by assumption)))
 
 end
-
--- `ring` multiplies out `2^51` powers up to `2^408`
-set_option exponentiation.threshold 512 in
-/-- The columns of `X * Y`, `za + 19 zb`, are `X * Y` in `ZMod p`. -/
-theorem quad_mul_core {X Y : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
-    (h : ∀ k j, k < 5 → j < 5 → X k * Y j = L k j + 2 ^ 52 * H k j) :
-    ((limbs5 fun n => mcol L H n + 19 * mcol L H (n + 5) : ℕ) : ZMod p) =
-      (limbs5 X : ZMod p) * limbs5 Y := by
-  have e : ∀ k j, k < 5 → j < 5 → (X k : ℤ) * Y j = L k j + 2 ^ 52 * H k j := fun k j hk hj => by
-    exact_mod_cast h k j hk hj
-  have hz :
-    ((limbs5 fun n => mcol L H n + 19 * mcol L H (n + 5) : ℕ) : ℤ) +
-        p * limbs5 (fun n => mcol L H (n + 5)) =
-      limbs5 X * limbs5 Y := by
-    simp only [limbs5, mcol, Nat.reduceAdd]
-    rw [p_int]
-    push_cast
-    linear_combination
-      -(e 0 0 (by decide) (by decide) +
-          2 ^ 51 * (e 0 1 (by decide) (by decide) + e 1 0 (by decide) (by decide)) +
-          2 ^ 102 *
-            (e 0 2 (by decide) (by decide) + e 1 1 (by decide) (by decide) +
-              e 2 0 (by decide) (by decide)) +
-          2 ^ 153 *
-            (e 0 3 (by decide) (by decide) + e 1 2 (by decide) (by decide) +
-              e 2 1 (by decide) (by decide) +
-              e 3 0 (by decide) (by decide)) +
-          2 ^ 204 *
-            (e 0 4 (by decide) (by decide) + e 1 3 (by decide) (by decide) +
-              e 2 2 (by decide) (by decide) +
-              e 3 1 (by decide) (by decide) +
-              e 4 0 (by decide) (by decide)) +
-          2 ^ 255 *
-            (e 1 4 (by decide) (by decide) + e 2 3 (by decide) (by decide) +
-              e 3 2 (by decide) (by decide) +
-              e 4 1 (by decide) (by decide)) +
-          2 ^ 306 *
-            (e 2 4 (by decide) (by decide) + e 3 3 (by decide) (by decide) +
-              e 4 2 (by decide) (by decide)) +
-          2 ^ 357 * (e 3 4 (by decide) (by decide) + e 4 3 (by decide) (by decide)) +
-          2 ^ 408 * e 4 4 (by decide) (by decide))
-  have := congrArg (Int.cast : ℤ → ZMod p) hz
-  simpa only [Int.cast_add, Int.cast_mul, Int.cast_natCast, ZMod.natCast_self, zero_mul, add_zero,
-    Nat.cast_mul] using this
 
 /-! ## `fd_r52x5_quad_mul_fast` -/
 
@@ -415,9 +365,11 @@ public theorem fd_r52x5_quad_mul_fast.spec_lane {X Y : Quad5} (hX : X.Below 52) 
       simp only [Fin.getElem_fin, mcol, lq, hq, Quad5.laneN]
       madd_bounds
       omega
-  · rw [quad_mul_core (L := lq X Y j) (H := hq X Y j) fun k i hk hi =>
-        madd52_split (X.laneN_lt hX j hk) (Y.laneN_lt hY j hi),
-      Quad5.val, Quad5.val, Ref.Limbs.val_nat, Ref.Limbs.val_nat, Quad5.nat_elem, Quad5.nat_elem]
+  · rw [cast_of_core
+        (mul_core (L := lq X Y j) (H := hq X Y j) fun k i hk hi =>
+          madd52_split (X.laneN_lt hX j hk) (Y.laneN_lt hY j hi)),
+      Quad5.val, Quad5.val, Ref.Limbs.val_nat, Ref.Limbs.val_nat, Quad5.nat_elem, Quad5.nat_elem,
+      Nat.cast_mul]
 
 /-- `fd_r52x5_quad_mul_fast` of QUADs with limbs below `2^52`: the four products, limbs at most
 `2^56 - 2^52`. -/

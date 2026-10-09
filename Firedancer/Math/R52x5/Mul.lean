@@ -65,7 +65,7 @@ end
 -- `ring` multiplies out `2^51` powers up to `2^408`
 set_option exponentiation.threshold 512 in
 /-- The columns of `X * Y`, `za + 19 zb`, differ from `X * Y` by `p zb`. -/
-theorem mul_core {X Y : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
+public theorem mul_core {X Y : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
     (h : ∀ k j, k < 5 → j < 5 → X k * Y j = L k j + 2 ^ 52 * H k j) :
     (limbs5 (fun n => mcol L H n + 19 * mcol L H (n + 5)) : ℤ) +
         p * limbs5 (fun n => mcol L H (n + 5)) =
@@ -134,7 +134,7 @@ theorem mul_core {X Y : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
 -- `ring` multiplies out `2^51` powers up to `2^408`
 set_option exponentiation.threshold 512 in
 /-- The columns of `X ^ 2`, `za + 19 zb`, differ from `X ^ 2` by `p zb`. -/
-theorem sqr_core {X : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
+public theorem sqr_core {X : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
     (h : ∀ i j, i ≤ j → j < 5 → X i * X j = L i j + 2 ^ 52 * H i j) :
     (limbs5 (fun n => scol L H n + 19 * scol L H (n + 5)) : ℤ) +
         p * limbs5 (fun n => scol L H (n + 5)) =
@@ -181,7 +181,7 @@ theorem sqr_core {X : ℕ → ℕ} {L H : ℕ → ℕ → ℕ}
         2 ^ 408 * h44)
 
 /-- A `p`-multiple apart in `ℤ`, equal in `ZMod p`. -/
-theorem cast_of_core {u v w : ℕ} (h : (u : ℤ) + p * v = w) : (u : ZMod p) = w := by
+public theorem cast_of_core {u v w : ℕ} (h : (u : ℤ) + p * v = w) : (u : ZMod p) = w := by
   have e := congrArg (Int.cast : ℤ → ZMod p) h
   simpa only [Int.cast_add, Int.cast_mul, Int.cast_natCast, ZMod.natCast_self, zero_mul,
     add_zero] using e
@@ -191,7 +191,7 @@ theorem nat_eq_limbs5 (x : Wwl) : Ref.Limbs.nat (limbs x) = limbs5 fun k => x[k]
   simp [Ref.Limbs.nat, limbs5, limbs, getElem!_pos]
 
 /-- `madd52hi` of 52-bit operands is below `2^52`. -/
-theorem madd52hi_lt52 {a b : BitVec 64} (ha : a.toNat < 2 ^ 52) (hb : b.toNat < 2 ^ 52) :
+public theorem madd52hi_lt52 {a b : BitVec 64} (ha : a.toNat < 2 ^ 52) (hb : b.toNat < 2 ^ 52) :
     (madd52hi a b).toNat < 2 ^ 52 :=
   Firedancer.Avx512.R43x6.madd52hi_lt (m := 52) (n := 52) ha hb le_rfl le_rfl
 

@@ -82,64 +82,6 @@ theorem runBodyFrom_blendBackRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets 
   rw [hE, hS]
   exact hK
 
-/-- `FD_R52X5_QUAD_LANE_IF( d, i0,i1,i2,i3, s, t )` with the mask's bytes `mb` at hand (an
-earlier `LANE_IF`'s, or hoisted): per limb `blendLimbRun`. -/
-def laneIfMaskFirstRun (mb : Dst Γ Ty32x8) (t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 : Dst Γ Ty4x64)
-    (tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3 tb4 sb4 q4 : Dst Γ Ty32x8)
-    (r0 r1 r2 r3 r4 : Dst Γ Ty4x64) : List (Instr Γ) :=
-  blendLimbRun t0 s0 mb tb0 sb0 q0 r0 ++ blendLimbRun t1 s1 mb tb1 sb1 q1 r1 ++
-    blendLimbRun t2 s2 mb tb2 sb2 q2 r2 ++
-    blendLimbRun t3 s3 mb tb3 sb3 q3 r3 ++
-    blendLimbRun t4 s4 mb tb4 sb4 q4 r4
-
-/-- Where the body at `pos` is `laneIfMaskFirstRun`, `mb` holds the bytes of `laneMask i0 i1 i2 i3`,
-`t0 … t4` hold `T` and `s0 … s4` hold `X`: running on from `pos` then `g` gives `K` if it does
-from `pos + 20` with `Quad5.laneIf i0 i1 i2 i3 X T` in `r0 … r4`, and the operands' and the
-results' bytes in the others. -/
-theorem runBodyFrom_laneIfMaskFirstRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
-    {pos : Nat} {mb : Dst Γ Ty32x8} {t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 : Dst Γ Ty4x64}
-    {tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3 tb4 sb4 q4 : Dst Γ Ty32x8}
-    {r0 r1 r2 r3 r4 : Dst Γ Ty4x64} {rest : List (Instr Γ)} {X T : Quad5} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody :
-      blk.body.drop pos =
-        laneIfMaskFirstRun mb t0 s0 t1 s1 t2 s2 t3 s3 t4 s4 tb0 sb0 q0 tb1 sb1 q1 tb2 sb2 q2 tb3 sb3 q3
-            tb4 sb4 q4 r0 r1 r2 r3 r4 ++
-          rest)
-    (hR :
-      E ⊨ [mb := wlBytes (laneMask i0 i1 i2 i3), t0 := T.P0, t1 := T.P1, t2 := T.P2, t3 := T.P3,
-        t4 := T.P4, s0 := X.P0, s1 := X.P1, s2 := X.P2, s3 := X.P3, s4 := X.P4])
-    (hi : i0 ≤ 1 ∧ i1 ≤ 1 ∧ i2 ≤ 1 ∧ i3 ≤ 1)
-    (hd :
-      [mb.i, t0.i, s0.i, t1.i, s1.i, t2.i, s2.i, t3.i, s3.i, t4.i, s4.i, tb0.i, sb0.i, q0.i, r0.i,
-          tb1.i, sb1.i, q1.i, r1.i, tb2.i, sb2.i, q2.i, r2.i, tb3.i, sb3.i, q3.i, r3.i, tb4.i,
-          sb4.i, q4.i].Nodup)
-    (hK :
-      (blk.runBodyFrom
-            E[tb0 := Ty.wrap (wlBytes T.P0), sb0 := Ty.wrap (wlBytes X.P0), q0 :=
-              Ty.wrap (wlBytes (Quad5.laneIf i0 i1 i2 i3 X T).P0), r0 :=
-              Ty.wrap (Quad5.laneIf i0 i1 i2 i3 X T).P0, tb1 := Ty.wrap (wlBytes T.P1), sb1 :=
-              Ty.wrap (wlBytes X.P1), q1 := Ty.wrap (wlBytes (Quad5.laneIf i0 i1 i2 i3 X T).P1),
-              r1 := Ty.wrap (Quad5.laneIf i0 i1 i2 i3 X T).P1, tb2 := Ty.wrap (wlBytes T.P2), sb2 :=
-              Ty.wrap (wlBytes X.P2), q2 := Ty.wrap (wlBytes (Quad5.laneIf i0 i1 i2 i3 X T).P2),
-              r2 := Ty.wrap (Quad5.laneIf i0 i1 i2 i3 X T).P2, tb3 := Ty.wrap (wlBytes T.P3), sb3 :=
-              Ty.wrap (wlBytes X.P3), q3 := Ty.wrap (wlBytes (Quad5.laneIf i0 i1 i2 i3 X T).P3),
-              r3 := Ty.wrap (Quad5.laneIf i0 i1 i2 i3 X T).P3, tb4 := Ty.wrap (wlBytes T.P4), sb4 :=
-              Ty.wrap (wlBytes X.P4), q4 := Ty.wrap (wlBytes (Quad5.laneIf i0 i1 i2 i3 X T).P4),
-              r4 := Ty.wrap (Quad5.laneIf i0 i1 i2 i3 X T).P4]
-            (pos + 20) S >>=
-          g) =
-        K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  obtain ⟨h0, h1, h2, h3⟩ := hi
-  step_pattern using runBodyFrom_blendLimbRun i0 i1 i2 i3 inline
-  step_pattern using runBodyFrom_blendLimbRun i0 i1 i2 i3 inline
-  step_pattern using runBodyFrom_blendLimbRun i0 i1 i2 i3 inline
-  step_pattern using runBodyFrom_blendLimbRun i0 i1 i2 i3 inline
-  step_pattern using runBodyFrom_blendLimbRun i0 i1 i2 i3 inline
-  rw [hE, hS]
-  exact hK
-
 /-- `FD_R52X5_QUAD_LANE_IF( d, i0,i1,i2,i3, s, _zero )` with the mask's bytes `mb` at hand: per
 limb `s`'s bytes and their `pblendvb` with the zero bytes `z` (`blendLimbRun'`). -/
 def laneIfZeroMaskRun (z mb : Dst Γ Ty32x8) (s0 s1 s2 s3 s4 : Dst Γ Ty4x64)
@@ -364,7 +306,7 @@ theorem runBodyFrom_laneIfBytesRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRet
   rw [hE, hS]
   exact hK _ _ _ _ _
 
-/-! ### `FD_R52X5_QUAD_ADD_FAST( d, s, s )`, `FD_R52X5_QUAD_MUL_FAST` into a point -/
+/-! ### `FD_R52X5_QUAD_ADD_FAST( d, s, s )` -/
 
 /-- `FD_R52X5_QUAD_ADD_FAST( d, s, s )` as compiled: `sk << 1` (`one` the splat 1) into `dk`. -/
 def addSelfRun (one s0 s1 s2 s3 s4 d0 d1 d2 d3 d4 : Dst Γ Ty4x64) : List (Instr Γ) :=
@@ -400,95 +342,6 @@ theorem runBodyFrom_addSelfRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
   step_pure with e4
   rw [wl_shl_one] at he0 he1 he2 he3 he4
   rw [hE, he0, he1, he2, he3, he4]
-  exact hK
-
-/-- `FD_R52X5_QUAD_MUL_FAST( q, x, y )` into the point at `p` as compiled: `qpMulRun` with the
-point's `getelementptr`s (`p + 32 k` into `g1 … g4`) among the loads. -/
-def qpMulGepTailRun (z0 z1 z2 z3 z4 : Dst Γ .ptr)
-    (x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64) (p : Reg Γ .ptr)
-    (g1 g2 g3 g4 : Dst Γ .ptr) : List (Instr Γ) :=
-  [.lifetimeStart (.val z0.i z0.h) 32, .lifetimeStart (.val z1.i z1.h) 32,
-    .lifetimeStart (.val z2.i z2.h) 32, .lifetimeStart (.val z3.i z3.h) 32,
-    .lifetimeStart (.val z4.i z4.h) 32,
-    .call fd_r52x5_quad_mul_fast.call
-      (.cons (.val z0.i z0.h)
-        (.cons (.val z1.i z1.h)
-          (.cons (.val z2.i z2.h)
-            (.cons (.val z3.i z3.h)
-              (.cons (.val z4.i z4.h)
-                (.cons (.val x0.i x0.h)
-                  (.cons (.val x1.i x1.h)
-                    (.cons (.val x2.i x2.h)
-                      (.cons (.val x3.i x3.h)
-                        (.cons (.val x4.i x4.h)
-                          (.cons (.val y0.i y0.h)
-                            (.cons (.val y1.i y1.h)
-                              (.cons (.val y2.i y2.h)
-                                (.cons (.val y3.i y3.h) (.cons (.val y4.i y4.h) .nil)))))))))))))))
-      .nil,
-    .load q0 (.val z0.i z0.h), .load q1 (.val z1.i z1.h), .unop (.gepConst 32) g1 p,
-    .load q2 (.val z2.i z2.h), .unop (.gepConst 64) g2 p, .load q3 (.val z3.i z3.h),
-    .unop (.gepConst 96) g3 p, .load q4 (.val z4.i z4.h), .unop (.gepConst 128) g4 p,
-    .lifetimeEnd (.val z4.i z4.h) 32, .lifetimeEnd (.val z3.i z3.h) 32,
-    .lifetimeEnd (.val z2.i z2.h) 32, .lifetimeEnd (.val z1.i z1.h) 32,
-    .lifetimeEnd (.val z0.i z0.h) 32]
-
-/-- `runBodyFrom_qpMulRun` for `qpMulGepTailRun`, `p` holding the point `P`: from `pos + 20`, with
-`P + 32 k` in `gk`. -/
-theorem runBodyFrom_qpMulGepTailRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {z0 z1 z2 z3 z4 : Dst Γ .ptr} {x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64}
-    {p : Reg Γ .ptr} {g1 g2 g3 g4 : Dst Γ .ptr} {rest : List (Instr Γ)} {X Y : Quad5}
-    {Z0 Z1 Z2 Z3 Z4 P : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
-    {K : PoisonOr β}
-    (hbody :
-      blk.body.drop pos =
-        qpMulGepTailRun z0 z1 z2 z3 z4 x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 p g1 g2 g3 g4 ++
-          rest)
-    (hR :
-      E ⊨ [x0 := X.P0, x1 := X.P1, x2 := X.P2, x3 := X.P3, x4 := X.P4, y0 := Y.P0, y1 := Y.P1, y2 :=
-        Y.P2, y3 := Y.P3, y4 := Y.P4, z0 := Z0, z1 := Z1, z2 := Z2, z3 := Z3, z4 := Z4, p := P])
-    (hwf : S.WF) (hP : S.mem.Quad5Fit P)
-    (hZ :
-      Fits S.mem Z0 256 ∧
-        Fits S.mem Z1 256 ∧ Fits S.mem Z2 256 ∧ Fits S.mem Z3 256 ∧ Fits S.mem Z4 256)
-    (hne :
-      Z1.id ≠ Z0.id ∧
-        Z2.id ≠ Z0.id ∧
-        Z3.id ≠ Z0.id ∧
-        Z4.id ≠ Z0.id ∧
-        Z2.id ≠ Z1.id ∧
-        Z3.id ≠ Z1.id ∧ Z4.id ≠ Z1.id ∧ Z3.id ≠ Z2.id ∧ Z4.id ≠ Z2.id ∧ Z4.id ≠ Z3.id)
-    (hp : p ≠ .val g1.i g1.h ∧ p ≠ .val g2.i g2.h ∧ p ≠ .val g3.i g3.h)
-    (hd : [z0.i, z1.i, z2.i, z3.i, z4.i, g1.i, g2.i, g3.i, g4.i].Nodup)
-    (hK :
-      (blk.runBodyFrom
-            E[q0 := Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P0, q1 :=
-              Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P1, g1 := .value (P.add 32#64), q2 :=
-              Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P2, g2 := .value (P.add 64#64), q3 :=
-              Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P3, g3 := .value (P.add 96#64), q4 :=
-              Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P4, g4 := .value (P.add 128#64)]
-            (pos + 20)
-            { alloc := S.alloc,
-              mem := S.mem.storeTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_mul_fast.spec X Y) } >>=
-          g) =
-        K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
-  obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
-  obtain ⟨hp1, hp2, hp3⟩ := hp
-  iterate 5 step_pure
-  step_call using fd_r52x5_quad_mul_fast.call_eq
-  step_load [ofFn_extractVecElem_readAt] inline
-  step_load [ofFn_extractVecElem_readAt] inline
-  step_pure
-  step_load [ofFn_extractVecElem_readAt] inline
-  step_pure
-  step_load [ofFn_extractVecElem_readAt] inline
-  step_pure
-  step_load [ofFn_extractVecElem_readAt] inline
-  step_pure
-  iterate 5 step_pure
-  rw [hE, hS]
   exact hK
 
 /-! ### `FD_R52X5_QUAD_REDUCE` with its result named -/

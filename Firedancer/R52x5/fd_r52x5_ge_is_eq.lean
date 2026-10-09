@@ -164,7 +164,7 @@ theorem MemoryState.readAt_limbs12 {m : MemoryState} (hf : m.LimbsFit p) (h : m.
         have := hf.1
         simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq]
         omega)
-      (by decide) (MemoryState.LimbsFit.fits hf)
+      (by decide) hf.fits
   have e0 :=
     MemoryState.readAt_of_readAt_le (m := m) (p := p.add 8#64) (v := 128) (w := 64) (by decide) rfl
   have e1 := MemoryState.readAt_add_of_readAt hf8 hov (w := 64) (by decide) rfl
@@ -187,7 +187,7 @@ theorem MemoryState.readAt_limbs0123 {m : MemoryState} (hf : m.LimbsFit p) (h : 
     have := hf.1
     simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq]
     omega
-  have hf256 : Fits m p 256 := (MemoryState.LimbsFit.fits hf).mono (by omega)
+  have hf256 : Fits m p 256 := hf.fits.mono (by omega)
   have e0 := MemoryState.readAt_of_readAt_le (m := m) (p := p) (v := 256) (w := 64) (by decide) rfl
   have e1 := MemoryState.readAt_add_of_readAt hf256 (hov 8 (by omega)) (w := 64) (by decide) rfl
   have e2 := MemoryState.readAt_add_of_readAt hf256 (hov 16 (by omega)) (w := 64) (by decide) rfl

@@ -24,19 +24,6 @@ end
 
 section Proof
 
-/-- Limbs 0-3 stored and read back as one `<4 x i64>`. -/
-public theorem MemoryState.readAt_storeLimbs_wv {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
-    (m.storeLimbs p l).readAt p 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
-  have hf : Fits m p 256 := (MemoryState.LimbsFit.fits h).mono (by omega)
-  rw [← MemoryState.storeLimbsV_eq h, MemoryState.storeLimbsV, MemoryState.readAt_storeAt_disjoint,
-    MemoryState.readAt_storeWv_self hf]
-  simp only [Range.Disjoint, Range.of]
-  right; right
-  rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
-    Pointer.offsetInBits_add_limb h.1 (by omega)]
-  unfold Pointer.offsetInBits
-  omega
-
 /-- `fd_f25519_canonical_limbs( h, a )` stores `spec` of the element at `a` as limbs at `h`;
 `fd_f25519_reduce`'s temporary moves the counter on by one block. -/
 public theorem fd_f25519_canonical_limbs.call_eq (h a : Pointer) (s : GlobalState) (hwf : s.WF)

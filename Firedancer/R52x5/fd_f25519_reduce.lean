@@ -24,9 +24,8 @@ public theorem fd_f25519_reduce.call_eq (out : Pointer) (x : Wwl) (s : GlobalSta
         (.nil,
           { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem := s.mem.storeLimbs out (limbs (fold x)) }) := by
-  have hout256 : Fits s.mem out 256 := (MemoryState.LimbsFit.fits hout).mono (by omega)
+  have hout256 : Fits s.mem out 256 := hout.fits.mono (by omega)
   rw [← MemoryState.storeLimbsV_eq hout]
-  obtain ⟨hout_off, -, -, -, -, hout32⟩ := hout
   func_init
   block_init
   step_pure
