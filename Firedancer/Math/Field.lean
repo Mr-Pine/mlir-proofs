@@ -198,11 +198,12 @@ end Prime
 
 section Arith
 
-theorem toNat_and_mask (x : BitVec 64) : (x &&& 2251799813685247#64).toNat = x.toNat % 2 ^ 51 := by
+public theorem toNat_and_mask (x : BitVec 64) :
+    (x &&& 2251799813685247#64).toNat = x.toNat % 2 ^ 51 := by
   rw [BitVec.toNat_and, ← Nat.and_two_pow_sub_one_eq_mod]
   rfl
 
-theorem toNat_shift (x : BitVec 64) : (x >>> 51).toNat = x.toNat / 2 ^ 51 := by
+public theorem toNat_shift (x : BitVec 64) : (x >>> 51).toNat = x.toNat / 2 ^ 51 := by
   rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 theorem toNat_shift_lo (x : BitVec 128) :
@@ -238,7 +239,7 @@ def carryCols (c0 c1 c2 c3 c4 : BitVec 128) : Fin 5 → BitVec 64 :=
   | ⟨4, _⟩ => r4.setWidth 64 &&& mask
 
 /-- The carries' value identity in `ℕ`, cast to `ZMod p`. -/
-theorem carry_val {C0 C1 C2 C3 C4 t1 t2 t3 t4 u0 u1 : ℕ} (ht1 : t1 = C1 + C0 / 2 ^ 51)
+public theorem carry_val {C0 C1 C2 C3 C4 t1 t2 t3 t4 u0 u1 : ℕ} (ht1 : t1 = C1 + C0 / 2 ^ 51)
     (ht2 : t2 = C2 + t1 / 2 ^ 51) (ht3 : t3 = C3 + t2 / 2 ^ 51) (ht4 : t4 = C4 + t3 / 2 ^ 51)
     (hu0 : u0 = t4 / 2 ^ 51 * 19 + C0 % 2 ^ 51) (hu1 : u1 = u0 / 2 ^ 51 + t1 % 2 ^ 51) :
     ((u0 % 2 ^ 51 : ℕ) : ZMod p) + (u1 % 2 ^ 51 : ℕ) * 2 ^ 51 +
@@ -317,31 +318,33 @@ theorem carryCols_spec {c0 c1 c2 c3 c4 : BitVec 128} (h0 : c0.toNat ≤ 2 ^ 114)
     omega
 
 /-- `x` holds `n`, at most `M`. -/
-def ValLe (x : BitVec w) (n M : ℕ) : Prop :=
+@[expose] public def ValLe (x : BitVec w) (n M : ℕ) : Prop :=
   x.toNat = n ∧ n ≤ M
 
-theorem ValLe.const (c : BitVec w) : ValLe c c.toNat c.toNat :=
+public theorem ValLe.const (c : BitVec w) : ValLe c c.toNat c.toNat :=
   ⟨rfl, le_rfl⟩
 
-theorem ValLe.add {x y : BitVec w} (hx : ValLe x m M) (hy : ValLe y n N) (h : M + N < 2 ^ w) :
+public theorem ValLe.add {x y : BitVec w} (hx : ValLe x m M) (hy : ValLe y n N)
+    (h : M + N < 2 ^ w) :
     ValLe (x + y) (m + n) (M + N) := by
   obtain ⟨rfl, hm⟩ := hx
   obtain ⟨rfl, hn⟩ := hy
   exact ⟨by rw [BitVec.toNat_add, Nat.mod_eq_of_lt (by omega)], by omega⟩
 
-theorem ValLe.mul {x y : BitVec w} (hx : ValLe x m M) (hy : ValLe y n N) (h : M * N < 2 ^ w) :
+public theorem ValLe.mul {x y : BitVec w} (hx : ValLe x m M) (hy : ValLe y n N)
+    (h : M * N < 2 ^ w) :
     ValLe (x * y) (m * n) (M * N) := by
   obtain ⟨rfl, hm⟩ := hx
   obtain ⟨rfl, hn⟩ := hy
   have := Nat.mul_le_mul hm hn
   exact ⟨by rw [BitVec.toNat_mul, Nat.mod_eq_of_lt (by omega)], this⟩
 
-theorem ValLe.setWidth {x : BitVec w} (hx : ValLe x n M) (h : M < 2 ^ v) :
+public theorem ValLe.setWidth {x : BitVec w} (hx : ValLe x n M) (h : M < 2 ^ v) :
     ValLe (x.setWidth v) n M := by
   obtain ⟨rfl, hn⟩ := hx
   exact ⟨by rw [BitVec.toNat_setWidth, Nat.mod_eq_of_lt (by omega)], hn⟩
 
-theorem ValLe.shl {x : BitVec w} (hx : ValLe x n M) (h : M * 2 ^ k < 2 ^ w) :
+public theorem ValLe.shl {x : BitVec w} (hx : ValLe x n M) (h : M * 2 ^ k < 2 ^ w) :
     ValLe (x <<< k) (n * 2 ^ k) (M * 2 ^ k) := by
   obtain ⟨rfl, hn⟩ := hx
   have := Nat.mul_le_mul_right (2 ^ k) hn
@@ -1052,8 +1055,9 @@ theorem Limbs.forall_eq_iff (l c : Fin 5 → BitVec 64) :
   fin_cases k <;> exact BitVec.eq_of_toNat_eq ‹_›
 
 /-- The bounded multiples of `p`: `0` and `p`'s digits. -/
-theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 4503599627370458) (h1 : a1 ≤ 4503599627370494)
-    (h2 : a2 ≤ 4503599627370494) (h3 : a3 ≤ 4503599627370494) (h4 : a4 ≤ 4503599627370494)
+public theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 4503599627370458)
+    (h1 : a1 ≤ 4503599627370494) (h2 : a2 ≤ 4503599627370494) (h3 : a3 ≤ 4503599627370494)
+    (h4 : a4 ≤ 4503599627370494)
     (hN : a0 + a1 * 2 ^ 51 + a2 * 2 ^ 102 + a3 * 2 ^ 153 + a4 * 2 ^ 204 < 2 * p) :
     p ∣ a0 + a1 * 2 ^ 51 + a2 * 2 ^ 102 + a3 * 2 ^ 153 + a4 * 2 ^ 204 ↔
       (a0 = 0 ∧ a1 = 0 ∧ a2 = 0 ∧ a3 = 0 ∧ a4 = 0) ∨
@@ -1083,7 +1087,7 @@ theorem p_dvd_iff {a0 a1 a2 a3 a4 : ℕ} (h0 : a0 ≤ 4503599627370458) (h1 : a1
     · exact ⟨1, rfl⟩
 
 /-- A zero below `2p`, its limbs at most `2p`'s, is all zeros or `p`'s limbs. -/
-theorem Limbs.val_eq_zero_iff {l : Fin 5 → BitVec 64} (h : Limbs.Under2p l)
+public theorem Limbs.val_eq_zero_iff {l : Fin 5 → BitVec 64} (h : Limbs.Under2p l)
     (hN : Limbs.nat l < 2 * p) :
     Limbs.val l = 0 ↔ (∀ k, l k = 0) ∨ (∀ k, l k = fd_f25519_is_zero.pLimbs k) := by
   obtain ⟨h0, h1, h2, h3, h4⟩ := h.bounds

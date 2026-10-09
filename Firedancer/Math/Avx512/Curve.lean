@@ -3,6 +3,7 @@ module
 public import Firedancer.Math.Avx512.Point
 public import Firedancer.Math.Avx512.F25519
 public import Firedancer.Math.Group
+public import Firedancer.Math.Ext
 public import Firedancer.Avx512.fd_ed25519_partial_dbl
 public import Firedancer.Avx512.fd_ed25519_point_sub_with_opts
 public import Firedancer.Avx512.fd_ed25519_point_dbln
@@ -11,7 +12,6 @@ public import Firedancer.Avx512.fd_ed25519_point_from
 public import Firedancer.Avx512.fd_curve25519_into_precomputed
 public import Firedancer.Avx512.fd_ed25519_point_eq_z1
 public import Firedancer.Avx512.fd_ed25519_affine_is_small_order
-import Mathlib.Tactic.FieldSimp
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.NormNum
@@ -23,57 +23,8 @@ its curve operation on the points its QUADs represent, folded. -/
 namespace MLIR.Firedancer.Avx512
 
 open MLIR.Firedancer.Ref (p)
-open MLIR.Firedancer.Ref.Ed25519 (d OnCurve IsExt dbl_den₁ dbl_den₂ add_compl)
-
-/-! ## The curve algebra -/
-
-section Algebra
-
-variable {x y : ZMod p}
-
-/-- `addTail`'s output is the sum in extended coordinates, for `(A, B, D, C)` the formula's
-`(Y₁ - X₁)(Y₂ - X₂)`, `(Y₁ + X₁)(Y₂ + X₂)`, `2 Z₁ Z₂`, `2d T₁ T₂`. -/
-theorem isExt_add {x₁ y₁ X₁ Y₁ T₁ Z₁ x₂ y₂ X₂ Y₂ T₂ Z₂ A B C D : ZMod p}
-    (hA : IsExt x₁ y₁ X₁ Y₁ T₁ Z₁) (hB : IsExt x₂ y₂ X₂ Y₂ T₂ Z₂)
-    (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) (eA : A = (Y₁ - X₁) * (Y₂ - X₂))
-    (eB : B = (Y₁ + X₁) * (Y₂ + X₂)) (eC : C = T₁ * T₂ * (2 * d)) (eD : D = (Z₁ + Z₁) * Z₂) :
-    let Q := Ref.Ed25519.add x₁ y₁ x₂ y₂
-    IsExt Q.1 Q.2 ((B - A) * (D - C)) ((C + D) * (A + B)) ((B - A) * (A + B))
-      ((C + D) * (D - C)) := by
-  obtain ⟨d₁, d₂, eX, eY⟩ := add_compl hA hB h1 h2
-  subst eA eB eC eD
-  refine ⟨mul_ne_zero (by rwa [add_comm]) d₂, ?_, ?_, by ring⟩
-  · linear_combination ((Z₁ + Z₁) * Z₂ - T₁ * T₂ * (2 * d)) * eX
-  · linear_combination (T₁ * T₂ * (2 * d) + (Z₁ + Z₁) * Z₂) * eY
-
-/-- `geDbl_is`'s output is the double in extended coordinates, for `(X, Y, Z)` projective
-coordinates of `(x, y)`. -/
-theorem isExt_dbl {X Y Z : ZMod p} (hz : Z ≠ 0) (hx : X = x * Z) (hy : Y = y * Z)
-    (hc : OnCurve x y) :
-    let A := X ^ 2
-    let B := Y ^ 2
-    let E := A + B - (Y + X) ^ 2
-    let G := A - B
-    let F := G + (Z ^ 2 + Z ^ 2)
-    let H := A + B
-    IsExt (Ref.Ed25519.dbl x y).1 (Ref.Ed25519.dbl x y).2 (E * F) (G * H) (E * H) (G * F) := by
-  intro A B E G F H
-  have d₁ := dbl_den₁ hc
-  have d₂ := dbl_den₂ hc
-  have eG : G = -(Z ^ 2 * (y ^ 2 - x ^ 2)) := by simp only [G, A, B, hx, hy]; ring
-  have eF : F = Z ^ 2 * (2 - y ^ 2 + x ^ 2) := by simp only [F, G, A, B, hx, hy]; ring
-  have eE : E = -(2 * x * y * Z ^ 2) := by simp only [E, A, B, hx, hy]; ring
-  have eH : H = (y ^ 2 + x ^ 2) * Z ^ 2 := by simp only [H, A, B, hx, hy]; ring
-  have hz2 : Z ^ 2 ≠ 0 := pow_ne_zero 2 hz
-  refine ⟨?_, ?_, ?_, by ring⟩
-  · rw [eG, eF]
-    exact mul_ne_zero (neg_ne_zero.2 (mul_ne_zero hz2 d₁)) (mul_ne_zero hz2 d₂)
-  · simp only [Ref.Ed25519.dbl, eE, eF, eG]
-    field_simp
-  · simp only [Ref.Ed25519.dbl, eH, eF, eG]
-    field_simp
-
-end Algebra
+open MLIR.Firedancer.Ref.Ed25519 (d OnCurve IsExt)
+open MLIR.Firedancer.Ref.Ed25519 (isExt_add isExt_dbl isExt_neg dblN_succ' dblN_onCurve)
 
 /-! ## The QUAD formulas -/
 
@@ -242,11 +193,6 @@ public theorem fd_ed25519_point_add_with_opts.spec_ext {pre : BitVec 32} (hA : A
     · rw [e3]; ring
     · rw [e2]; ring
 
-/-- `IsExt` of `-(x, y) = (-x, y)`. -/
-theorem isExt_neg {X Y T Z : ZMod p} (h : IsExt x y X Y T Z) : IsExt (-x) y (-X) Y (-T) Z := by
-  obtain ⟨hZ, rfl, rfl, hT⟩ := h
-  exact ⟨hZ, by ring, rfl, by linear_combination -hT⟩
-
 /-- `neg` takes a folded `(x, y)` to `-(x, y) = (-x, y)`, folded. -/
 public theorem fd_ed25519_point_neg.spec_ext (hA : A.Ext x y) (hr : A.Folded) :
     let N := fd_ed25519_point_neg.spec A
@@ -353,21 +299,6 @@ public theorem fd_ed25519_point_from.spec_folded {x y z t : Wwl} (hx : R43x6.Fol
     | exact ⟨hy.1, hy.2.1, hy.2.2.1, hy.2.2.2.1, hy.2.2.2.2.1, hy.2.2.2.2.2.1, rfl, rfl⟩
     | exact ⟨hz.1, hz.2.1, hz.2.2.1, hz.2.2.2.1, hz.2.2.2.2.1, hz.2.2.2.2.2.1, rfl, rfl⟩
     | exact ⟨ht.1, ht.2.1, ht.2.2.1, ht.2.2.2.1, ht.2.2.2.2.1, ht.2.2.2.2.2.1, rfl, rfl⟩
-
-/-- `dblN (n + 1)` doubles `dblN n`. -/
-public theorem dblN_succ' (n : ℕ) (P : ZMod p × ZMod p) :
-    Ref.Ed25519.dblN (n + 1) P =
-      Ref.Ed25519.dbl (Ref.Ed25519.dblN n P).1 (Ref.Ed25519.dblN n P).2 := by
-  induction n generalizing P with
-  | zero => rfl
-  | succ n ih => rw [Ref.Ed25519.dblN, ih, Ref.Ed25519.dblN]
-
-/-- Doubling `n` times stays on the curve. -/
-public theorem dblN_onCurve (n : ℕ) {P : ZMod p × ZMod p} (h : OnCurve P.1 P.2) :
-    OnCurve (Ref.Ed25519.dblN n P).1 (Ref.Ed25519.dblN n P).2 := by
-  induction n with
-  | zero => exact h
-  | succ n ih => rw [dblN_succ']; exact Ref.Ed25519.dbl_onCurve ih
 
 /-- `dbln` takes a projective `(x, y)` on the curve, its elements below `2^44`, to `2ⁿ (x, y)` in
 extended coordinates, folded, for `n ≥ 1`. -/

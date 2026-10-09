@@ -717,7 +717,7 @@ public theorem _root_.MLIR.PointLimbs.Operand.of_z_one {B : PointLimbs} {pre : B
   split_ifs <;> simp [← hz, hZ]
 
 /-- The order-8 `y`s' limbs: `y8` and `-y8`, tight. -/
-theorem fd_ed25519_order8_point_y.val :
+public theorem fd_ed25519_order8_point_y.val :
     (Limbs.val fd_ed25519_order8_point_y0.limbs = Ed25519.y8 ∧
         Limbs.Tight fd_ed25519_order8_point_y0.limbs) ∧
       (Limbs.val fd_ed25519_order8_point_y1.limbs = -Ed25519.y8 ∧
@@ -758,7 +758,7 @@ public theorem fd_ed25519_point_eq_z1.spec_val {A B : PointLimbs} (hA : A.Proj x
   exact if_congr and_comm rfl rfl
 
 /-- `d`, tight. -/
-theorem fd_f25519_d.val :
+public theorem fd_f25519_d.val :
     Limbs.val fd_f25519_d.limbs = Ed25519.d ∧ Limbs.Tight fd_f25519_d.limbs := by
   refine ⟨?_, by rw [Limbs.tight_iff]; decide⟩
   rw [Limbs.val_eq]
