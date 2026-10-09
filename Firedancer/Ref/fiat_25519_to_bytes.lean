@@ -221,15 +221,15 @@ theorem fiat_25519_to_bytes.pack_eq {x12 x14 x16 x18 x20 x38 x51 x66 x79 : BitVe
 
 -- 154 steps late in a 260-instruction block: just under 200000 heartbeats
 set_option maxHeartbeats 400000 in
-/-- From `%74` on: `x12 … x20`'s bytes, stored at `out1`, as `pack x12 x14 x16 x18 x20`. -/
+/-- From `%137` on: `x12 … x20`'s bytes, stored at `out1`, as `pack x12 x14 x16 x18 x20`. -/
 theorem fiat_25519_to_bytes.store_bytes {E : ⟪fiat_25519_to_bytes.Γ⟫} {S : GlobalState}
     {g : ⟪fiat_25519_to_bytes.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β} {out1 arg1 : Pointer}
     {x12 x14 x16 x18 x20 : BitVec 64}
     (hArgs : E.args = (fiat_25519_to_bytes.args (.value out1) (.value arg1)).get)
     (hR :
-      E ⊨ [%10 := 8#64, %11 := 16#64, %12 := 24#64, %13 := 32#64, %14 := 40#64, %15 := 48#64, %16 :=
-        255#64, %17 := 56#64, %66 := x20 <<< 4, %68 := x18 <<< 1, %70 := x16 <<< 6, %72 :=
-        x14 <<< 3, %73 := x12])
+      E ⊨ [%66 := 8#64, %68 := 16#64, %69 := 24#64, %70 := 32#64, %77 := 40#64, %78 := 48#64, %79 :=
+        255#64, %80 := 56#64, %129 := x20 <<< 4, %131 := x18 <<< 1, %133 := x16 <<< 6, %135 :=
+        x14 <<< 3, %136 := x12])
     (hwf : S.WF) (hout1 : Fits S.mem out1 (8 * 32)) (hout1_off : ¬out1.offset.uaddOverflow 32#64)
     (hK :
       ∀ E',
