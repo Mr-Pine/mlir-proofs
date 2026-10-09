@@ -2,6 +2,7 @@ module
 
 public import SSA.Projects.RIR.Run.Tactic
 public import Ed25519.Sha512
+public import Zig.Memory
 
 /-! Zig's `Sha512` object in memory: `total_len : u128` at `d`, the state `s : [8]u64` at `d + 16`,
 `buf : [128]u8` at `d + 80`, `buf_len : u8` at `d + 208`; 224 bytes. -/
@@ -51,6 +52,14 @@ structure Absorbed (m : MemoryState) (d : Pointer) (M : List (BitVec 8)) : Prop 
   bufLen : (bufLen m d).toNat = M.length % 128
   buf : (bytesLE (buf m d)).take (M.length % 128) = M.drop (M.length / 128 * 128)
   totalLen : totalLen m d = BitVec.ofNat 128 M.length
+
+/-- Erasing a frame commutes with storing the state words. -/
+public theorem eraseFrom_storeWords {m : MemoryState} :
+    ∀ n i, (storeWords d f i n m).eraseFrom k = storeWords d f i n (m.eraseFrom k) := by
+  intro n
+  induction n generalizing m with
+  | zero => intro _; rfl
+  | succ n ih => intro i; rw [storeWords, ih, MemoryState.eraseFrom_storeAt]; rfl
 
 end Sha512Obj
 

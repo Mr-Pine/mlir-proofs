@@ -138,4 +138,11 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_basePointPc {m : MemorySta
   rw [hn, show 168 * i.val * 8 = 1344 * i.val by omega, basePointPc_entry_bits] at h
   exact ⟨hq, MemoryState.readPt_of_readAt hq h⟩
 
+/-- The table's limbs are below `2^52`. -/
+public theorem Edwards25519.basePointPc.pts_lt (i : Fin 16) :
+    (Edwards25519.basePointPc.pts[i]).Lt (2 ^ 52) := by
+  revert i
+  unfold ZPt.Lt Fe.Lt
+  decide +kernel
+
 end LeanMLIR.RIR.Zig

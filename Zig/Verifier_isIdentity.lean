@@ -24,16 +24,6 @@ end
 
 section Proof
 
-/-- `Fe.isZero`'s `call_eq` on the limbs `A` read at `a`. -/
-public theorem Fe_isZero.call_eq_of (a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A) (hA' : Fe.Lt A (2 ^ 63)) :
-    Fe_isZero.call (Fe_isZero.args (.value a)) s =
-      .value
-        (.cons (.value (Fe.isZero.spec A)) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem }) := by
-  subst hA
-  exact Fe_isZero.call_eq a s hwf ha hA'
-
 /-- `Verifier.isIdentity` returns `spec P`, for `x`, `z` below `2^63` and `y` below `2^62`. -/
 public theorem Verifier_isIdentity.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
     (hp : s.mem.PtFit p) (hx : Fe.Lt (s.mem.readPt p).x (2 ^ 63))

@@ -1,5 +1,6 @@
 module
 
+public import Zig.Edwards25519_fromBytes
 public import Ed25519.Decode
 public import Zig.Math.Field
 public import Zig.Math.Point
@@ -15,7 +16,7 @@ and otherwise gives the decoded point with `z = 1`.
 
 The program file `Zig/Edwards25519_fromBytes.lean` is still in progress, so its definitions
 (`Fe.d`, `Fe.one`, `Fe.sqrtm1`, `Fe.fromBytes.spec`, `Fe.pow2523.spec`) are mirrored here under
-`Decode`, and `Decode.fromBytes` is the source's `fromBytes`. -/
+`Decode`, and `Decode.fromBytes` is the source's `Edwards25519.fromBytes.spec`. -/
 
 namespace LeanMLIR.RIR.Zig
 
@@ -26,100 +27,35 @@ namespace Decode
 /-! ## Definitions -/
 
 @[expose] public section
-
-/-- `d`'s limbs. -/
-def feD : Fin 5 → BitVec 64
-  | ⟨0, _⟩ => 929955233495203
-  | ⟨1, _⟩ => 466365720129213
-  | ⟨2, _⟩ => 1662059464998953
-  | ⟨3, _⟩ => 2033849074728123
-  | ⟨4, _⟩ => 1442794654840575
-
-/-- `1`'s limbs. -/
-def feOne : Fin 5 → BitVec 64
-  | ⟨0, _⟩ => 1
-  | _ => 0
-
-/-- `√-1`'s limbs. -/
-def feSqrtm1 : Fin 5 → BitVec 64
-  | ⟨0, _⟩ => 1718705420411056
-  | ⟨1, _⟩ => 234908883556509
-  | ⟨2, _⟩ => 2233514472574048
-  | ⟨3, _⟩ => 2117202627021982
-  | ⟨4, _⟩ => 765476049583133
-
-/-- `Fe.fromBytes`: five 51-bit limbs of `b`, bit 255 dropped. -/
-def feFromBytes (b : BitVec 256) : Fin 5 → BitVec 64 :=
-  Fe.mk5 (b.setWidth 64 &&& Fe.mask) (b.extractLsb' 48 64 >>> 3 &&& Fe.mask)
-    (b.extractLsb' 96 64 >>> 6 &&& Fe.mask) (b.extractLsb' 152 64 >>> 1 &&& Fe.mask)
-    (b.extractLsb' 192 64 >>> 12 &&& Fe.mask)
-
-/-- `Fe.pow2523`: `a^(2^252 - 3)`, by the program's chain of squarings. -/
-def pow2523 (a : Fin 5 → BitVec 64) : Fin 5 → BitVec 64 :=
-  let t0 := Fe.sq.spec a
-  let t1 := Fe.mul.spec a t0
-  let t0 := Fe.sqn.spec 2 t1
-  let t0 := Fe.mul.spec t1 t0
-  let t0 := Fe.mul.spec (Fe.sq.spec t0) a
-  let t1 := Fe.mul.spec (Fe.sqn.spec 5 t0) t0
-  let t2 := Fe.mul.spec (Fe.sqn.spec 5 t1) t0
-  let t0 := Fe.mul.spec (Fe.sqn.spec 15 t2) t2
-  let t2 := Fe.mul.spec (Fe.sqn.spec 30 t0) t0
-  let t0 := Fe.mul.spec (Fe.sqn.spec 60 t2) t2
-  let t0 := Fe.mul.spec (Fe.sqn.spec 120 t0) t0
-  let t0 := Fe.mul.spec (Fe.sqn.spec 10 t0) t1
-  Fe.mul.spec (Fe.sqn.spec 2 t0) a
-
-/-- `x`'s sign fix: `b`'s top bit xor the low bit of `x` reduced. -/
-def signFlip (b : BitVec 256) (x : Fin 5 → BitVec 64) : BitVec 64 :=
-  ((b.extractLsb' 248 8 >>> 7) ^^^ ((Fe.reduce.spec x 0).setWidth 8 &&& 1#8)).setWidth 64
-
-/-- `Edwards25519.fromBytes`, as the source computes it: `none` for `InvalidEncoding`. -/
-def fromBytes (b : BitVec 256) : Option ZPt :=
-  let y := feFromBytes b
-  let u := Fe.sq.spec y
-  let v := Fe.mul.spec u feD
-  let u := Fe.sub.spec u feOne
-  let v := Fe.add.spec v feOne
-  let x := Fe.mul.spec (pow2523 (Fe.mul.spec u v)) u
-  let vxx := Fe.mul.spec (Fe.sq.spec x) v
-  let hm := Fe.isZero.spec (Fe.sub.spec vxx u)
-  let hp := Fe.isZero.spec (Fe.add.spec vxx u)
-  if hm ||| hp = 0#1 then none
-  else
-    let x := Fe.cMov.spec x (Fe.mul.spec x feSqrtm1) (hm.setWidth 64 ^^^ 1#64)
-    let x := Fe.cMov.spec x (Fe.neg.spec x) (signFlip b x)
-    some ⟨x, y, feOne, Fe.mul.spec x y⟩
-
 end
 
 /-! ## Constants -/
 
-public theorem feD_val : Limbs.val feD = d := by
+public theorem feD_val : Limbs.val Fe.d = d := by
   rw [Limbs.val_eq]
   unfold Ed25519.d
-  simp [feD]
+  simp [Fe.d]
   reduce_mod_char
 
-public theorem feOne_val : Limbs.val feOne = 1 := by
-  rw [Limbs.val_eq, show (feOne 0).toNat = 1 from rfl, show (feOne 1).toNat = 0 from rfl,
-    show (feOne 2).toNat = 0 from rfl, show (feOne 3).toNat = 0 from rfl,
-    show (feOne 4).toNat = 0 from rfl]
+public theorem feOne_val : Limbs.val Fe.one = 1 := by
+  rw [Limbs.val_eq, show (Fe.one 0).toNat = 1 from rfl, show (Fe.one 1).toNat = 0 from rfl,
+    show (Fe.one 2).toNat = 0 from rfl, show (Fe.one 3).toNat = 0 from rfl,
+    show (Fe.one 4).toNat = 0 from rfl]
   simp
 
-public theorem feSqrtm1_val : Limbs.val feSqrtm1 = sqrtM1 := by
+public theorem feSqrtm1_val : Limbs.val Fe.sqrtm1 = sqrtM1 := by
   rw [Limbs.val_eq]
   unfold Ed25519.sqrtM1
-  simp [feSqrtm1]
+  simp [Fe.sqrtm1]
   reduce_mod_char
 
-public theorem feD_lt : Fe.Lt feD (2 ^ 51) := by
+public theorem feD_lt : Fe.Lt Fe.d (2 ^ 51) := by
   intro i; fin_cases i <;> decide
 
-public theorem feOne_lt : Fe.Lt feOne (2 ^ 51) := by
+public theorem feOne_lt : Fe.Lt Fe.one (2 ^ 51) := by
   intro i; fin_cases i <;> decide
 
-public theorem feSqrtm1_lt : Fe.Lt feSqrtm1 (2 ^ 51) := by
+public theorem feSqrtm1_lt : Fe.Lt Fe.sqrtm1 (2 ^ 51) := by
   intro i; fin_cases i <;> decide
 
 /-! ## Bytes -/
@@ -129,24 +65,24 @@ theorem toNat_slice (b : BitVec 256) (o s : ℕ) :
   rw [toNat_and_mask, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, BitVec.extractLsb'_toNat,
     Nat.shiftRight_eq_div_pow]
 
-/-- `fromBytes`'s number is `b`'s low 255 bits. -/
+/-- `Edwards25519.fromBytes.spec`'s number is `b`'s low 255 bits. -/
 public theorem feFromBytes_nat (b : BitVec 256) :
-    Limbs.nat (feFromBytes b) = b.toNat % 2 ^ 255 := by
+    Limbs.nat (Fe.fromBytes.spec b) = b.toNat % 2 ^ 255 := by
   have h0 : (b.setWidth 64 &&& Fe.mask).toNat = b.toNat % 2 ^ 51 := by
     rw [toNat_and_mask, BitVec.toNat_setWidth, Nat.mod_mod_of_dvd _ (by decide)]
-  simp only [Limbs.nat, feFromBytes, Fe.mk5, h0, toNat_slice]
+  simp only [Limbs.nat, Fe.fromBytes.spec, Fe.mk5, h0, toNat_slice]
   have := b.isLt
   omega
 
-/-- `fromBytes`'s value is `b`'s low 255 bits, mod `p`. -/
+/-- `Edwards25519.fromBytes.spec`'s value is `b`'s low 255 bits, mod `p`. -/
 public theorem feFromBytes_val (b : BitVec 256) :
-    Limbs.val (feFromBytes b) = ((b.toNat % 2 ^ 255 : ℕ) : ZMod p) := by
+    Limbs.val (Fe.fromBytes.spec b) = ((b.toNat % 2 ^ 255 : ℕ) : ZMod p) := by
   rw [Limbs.val_nat, feFromBytes_nat]
 
-public theorem feFromBytes_lt (b : BitVec 256) : Fe.Lt (feFromBytes b) (2 ^ 51) := by
+public theorem feFromBytes_lt (b : BitVec 256) : Fe.Lt (Fe.fromBytes.spec b) (2 ^ 51) := by
   intro i; fin_cases i <;> exact mask_lt _
 
-/-! ## `pow2523` -/
+/-! ## `Fe.pow2523.spec` -/
 
 /-- `l` holds `A ^ e`, limbs below `2^54`. -/
 def IsPow (l : Fin 5 → BitVec 64) (A : ZMod p) (e : ℕ) : Prop :=
@@ -161,9 +97,9 @@ theorem IsPow.sq (h : IsPow l A e) : IsPow (Fe.sq.spec l) A (e * 2) :=
 theorem IsPow.sqn (h : IsPow l A e) (n : ℕ) : IsPow (Fe.sqn.spec n l) A (e * 2 ^ n) :=
   ⟨Fe.sqn.spec_lt h.1 n, by rw [Fe.sqn.spec_val h.1, h.2, pow_mul]⟩
 
-/-- `pow2523` raises to `2^252 - 3`, for limbs below `2^54`; its limbs are below `2^52`. -/
+/-- `Fe.pow2523.spec` raises to `2^252 - 3`, for limbs below `2^54`; its limbs are below `2^52`. -/
 public theorem pow2523_val {a : Fin 5 → BitVec 64} (ha : Fe.Lt a (2 ^ 54)) :
-    Limbs.val (pow2523 a) = Limbs.val a ^ (2 ^ 252 - 3) := by
+    Limbs.val (Fe.pow2523.spec a) = Limbs.val a ^ (2 ^ 252 - 3) := by
   have a1 : IsPow a (Limbs.val a) 1 := ⟨ha, (pow_one _).symm⟩
   have t0 := a1.sq
   have t1 := a1.mul t0
@@ -180,8 +116,8 @@ public theorem pow2523_val {a : Fin 5 → BitVec 64} (ha : Fe.Lt a (2 ^ 54)) :
   refine r.2.trans ?_
   congr 1
 
-/-- `pow2523`'s limbs are below `2^52`. -/
-public theorem pow2523_lt (a : Fin 5 → BitVec 64) : Fe.Lt (pow2523 a) (2 ^ 52) :=
+/-- `Fe.pow2523.spec`'s limbs are below `2^52`. -/
+public theorem pow2523_lt (a : Fin 5 → BitVec 64) : Fe.Lt (Fe.pow2523.spec a) (2 ^ 52) :=
   Fe.mul.spec_lt _ _
 
 /-! ## Square roots -/
@@ -265,10 +201,10 @@ theorem sign_bits (a : BitVec 8) (r : BitVec 64) :
     exact this
   · bv_decide
 
-/-- `signFlip`'s condition: `b`'s top bit differs from `x`'s parity. -/
+/-- `Edwards25519.fromBytes.sign`'s condition: `b`'s top bit differs from `x`'s parity. -/
 theorem signFlip_spec (b : BitVec 256) {x : Fin 5 → BitVec 64} (hx : Fe.Lt x (2 ^ 63)) :
-    (signFlip b x).toNat < 2 ∧
-      (signFlip b x = 1#64 ↔ b.toNat / 2 ^ 255 ≠ (Limbs.val x).val % 2) := by
+    (Edwards25519.fromBytes.sign b x).toNat < 2 ∧
+      (Edwards25519.fromBytes.sign b x = 1#64 ↔ b.toNat / 2 ^ 255 ≠ (Limbs.val x).val % 2) := by
   obtain ⟨h1, h2⟩ := sign_bits (b.extractLsb' 248 8) (Fe.reduce.spec x 0)
   refine ⟨h1, h2.trans ?_⟩
   have hn := Fe.reduce.spec_nat_val hx
@@ -282,29 +218,29 @@ theorem signFlip_spec (b : BitVec 256) {x : Fin 5 → BitVec 64} (hx : Fe.Lt x (
 /-- What `fromBytes` gives: `none` exactly when no `x` is on the curve with the encoded `y`, else a
 point with `x` of the encoded sign, the encoded `y`, `z = 1`, `t = x y`. -/
 theorem fromBytes_cases (b : BitVec 256) :
-    (fromBytes b = none ∧ ¬∃ x, OnCurve x (encY b)) ∨
+    (Edwards25519.fromBytes.spec b = none ∧ ¬∃ x, OnCurve x (encY b)) ∨
       ∃ P,
-        fromBytes b = some P ∧
+        Edwards25519.fromBytes.spec b = some P ∧
           OnCurve (Limbs.val P.x) (encY b) ∧
           (Limbs.val P.x = 0 ∨ (Limbs.val P.x).val % 2 = b.toNat / 2 ^ 255) ∧
           Limbs.val P.y = encY b ∧
-          P.z = feOne ∧ Limbs.val P.t = Limbs.val P.x * Limbs.val P.y ∧ P.Lt (2 ^ 52) := by
-  dsimp only [fromBytes]
+          P.z = Fe.one ∧ Limbs.val P.t = Limbs.val P.x * Limbs.val P.y ∧ P.Lt (2 ^ 52) := by
+  dsimp only [Edwards25519.fromBytes.spec]
   have vy := feFromBytes_val b
   have hyb := feFromBytes_lt b
-  generalize feFromBytes b = y at *
+  generalize Fe.fromBytes.spec b = y at *
   have vu0 := Fe.sq.spec_val (hyb.mono (by norm_num))
   have bu0 := Fe.sq.spec_lt y
   generalize Fe.sq.spec y = u0 at *
   have vv0 := Fe.mul.spec_val (bu0.mono (by norm_num)) (feD_lt.mono (by norm_num))
-  have bv0 := Fe.mul.spec_lt u0 feD
-  generalize Fe.mul.spec u0 feD = v0 at *
+  have bv0 := Fe.mul.spec_lt u0 Fe.d
+  generalize Fe.mul.spec u0 Fe.d = v0 at *
   have vu := Fe.sub.spec_val (bu0.mono (by norm_num)) (feOne_lt.mono (by norm_num))
-  have bu := Fe.sub.spec_lt (b := feOne) bu0 (by norm_num)
-  generalize Fe.sub.spec u0 feOne = u at *
+  have bu := Fe.sub.spec_lt (b := Fe.one) bu0 (by norm_num)
+  generalize Fe.sub.spec u0 Fe.one = u at *
   have vv := Fe.add.spec_val bv0 feOne_lt (by norm_num)
   have bv := Fe.add.spec_lt bv0 feOne_lt (by norm_num)
-  generalize Fe.add.spec v0 feOne = v at *
+  generalize Fe.add.spec v0 Fe.one = v at *
   rw [vu0, vy] at vu
   rw [vv0, vu0, vy, feD_val] at vv
   rw [feOne_val] at vu vv
@@ -321,8 +257,8 @@ theorem fromBytes_cases (b : BitVec 256) :
   have vp := pow2523_val ((Fe.mul.spec_lt u v).mono (by norm_num))
   have vx0 := Fe.mul.spec_val ((pow2523_lt (Fe.mul.spec u v)).mono (by norm_num)) bu'
   rw [vp, vw, vu, vv] at vx0
-  have bx0 := Fe.mul.spec_lt (pow2523 (Fe.mul.spec u v)) u
-  generalize Fe.mul.spec (pow2523 (Fe.mul.spec u v)) u = x0 at *
+  have bx0 := Fe.mul.spec_lt (Fe.pow2523.spec (Fe.mul.spec u v)) u
+  generalize Fe.mul.spec (Fe.pow2523.spec (Fe.mul.spec u v)) u = x0 at *
   have vxx := Fe.mul.spec_val ((Fe.sq.spec_lt x0).mono (by norm_num)) bv'
   rw [Fe.sq.spec_val (bx0.mono (by norm_num)), vv] at vxx
   have bxx := Fe.mul.spec_lt (Fe.sq.spec x0) v
@@ -347,13 +283,13 @@ theorem fromBytes_cases (b : BitVec 256) :
   rw [or_ofBool, decide_eq_true_iff, decide_eq_true_iff, not_not] at hc
   -- `x · √-1` when `v x² = -u`: then `v x² = u`
   have c1lt := flag_lt (decide (Limbs.val x0 ^ 2 * (Y ^ 2 * d + 1) - (Y ^ 2 - 1) = 0))
-  have vx1 := Fe.cMov.spec_val (fe := x0) (a := Fe.mul.spec x0 feSqrtm1) c1lt
+  have vx1 := Fe.cMov.spec_val (fe := x0) (a := Fe.mul.spec x0 Fe.sqrtm1) c1lt
   simp only [flag_eq, decide_eq_false_iff_not] at vx1
   rw [Fe.mul.spec_val (bx0.mono (by norm_num)) (feSqrtm1_lt.mono (by norm_num)),
     feSqrtm1_val] at vx1
   have bx1 :
     Fe.Lt
-      (Fe.cMov.spec x0 (Fe.mul.spec x0 feSqrtm1)
+      (Fe.cMov.spec x0 (Fe.mul.spec x0 Fe.sqrtm1)
         ((BitVec.ofBool (decide (Limbs.val x0 ^ 2 * (Y ^ 2 * d + 1) - (Y ^ 2 - 1) = 0))).setWidth
             64 ^^^
           1#64))
@@ -362,7 +298,7 @@ theorem fromBytes_cases (b : BitVec 256) :
     split
     · exact Fe.mul.spec_lt _ _
     · exact bx0
-  generalize Fe.cMov.spec x0 (Fe.mul.spec x0 feSqrtm1) _ = x1 at *
+  generalize Fe.cMov.spec x0 (Fe.mul.spec x0 Fe.sqrtm1) _ = x1 at *
   have root : (Y ^ 2 * d + 1) * Limbs.val x1 ^ 2 = Y ^ 2 - 1 := by
     rw [vx1]
     split_ifs with h
@@ -374,12 +310,13 @@ theorem fromBytes_cases (b : BitVec 256) :
   have vx := Fe.cMov.spec_val (fe := x1) (a := Fe.neg.spec x1) slt
   simp only [seq] at vx
   rw [Fe.neg.spec_val (bx1.mono (by norm_num))] at vx
-  have bx : Fe.Lt (Fe.cMov.spec x1 (Fe.neg.spec x1) (signFlip b x1)) (2 ^ 52) := by
+  have bx :
+    Fe.Lt (Fe.cMov.spec x1 (Fe.neg.spec x1) (Edwards25519.fromBytes.sign b x1)) (2 ^ 52) := by
     rw [Fe.cMov.spec_eq _ _ _ slt]
     split
     · exact Fe.neg.spec_lt (bx1.mono (by norm_num))
     · exact bx1
-  generalize Fe.cMov.spec x1 (Fe.neg.spec x1) (signFlip b x1) = x at *
+  generalize Fe.cMov.spec x1 (Fe.neg.spec x1) (Edwards25519.fromBytes.sign b x1) = x at *
   refine
     ⟨_, rfl, ?_, ?_, vy, rfl, Fe.mul.spec_val (bx.mono (by norm_num)) (hyb.mono (by norm_num)), bx,
       hyb.mono (by norm_num), feOne_lt.mono (by norm_num), Fe.mul.spec_lt _ _⟩
@@ -400,16 +337,18 @@ theorem fromBytes_cases (b : BitVec 256) :
         omega
     · exact .inr (by omega)
 
-/-- `fromBytes` fails exactly when no point decodes. -/
-public theorem fromBytes_eq_none (b : BitVec 256) : fromBytes b = none ↔ decode b = none := by
+/-- `Edwards25519.fromBytes.spec` fails exactly when no point decodes. -/
+public theorem fromBytes_eq_none (b : BitVec 256) :
+    Edwards25519.fromBytes.spec b = none ↔ decode b = none := by
   rw [decode_eq_none, ← not_exists, exists_decodes_iff]
   rcases fromBytes_cases b with ⟨h, hn⟩ | ⟨P, h, hc, -⟩
   · exact ⟨fun _ => hn, fun _ => h⟩
   · rw [h]
     exact ⟨fun h => absurd h (by simp), fun h => absurd ⟨_, hc⟩ h⟩
 
-/-- `fromBytes`'s point is the decoded one, with `z = 1` and limbs below `2^52`. -/
-public theorem fromBytes_eq_some {b : BitVec 256} {P : ZPt} (h : fromBytes b = some P) :
+/-- `fromBytes`' point is the decoded one, with `z = 1` and limbs below `2^52`. -/
+public theorem fromBytes_eq_some {b : BitVec 256} {P : ZPt}
+    (h : Edwards25519.fromBytes.spec b = some P) :
     ∃ Q, decode b = some Q ∧ P.Ext Q.x Q.y ∧ Limbs.val P.z = 1 ∧ P.Lt (2 ^ 52) := by
   rcases fromBytes_cases b with ⟨h', -⟩ | ⟨P', h', hc, hs, hy, hz, ht, hl⟩
   · rw [h'] at h; exact absurd h (by simp)

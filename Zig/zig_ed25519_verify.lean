@@ -9,7 +9,7 @@ public import Zig.Sha512_frame
 public import Zig.Verifier_verify
 public import Zig.Edwards25519_identityElement
 public import Zig.Edwards25519_precompute
-public import Zig.Math.FromBytesLink
+public import Zig.Math.Decode
 public import Zig.Math.Reduce64Link
 public import Zig.Mlir.zig_ed25519_verify
 import all Zig.Edwards25519_fromBytes
@@ -401,7 +401,6 @@ public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig
     -- decoded points' limbs are below `2^52`
     have hlt {b : BitVec 256} {P : ZPt} (h : Edwards25519.fromBytes.spec b = some P) :
       P.Lt (2 ^ 53) := by
-      rw [Edwards25519.fromBytes.spec_eq] at h
       obtain ⟨-, -, -, -, hl⟩ := Decode.fromBytes_eq_some h
       exact hl.mono53
     have hA53 : (S.mem.readPt (v2.add 224#64)).Lt (2 ^ 53) := by

@@ -14,6 +14,8 @@ namespace Ed25519
 
 namespace ExtN
 
+@[expose] public section
+
 /-- `a b mod p`. -/
 def mulN (a b : ℕ) : ℕ :=
   a * b % p
@@ -50,6 +52,7 @@ structure E where
   Y : ℕ
   T : ℕ
   Z : ℕ
+  deriving DecidableEq
 
 /-- `A` are extended coordinates of `P`, mod `p`. -/
 def Rep (P : Point) (A : E) : Prop :=
@@ -141,6 +144,8 @@ theorem eq_zero_of_isZero {P : Point} {A : E} (h : Rep P A) (hz : IsZero A = tru
 
 theorem isZero_ladder :
     IsZero (ladder 253 ell ⟨BxN, ByN, BxN * ByN % p, 1⟩ ⟨0, 1, 0, 1⟩) = true := by decide +kernel
+
+end
 
 end ExtN
 

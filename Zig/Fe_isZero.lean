@@ -65,6 +65,16 @@ public theorem Fe_isZero.call_eq (a : Pointer) (s : GlobalState) (hwf : s.WF)
   erase_frame
   simp [GlobalState.alloca, Fe.isZero.spec]
 
+/-- `call_eq` on the limbs `A` read at `a`. -/
+public theorem Fe_isZero.call_eq_of (a : Pointer) (s : GlobalState) (hwf : s.WF)
+    (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A) (hA' : Fe.Lt A (2 ^ 63)) :
+    Fe_isZero.call (Fe_isZero.args (.value a)) s =
+      .value
+        (.cons (.value (Fe.isZero.spec A)) .nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem }) := by
+  subst hA
+  exact Fe_isZero.call_eq a s hwf ha hA'
+
 end Proof
 
 end LeanMLIR.RIR.Zig

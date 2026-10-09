@@ -26,12 +26,13 @@ macro "read_stores " p:term ", " x:term " with " hr:ident : tactic =>
 macro "checkpoint " hck:ident : tactic =>
   `(tactic| (have $hck:ident := $(Lean.mkIdent `hS).symm; clear $(Lean.mkIdent `hS)))
 
-/-- A loaded value `v` (`hv : v = S's read`) as the read fact `h` gives it. -/
+/-- A loaded value `v` (`hv : v = S's read`) as the read fact `h` gives it; `h`'s copy cleared. -/
 macro "fix_load " v:ident hv:ident h:term : tactic =>
   `(tactic|
     ( have h' := $h; try simp only [MemoryState.readLimbs] at h'
       rw [$(Lean.mkIdent `hS):ident] at h'; try dsimp only at h'
       rw [h'] at $hv:ident
-      subst $v:ident))
+      subst $v:ident
+      clear h'))
 
 end LeanMLIR.RIR.Zig

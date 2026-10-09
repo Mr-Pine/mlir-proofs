@@ -19,6 +19,10 @@ def Fe.neg.spec (a : Fin 5 → BitVec 64) : Fin 5 → BitVec 64 :=
 
 end
 
+/-- `-a`'s limbs are below `2^53`, whatever `a`'s. -/
+public theorem Fe.neg.spec_lt53 (a : Fin 5 → BitVec 64) : Fe.Lt (Fe.neg.spec a) (2 ^ 53) :=
+  (Fe.sub.spec_lt (A := 1) (b := a) (fun _ => by simp) (by decide)).mono (by decide)
+
 /-! ## Proof -/
 
 section Proof

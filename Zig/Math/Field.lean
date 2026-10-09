@@ -150,13 +150,6 @@ public theorem Fe.sqn.spec_val {a : Fin 5 → BitVec 64} (ha : Fe.Lt a (2 ^ 54))
     rw [Fe.sqn.spec, ih ((Fe.sq.spec_lt a).mono (by norm_num)), Fe.sq.spec_val ha, ← pow_mul,
       pow_succ']
 
-/-- `sqn`'s limbs stay below `2^54`. -/
-public theorem Fe.sqn.spec_lt {a : Fin 5 → BitVec 64} (ha : Fe.Lt a (2 ^ 54)) (n : ℕ) :
-    Fe.Lt (Fe.sqn.spec n a) (2 ^ 54) := by
-  induction n generalizing a with
-  | zero => exact ha
-  | succ n ih => exact ih ((Fe.sq.spec_lt a).mono (by norm_num))
-
 /-! ## Sums and differences -/
 
 /-- A limb of `a + b` without wrap. -/

@@ -39,6 +39,10 @@ def Edwards25519.add.spec (P Q : ZPt) : ZPt :=
 
 end
 
+/-- `P + Q`'s limbs are below `2^52`. -/
+public theorem Edwards25519.add.spec_lt (P Q : ZPt) : (Edwards25519.add.spec P Q).Lt (2 ^ 52) :=
+  ⟨Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _⟩
+
 /-! ## Proof -/
 
 section Proof

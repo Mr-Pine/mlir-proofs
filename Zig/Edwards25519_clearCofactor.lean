@@ -22,18 +22,6 @@ end
 
 section Proof
 
-/-- A fresh `alloca` block reads zero. -/
-private theorem readAt_alloca_zero {s : GlobalState} {k : BitVec 64} :
-    (s.alloca n).mem.readAt (s.allocaPtr.add k) w = 0 := by
-  unfold MemoryState.readAt
-  split
-  · rename_i b hb
-    simp only [GlobalState.alloca, GlobalState.allocaPtr, Pointer.add, MemoryState.getElem?_eq,
-      Std.ExtHashMap.getElem?_insert_self, Option.some.injEq] at hb
-    subst hb
-    simp
-  · rfl
-
 /-- `Edwards25519.clearCofactor` stores `spec P` at `out`, its last 8 bytes zero, for `x, y, z`
 below `2^53`; `out` may be `p`. -/
 public theorem Edwards25519_clearCofactor.call_eq (out p : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -106,7 +94,7 @@ public theorem Edwards25519_clearCofactor.call_eq (out p : Pointer) (s : GlobalS
       MemoryState.readRest_alloca hwf₀.alloca.alloca (hF.alloca hwf₀.alloca),
       MemoryState.readRest_alloca hwf₀.alloca hF]
     unfold MemoryState.readRest
-    rw [readAt_alloca_zero]; rfl
+    rw [readAt_alloca_self]; rfl
   clear hM h32 h42 hF
   have f1 := hout.2
   have f2 := ht2P.2

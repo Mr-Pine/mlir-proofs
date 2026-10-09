@@ -44,15 +44,6 @@ theorem identity_bits :
       Edwards25519.identity.bits 0#64 := by
   decide +kernel
 
-/-- A point read back from its bits, where it fits. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_of_readAt {m : MemoryState} {p : Pointer}
-    {P : ZPt} {rest : BitVec 64} (h : m.PtFit p) (hr : m.readAt p 1344 = P.bits rest) :
-    m.readPt p = P ∧ m.readRest p = rest := by
-  have hm : m = m.storePt p P rest := by
-    rw [MemoryState.storePt, ← hr, MemoryState.storeAt_readAt_self h.2]
-  rw [hm]
-  exact MemoryState.readPt_storePt_self h
-
 /-- The identity global's block (`step_addressof … value_eq`'s facts) read back. -/
 public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_identity {m : MemoryState} {p : Pointer}
     {hw : EdTy.width = 1344} (hf : Fits m p 1344) (ho : p.offset = 0)

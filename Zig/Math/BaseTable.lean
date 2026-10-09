@@ -1,6 +1,7 @@
 module
 
 public import Ed25519.BasePoint
+public import Ed25519.Order
 public import Zig.Math.Point
 public import Zig.Edwards25519_basePointPc
 import Mathlib.Tactic.LinearCombination
@@ -15,81 +16,13 @@ open _root_.Ed25519
 
 namespace BaseTable
 
+open Ed25519.ExtN
+
 /-! ## Extended coordinates over `ℕ` -/
-
-/-- `a b mod p`. -/
-def mulN (a b : ℕ) : ℕ :=
-  a * b % p
-
-/-- `a + b mod p`. -/
-def addN (a b : ℕ) : ℕ :=
-  (a + b) % p
-
-/-- `a - b mod p`. -/
-def subN (a b : ℕ) : ℕ :=
-  (a + (p - b % p)) % p
-
-theorem cast_mulN (a b : ℕ) : ((mulN a b : ℕ) : ZMod p) = a * b := by
-  rw [mulN, ZMod.natCast_mod, Nat.cast_mul]
-
-theorem cast_addN (a b : ℕ) : ((addN a b : ℕ) : ZMod p) = a + b := by
-  rw [addN, ZMod.natCast_mod, Nat.cast_add]
-
-theorem cast_subN (a b : ℕ) : ((subN a b : ℕ) : ZMod p) = a - b := by
-  rw [subN, ZMod.natCast_mod, Nat.cast_add, Nat.cast_sub (Nat.mod_lt _ (by decide)).le,
-    ZMod.natCast_self, ZMod.natCast_mod]
-  ring
-
-/-- `2 d`. -/
-def d2N : ℕ :=
-  2 * 37095705934669439343138083508754565189542113879843219016388785533085940283555
-
-theorem cast_d2N : ((d2N : ℕ) : ZMod p) = 2 * d := by
-  rw [d2N, Nat.cast_mul, Nat.cast_ofNat, Nat.cast_ofNat, d]
-
-/-- Extended coordinates `(X : Y : T : Z)` over `ℕ`. -/
-structure E where
-  X : ℕ
-  Y : ℕ
-  T : ℕ
-  Z : ℕ
-  deriving DecidableEq
-
-/-- `A` are extended coordinates of `P`, mod `p`. -/
-def Rep (P : Point) (A : E) : Prop :=
-  IsExt P.x P.y A.X A.Y A.T A.Z
-
-/-- The sum, by `add_compl`'s completed point. -/
-def eadd (A B : E) : E :=
-  let r₅ := mulN (subN A.Y A.X) (subN B.Y B.X)
-  let r₆ := mulN (addN A.Y A.X) (addN B.Y B.X)
-  let r₇ := mulN (mulN A.T B.T) d2N
-  let r₈ := mulN (addN A.Z A.Z) B.Z
-  ⟨mulN (subN r₆ r₅) (subN r₈ r₇), mulN (addN r₆ r₅) (addN r₈ r₇), mulN (subN r₆ r₅) (addN r₆ r₅),
-    mulN (addN r₈ r₇) (subN r₈ r₇)⟩
-
-theorem rep_add {P Q : Point} {A B : E} (hA : Rep P A) (hB : Rep Q B) : Rep (P + Q) (eadd A B) := by
-  simp only [Rep, eadd, cast_mulN, cast_addN, cast_subN, cast_d2N, Point.add_x, Point.add_y]
-  obtain ⟨n₁, n₂, c₁, c₂⟩ := add_compl hA hB P.on Q.on
-  exact
-    ⟨mul_ne_zero n₁ n₂, by
-      rw [c₁]; ring, by
-      rw [c₂]; ring, by ring⟩
 
 /-- `B`. -/
 def BE : E :=
-  ⟨15112221349535400772501151409588531511454012693041857206046113283949847762202,
-    46316835694926478169428394003475163141307993866256225615783033603165251855960,
-    15112221349535400772501151409588531511454012693041857206046113283949847762202 *
-        46316835694926478169428394003475163141307993866256225615783033603165251855960 %
-      p,
-    1⟩
-
-theorem rep_B : Rep basePoint BE := by
-  refine ⟨by simp [BE], ?_, ?_, ?_⟩
-  · rw [BE, Nat.cast_one, mul_one, Nat.cast_ofNat]; rfl
-  · rw [BE, Nat.cast_one, mul_one, Nat.cast_ofNat]; rfl
-  · rw [BE, Nat.cast_one, mul_one, ZMod.natCast_mod, Nat.cast_mul]
+  ⟨BxN, ByN, BxN * ByN % p, 1⟩
 
 /-- `B` and `A` are the same projective point, `B.Z ≠ 0`: cross-multiplied. -/
 def projEq (A B : E) : Bool :=
@@ -139,9 +72,6 @@ theorem tbl_ok :
       (List.range 15).all fun n => projEq (eadd (tbl n) BE) (tbl (n + 1)) := by
   decide +kernel
 
-theorem rep_zero : Rep 0 ⟨0, 1, 0, 1⟩ :=
-  ⟨by simp, by simp, by simp, by simp⟩
-
 /-- Entry `n` represents `n B`. -/
 theorem rep_tbl : ∀ n, n < 16 → Rep (n • basePoint) (tbl n) := by
   obtain ⟨h0, hs⟩ := Bool.and_eq_true _ _ ▸ tbl_ok
@@ -169,12 +99,5 @@ public theorem Edwards25519.basePointPc.pts_ext (i : Fin 16) :
   unfold ZPt.Ext
   simp only [Limbs.val_nat]
   exact h
-
-/-- The base-point table's limbs are below `2^52`. -/
-public theorem Edwards25519.basePointPc.pts_lt (i : Fin 16) :
-    (Edwards25519.basePointPc.pts[i]).Lt (2 ^ 52) := by
-  revert i
-  unfold ZPt.Lt Fe.Lt
-  decide +kernel
 
 end LeanMLIR.RIR.Zig

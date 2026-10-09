@@ -42,17 +42,6 @@ end
 
 section Proof
 
-/-- A fresh `alloca` block reads zero. -/
-theorem readAt_alloca_fresh {s : GlobalState} : (s.alloca n).mem.readAt s.allocaPtr w = 0 := by
-  unfold MemoryState.readAt
-  split
-  · rename_i b hb
-    simp only [GlobalState.alloca, GlobalState.allocaPtr, MemoryState.getElem?_eq,
-      Std.ExtHashMap.getElem?_insert_self, Option.some.injEq] at hb
-    subst hb
-    simp
-  · rfl
-
 /-- Bit `m` of nine packed points: bit `m % 1344` of lane `m / 1344`. -/
 theorem getLsbD_packLanes9 (v : Vector (BitVec 1344) 9) {m : Nat} (hm : m < 1344 * 9) :
     (BitVec.packLanes v).getLsbD m = (v[m / 1344]'(by omega)).getLsbD (m % 1344) := by
@@ -170,15 +159,6 @@ theorem Edwards25519_add.call_eq_tmp (out p q : Pointer) (s : GlobalState) (hwf 
   rw [Edwards25519_add.call_eq out p q s hwf hout hp hq hP hQ, hr]
   rfl
 
-/-- `P + Q`'s limbs are below `2^52`. -/
-public theorem Edwards25519.precompute.add_lt (P Q : ZPt) :
-    (Edwards25519.add.spec P Q).Lt (2 ^ 52) :=
-  ⟨Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _⟩
-
-/-- Limbs below `2^52` are below `2^53`. -/
-public theorem ZPt.Lt.mono53 {P : ZPt} (h : P.Lt (2 ^ 52)) : P.Lt (2 ^ 53) :=
-  ⟨h.1.mono (by decide), h.2.1.mono (by decide), h.2.2.1.mono (by decide), h.2.2.2.mono (by decide)⟩
-
 /-- `hA`'s table, entry `j` stored over a checkpoint: `hA1` for `tbl_post`, and the entry's fit as
 `hcj`. -/
 local macro "tbl_pre " j:num : tactic =>
@@ -249,13 +229,13 @@ public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalStat
   iterate 7 step_pure
   step_alloca with t9
   have hz9 : S.mem.readAt t9 1344 = ZPt.zero.bits 0#64 := by
-    rw [hS, ht9, ZPt.zero_bits]; exact readAt_alloca_fresh
+    rw [hS, ht9, ZPt.zero_bits]; exact readAt_alloca_allocaPtr
   step_alloca with t10
   have hz10 : S.mem.readAt t10 1344 = ZPt.zero.bits 0#64 := by
-    rw [hS, ht10, ZPt.zero_bits]; exact readAt_alloca_fresh
+    rw [hS, ht10, ZPt.zero_bits]; exact readAt_alloca_allocaPtr
   step_alloca with c
   have hA : S.mem.readAt c 12096 = BitVec.packLanes (Vector.replicate 9 (0#1344)) := by
-    rw [hS, hc, packLanes_zero]; exact readAt_alloca_fresh
+    rw [hS, hc, packLanes_zero]; exact readAt_alloca_allocaPtr
   checkpoint hck0
   have hA1 := fun x => readAt_tbl_storeAt hc_fits hc_off hA (j := 0) (by omega) x
   have hc1344 := hc_fits.mono (show 1344 ≤ 12096 by omega)
@@ -343,7 +323,7 @@ public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalStat
   -- 6: dbl of entry 3
   iterate 2 step_pure
   have hB : (Edwards25519.add.spec (Edwards25519.dbl.spec P) P).Lt (2 ^ 53) :=
-    (Edwards25519.precompute.add_lt _ _).mono53
+    (Edwards25519.add.spec_lt _ _).mono53
   have hX := hB.1
   have hY := hB.2.1
   have hZ := hB.2.2.1

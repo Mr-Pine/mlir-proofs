@@ -1,6 +1,7 @@
 module
 
 public import Common.Limbs
+public import Zig.Memory
 import SSA.Projects.RIR.Run.Tactic.Memory
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring

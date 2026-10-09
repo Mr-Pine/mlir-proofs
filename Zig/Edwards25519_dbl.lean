@@ -44,15 +44,6 @@ public theorem Edwards25519.dbl.spec_lt (P : ZPt) : (Edwards25519.dbl.spec P).Lt
 
 section Proof
 
-/-- `fix_load`, its read fact cleared. -/
-local macro "fix_load' " v:ident hv:ident h:term : tactic =>
-  `(tactic|
-    ( have h' := $h; try simp only [MemoryState.readLimbs] at h'
-      rw [$(Lean.mkIdent `hS):ident] at h'; try dsimp only at h'
-      rw [h'] at $hv:ident
-      subst $v:ident
-      clear h'))
-
 /-- A product of limbs below `2^53` is below `2^106`. -/
 theorem zmul_lt53 {x y : BitVec 64} (hx : x.toNat < 2 ^ 53) (hy : y.toNat < 2 ^ 53) :
     (BitVec.setWidth 128 x * BitVec.setWidth 128 y).toNat < 2 ^ 106 := by
@@ -217,18 +208,6 @@ theorem Fe_carry128.call_eq_of (out r : Pointer) (s : GlobalState) (hwf : s.WF)
   subst hR
   exact Fe_carry128.call_eq out r s hwf hout hr hpre
 
-/-- `Fe_sq.call_eq` on the limbs `A` read at `a`. -/
-theorem Fe_sq.call_eq_of (out a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A)
-    (hA' : Fe.Lt A (2 ^ 54)) :
-    Fe_sq.call (Fe_sq.args (.value out) (.value a)) s =
-      .value
-        (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
-            mem := s.mem.storeLimbs out (Fe.sq.spec A) }) := by
-  subst hA
-  exact Fe_sq.call_eq out a s hwf hout ha hA'
-
 set_option maxHeartbeats 2000000 in
 /-- `Edwards25519.dbl` stores `spec P` at `out`, `is_base` false, for `x, y, z` below `2^53`; `out`
 may be `p`. -/
@@ -318,35 +297,35 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
         have := hX2 i; have := hY2 i; omega)
   step_load
   step_load with ux0
-  fix_load' ux0 hux0(congrFun hread_x 0 : S.mem.readAt x 64 = _)
+  fix_load ux0 hux0(congrFun hread_x 0 : S.mem.readAt x 64 = _)
   step_pure [hyo 0]
   step_pure
   step_load with uz1
-  fix_load' uz1 huz1 hread_z_8
+  fix_load uz1 huz1 hread_z_8
   step_pure
   step_load with ux1
-  fix_load' ux1 hux1(congrFun hread_x 1 : S.mem.readAt (x.add 8#64) 64 = _)
+  fix_load ux1 hux1(congrFun hread_x 1 : S.mem.readAt (x.add 8#64) 64 = _)
   step_pure [hyo 1]
   step_pure
   step_load with uz2
-  fix_load' uz2 huz2 hread_z_16
+  fix_load uz2 huz2 hread_z_16
   step_pure
   step_load with ux2
-  fix_load' ux2 hux2(congrFun hread_x 2 : S.mem.readAt (x.add 16#64) 64 = _)
+  fix_load ux2 hux2(congrFun hread_x 2 : S.mem.readAt (x.add 16#64) 64 = _)
   step_pure [hyo 2]
   step_pure
   step_load with uz3
-  fix_load' uz3 huz3 hread_z_24
+  fix_load uz3 huz3 hread_z_24
   step_pure
   step_load with ux3
-  fix_load' ux3 hux3(congrFun hread_x 3 : S.mem.readAt (x.add 24#64) 64 = _)
+  fix_load ux3 hux3(congrFun hread_x 3 : S.mem.readAt (x.add 24#64) 64 = _)
   step_pure [hyo 3]
   step_pure
   step_load with uz4
-  fix_load' uz4 huz4 hread_z_32
+  fix_load uz4 huz4 hread_z_32
   step_pure
   step_load with ux4
-  fix_load' ux4 hux4(congrFun hread_x 4 : S.mem.readAt (x.add 32#64) 64 = _)
+  fix_load ux4 hux4(congrFun hread_x 4 : S.mem.readAt (x.add 32#64) 64 = _)
   step_pure [hyo 4]
   step_store
   iterate 4 
@@ -379,23 +358,23 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_pure
   step_pure
   step_load with v0
-  fix_load' v0 hv0 hz0
+  fix_load v0 hv0 hz0
   step_pure
   step_pure
   step_load with v1
-  fix_load' v1 hv1 hz1
+  fix_load v1 hv1 hz1
   step_pure
   step_pure
   step_load with v2
-  fix_load' v2 hv2 hz2
+  fix_load v2 hv2 hz2
   step_pure
   step_pure
   step_load with v3
-  fix_load' v3 hv3 hz3
+  fix_load v3 hv3 hz3
   step_pure
   step_pure
   step_load with v4
-  fix_load' v4 hv4 hz4
+  fix_load v4 hv4 hz4
   step_pure
   iterate 10 (step_pure [hov, zext_shl1])
   step_pure [hov] with c0

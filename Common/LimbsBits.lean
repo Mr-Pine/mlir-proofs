@@ -35,13 +35,6 @@ public theorem getLsbD_limbsBits (l : Fin 5 → BitVec 64) (j : Nat) :
     | (exfalso; omega)
     | rfl
 
-private theorem insert_insert_self (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
-    (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
-  apply Std.ExtHashMap.ext_getElem?
-  intro a
-  simp only [Std.ExtHashMap.getElem?_insert]
-  split <;> rfl
-
 /-- Storing limbs is storing their bits at once. -/
 public theorem MemoryState.storeLimbs_eq_storeAt {m : MemoryState} {p : Pointer}
     {l : Fin 5 → BitVec 64} (h : p.offset.toNat + 32 < 2 ^ 64) :

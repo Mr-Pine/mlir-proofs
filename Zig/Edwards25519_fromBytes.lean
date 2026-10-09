@@ -117,16 +117,6 @@ public theorem Edwards25519_fromBytes_invalid.value_eq (s : GlobalState) :
       .value (Ty.wrap Edwards25519_fromBytes_invalid.lit, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
-/-- `Fe_sq.call_eq` on the limbs `A` read at `a`. -/
-theorem Fe_sq.call_eq_of (out a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A)
-    (hA' : Fe.Lt A (2 ^ 54)) :
-    Fe_sq.call (Fe_sq.args (.value out) (.value a)) s =
-      .value
-        (.nil, { alloc := ⟨s.alloc.nextFreeBlock + 2⟩, mem := s.mem.storeLimbs out (Fe.sq.spec A) }) := by
-  subst hA
-  exact Fe_sq.call_eq out a s hwf hout ha hA'
-
 /-- `Fe_sqn.call_eq` on the limbs `A` read at `a`. -/
 theorem Fe_sqn.call_eq_of (out a : Pointer) (n : BitVec 64) (s : GlobalState) (hwf : s.WF)
     (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A)
@@ -138,16 +128,6 @@ theorem Fe_sqn.call_eq_of (out a : Pointer) (n : BitVec 64) (s : GlobalState) (h
             mem := s.mem.storeLimbs out (Fe.sqn.spec n.toNat A) }) := by
   subst hA
   rw [Fe_sqn.call_eq out a n s hwf hout ha hA' hn, Nat.add_assoc]
-
-/-- `Fe_isZero.call_eq` on the limbs `A` read at `a`. -/
-theorem Fe_isZero.call_eq_of (a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A) (hA' : Fe.Lt A (2 ^ 63)) :
-    Fe_isZero.call (Fe_isZero.args (.value a)) s =
-      .value
-        (.cons (.value (Fe.isZero.spec A)) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem }) := by
-  subst hA
-  exact Fe_isZero.call_eq a s hwf ha hA'
 
 /-- `Fe_neg.call_eq` on the limbs `A` read at `a`. -/
 theorem Fe_neg.call_eq_of (out a : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -243,24 +223,6 @@ theorem _root_.LeanMLIR.RIR.MemoryState.readBlk_storeLimbs_add {m : MemoryState}
   rw [MemoryState.storeLimbs_eq_storeAt (by simp [Pointer.add, ho]; omega)]
   exact MemoryState.readBlk_storeAt_add hf ho hw
 
-/-- `spliceBits` as masks, for `bv_decide` (`Point.lean`'s, private there). -/
-theorem spliceBits_eq' {n w : Nat} (bytes : BitVec n) (off : Nat) (x : BitVec w) :
-    spliceBits bytes off x =
-      (bytes &&& ~~~((BitVec.allOnes w).setWidth n <<< off)) ||| (x.setWidth n <<< off) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [getLsbD_spliceBits, BitVec.getLsbD_or, BitVec.getLsbD_and, BitVec.getLsbD_not,
-    BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth, BitVec.getLsbD_allOnes]
-  by_cases h1 : off ≤ i
-  · by_cases h2 : i < off + w
-    · have h3 : i - off < n := by omega
-      have h4 : i - off < w := by omega
-      simp [h1, h2, hi, h3, h4, show ¬i < off by omega]
-    · have h4 : ¬i - off < w := by omega
-      have hx : x.getLsbD (i - off) = false := BitVec.getLsbD_of_ge x _ (by omega)
-      simp [h1, h2, hi, h4, hx]
-  · simp [h1, hi, show i < off by omega]
-
 /-- The point's fields stored into a 160-byte block (`t` first), read back whole. -/
 theorem readAt_fields {m : MemoryState} {p : Pointer} (hf : Fits m p 1280) (ho : p.offset = 0)
     (x y z t : Fin 5 → BitVec 64) :
@@ -279,7 +241,7 @@ theorem readAt_fields {m : MemoryState} {p : Pointer} (hf : Fits m p 1280) (ho :
   generalize limbsBits y = b
   generalize limbsBits z = c
   generalize limbsBits t = d
-  simp only [spliceBits_eq']
+  simp only [spliceBits_eq]
   bv_decide
 
 /-- A store past a point's last 8 bytes leaves them. -/
@@ -320,7 +282,7 @@ theorem storeAt_point_eq {m : MemoryState} {p : Pointer} (h : m.PtFit p)
   generalize limbsBits y = b
   generalize limbsBits z = c
   generalize limbsBits t = d
-  simp only [spliceBits_eq', show (0#64).toNat * 8 = 0 from rfl,
+  simp only [spliceBits_eq, show (0#64).toNat * 8 = 0 from rfl,
     show (160#64).toNat * 8 = 1280 from rfl]
   bv_decide
 
@@ -368,16 +330,6 @@ theorem Fe.cMov.spec_lt' {F A : Fin 5 → BitVec 64} {c : BitVec 64} {C : Nat} (
     (hA : Fe.Lt A C) (hc : c.toNat < 2) : Fe.Lt (Fe.cMov.spec F A c) C := by
   rw [Fe.cMov.spec_eq _ _ _ hc]; split <;> assumption
 
-/-- `neg` adds below `2^52` to zero. -/
-theorem Fe.neg.spec_lt (a : Fin 5 → BitVec 64) : Fe.Lt (Fe.neg.spec a) (2 ^ 53) :=
-  (Fe.sub.spec_lt (A := 1) (b := a) (fun _ => by simp) (by decide)).mono (by decide)
-
-/-- `sqn` keeps limbs below `2^54`. -/
-theorem Fe.sqn.spec_lt : ∀ (n : Nat) {a : Fin 5 → BitVec 64}, Fe.Lt a (2 ^ 54) →
-    Fe.Lt (Fe.sqn.spec n a) (2 ^ 54)
-  | 0, _, h => h
-  | n + 1, a, _ => Fe.sqn.spec_lt n ((Fe.sq.spec_lt a).mono (by decide))
-
 /-- `fromBytes`'s limbs are below `2^51`. -/
 theorem Fe.fromBytes.spec_lt (b : BitVec 256) : Fe.Lt (Fe.fromBytes.spec b) (2 ^ 51) := by
   intro i; fin_cases i <;> exact mask_lt _
@@ -414,7 +366,7 @@ macro "fe_sqn " a:ident ", " k:num " as " n:ident : tactic =>
   `(tactic|
     ( have h1 : Fe.Lt $a (2 ^ 54) := $(ltIdent a).mono (by decide)
       step_call using Fe_sqn.call_eq_of consuming h1
-      have $(ltIdent n) := Fe.sqn.spec_lt $k ($(ltIdent a).mono (by decide))
+      have $(ltIdent n) := Fe.sqn.spec_lt ($(ltIdent a).mono (by decide)) $k
       name_limbs $n
       stash $(Lean.mkIdent (n.getId.appendBefore "h"))))
 
@@ -715,7 +667,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   stash hX1
   have h1 := X1_lt.mono (by decide : (2:Nat) ^ 52 ≤ 2 ^ 63)
   step_call using Fe_neg.call_eq_of consuming h1
-  have NX_lt := Fe.neg.spec_lt X1
+  have NX_lt := Fe.neg.spec_lt53 X1
   name_limbs NX
   stash hNX
   step_pure
@@ -790,7 +742,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   have f2 := hpt_fits
   step_memcpy consuming f1 f2 hptv
   step_pure
-  have hz : S.mem.readAt flag 8 = 0#8 := hrfl.trans (by simp only [spliceBits_eq']; bv_decide)
+  have hz : S.mem.readAt flag 8 = 0#8 := hrfl.trans (by simp only [spliceBits_eq]; bv_decide)
   step_load
   have f1 : Fits S.mem (out.add 160#64) 8 :=
     Fits.add_of_le (by simp [BitVec.uaddOverflow]; omega) (by decide) hout

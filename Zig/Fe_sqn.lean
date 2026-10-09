@@ -33,20 +33,17 @@ end Fe_sqn
 
 end
 
+/-- `a^(2^n)`'s limbs stay below `2^54`. -/
+public theorem Fe.sqn.spec_lt {a : Fin 5 → BitVec 64} (ha : Fe.Lt a (2 ^ 54)) :
+    ∀ n, Fe.Lt (Fe.sqn.spec n a) (2 ^ 54)
+  | 0 => ha
+  | n + 1 => Fe.sqn.spec_lt ((Fe.sq.spec_lt a).mono (by decide)) n
+
 /-! ## Proof -/
 
 section Proof
 
 namespace Fe_sqn
-
-/-- The counter's `+ 1` does not wrap. -/
-theorem counter_overflow {i : Nat} (h : i + 1 < 2 ^ 63) :
-    (BitVec.ofNat 64 i).uaddOverflow 1#64 = false ∧
-      (BitVec.ofNat 64 i).saddOverflow 1#64 = false := by
-  have : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  constructor
-  · simp [BitVec.uaddOverflow]; omega
-  · simp [BitVec.saddOverflow, this]; omega
 
 /-- `sq` keeps limbs below `2^54`. -/
 theorem sq_lt (x : Fin 5 → BitVec 64) : Fe.Lt (Fe.sq.spec x) (2 ^ 54) := fun i =>

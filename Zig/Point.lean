@@ -2,6 +2,7 @@ module
 
 public import Common.LimbsBits
 public import Zig.Fe
+public import Zig.Memory
 import Std.Data.ExtHashMap.Lemmas
 import SSA.Projects.RIR.Run.Tactic.Memory
 import Std.Tactic.BVDecide
@@ -64,13 +65,6 @@ theorem ZPt.getLsbD_bits (P : ZPt) (rest : BitVec 64) (j : Nat) :
     first
     | (exfalso; omega)
     | rfl
-
-private theorem insert_insert_self (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
-    (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
-  apply Std.ExtHashMap.ext_getElem?
-  intro a
-  simp only [Std.ExtHashMap.getElem?_insert]
-  split <;> rfl
 
 /-- A second store at the same place, of the same width, overwrites the first. -/
 public theorem _root_.LeanMLIR.RIR.MemoryState.storeAt_storeAt_self {m : MemoryState} {p : Pointer}
@@ -213,24 +207,6 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_storePt_self {m : MemorySt
   · simp only [MemoryState.readRest, MemoryState.storePt] at hrest ⊢
     rw [hrest, show (160#64).toNat * 8 = 1280 from rfl, sr]
 
-/-- `spliceBits` as masks, for `bv_decide`. -/
-theorem spliceBits_eq {n w : Nat} (bytes : BitVec n) (off : Nat) (x : BitVec w) :
-    spliceBits bytes off x =
-      (bytes &&& ~~~((BitVec.allOnes w).setWidth n <<< off)) ||| (x.setWidth n <<< off) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [getLsbD_spliceBits, BitVec.getLsbD_or, BitVec.getLsbD_and, BitVec.getLsbD_not,
-    BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth, BitVec.getLsbD_allOnes]
-  by_cases h1 : off ≤ i
-  · by_cases h2 : i < off + w
-    · have h3 : i - off < n := by omega
-      have h4 : i - off < w := by omega
-      simp [h1, h2, hi, h3, h4, show ¬i < off by omega]
-    · have h4 : ¬i - off < w := by omega
-      have hx : x.getLsbD (i - off) = false := BitVec.getLsbD_of_ge x _ (by omega)
-      simp [h1, h2, hi, h4, hx]
-  · simp [h1, hi, show i < off by omega]
-
 /-- The splices the field stores make, as the point's bits. -/
 theorem splices_eq (B : BitVec 1344) (x y z t : Fin 5 → BitVec 64) (b : BitVec 1) :
     spliceBits
@@ -293,6 +269,10 @@ public theorem _root_.LeanMLIR.RIR.Pointer.field_offset {p : Pointer}
 @[expose]
 public def ZPt.Lt (P : ZPt) (B : ℕ) : Prop :=
   Fe.Lt P.x B ∧ Fe.Lt P.y B ∧ Fe.Lt P.z B ∧ Fe.Lt P.t B
+
+/-- Limbs below `2^52` are below `2^53`. -/
+public theorem ZPt.Lt.mono53 {P : ZPt} (h : P.Lt (2 ^ 52)) : P.Lt (2 ^ 53) :=
+  ⟨h.1.mono (by decide), h.2.1.mono (by decide), h.2.2.1.mono (by decide), h.2.2.2.mono (by decide)⟩
 
 /-! ### Fit across steps -/
 
@@ -399,5 +379,14 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_copy {m : MemoryState} {p 
   have hp' : m.PtFit p := ⟨hp.1, Fits.storeAt_iff.mp hp.2⟩
   have hc' : m.PtFit c := ⟨hc.1, Fits.storeAt_iff.mp hc.2⟩
   rw [(MemoryState.readPt_storeAt_readAt hp' hc').1, MemoryState.readPt_storeAt_of_id_ne hne]
+
+/-- A point read back from its 168 bytes. -/
+public theorem _root_.LeanMLIR.RIR.MemoryState.readPt_of_readAt {m : MemoryState} {p : Pointer}
+    {P : ZPt} {rest : BitVec 64} (h : m.PtFit p) (hr : m.readAt p 1344 = P.bits rest) :
+    m.readPt p = P ∧ m.readRest p = rest := by
+  have hm : m = m.storePt p P rest := by
+    rw [MemoryState.storePt, ← hr, MemoryState.storeAt_readAt_self h.2]
+  rw [hm]
+  exact MemoryState.readPt_storePt_self h
 
 end LeanMLIR.RIR.Zig

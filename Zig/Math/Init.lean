@@ -2,7 +2,7 @@ module
 
 public import Zig.Verifier_init
 public import Zig.Math.Verify
-public import Zig.Math.FromBytesLink
+public import Zig.Math.Decode
 public import Zig.Math.PointDbl
 
 /-! `Verifier.init`'s error code is `verify`'s rejection before hashing: `-code` when nonzero. -/
@@ -23,8 +23,7 @@ public theorem Verifier.init.verify_of_code_ne (msg : List (BitVec 8)) {r S A : 
   · simp [hS]
   simp only [hS, ite_true, ne_eq, not_true_eq_false, ite_false, show ¬ell ≤ S.toNat by omega]
     at hc ⊢
-  rw [Edwards25519.fromBytes.spec_eq] at hc ⊢
-  rcases hA : Decode.fromBytes A with _ | a
+  rcases hA : Edwards25519.fromBytes.spec A with _ | a
   · rw [(Decode.fromBytes_eq_none A).1 hA]
     rfl
   obtain ⟨PA, hPA, hext, -, hlt⟩ := Decode.fromBytes_eq_some hA
@@ -43,8 +42,7 @@ public theorem Verifier.init.verify_of_code_ne (msg : List (BitVec 8)) {r S A : 
     rfl
   have : ¬p ≤ r.toNat % 2 ^ 255 := by simp only [p]; omega
   simp only [hr, this, ite_true, ite_false, not_true_eq_false] at hc ⊢
-  rw [Edwards25519.fromBytes.spec_eq] at hc ⊢
-  rcases hR : Decode.fromBytes r with _ | R
+  rcases hR : Edwards25519.fromBytes.spec r with _ | R
   · rw [(Decode.fromBytes_eq_none r).1 hR]
     rfl
   obtain ⟨PR, hPR, hextR, -, hltR⟩ := Decode.fromBytes_eq_some hR
@@ -74,7 +72,7 @@ public theorem Verifier.init.checks_of_code_eq {r S A : BitVec 256}
   rcases hA : Edwards25519.fromBytes.spec A with _ | a
   · rw [hA] at hc
     simp at hc
-  obtain ⟨PA, hPA, hext, hz, hlt⟩ := Decode.fromBytes_eq_some ((Edwards25519.fromBytes.spec_eq A) ▸ hA)
+  obtain ⟨PA, hPA, hext, hz, hlt⟩ := Decode.fromBytes_eq_some hA
   rw [hA] at hc
   simp only at hc
   rw [Edwards25519.rejectIdentity.spec_eq hext (hlt.1.mono (by decide))] at hc
@@ -90,7 +88,7 @@ public theorem Verifier.init.checks_of_code_eq {r S A : BitVec 256}
   · rw [hR] at hc
     simp at hc
   obtain ⟨PR, hPR, hextR, hzR, hltR⟩ :=
-    Decode.fromBytes_eq_some ((Edwards25519.fromBytes.spec_eq r) ▸ hR)
+    Decode.fromBytes_eq_some hR
   rw [hR] at hc
   simp only at hc
   rw [Edwards25519.rejectIdentity.spec_eq hextR (hltR.1.mono (by decide))] at hc

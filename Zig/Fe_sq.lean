@@ -243,6 +243,18 @@ public theorem Fe_sq.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   erase_frame
   simp [GlobalState.alloca]
 
+/-- `call_eq` on the limbs `A` read at `a`. -/
+public theorem Fe_sq.call_eq_of (out a : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A)
+    (hA' : Fe.Lt A (2 ^ 54)) :
+    Fe_sq.call (Fe_sq.args (.value out) (.value a)) s =
+      .value
+        (.nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
+            mem := s.mem.storeLimbs out (Fe.sq.spec A) }) := by
+  subst hA
+  exact Fe_sq.call_eq out a s hwf hout ha hA'
+
 end Proof
 
 end LeanMLIR.RIR.Zig

@@ -19,21 +19,13 @@ def Edwards25519.sub.spec (P Q : ZPt) : ZPt :=
 
 end
 
+/-- `P - Q`'s limbs are below `2^52`. -/
+public theorem Edwards25519.sub.spec_lt (P Q : ZPt) : (Edwards25519.sub.spec P Q).Lt (2 ^ 52) :=
+  Edwards25519.add.spec_lt _ _
+
 /-! ## Proof -/
 
 section Proof
-
-/-- A fresh `alloca` block reads zero. -/
-public theorem readAt_alloca_self {s : GlobalState} {k : BitVec 64} :
-    (s.alloca n).mem.readAt (s.allocaPtr.add k) w = 0 := by
-  unfold MemoryState.readAt
-  split
-  · rename_i b hb
-    simp only [GlobalState.alloca, GlobalState.allocaPtr, Pointer.add, MemoryState.getElem?_eq,
-      Std.ExtHashMap.getElem?_insert_self, Option.some.injEq] at hb
-    subst hb
-    simp
-  · rfl
 
 /-- `neg`'s `call_eq` on the point `Q` read at `p`. -/
 public theorem Edwards25519_neg.call_eq_of (out p : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -137,6 +129,18 @@ public theorem Edwards25519_sub.call_eq (out p q : Pointer) (s : GlobalState) (h
   rw [MemoryState.readAt_storeAt_self (Fits.storeAt hF'.2),
     MemoryState.readRest_storeAt_of_id_ne h32, hz, hP₀, hQ₀]
   simp [GlobalState.alloca, Edwards25519.sub.spec, ZPt.flag]
+
+/-- `call_eq` on the points `P`, `Q` read at `p`, `q`. -/
+public theorem Edwards25519_sub.call_eq_of (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hout : s.mem.PtFit out) (hp : s.mem.PtFit p) (hq : s.mem.PtFit q) (hPd : s.mem.readPt p = P)
+    (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53)) (hQ : Q.Lt (2 ^ 53)) :
+    Edwards25519_sub.call (Edwards25519_sub.args (.value out) (.value p) (.value q)) s =
+      .value
+        (.nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 47⟩,
+            mem := s.mem.storePt out (Edwards25519.sub.spec P Q) 0#64 }) := by
+  subst hPd hQd
+  exact Edwards25519_sub.call_eq out p q s hwf hout hp hq hP hQ
 
 end Proof
 

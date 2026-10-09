@@ -60,7 +60,8 @@ theorem Pointer.offsetInBits_add_limb {p : Pointer} (h : p.offset.toNat + 32 < 2
   rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
   omega
 
-private theorem insert_insert_self (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
+/-- Inserting twice at a key keeps the second. -/
+public theorem insert_insert_self (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
     (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
   apply Std.ExtHashMap.ext_getElem?
   intro a

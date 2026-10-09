@@ -19,14 +19,6 @@ open _root_.Ed25519
 namespace Sha512_final
 
 
-/-- The counter's `+ 1` wraps neither way. -/
-theorem counter_overflow {i : Nat} (h : i + 1 < 2 ^ 63) :
-    (BitVec.ofNat 64 i).saddOverflow 1#64 = false ∧ (BitVec.ofNat 64 i).uaddOverflow 1#64 = false := by
-  have : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  constructor
-  · simp [BitVec.saddOverflow, this]; omega
-  · simp [BitVec.uaddOverflow]; omega
-
 /-- The length's bytes `x`, `x >>> 8`, … stored at `buf[127 - i]`, `buf[126 - i]`, …. -/
 @[expose] public def lenStores (d : Pointer) : (x : BitVec 128) → (i n : Nat) → MemoryState → MemoryState
   | _, _, 0, m => m

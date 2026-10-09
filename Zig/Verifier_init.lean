@@ -148,7 +148,7 @@ theorem storeFromBytes_eq {m : MemoryState} {out : Pointer} (hf : Fits m out 140
     rw [Pointer.add_zero] at e0
     rw [e0, MemoryState.readAt_storeAt_self hf, MemoryState.storeAt_storeAt_self]
     congr 1
-    simp only [Edwards25519.fromBytes.bits, spliceBits_eq', show (0#64).toNat * 8 = 0 from rfl,
+    simp only [Edwards25519.fromBytes.bits, spliceBits_eq, show (0#64).toNat * 8 = 0 from rfl,
       show (168#64).toNat * 8 = 1344 from rfl, show (0#64 &&& 0xffffffffffffff00#64) = 0#64 from rfl]
     generalize P.bits 0#64 = B
     bv_decide
@@ -210,26 +210,6 @@ theorem fbBits_code (o : Option ZPt) :
     generalize P.bits 0#64 = B
     bv_decide
 
-/-- A point's bits read where it fits: the point and its last 8 bytes. -/
-theorem readPt_of_bits {m : MemoryState} {p : Pointer} {P : ZPt} {rest : BitVec 64} (hpf : m.PtFit p)
-    (h : m.readAt p 1344 = P.bits rest) : m.readPt p = P ∧ m.readRest p = rest := by
-  have e := MemoryState.readAt_eq_ptBits hpf.2 hpf.1
-  rw [h] at e
-  obtain ⟨sx, sy, sz, st, sr⟩ := slices_bits P rest
-  obtain ⟨sx', sy', sz', st', sr'⟩ := slices_bits (m.readPt p) (m.readRest p)
-  rw [← e] at sx' sy' sz' st' sr'
-  have hx := sx'.symm.trans sx
-  have hy := sy'.symm.trans sy
-  have hz := sz'.symm.trans sz
-  have ht := st'.symm.trans st
-  refine ⟨?_, sr'.symm.trans sr⟩
-  generalize m.readPt p = Q at hx hy hz ht ⊢
-  obtain ⟨x, y, z, t⟩ := P
-  obtain ⟨x', y', z', t'⟩ := Q
-  simp only at hx hy hz ht
-  subst hx hy hz ht
-  rfl
-
 /-- A block holding `fromBytes.bits (some P)`: the point `P` there. -/
 theorem fb_point {m : MemoryState} {p : Pointer} {P : ZPt} (hf : Fits m p 1408) (ho : p.offset = 0)
     (h : m.readAt p 1408 = Edwards25519.fromBytes.bits (some P)) :
@@ -240,7 +220,7 @@ theorem fb_point {m : MemoryState} {p : Pointer} {P : ZPt} (hf : Fits m p 1408) 
     generalize P.bits 0#64 = B
     bv_decide
   have hpf : m.PtFit p := ⟨by simp [ho], Sha512_update.fits_le hf (by omega)⟩
-  exact ⟨hpf, (readPt_of_bits hpf h1344).1, h1344⟩
+  exact ⟨hpf, (MemoryState.readPt_of_readAt hpf h1344).1, h1344⟩
 
 /-- A decoded point's `x` limbs are below `2^63`. -/
 theorem fromBytes_x_lt {b : BitVec 256} {P : ZPt} (h : Edwards25519.fromBytes.spec b = some P) :
@@ -252,12 +232,12 @@ theorem fromBytes_x_lt {b : BitVec 256} {P : ZPt} (h : Edwards25519.fromBytes.sp
   · cases h
     have h1 := Fe.cMov.spec_lt' (Fe.mul.spec_lt (Fe.pow2523.spec (Fe.mul.spec u' v')) u')
       (Fe.mul.spec_lt x Fe.sqrtm1) (setWidth_xor_one_lt hm)
-    exact (Fe.cMov.spec_lt' (h1.mono (by decide)) (Fe.neg.spec_lt _)
+    exact (Fe.cMov.spec_lt' (h1.mono (by decide)) (Fe.neg.spec_lt53 _)
       (sign_lt (b.extractLsb' 248 8) _)).mono (by decide)
 
 /-- A full-width splice at `0` replaces. -/
 theorem spliceBits_full (X B : BitVec n) : spliceBits X 0 B = B := by
-  simp only [spliceBits_eq']
+  simp only [spliceBits_eq]
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
   simp [hi]
@@ -335,7 +315,7 @@ theorem upd1_eq (r : BitVec 256) :
     spliceBits (0#1152 ++ Verifier.init.ivState ++ 0#128) 0
         (upd32 (0#1152 ++ Verifier.init.ivState ++ 0#128) 0#8 0#128 r) = hash1 r := by
   rw [spliceBits_full]
-  simp only [upd32, spliceBits_eq', hash1, BitVec.setWidth_zero, BitVec.add_zero, BitVec.toNat_ofNat]
+  simp only [upd32, spliceBits_eq, hash1, BitVec.setWidth_zero, BitVec.add_zero, BitVec.toNat_ofNat]
   generalize Verifier.init.ivState = I
   bv_decide
 
@@ -351,7 +331,7 @@ theorem hbl_T1 (r : BitVec 256) :
 theorem upd2_eq (r A : BitVec 256) :
     spliceBits (hash1 r) 0 (upd32 (hash1 r) 32#8 32#128 A) = Verifier.init.hashBits r A := by
   rw [spliceBits_full]
-  simp only [upd32, spliceBits_eq', hash1, Verifier.init.hashBits]
+  simp only [upd32, spliceBits_eq, hash1, Verifier.init.hashBits]
   generalize Verifier.init.ivState = I
   bv_decide
 
@@ -359,7 +339,7 @@ theorem upd2_eq (r A : BitVec 256) :
 theorem assemble_eq (H : BitVec 1792) (S : BitVec 256) (A R : BitVec 1344) :
     spliceBits (spliceBits (spliceBits (spliceBits (0#4736) 0 H) 4480 S) 1792 A) 3136 R =
       S ++ R ++ A ++ H := by
-  simp only [spliceBits_eq']
+  simp only [spliceBits_eq]
   bv_decide
 
 /-- `bits` on decoded points. -/
@@ -820,8 +800,8 @@ public theorem Verifier.init.mem_ok {m : MemoryState} {out : Pointer} {r S A : B
       m'.readAt (out.add 392#64) 1344 = R.bits 0#64 ∧ m'.readAt (out.add 560#64) 256 = S :=
     ⟨(hr 224 1344 (by omega)).trans e2, (hr 392 1344 (by omega)).trans e3,
       (hr 560 256 (by omega)).trans e4⟩
-  have ha' := readPt_of_bits (hpt 224 (by omega)) hA.1
-  have hR' := readPt_of_bits (hpt 392 (by omega)) hA.2.1
+  have ha' := MemoryState.readPt_of_readAt (hpt 224 (by omega)) hA.1
+  have hR' := MemoryState.readPt_of_readAt (hpt 392 (by omega)) hA.2.1
   exact ⟨Verifier.init.absorbed ⟨Sha512_update.fits_le hF (by omega), by omega⟩ hH, hH,
     hpt 224 (by omega), ha'.1, ha'.2, hpt 392 (by omega), hR'.1, hR'.2, hA.2.2⟩
 

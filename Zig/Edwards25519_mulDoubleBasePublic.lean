@@ -121,26 +121,6 @@ theorem _root_.LeanMLIR.RIR.MemoryState.PtFit.isBase {m : MemoryState} {p : Poin
   rw [Pointer.add_zero] at this
   exact this
 
-/-- `add`'s limbs are below `2^52`. -/
-theorem Edwards25519.add.spec_lt (P Q : ZPt) : (Edwards25519.add.spec P Q).Lt (2 ^ 52) :=
-  ⟨Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _⟩
-
-/-- `sub`'s limbs are below `2^52`. -/
-theorem Edwards25519.sub.spec_lt (P Q : ZPt) : (Edwards25519.sub.spec P Q).Lt (2 ^ 52) :=
-  Edwards25519.add.spec_lt _ _
-
-/-- `sub`'s `call_eq` on the points `P`, `Q` read at `p`, `q`. -/
-theorem Edwards25519_sub.call_eq_of (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PtFit out) (hp : s.mem.PtFit p) (hq : s.mem.PtFit q) (hPd : s.mem.readPt p = P)
-    (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53)) (hQ : Q.Lt (2 ^ 53)) :
-    Edwards25519_sub.call (Edwards25519_sub.args (.value out) (.value p) (.value q)) s =
-      .value
-        (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 47⟩,
-            mem := s.mem.storePt out (Edwards25519.sub.spec P Q) 0#64 }) := by
-  subst hPd hQd
-  exact Edwards25519_sub.call_eq out p q s hwf hout hp hq hP hQ
-
 /-- A `WF` state stays so with its counter advanced. -/
 theorem GlobalState.WF.bump' {s : GlobalState} (h : s.WF) (hn : s.alloc.nextFreeBlock ≤ n) :
     (⟨⟨n⟩, s.mem⟩ : GlobalState).WF :=
@@ -715,18 +695,14 @@ theorem tail_block (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (
         eraseFrom_storePt hL (t := P.t12) (by simp [Ptrs.temps]),
         eraseFrom_storePt hL (t := P.t13) (by simp [Ptrs.temps])]
 
-/-- Limbs below `2^52` are below `2^53`. -/
-theorem ZPt.Lt.to53 {A : ZPt} (h : A.Lt (2 ^ 52)) : A.Lt (2 ^ 53) :=
-  ⟨h.1.mono (by decide), h.2.1.mono (by decide), h.2.2.1.mono (by decide), h.2.2.2.mono (by decide)⟩
-
 /-- A digit's step keeps limbs below `2^53`. -/
 theorem digitStep_lt (tbl : Nat → ZPt) (d : BitVec 8) {Q : ZPt} (hQ : Q.Lt (2 ^ 53)) :
     (digitStep tbl d Q).Lt (2 ^ 53) := by
   unfold digitStep
   split
-  · exact ZPt.Lt.to53 (Edwards25519.add.spec_lt _ _)
+  · exact ZPt.Lt.mono53 (Edwards25519.add.spec_lt _ _)
   · split
-    · exact ZPt.Lt.to53 (Edwards25519.sub.spec_lt _ _)
+    · exact ZPt.Lt.mono53 (Edwards25519.sub.spec_lt _ _)
     · exact hQ
 
 /-- One iteration at `pos = i`: both digits, then out at `0`, else four doublings and around. -/
@@ -786,7 +762,7 @@ theorem iter (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (T : Na
 
 /-- `dbl4`'s limbs are below `2^53`. -/
 theorem dbl4_lt (A : ZPt) : (dbl4 A).Lt (2 ^ 53) :=
-  ZPt.Lt.to53 (Edwards25519.dbl.spec_lt _)
+  ZPt.Lt.mono53 (Edwards25519.dbl.spec_lt _)
 
 /-- The loop from `^bb5` at `pos = i`: the accumulator becomes `ladder … i Q`, then `^bb16`. -/
 theorem loop (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (T : Nat → ZPt)
@@ -947,17 +923,6 @@ theorem from_bb2 (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (T 
     rw [MemoryState.eraseFrom_storeAt_of_le (hL.temp _ hacc).2.1,
       MemoryState.eraseFrom_storeAt_of_le hN2, MemoryState.eraseFrom_storeAt_of_le hN1]
 
-/-- A fresh `alloca` block reads zero. -/
-theorem readAt_alloca_zero {s : GlobalState} : (s.alloca n).mem.readAt s.allocaPtr w = 0 := by
-  unfold MemoryState.readAt
-  split
-  · rename_i b hb
-    simp only [GlobalState.alloca, GlobalState.allocaPtr, MemoryState.getElem?_eq,
-      Std.ExtHashMap.getElem?_insert_self, Option.some.injEq] at hb
-    subst hb
-    simp
-  · rfl
-
 /-- A zero point-sized block: a point that fits, its last 8 bytes zero. -/
 theorem tempOK_of_zero {m : MemoryState} {t : Pointer} (hf : Fits m t 1344) (ho : t.offset = 0)
     (h : m.readAt t 1344 = 0) : m.PtFit t ∧ m.readRest t = 0#64 := by
@@ -967,21 +932,16 @@ theorem tempOK_of_zero {m : MemoryState} {t : Pointer} (hf : Fits m t 1344) (ho 
       (by simp [BitVec.uaddOverflow, ho]) (by simp) h
   simpa [MemoryState.readRest] using this
 
-/-- The base point's table entries are below `2^52`. -/
-theorem pts_lt : ∀ i : Fin 16, (Edwards25519.basePointPc.pts[i]).Lt (2 ^ 52) := by
-  unfold ZPt.Lt Fe.Lt
-  decide +kernel
-
 /-- The base point's table, entries `0 … 8`, below `2^53`. -/
 theorem baseTbl_lt : ∀ k < 9, (baseTbl k).Lt (2 ^ 53) := fun k hk => by
   simp only [baseTbl, show k < 16 by omega, dite_true]
-  exact ZPt.Lt.to53 (pts_lt ⟨k, by omega⟩)
+  exact ZPt.Lt.mono53 (Edwards25519.basePointPc.pts_lt ⟨k, by omega⟩)
 
 /-- `precompute`'s table, entries `0 … 8`, below `2^53`. -/
 theorem pcTbl_lt {P : ZPt} (h : P.Lt (2 ^ 53)) : ∀ k < 9, (pcTbl P k).Lt (2 ^ 53) := by
   intro k hk
-  have ha := fun A B => ZPt.Lt.to53 (Edwards25519.add.spec_lt A B)
-  have hd := fun A => ZPt.Lt.to53 (Edwards25519.dbl.spec_lt A)
+  have ha := fun A B => ZPt.Lt.mono53 (Edwards25519.add.spec_lt A B)
+  have hd := fun A => ZPt.Lt.mono53 (Edwards25519.dbl.spec_lt A)
   rcases k with _ | _ | _ | _ | _ | _ | _ | _ | _ | k
   · exact identity_lt
   · exact h
@@ -1016,15 +976,6 @@ theorem tableAt_pc' {m : MemoryState} {c : Pointer} (hf : Fits m c 12096)
     (hr : m.readAt c 12096 = Edwards25519.precompute.bits P r) : TableAt m c (pcTbl P) := by
   have h := tableAt_pc hf ho P r
   rwa [← hr, MemoryState.storeAt_readAt_self hf] at h
-
-/-- A block below the frame reads alike in memories alike outside the frame. -/
-theorem getElem?_of_eraseFrom {m m' : MemoryState} {p : Pointer}
-    (he : m'.eraseFrom N = m.eraseFrom N) (hp : p.id.id < N) : m'[p.id]? = m[p.id]? := by
-  have key (m : MemoryState) : (m.eraseFrom N)[p.id]? = m[p.id]? := by
-    simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter', hp,
-      decide_true]
-    cases m.mem[p.id]? <;> rfl
-  rw [← key m', he, key m]
 
 /-- A range below the frame fits alike in memories alike outside the frame. -/
 theorem Fits.of_eraseFrom {m m' : MemoryState} {p : Pointer} (he : m'.eraseFrom N = m.eraseFrom N)
@@ -1152,28 +1103,28 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
   iterate 5 step_pure
   step_alloca with t11
   have hz11 : S.mem.readAt t11 1344 = 0 := by
-    rw [hS, ht11]; exact readAt_alloca_zero
+    rw [hS, ht11]; exact readAt_alloca_allocaPtr
   step_alloca with t12
   have hz12 : S.mem.readAt t12 1344 = 0 := by
-    rw [hS, ht12]; exact readAt_alloca_zero
+    rw [hS, ht12]; exact readAt_alloca_allocaPtr
   step_alloca with t13
   have hz13 : S.mem.readAt t13 1344 = 0 := by
-    rw [hS, ht13]; exact readAt_alloca_zero
+    rw [hS, ht13]; exact readAt_alloca_allocaPtr
   step_alloca with t14
   have hz14 : S.mem.readAt t14 1344 = 0 := by
-    rw [hS, ht14]; exact readAt_alloca_zero
+    rw [hS, ht14]; exact readAt_alloca_allocaPtr
   step_alloca with t15
   have hz15 : S.mem.readAt t15 1344 = 0 := by
-    rw [hS, ht15]; exact readAt_alloca_zero
+    rw [hS, ht15]; exact readAt_alloca_allocaPtr
   step_alloca with t16
   have hz16 : S.mem.readAt t16 1344 = 0 := by
-    rw [hS, ht16]; exact readAt_alloca_zero
+    rw [hS, ht16]; exact readAt_alloca_allocaPtr
   step_alloca with t17
   have hz17 : S.mem.readAt t17 1344 = 0 := by
-    rw [hS, ht17]; exact readAt_alloca_zero
+    rw [hS, ht17]; exact readAt_alloca_allocaPtr
   step_alloca with acc
   have hzacc : S.mem.readAt acc 1344 = 0 := by
-    rw [hS, hacc]; exact readAt_alloca_zero
+    rw [hS, hacc]; exact readAt_alloca_allocaPtr
   step_alloca with e2
   step_alloca with e1
   step_alloca with pc

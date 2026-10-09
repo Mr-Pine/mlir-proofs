@@ -41,24 +41,7 @@ theorem readAt_stores_bytes {m : MemoryState} {p : Pointer} (hf : Fits m p 256) 
     MemoryState.readAt_add_storeAt (hf.storeAt) (hov _) (by decide), h0]
   rfl
 
-/-- A fresh `alloca` reads as zeros. -/
-theorem readAt_alloca_slot {s : GlobalState} : (s.alloca n).mem.readAt (s.slot 0) w = 0 := by
-  have h : (s.alloca n).mem[(s.slot 0).id]? = some ⟨n, 0⟩ := by
-    simp [GlobalState.alloca, GlobalState.slot, MemoryState.getElem?_eq]
-  simp only [MemoryState.readAt, h]
-  simp
-
 open Memory in
-/-- `spliceBits` as masks and shifts. -/
-theorem spliceBits_eq {n w : Nat} (b : BitVec n) (off : Nat) (x : BitVec w) :
-    spliceBits b off x =
-      (b &&& ~~~((BitVec.allOnes w).setWidth n <<< off)) ||| (x.setWidth n <<< off) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [getLsbD_spliceBits, BitVec.getLsbD_or, BitVec.getLsbD_and, BitVec.getLsbD_not,
-    BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth, BitVec.getLsbD_allOnes]
-  grind
-
 open Memory in
 /-- The splices into zeros: the limbs' bytes. -/
 theorem splice_eq (v0 v1 v2 v3 v4 : BitVec 64) :

@@ -114,23 +114,6 @@ open Verifier.verify
 
 /-! ### Blocks held alike -/
 
-/-- Reads in a block two memories hold alike agree. -/
-theorem readAt_congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?) :
-    m'.readAt p w = m.readAt p w := by
-  unfold MemoryState.readAt; rw [h]
-
-/-- Erasing from `N` keeps the blocks below it. -/
-theorem getElem?_eraseFrom {m : MemoryState} {b : BlockId} (hb : b.id < N) :
-    (m.eraseFrom N)[b]? = m[b]? := by
-  simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter', hb,
-    decide_true]
-  cases m.mem[b]? <;> rfl
-
-/-- Reads below `N` survive erasing from it. -/
-theorem readAt_eraseFrom {m : MemoryState} {p : Pointer} (hp : p.id.id < N) :
-    (m.eraseFrom N).readAt p w = m.readAt p w :=
-  readAt_congr (getElem?_eraseFrom hp)
-
 /-- `Absorbed` in a memory holding the object's block alike. -/
 theorem Absorbed.congr {m m' : MemoryState} {d : Pointer} (h : m'[d.id]? = m[d.id]?)
     (hA : Sha512Obj.Absorbed m d M) : Sha512Obj.Absorbed m' d M := by
@@ -146,13 +129,6 @@ theorem Absorbed.congr {m m' : MemoryState} {d : Pointer} (h : m'[d.id]? = m[d.i
     assumption
 
 /-! ### `Sha512.final`'s memory past a frame erase -/
-
-theorem eraseFrom_storeWords {d : Pointer} {f : Nat → BitVec 64} :
-    ∀ n i (m : MemoryState),
-      (Sha512Obj.storeWords d f i n m).eraseFrom N = Sha512Obj.storeWords d f i n (m.eraseFrom N)
-  | 0, _, _ => rfl
-  | n + 1, i, m => by
-    rw [Sha512Obj.storeWords, eraseFrom_storeWords n, MemoryState.eraseFrom_storeAt]; rfl
 
 theorem eraseFrom_lenStores {d : Pointer} :
     ∀ n i (x : BitVec 128) (m : MemoryState),
@@ -183,8 +159,8 @@ theorem roundState_eraseFrom {s : GlobalState} {d p : Pointer} (hd : d.id.id < N
     (a : AllocState) :
     (Sha512_update.roundState s d p).mem.eraseFrom N =
       (Sha512_update.roundState ⟨a, s.mem.eraseFrom N⟩ d p).mem := by
-  simp only [Sha512_update.roundState, Sha512Obj.setState, eraseFrom_storeWords, state_eraseFrom hd,
-    readAt_eraseFrom hp]
+  simp only [Sha512_update.roundState, Sha512Obj.setState, Sha512Obj.eraseFrom_storeWords,
+    state_eraseFrom hd, readAt_eraseFrom hp]
 
 theorem padMem_eraseFrom {m : MemoryState} {d : Pointer} {bl : BitVec 8} :
     (Sha512_final.padMem m d bl).eraseFrom N = Sha512_final.padMem (m.eraseFrom N) d bl := by
@@ -334,11 +310,6 @@ public theorem finalMem_readAt {s : GlobalState} {d q : Pointer} (hwf : s.WF)
     simp [GlobalState.allocaPtr] at hqN
   rw [← he, readAt_eraseFrom hqN,
     Sha512_final.post_readAt hdo (by simp [GlobalState.allocaPtr]) hbl h1 hne]
-
-/-- Blocks below `N` alike in memories alike below it. -/
-theorem getElem?_of_eraseFrom {m m' : MemoryState} {b : BlockId}
-    (he : m'.eraseFrom N = m.eraseFrom N) (hb : b.id < N) : m'[b]? = m[b]? := by
-  rw [← getElem?_eraseFrom (m := m') hb, he, getElem?_eraseFrom hb]
 
 /-- `readPt` in a memory holding its block alike. -/
 theorem readPt_congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?) :
@@ -504,10 +475,6 @@ theorem post_alloc (s : GlobalState) (d out : Pointer) :
     Sha512_final.lenState]
   split <;> rfl
 
-/-- `add`'s limbs are below `2^52`. -/
-theorem add_lt (P Q : ZPt) : (Edwards25519.add.spec P Q).Lt (2 ^ 52) :=
-  ⟨Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _, Fe.mul.spec_lt _ _⟩
-
 /-- `ladder` keeps limbs below `2^53`. -/
 theorem ladder_lt {T : Nat → ZPt} {x1 x2 : BitVec 256} :
     ∀ i (Q : ZPt),
@@ -516,9 +483,9 @@ theorem ladder_lt {T : Nat → ZPt} {x1 x2 : BitVec 256} :
     (Edwards25519.mulDoubleBasePublic.digitStep tbl d Q).Lt (2 ^ 53) := by
     unfold Edwards25519.mulDoubleBasePublic.digitStep
     split
-    · exact ZPt.Lt.mono53 (add_lt _ _)
+    · exact ZPt.Lt.mono53 (Edwards25519.add.spec_lt _ _)
     · split
-      · exact ZPt.Lt.mono53 (add_lt _ _)
+      · exact ZPt.Lt.mono53 (Edwards25519.add.spec_lt _ _)
       · exact hQ
   have hp (i : Nat) (Q : ZPt) (hQ : Q.Lt (2 ^ 53)) :
     (Edwards25519.mulDoubleBasePublic.posStep T x1 x2 i Q).Lt (2 ^ 53) := hd _ _ _ (hd _ _ _ hQ)
@@ -540,18 +507,6 @@ theorem mdbp_lt (h : Edwards25519.mulDoubleBasePublic.spec x1 b P2 x2 = some Q) 
   · split at h
     · cases h; exact ladder_lt 63 _ hid
     · cases h
-
-/-- `sub`'s `call_eq` on the points `P`, `Q` read at `p`, `q`. -/
-theorem Edwards25519_sub.call_eq_of (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PtFit out) (hp : s.mem.PtFit p) (hq : s.mem.PtFit q) (hPd : s.mem.readPt p = P)
-    (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53)) (hQ : Q.Lt (2 ^ 53)) :
-    Edwards25519_sub.call (Edwards25519_sub.args (.value out) (.value p) (.value q)) s =
-      .value
-        (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 47⟩,
-            mem := s.mem.storePt out (Edwards25519.sub.spec P Q) 0#64 }) := by
-  subst hPd hQd
-  exact Edwards25519_sub.call_eq out p q s hwf hout hp hq hP hQ
 
 /-- `isIdentity`'s `call_eq` on the point `P` read at `p`. -/
 theorem Verifier_isIdentity.call_eq_of (p : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -863,7 +818,7 @@ public theorem Verifier_verify.call_eq (hred : Reduce64Call) (self : Pointer) (s
     have hchkd : S.mem.readPt chk = check Q R := by
       have h := hchkP; rw [hS] at h ⊢
       exact (MemoryState.readPt_storePt_self ⟨h.1, Fits.storeAt_iff.mp h.2⟩).1
-    have hckl : (check Q R).Lt (2 ^ 52) := add_lt _ _
+    have hckl : (check Q R).Lt (2 ^ 52) := Edwards25519.add.spec_lt _ _
     step_call using Verifier_isIdentity.call_eq_of consuming hchkd hckl
     step_pure
     finish_block

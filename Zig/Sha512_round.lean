@@ -1826,14 +1826,6 @@ theorem shl3_facts {i : Nat} (hi : i < 2 ^ 60) :
 abbrev bswapv (x : BitVec 64) : BitVec 64 :=
   (List.range 8).foldl (fun acc i => acc ||| (x >>> (8 * i) &&& 255#64) <<< (64 - 8 * (i + 1))) 0#64
 
-/-- The counter's `+ 1` wraps neither way. -/
-theorem counter_overflow {i : Nat} (h : i + 1 < 2 ^ 63) :
-    (BitVec.ofNat 64 i).saddOverflow 1#64 = false ∧ (BitVec.ofNat 64 i).uaddOverflow 1#64 = false := by
-  have : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  constructor
-  · simp [BitVec.saddOverflow, this]; omega
-  · simp [BitVec.uaddOverflow]; omega
-
 set_option maxHeartbeats 0 in
 /-- `bb1`/`bb2` from round `i`, `m` left: `W[i] = bswap(block word i)`. -/
 theorem loop1 (dd blk V W : Pointer) (B : BitVec 1024) {β : Type}
@@ -2199,13 +2191,6 @@ theorem compress_getElem (H : Vector (BitVec 64) 8) (B : List (BitVec 8)) (hj : 
     (Sha512.compress H B)[j] = H[j] + (rounds (fun t => (Sha512.schedule B)[t]!) 0 80 H)[j] := by
   simp only [Sha512.compress, rounds, Vector.getElem_zipWith, List.range_eq_range']
 
-theorem eraseFrom_storeWords {m : MemoryState} :
-    ∀ n i, (Sha512Obj.storeWords d f i n m).eraseFrom k = Sha512Obj.storeWords d f i n (m.eraseFrom k) := by
-  intro n
-  induction n generalizing m with
-  | zero => intro _; rfl
-  | succ n ih => intro i; rw [Sha512Obj.storeWords, ih, MemoryState.eraseFrom_storeAt]; rfl
-
 theorem storeWords_congr {m : MemoryState} {f g : Nat → BitVec 64} :
     ∀ n i, (∀ j, i ≤ j → j < i + n → f j = g j) →
       Sha512Obj.storeWords d f i n m = Sha512Obj.storeWords d g i n m := by
@@ -2320,7 +2305,7 @@ public theorem Sha512_round.call_eq (d b : Pointer) (s : GlobalState) (hwf : s.W
     have hWn : S₀.alloc.nextFreeBlock ≤ W.id.id := by rw [hW]; simp [GlobalState.slot]
     have hVn : S₀.alloc.nextFreeBlock ≤ V.id.id := by rw [hV]; simp [GlobalState.slot]
     dsimp only
-    rw [eraseFrom_storeWords, storeWords8_eq, eraseFrom_stores hVn, eraseFrom_stores hWn,
+    rw [Sha512Obj.eraseFrom_storeWords, storeWords8_eq, eraseFrom_stores hVn, eraseFrom_stores hWn,
       eraseFrom_stores hWn, hS, GlobalState.eraseFrom_alloca_of_le (by simp [GlobalState.alloca]),
       GlobalState.eraseFrom_alloca_of_le (Nat.le_refl _), hwf₀.eraseFrom, ← hstate]
     rw [storeWords_congr (g := fun j => (Sha512.compress (Sha512Obj.state S₀.mem d) (bytesLE B))[j]!) 8 0]
