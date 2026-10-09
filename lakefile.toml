@@ -4,7 +4,7 @@ defaultTargets = ["Firedancer"]
 # Firedancer's ed25519 verify (ref), lifted to the register-based IR and proved.
 [[require]]
 name = "MLIR"
-path = "../lean-mlir-nightly-port"
+path = "../lean-mlir"
 
 [[require]]
 name = "mathlib"
