@@ -154,61 +154,61 @@ theorem GlobalState.WF_mk_storeLimbs {a : AllocState} {m : MemoryState} :
 /-! The live registers at each loop's header (at counter `i`) and exit. -/
 
 abbrev hdr2 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2044 := .value 5#32, %2045 := .value 10#32, %2046 := .value 20#32, %2047 :=
-    .value 50#32, %2048 := .value 100#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2, %2062 :=
+  E[%2059 := .value 1#32, %2060 := .value 5#32, %2061 := .value 10#32, %2062 := .value 20#32, %2063 :=
+    .value 50#32, %2064 := .value 100#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2, %2078 :=
     .value (BitVec.ofNat 32 i)]
 
 abbrev exit2 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2045 := .value 10#32, %2046 := .value 20#32, %2047 := .value 50#32, %2048 :=
-    .value 100#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2]
+  E[%2059 := .value 1#32, %2061 := .value 10#32, %2062 := .value 20#32, %2063 := .value 50#32, %2064 :=
+    .value 100#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2]
 
 abbrev hdr4 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2045 := .value 10#32, %2046 := .value 20#32, %2047 := .value 50#32, %2048 :=
-    .value 100#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2, %2068 :=
+  E[%2059 := .value 1#32, %2061 := .value 10#32, %2062 := .value 20#32, %2063 := .value 50#32, %2064 :=
+    .value 100#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2, %2084 :=
     .value (BitVec.ofNat 32 i)]
 
 abbrev exit4 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2045 := .value 10#32, %2046 := .value 20#32, %2047 := .value 50#32, %2048 :=
-    .value 100#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2]
+  E[%2059 := .value 1#32, %2061 := .value 10#32, %2062 := .value 20#32, %2063 := .value 50#32, %2064 :=
+    .value 100#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2]
 
 abbrev hdr6 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2045 := .value 10#32, %2046 := .value 20#32, %2047 := .value 50#32, %2048 :=
-    .value 100#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2, %2074 :=
+  E[%2059 := .value 1#32, %2061 := .value 10#32, %2062 := .value 20#32, %2063 := .value 50#32, %2064 :=
+    .value 100#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2, %2090 :=
     .value (BitVec.ofNat 32 i)]
 
 abbrev exit6 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2045 := .value 10#32, %2047 := .value 50#32, %2048 := .value 100#32, %2049 := .value t0,
-    %2050 := .value t1, %2051 := .value t2]
+  E[%2059 := .value 1#32, %2061 := .value 10#32, %2063 := .value 50#32, %2064 := .value 100#32, %2065 := .value t0,
+    %2066 := .value t1, %2067 := .value t2]
 
 abbrev hdr8 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2045 := .value 10#32, %2047 := .value 50#32, %2048 := .value 100#32, %2049 := .value t0,
-    %2050 := .value t1, %2051 := .value t2, %2080 := .value (BitVec.ofNat 32 i)]
+  E[%2059 := .value 1#32, %2061 := .value 10#32, %2063 := .value 50#32, %2064 := .value 100#32, %2065 := .value t0,
+    %2066 := .value t1, %2067 := .value t2, %2096 := .value (BitVec.ofNat 32 i)]
 
 abbrev exit8 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2047 := .value 50#32, %2048 := .value 100#32, %2049 := .value t0, %2050 := .value t1,
-    %2051 := .value t2]
+  E[%2059 := .value 1#32, %2063 := .value 50#32, %2064 := .value 100#32, %2065 := .value t0, %2066 := .value t1,
+    %2067 := .value t2]
 
 abbrev hdr10 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2047 := .value 50#32, %2048 := .value 100#32, %2049 := .value t0, %2050 := .value t1,
-    %2051 := .value t2, %2086 := .value (BitVec.ofNat 32 i)]
+  E[%2059 := .value 1#32, %2063 := .value 50#32, %2064 := .value 100#32, %2065 := .value t0, %2066 := .value t1,
+    %2067 := .value t2, %2102 := .value (BitVec.ofNat 32 i)]
 
 abbrev exit10 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2047 := .value 50#32, %2048 := .value 100#32, %2049 := .value t0, %2050 := .value t1,
-    %2051 := .value t2]
+  E[%2059 := .value 1#32, %2063 := .value 50#32, %2064 := .value 100#32, %2065 := .value t0, %2066 := .value t1,
+    %2067 := .value t2]
 
 abbrev hdr12 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2047 := .value 50#32, %2048 := .value 100#32, %2049 := .value t0, %2050 := .value t1,
-    %2051 := .value t2, %2092 := .value (BitVec.ofNat 32 i)]
+  E[%2059 := .value 1#32, %2063 := .value 50#32, %2064 := .value 100#32, %2065 := .value t0, %2066 := .value t1,
+    %2067 := .value t2, %2108 := .value (BitVec.ofNat 32 i)]
 
 abbrev exit12 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2047 := .value 50#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2]
+  E[%2059 := .value 1#32, %2063 := .value 50#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2]
 
 abbrev hdr14 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) (i : Nat) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2047 := .value 50#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2, %2100 :=
+  E[%2059 := .value 1#32, %2063 := .value 50#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2, %2116 :=
     .value (BitVec.ofNat 32 i)]
 
 abbrev exit14 (t0 t1 t2 : Pointer) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%2043 := .value 1#32, %2049 := .value t0, %2050 := .value t1, %2051 := .value t2]
+  E[%2059 := .value 1#32, %2065 := .value t0, %2066 := .value t1, %2067 := .value t2]
 
 /-- One in-place squaring of the limbs at `t`: a loop iteration's state. -/
 abbrev sqAt (t : Pointer) (S : GlobalState) : GlobalState :=

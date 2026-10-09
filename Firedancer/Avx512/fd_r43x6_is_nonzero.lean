@@ -1,7 +1,6 @@
 module
 
 public import MLIR.Run.Tactic
-public import Firedancer.Avx512.fd_long_if
 public import Firedancer.Avx512.Common.ExtractLimbs
 public import Firedancer.Avx512.Common.ModNearlyReducedLimbs
 public import Firedancer.Avx512.Mlir.fd_r43x6_is_nonzero
@@ -38,7 +37,7 @@ public theorem fd_r43x6_is_nonzero.call_eq (x : Wwl) (s : GlobalState) (hwf : s.
   func_init
   block_init
   -- the constants, left inline: the patterns read them as literals
-  iterate 14 step_pure
+  iterate 15 step_pure
   -- `fd_r43x6_extract_limbs( x, l )`
   step_pattern using runBodyFrom_extractLimbsRun with l5
   subst l5

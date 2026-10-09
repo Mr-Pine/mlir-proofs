@@ -18,17 +18,17 @@ mlir_def fd_f25519_sgn :=
 #tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
 #tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc, access_type = #tbaa_type_desc, offset = 0>
 "llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}], dso_local, function_type = !llvm.func<i32 (ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"]], res_attrs = [{llvm.range = #llvm.constant_range<i32, 0, 2>}], sym_name = "fd_f25519_sgn", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
-^bb0(%arg82: !llvm.ptr):
-  %1763 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
-  %1764 = "llvm.mlir.constant"() <{value = 1 : i8}> : () -> i8
-  %1765 = "llvm.alloca"(%1763) <{alignment = 16 : i64, elem_type = !llvm.array<32 x i8>}> : (i32) -> !llvm.ptr
-  "llvm.intr.lifetime.start"(%1765) : (!llvm.ptr) -> ()
-  %1766 = "llvm.call"(%1765, %arg82) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.nonnull, llvm.noundef}, {llvm.noundef}], callee = @fd_f25519_tobytes, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-  %1767 = "llvm.load"(%1765) <{alignment = 16 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> i8
-  %1768 = "llvm.and"(%1767, %1764) : (i8, i8) -> i8
-  %1769 = "llvm.zext"(%1768) <{nonNeg}> : (i8) -> i32
-  "llvm.intr.lifetime.end"(%1765) : (!llvm.ptr) -> ()
-  "llvm.return"(%1769) : (i32) -> ()
+^bb0(%arg85: !llvm.ptr):
+  %1778 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+  %1779 = "llvm.mlir.constant"() <{value = 1 : i8}> : () -> i8
+  %1780 = "llvm.alloca"(%1778) <{alignment = 16 : i64, elem_type = !llvm.array<32 x i8>}> : (i32) -> !llvm.ptr
+  "llvm.intr.lifetime.start"(%1780) : (!llvm.ptr) -> ()
+  %1781 = "llvm.call"(%1780, %arg85) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.nonnull, llvm.noundef}, {llvm.noundef}], callee = @fd_f25519_tobytes, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+  %1782 = "llvm.load"(%1780) <{alignment = 16 : i64, ordering = 0 : i64, tbaa = [#tbaa_tag]}> : (!llvm.ptr) -> i8
+  %1783 = "llvm.and"(%1782, %1779) : (i8, i8) -> i8
+  %1784 = "llvm.zext"(%1783) <{nonNeg}> : (i8) -> i32
+  "llvm.intr.lifetime.end"(%1780) : (!llvm.ptr) -> ()
+  "llvm.return"(%1784) : (i32) -> ()
 }) : () -> ()
   with @fd_f25519_tobytes := fd_f25519_tobytes
 

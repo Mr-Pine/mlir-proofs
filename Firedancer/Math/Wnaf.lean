@@ -5,10 +5,12 @@ public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
 public import Mathlib.Algebra.Ring.Int.Parity
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.LinearCombination
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 
-/-! The arithmetic of `fd_curve25519_scalar_wnaf.wnaf`: for `x < 2^255` and `bits ≤ 13` its digits
-`d_i` sum to `x` as `Σ d_i 2^i`, each `0` or odd in `[-(2^bits - 1), 2^bits - 1]`. -/
+/-! The arithmetic of `fd_curve25519_scalar_wnaf.wnaf`: for `x < 2^255` and `1 ≤ bits ≤ 13` its
+digits `d_i` sum to `x` as `Σ d_i 2^i`, each `0` or odd in `[-(2^bits - 1), 2^bits - 1]`. -/
 
 namespace MLIR.Firedancer.Ref
 
@@ -19,7 +21,8 @@ namespace fd_curve25519_scalar_wnaf
 section Value
 
 /-- The integer `t` represents: `Σ t[k] 2^k`. -/
-def val (t : Vector Int 256) : Int := ∑ k : Fin 256, t[k] * 2 ^ (k : Nat)
+def val (t : Vector Int 256) : Int :=
+  ∑ k : Fin 256, t[k] * 2 ^ (k : Nat)
 
 /-- Setting entry `j` to `v` adds `(v - t[j]) 2^j`. -/
 theorem val_set (t : Vector Int 256) (hj : j < 256) (v : Int) :
@@ -33,24 +36,8 @@ theorem val_set (t : Vector Int 256) (hj : j < 256) (v : Int) :
     simp [Fin.getElem_fin, Vector.getElem_set_ne _ _ this]
   · simp
 
-/-- Bits `0 … n-1` of `x`, weighted, sum to `x % 2^n`. -/
-theorem sum_testBit (x : Nat) : ∀ n,
-    ∑ k ∈ Finset.range n, (if x.testBit k then (1 : Int) else 0) * 2 ^ k = (x % 2 ^ n : Nat)
-  | 0 => by simp [Nat.mod_one]
-  | n + 1 => by
-    rw [Finset.sum_range_succ, sum_testBit x n, Nat.mod_pow_succ, ← Nat.toNat_testBit]
-    cases x.testBit n <;> simp [mul_comm]
-
-/-- The unpacked bits represent `x % 2^255`: `_t[255]` is `0`. -/
-theorem val_unpackT (x : BitVec 256) : val (unpackT x) = (x.toNat % 2 ^ 255 : Nat) := by
-  unfold val unpackT
-  simp only [Fin.getElem_fin, Vector.getElem_ofFn]
-  rw [Fin.sum_univ_eq_sum_range
-    (fun k => (if k < 255 ∧ x.getLsbD k = true then (1 : Int) else 0) * 2 ^ k) 256,
-    Finset.sum_range_succ, ← sum_testBit]
-  simp only [lt_irrefl, false_and, ite_false, zero_mul, add_zero]
-  refine Finset.sum_congr rfl fun k hk => ?_
-  simp [Finset.mem_range.mp hk, BitVec.getLsbD]
+/-- The zero digits represent `0`. -/
+theorem val_replicate_zero : val (Vector.replicate 256 0) = 0 := by simp [val]
 
 end Value
 
@@ -58,166 +45,226 @@ end Value
 
 section Sum
 
-/-- Entries from `i` on are `0` or `1`. -/
-def BitsFrom (i : Nat) (t : Vector Int 256) : Prop :=
-  ∀ k (hk : k < 256), i ≤ k → t[k] = 0 ∨ t[k] = 1
+/-- `x % 2^k = 0`: the low `k` bits are clear. -/
+theorem mod_two_pow_eq_zero_iff {x k : Nat} : x % 2 ^ k = 0 ↔ ∀ i < k, x.testBit i = false := by
+  constructor
+  · intro h i hi
+    have := Nat.testBit_mod_two_pow x k i
+    rw [h, Nat.zero_testBit] at this
+    simpa [hi] using this.symm
+  · intro h
+    apply Nat.eq_of_testBit_eq
+    intro i
+    rw [Nat.testBit_mod_two_pow, Nat.zero_testBit]
+    by_cases hi : i < k
+    · simp [hi, h i hi]
+    · simp [hi]
 
-/-- The carry from `j < 255`, with `t[255] = 0`, adds `2^(j+1)`, sets a `1` at the index it
-returns, keeps entries `≤ j`, and keeps bits after `j`. -/
-theorem carryT_spec {t : Vector Int 256} (hj : j < 255) (hn : 255 ≤ j + n) (h255 : t[255] = 0)
-    (hb : BitsFrom (j + 1) t) :
-    val (carryT n t j).1 = val t + 2 ^ (j + 1) ∧ j < (carryT n t j).2 ∧
-      ∃ h : (carryT n t j).2 < 256, (carryT n t j).1[(carryT n t j).2] = 1 ∧
-      (∀ k (hk : k < 256), k ≤ j → (carryT n t j).1[k] = t[k]) ∧
-      BitsFrom (j + 1) (carryT n t j).1 ∧
-      ((carryT n t j).2 < 255 → (carryT n t j).1[255] = 0) := by
-  induction n generalizing t j with
+/-- No bit is set from `k` up to `nextBit`, with enough fuel. -/
+theorem getLsbD_lt_nextBit {n : BitVec 320} (hf : 256 ≤ k + fuel) (hk : k ≤ i)
+    (hi : i < nextBit n fuel k) (h256 : i < 256) : n.getLsbD i = false := by
+  induction fuel generalizing k with
   | zero => omega
-  | succ n ih =>
-    simp only [carryT, show j + 1 < 256 by omega, dite_true]
-    split
-    next h0 =>
-      refine ⟨by rw [val_set, h0]; ring, by omega, by omega, by simp, fun k hk hkj => ?_,
-        fun k hk hkj => ?_, fun h => ?_⟩
-      · exact Vector.getElem_set_ne (by omega) _ (by omega)
-      · rw [Vector.getElem_set]; split
-        · exact .inr rfl
-        · exact hb k hk hkj
-      · rw [Vector.getElem_set_ne _ _ (by omega)]; exact h255
-    next h1 =>
-      have h1 : t[j + 1] = 1 := (hb (j + 1) (by omega) le_rfl).resolve_left h1
-      have hj1 : j + 1 < 255 := by
-        by_contra h
-        have h1' : t[255] = 1 := by simpa [show j + 1 = 255 by omega] using h1
-        omega
-      obtain ⟨hv, hlt, hc, hc1, hpre, hbits, h255'⟩ := ih (t := t.set (j + 1) 0) hj1 (by omega)
-        (by rw [Vector.getElem_set_ne _ _ (by omega)]; exact h255)
-        (fun k hk hkj => by rw [Vector.getElem_set_ne _ _ (by omega)]; exact hb k hk (by omega))
-      refine ⟨by rw [hv, val_set, h1]; ring, by omega, hc, hc1, fun k hk hkj => ?_,
-        fun k hk hkj => ?_, h255'⟩
-      · rw [hpre k hk (by omega), Vector.getElem_set_ne _ _ (by omega)]
-      · by_cases hk' : k = j + 1
-        · subst hk'; rw [hpre _ hk le_rfl]; simp
-        · exact hbits k hk (by omega)
+  | succ fuel ih =>
+    simp only [nextBit, show k < 256 by omega, ite_true] at hi
+    split at hi
+    · omega
+    next hb =>
+      rcases Nat.eq_or_lt_of_le hk with rfl | h
+      · simpa using hb
+      · exact ih (by omega) (by omega) hi
 
-/-- `delta = 2^min (j-i) 14` scales `2^i` to `2^j`, or exceeds `2 max`. -/
-theorem delta_cases {max : Int} (hij : i < j) (hm : 2 * max < 2 ^ 14) :
-    (2 : Int) ^ min (j - i) 14 * 2 ^ i = 2 ^ j ∨ 2 * max < (2 : Int) ^ min (j - i) 14 := by
-  by_cases h : j - i ≤ 14
-  · left; rw [min_eq_left h, ← pow_add, Nat.sub_add_cancel hij.le]
-  · right; rwa [min_eq_right (by omega)]
+/-- `nextBit` from `256` on is `256`. -/
+theorem nextBit_ge {n : BitVec 320} (hk : 256 ≤ k) : nextBit n fuel k = 256 := by
+  cases fuel <;> simp [nextBit, show ¬k < 256 by omega]
 
-/-- What `absorbT` from `(t, ti, j)` guarantees of its result `a`. -/
-def AbsorbPost (i : Nat) (hi : i < 256) (t : Vector Int 256) (ti : Int) (j : Nat)
-    (a : Vector Int 256 × Int × Nat) : Prop :=
-  val (a.1.set i a.2.1 hi) = val (t.set i ti hi) ∧ j ≤ a.2.2 ∧
-    (∀ h : a.2.2 < 256, a.1[a.2.2] = 1) ∧ BitsFrom (i + 1) a.1 ∧ (a.2.2 < 255 → a.1[255] = 0)
+/-- The loop invariant at `pos`: the digits so far and `n` stand for `x`; `n ≤ 2^255` with no bit
+below `pos`; no digit from `pos` on. -/
+structure Inv (x : BitVec 256) (n : BitVec 320) (t : Vector Int 256) (pos : Nat) : Prop where
+  sum : val t + n.toNat = x.toNat
+  le : n.toNat ≤ 2 ^ 255
+  low : n.toNat % 2 ^ pos = 0
+  zero : ∀ k (hk : k < 256), pos ≤ k → t[k] = 0
 
-/-- `absorbT` with `t`'s entries after `i` bits, and `2 max < 2^14`, keeps the value with `ti` at
-`i`; see `AbsorbPost`. -/
-theorem absorbT_spec {max ti : Int} {t : Vector Int 256} (hm : 2 * max < 2 ^ 14) (hi : i < 256)
-    (hij : i < j) (hn : 256 ≤ j + n) (h255 : j < 256 → t[255] = 0) (hb : BitsFrom (i + 1) t) :
-    AbsorbPost i hi t ti j (absorbT max i n t ti j) := by
-  induction n generalizing t ti j with
-  | zero => exact ⟨rfl, le_rfl, fun (h : j < 256) => by omega, hb, fun (h : j < 255) => by omega⟩
-  | succ n ih =>
-    simp only [absorbT]
-    split
-    next hj =>
-      split
-      next h0 =>
-        obtain ⟨hv, hle, h1, hb', h255'⟩ :=
-          ih (t := t) (ti := ti) (j := j + 1) (by omega) (by omega) (fun _ => h255 hj) hb
-        exact ⟨hv, by omega, h1, hb', h255'⟩
-      next h0 =>
-        have htj : t[j] = 1 := (hb j hj (by omega)).resolve_left h0
-        have h255j := h255 hj
-        have hj255 : j < 255 := by
-          by_contra h
-          have : t[255] = 1 := by simpa [show j = 255 by omega] using htj
-          omega
-        have stop : AbsorbPost i hi t ti j (t, ti, j) :=
-          ⟨rfl, le_rfl, fun _ => htj, hb, fun _ => h255j⟩
-        have hbs : BitsFrom (i + 1) (t.set j 0) := fun k hk hik => by
-          rw [Vector.getElem_set]; split
-          · exact .inl rfl
-          · exact hb k hk hik
-        have hd := delta_cases (max := max) hij hm
-        split
-        · exact stop
-        next hfar =>
-          have hd : (2 : Int) ^ min (j - i) 14 * 2 ^ i = 2 ^ j := hd.resolve_right hfar
-          split
-          · obtain ⟨hv, hle, h1, hb', h255'⟩ := ih (t := t.set j 0) (j := j + 1) (by omega)
-              (by omega) (fun _ => by rw [Vector.getElem_set_ne _ _ (by omega)]; exact h255j) hbs
-            refine ⟨?_, by omega, h1, hb', h255'⟩
-            rw [hv, val_set, val_set, val_set, Vector.getElem_set_ne _ _ (by omega), htj]
-            linear_combination hd
-          · split
-            · obtain ⟨hv, hlt, hc, hc1, hpre, hbits, h255'⟩ := carryT_spec (t := t.set j 0)
-                (n := 256) hj255 (by omega)
-                (by rw [Vector.getElem_set_ne _ _ (by omega)]; exact h255j)
-                fun k hk hjk => hbs k hk (by omega)
-              refine ⟨?_, hlt.le, fun _ => hc1, fun k hk hik => ?_, h255'⟩
-              · rw [val_set, hv, val_set, val_set, hpre i hi (by omega),
-                  Vector.getElem_set_ne _ _ (by omega), htj]
-                linear_combination (-1 : Int) * hd
-              · by_cases hjk : j < k
-                · exact hbits k hk (by omega)
-                · rw [hpre k hk (by omega)]; exact hbs k hk hik
-            · exact stop
-    next hj =>
-      exact ⟨rfl, le_rfl, fun (h : j < 256) => by omega, hb, fun (h : j < 255) => by omega⟩
-
-/-- The outer loop from `i`, where `t[i] = 1`, keeps the value. -/
-theorem outerT_val {max : Int} {t : Vector Int 256} (hm : 2 * max < 2 ^ 14)
-    (h255 : i < 255 → t[255] = 0) (hb : BitsFrom i t) (h1 : ∀ h : i < 256, t[i] = 1) :
-    val (outerT max n t i) = val t := by
-  induction n generalizing t i with
-  | zero => rfl
-  | succ n ih =>
-    simp only [outerT]
-    split
-    next hi =>
-      obtain ⟨hv, hle, h1', hb', h255'⟩ := absorbT_spec (max := max) (ti := 1) (n := 256) hm hi
-        (j := i + 1) (by omega) (by omega) (fun h => h255 (by omega))
-        (fun k hk hik => hb k hk (by omega))
-      generalize absorbT max i 256 t 1 (i + 1) = a at hv hle h1' hb' h255' ⊢
-      obtain ⟨t', ti', j'⟩ := a
-      dsimp only at hv hle h1' hb' h255' ⊢
-      rw [ih (fun h => ?_) (fun k hk hik => ?_) (fun h => ?_), hv, val_set, h1 hi]
-      · ring
-      · rw [Vector.getElem_set_ne _ _ (show i ≠ 255 by omega)]; exact h255' h
-      · rw [Vector.getElem_set_ne _ _ (show i ≠ k by omega)]; exact hb' k hk (by omega)
-      · rw [Vector.getElem_set_ne _ _ (show i ≠ _ by omega)]; exact h1' h
-    · rfl
-
-/-- `firstNonzero` with enough fuel stops at a non-zero entry or at `256`. -/
-theorem firstNonzero_spec {t : Vector Int 256} (hn : 256 ≤ k + n) :
-    ∀ h : firstNonzero t n k < 256, t[firstNonzero t n k] ≠ 0 := by
-  induction n generalizing k with
-  | zero => intro h; simp only [firstNonzero] at h; omega
-  | succ n ih =>
-    simp only [firstNonzero]
-    split
-    next hk =>
-      split
-      next h0 => exact fun _ => h0
-      · exact ih (by omega)
-    · intro h; omega
-
-/-- The digits of `wnaf x bits` sum to `x`: `Σ d_i 2^i = x`; no carry leaves `_t`. -/
-public theorem wnaf_sum (x : BitVec 256) (hb : bits ≤ 13) (hx : x.toNat < 2 ^ 255) :
-    ∑ i : Fin 256, (wnaf x bits)[i] * 2 ^ (i : Nat) = x.toNat := by
-  have hm : 2 * ((2 : Int) ^ bits - 1) < 2 ^ 14 := by
-    have : (2 : Int) ^ bits ≤ 2 ^ 13 := pow_le_pow_right₀ (by decide) hb
+/-- A negative digit's carry stays within `2^255`: `R h + d P ≤ 2^255` with `R = 2 P Q`, `d` odd
+and at least `Q` even, gives `R (h + 1) ≤ 2^255`. -/
+theorem carry_le {P Q d h : Nat} (hP : 0 < P) (hQ : Q % 2 = 0) (hd : d % 2 = 1) (hdQ : Q ≤ d)
+    (hn : P * (2 * Q) * h + d * P ≤ 2 ^ 255) (hpow : P * (2 * Q) ∣ 2 ^ 255 ∨ 2 ^ 255 ≤ P * Q) :
+    P * (2 * Q) * (h + 1) ≤ 2 ^ 255 := by
+  rcases hpow with ⟨T, hT⟩ | hge
+  · have hdP : 0 < d * P := Nat.mul_pos (by omega) hP
+    have hlt : P * (2 * Q) * h < P * (2 * Q) * T := by omega
+    rw [hT]
+    exact Nat.mul_le_mul_left _ (Nat.lt_of_mul_lt_mul_left hlt)
+  · exfalso
+    have h1 : Q * P ≤ d * P := Nat.mul_le_mul_right _ hdQ
+    have h2 : P * Q = Q * P := Nat.mul_comm _ _
+    have h3 : d * P = Q * P := by omega
+    have := Nat.eq_of_mul_eq_mul_right hP h3
     omega
+
+/-- One iteration of `loop` at the next set bit `p` keeps the invariant at `p + bits + 1`. -/
+theorem Inv.step {x : BitVec 256} {n : BitVec 320} {t : Vector Int 256} (hB : 1 ≤ B ∧ B ≤ 13)
+    (hI : Inv x n t pos) (hnp : nextBit n 256 pos = p) (hp : p < 256) :
+    Inv x (fd_curve25519_scalar_wnaf.digit B n t p hp).1
+      (fd_curve25519_scalar_wnaf.digit B n t p hp).2 (p + (B + 1)) := by
+  have h256 : pos ≤ 256 := by
+    by_contra hc
+    rw [nextBit_ge (by omega)] at hnp
+    omega
+  have hpp : pos ≤ p := hnp ▸ le_nextBit h256
+  have hbit : n.getLsbD p = true := hnp ▸ getLsbD_nextBit (hnp ▸ hp)
+  -- no bit below `p`: `n = 2^p q`, `q` odd
+  have hlowp : n.toNat % 2 ^ p = 0 := by
+    rw [mod_two_pow_eq_zero_iff]
+    intro i hi
+    by_cases hip : i < pos
+    · exact mod_two_pow_eq_zero_iff.1 hI.low i hip
+    · have :=
+        getLsbD_lt_nextBit (n := n) (fuel := 256) (k := pos) (i := i) (by omega) (by omega)
+          (by omega) (by omega)
+      rwa [BitVec.testBit_toNat]
+  obtain ⟨q, hq⟩ : ∃ q, n.toNat = 2 ^ p * q :=
+    ⟨n.toNat / 2 ^ p, (Nat.mul_div_cancel' (Nat.dvd_of_mod_eq_zero hlowp)).symm⟩
+  have hdiv : n.toNat / 2 ^ p = q := by rw [hq, Nat.mul_div_cancel_left _ (by positivity)]
+  have hqodd : q % 2 = 1 := by
+    rw [BitVec.getLsbD, Nat.testBit_eq_decide_div_mod_eq, decide_eq_true_eq, hdiv] at hbit
+    exact hbit
+  have hsplit := toNat_clear n hp hB.2
+  rw [hdiv] at hsplit
+  -- `q = 2^(bits+1) h + d`
+  obtain ⟨h, hh⟩ : ∃ h, q = 2 ^ (B + 1) * h + q % 2 ^ (B + 1) :=
+    ⟨q / 2 ^ (B + 1), (Nat.div_add_mod q _).symm⟩
+  have hdodd : q % 2 ^ (B + 1) % 2 = 1 := by
+    rw [Nat.mod_mod_of_dvd _ (by simp)]
+    exact hqodd
+  have hQ : 2 ^ B % 2 = 0 := by
+    obtain ⟨k, hk⟩ : ∃ k, B = k + 1 := ⟨B - 1, by omega⟩
+    rw [hk, Nat.pow_succ, Nat.mul_mod_left]
+  have h2 : 2 ^ (B + 1) = 2 * 2 ^ B := by rw [Nat.pow_succ, Nat.mul_comm]
+  have hpow : 2 ^ (p + (B + 1)) = 2 ^ p * (2 * 2 ^ B) := by rw [Nat.pow_add, h2]
+  have hzp : t[p] = 0 := hI.zero p hp hpp
+  have hn1 : (n &&& ~~~((mask B).setWidth 320 <<< p)).toNat = 2 ^ p * (2 * 2 ^ B) * h := by
+    have : 2 ^ p * q = 2 ^ p * (2 * 2 ^ B) * h + q % 2 ^ (B + 1) * 2 ^ p := by
+      conv_lhs => rw [hh]
+      rw [h2]
+      ring
+    omega
+  have hsplitZ :
+    ((2 ^ p * (2 * 2 ^ B) * h : Nat) : Int) + ((q % 2 ^ (B + 1) : Nat) : Int) * 2 ^ p =
+      n.toNat := by
+    rw [← hn1]
+    exact_mod_cast hsplit
+  have hval := hI.sum
+  simp only [fd_curve25519_scalar_wnaf.digit]
+  rw [toNat_window n hB.2, hdiv]
+  split
+  next hpos =>
+    dsimp only
+    refine ⟨?_, ?_, ?_, fun k hk hpk => ?_⟩
+    · rw [val_set, hzp, hn1]
+      linear_combination hval + hsplitZ
+    · have := hI.le
+      omega
+    · rw [hn1, hpow]
+      exact Nat.mul_mod_right _ _
+    · rw [Vector.getElem_set_ne _ _ (by omega)]
+      exact hI.zero k hk (by omega)
+  next
+    hneg =>
+    have hle : 2 ^ p * (2 * 2 ^ B) * (h + 1) ≤ 2 ^ 255 := by
+      refine
+        carry_le (Nat.two_pow_pos p) hQ hdodd (by omega)
+          (by
+            rw [← hn1, hsplit]; exact hI.le)
+          ?_
+      rcases Nat.lt_or_ge (p + (B + 1)) 256 with hs | hs
+      · refine .inl ⟨2 ^ (255 - (p + (B + 1))), ?_⟩
+        rw [← hpow, ← Nat.pow_add, show p + (B + 1) + (255 - (p + (B + 1))) = 255 by omega]
+      · refine .inr ?_
+        rw [← Nat.pow_add]
+        exact Nat.pow_le_pow_right (by decide) (by omega)
+    have hsum :
+      ((n &&& ~~~((mask B).setWidth 320 <<< p)) + 1#320 <<< (p + (B + 1))).toNat =
+        2 ^ p * (2 * 2 ^ B) * (h + 1) := by
+      rw [toNat_add_shiftLeft (by omega)
+          (by
+            rw [hn1, hpow]; linarith),
+        hn1, hpow]
+      ring
+    dsimp only
+    refine ⟨?_, ?_, ?_, fun k hk hpk => ?_⟩
+    · rw [val_set, hzp, hsum]
+      push_cast at hsplitZ ⊢
+      linear_combination hval + hsplitZ
+    · rw [hsum]
+      exact hle
+    · rw [hsum, hpow]
+      exact Nat.mul_mod_right _ _
+    · rw [Vector.getElem_set_ne _ _ (by omega)]
+      exact hI.zero k hk (by omega)
+
+/-- With no set bit from `pos` on, the digits alone stand for `x`. -/
+theorem Inv.done {x : BitVec 256} {n : BitVec 320} {t : Vector Int 256} (hI : Inv x n t pos)
+    (hz : ∀ i, pos ≤ i → i < 256 → n.getLsbD i = false) :
+    fd_curve25519_scalar_wnaf.val t = x.toNat := by
+  have h256 : n.toNat % 2 ^ 256 = 0 := by
+    rw [mod_two_pow_eq_zero_iff]
+    intro i hi
+    by_cases hip : i < pos
+    · exact mod_two_pow_eq_zero_iff.1 hI.low i hip
+    · rw [BitVec.testBit_toNat]
+      exact hz i (by omega) hi
+  have h0 : n.toNat = 0 := by
+    have : n.toNat < 2 ^ 256 := lt_of_le_of_lt hI.le (by norm_num)
+    rwa [Nat.mod_eq_of_lt this] at h256
+  have := hI.sum
+  rw [h0] at this
+  simpa using this
+
+/-- `loop` from the invariant, with enough fuel, ends with digits standing for `x`. -/
+theorem Inv.run {x : BitVec 256} (hB : 1 ≤ B ∧ B ≤ 13) :
+    ∀ f pos (n : BitVec 320) (t : Vector Int 256),
+      Inv x n t pos →
+        256 ≤ pos + f →
+        fd_curve25519_scalar_wnaf.val (fd_curve25519_scalar_wnaf.loop B f n t pos) = x.toNat := by
+  intro f
+  induction f with
+  | zero =>
+    intro pos n t hI hf
+    exact hI.done fun i h1 h2 => by omega
+  | succ f ih =>
+    intro pos n t hI hf
+    simp only [fd_curve25519_scalar_wnaf.loop]
+    split
+    next
+      hp =>
+      have h256 : pos ≤ 256 := by
+        by_contra hc
+        rw [nextBit_ge (by omega)] at hp
+        omega
+      have hpp : pos ≤ nextBit n 256 pos := le_nextBit h256
+      exact ih _ _ _ (hI.step hB rfl hp) (by omega)
+    next hp =>
+      by_cases hpos : 256 ≤ pos
+      · exact hI.done fun i h1 h2 => by omega
+      · exact hI.done fun i h1 h2 => getLsbD_lt_nextBit (fuel := 256) (by omega) h1 (by omega) h2
+
+/-- The digits of `wnaf x bits` sum to `x`: `Σ d_i 2^i = x`. -/
+public theorem wnaf_sum (x : BitVec 256) (hb : 1 ≤ bits ∧ bits ≤ 13) (hx : x.toNat < 2 ^ 255) :
+    ∑ i : Fin 256, (wnaf x bits)[i] * 2 ^ (i : Nat) = x.toNat := by
   change val (wnaf x bits) = _
-  have hu : ∀ k (hk : k < 256), (unpackT x)[k] = 0 ∨ (unpackT x)[k] = 1 := fun k hk => by
-    simp only [unpackT, Vector.getElem_ofFn]; split <;> simp
-  rw [wnaf, outerT_val hm (fun _ => by simp [unpackT]) (fun k hk _ => hu k hk)
-    (fun h => (hu _ h).resolve_left (firstNonzero_spec (by omega) h)), val_unpackT,
-    Nat.mod_eq_of_lt hx]
+  have hn0 : (n0 x).toNat = x.toNat := by
+    rw [n0, BitVec.toNat_setWidth, BitVec.toNat_setWidth, Nat.mod_eq_of_lt hx,
+      Nat.mod_eq_of_lt
+        (lt_trans hx (Nat.pow_lt_pow_right (a := 2) (by decide) (show 255 < 320 by decide)))]
+  refine Inv.run hb 256 0 _ _ ⟨?_, ?_, ?_, fun k hk _ => ?_⟩ (by omega)
+  · rw [val_replicate_zero, hn0]
+    simp
+  · rw [hn0]
+    exact hx.le
+  · exact Nat.mod_one _
+  · simp
 
 end Sum
 
@@ -228,7 +275,8 @@ section Digits
 /-- Each digit of `wnaf x bits` is `0` or odd, with `|d| ≤ 2^bits - 1`. -/
 public theorem wnaf_digit (x : BitVec 256) (hb : 1 ≤ bits) (hk : k < 256) :
     ((wnaf x bits)[k] = 0 ∨ Odd (wnaf x bits)[k]) ∧ (wnaf x bits)[k].natAbs ≤ 2 ^ bits - 1 := by
-  have hc : (2 : Int) ^ bits = ((2 ^ bits : Nat) : Int) := by push_cast; rfl
+  have hc : (2 : Int) ^ bits = ((2 ^ bits : Nat) : Int) := by
+    push_cast; rfl
   obtain ⟨hd, h1, h2⟩ := wnaf_digits x hb k hk
   rw [hc] at h1 h2
   generalize 2 ^ bits = M at h1 h2 ⊢
@@ -250,17 +298,15 @@ public theorem wnaf_index (x : BitVec 256) (hb : 1 ≤ bits) (hk : k < 256) :
 
 /-- `n1slide`'s digits: `0` or odd, `|d| ≤ 15`, an index into the 8-entry `ai` table. -/
 public theorem wnaf4_digit (x : BitVec 256) (hk : k < 256) :
-    ((wnaf x 4)[k] = 0 ∨ Odd (wnaf x 4)[k]) ∧ (wnaf x 4)[k].natAbs ≤ 15 ∧
-      (wnaf x 4)[k].natAbs / 2 < 8 :=
-  ⟨(wnaf_digit x (by decide) hk).1, (wnaf_digit x (by decide) hk).2,
-    wnaf_index x (by decide) hk⟩
+    ((wnaf x 4)[k] = 0 ∨ Odd (wnaf x 4)[k]) ∧
+      (wnaf x 4)[k].natAbs ≤ 15 ∧ (wnaf x 4)[k].natAbs / 2 < 8 :=
+  ⟨(wnaf_digit x (by decide) hk).1, (wnaf_digit x (by decide) hk).2, wnaf_index x (by decide) hk⟩
 
 /-- `n2slide`'s digits: `0` or odd, `|d| ≤ 255`, an index into the 128-entry base table. -/
 public theorem wnaf8_digit (x : BitVec 256) (hk : k < 256) :
-    ((wnaf x 8)[k] = 0 ∨ Odd (wnaf x 8)[k]) ∧ (wnaf x 8)[k].natAbs ≤ 255 ∧
-      (wnaf x 8)[k].natAbs / 2 < 128 :=
-  ⟨(wnaf_digit x (by decide) hk).1, (wnaf_digit x (by decide) hk).2,
-    wnaf_index x (by decide) hk⟩
+    ((wnaf x 8)[k] = 0 ∨ Odd (wnaf x 8)[k]) ∧
+      (wnaf x 8)[k].natAbs ≤ 255 ∧ (wnaf x 8)[k].natAbs / 2 < 128 :=
+  ⟨(wnaf_digit x (by decide) hk).1, (wnaf_digit x (by decide) hk).2, wnaf_index x (by decide) hk⟩
 
 end Digits
 

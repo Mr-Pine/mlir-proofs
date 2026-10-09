@@ -26,14 +26,14 @@ namespace fd_ed25519_point_add_with_opts
 /-- The entry block's constants the branches read: `_1112d`, the folds' shifts, masks and biases,
 the lane subtractions' `p` limbs, and `19` for the folds' top carries. -/
 abbrev Consts (E : ⟪Γ⟫) : Prop :=
-  E ⊨ [%2452 := quad1112d.P25, %2453 := quad1112d.P14, %2454 := quad1112d.P03, %2455 := m4340,
-    %2456 := Vector.replicate 8 1048576#64, %2457 := bias03,
-    %2458 := Vector.replicate 8 8796093022207#64, %2460 := s4340,
-    %2461 := Vector.replicate 8 43#64, %2462 := Vector.replicate 8 18446744073708503040#64,
-    %2463 := negBias03, %2485 := selPoison 1 0 0 0 quadP.P03,
-    %2493 := selPoison 1 0 0 0 quadP.P14, %2501 := selPoison 1 0 0 0 quadP.P25,
-    %2509 := k19Lanes, %2517 := selPoison 1 0 0 1 quadP.P03,
-    %2525 := selPoison 1 0 0 1 quadP.P14, %2533 := selPoison 1 0 0 1 quadP.P25]
+  E ⊨ [%2462 := quad1112d.P25, %2463 := quad1112d.P14, %2464 := quad1112d.P03, %2465 := m4340,
+    %2466 := Vector.replicate 8 1048576#64, %2467 := bias03,
+    %2468 := Vector.replicate 8 8796093022207#64, %2470 := s4340,
+    %2471 := Vector.replicate 8 43#64, %2472 := Vector.replicate 8 18446744073708503040#64,
+    %2473 := negBias03, %2495 := selPoison 1 0 0 0 quadP.P03,
+    %2503 := selPoison 1 0 0 0 quadP.P14, %2511 := selPoison 1 0 0 0 quadP.P25,
+    %2519 := k19Lanes, %2527 := selPoison 1 0 0 1 quadP.P03,
+    %2535 := selPoison 1 0 0 1 quadP.P14, %2543 := selPoison 1 0 0 1 quadP.P25]
 
 /-- `^bb2`, `FD_R43X6_GE_ADD( P3, A, B )`, then `^bb3`: `r` gets `geAdd` of the points at `a` and
 `b`, through the temporaries `z0 … z8` (block ids from `n` on). -/
@@ -42,8 +42,8 @@ theorem geAdd_run (r a b : Pointer) (pre : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z
     (K : PoisonOr β) (hArgs : E.args = (args (.value r) (.value a) (.value b) (.value pre)).get)
     (hC : Consts E)
     (hZ :
-      E ⊨ [%2540 := z0, %2541 := z1, %2542 := z2, %2543 := z3, %2544 := z4, %2545 := z5,
-        %2546 := z6, %2547 := z7, %2548 := z8])
+      E ⊨ [%2550 := z0, %2551 := z1, %2552 := z2, %2553 := z3, %2554 := z4, %2555 := z5,
+        %2556 := z6, %2557 := z7, %2558 := z8])
     (hwf : S.WF) (hr : S.mem.QuadFit r) (ha : S.mem.QuadFit a) (hb : S.mem.QuadFit b)
     (hz :
       Fits S.mem z0 512 ∧ Fits S.mem z1 512 ∧ Fits S.mem z2 512 ∧ Fits S.mem z3 512 ∧
@@ -138,7 +138,7 @@ theorem geAddTable_run (r a b : Pointer) (pre : BitVec 32) (z0 z1 z2 z3 z4 z5 : 
     (n : Nat) (S : GlobalState) (E : ⟪Γ⟫) (g : Vals [.ptr] × GlobalState → PoisonOr β)
     (K : PoisonOr β) (hArgs : E.args = (args (.value r) (.value a) (.value b) (.value pre)).get)
     (hC : Consts E)
-    (hZ : E ⊨ [%2534 := z0, %2535 := z1, %2536 := z2, %2537 := z3, %2538 := z4, %2539 := z5])
+    (hZ : E ⊨ [%2544 := z0, %2545 := z1, %2546 := z2, %2547 := z3, %2548 := z4, %2549 := z5])
     (hwf : S.WF) (hr : S.mem.QuadFit r) (ha : S.mem.QuadFit a) (hb : S.mem.QuadFit b)
     (hz :
       Fits S.mem z0 512 ∧ Fits S.mem z1 512 ∧ Fits S.mem z2 512 ∧ Fits S.mem z3 512 ∧

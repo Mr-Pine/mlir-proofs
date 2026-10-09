@@ -52,10 +52,10 @@ abbrev fill (m : MemoryState) (z : Vector (BitVec 64) 8) : MemoryState :=
   let z := BitVec.packLanes z
   (((((m.storeAt a03 z).storeAt b03 z).storeAt a14 z).storeAt b14 z).storeAt a25 z).storeAt b25 z
 
-/-- `^bb5`: `*_Pb25 = %2231`, then return `%2232`. -/
+/-- `^bb5`: `*_Pb25 = %2241`, then return `%2242`. -/
 theorem bb5_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (v : Vector (BitVec 64) 8)
-    (r : BitVec 32) (hv : E.read (%2231) = Ty.wrap v) (hr : E.read (%2232) = .value r)
+    (r : BitVec 32) (hv : E.read (%2241) = Ty.wrap v) (hr : E.read (%2242) = .value r)
     (hb25 : Fits S.mem b25 512) (K : PoisonOr (Vals [.bv 32] × GlobalState))
     (hK :
       .value (.cons (.value r) .nil, { S with mem := S.mem.storeAt b25 (BitVec.packLanes v) }) =
@@ -69,11 +69,11 @@ theorem bb5_run (E : ⟪Γ⟫) (S : GlobalState)
   subst_vars
   rfl
 
-/-- `^bb3`: the first encoding does not decode; all six out-vectors zeroed (`%1909`), then `-1`
-(`%1908`). -/
+/-- `^bb3`: the first encoding does not decode; all six out-vectors zeroed (`%1919`), then `-1`
+(`%1918`). -/
 theorem bb3_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (z : Vector (BitVec 64) 8)
-    (r : BitVec 32) (hz : E.read (%1909) = Ty.wrap z) (hr : E.read (%1908) = .value r)
+    (r : BitVec 32) (hz : E.read (%1919) = Ty.wrap z) (hr : E.read (%1918) = .value r)
     (ha03 : Fits S.mem a03 512) (ha14 : Fits S.mem a14 512) (ha25 : Fits S.mem a25 512)
     (hb03 : Fits S.mem b03 512) (hb14 : Fits S.mem b14 512) (hb25 : Fits S.mem b25 512) :
     func.runFrom E ^bb3 S =
@@ -83,11 +83,11 @@ theorem bb3_run (E : ⟪Γ⟫) (S : GlobalState)
   finish_block
   step_loop using bb5_run
 
-/-- `^bb4`: the second encoding does not decode; all six out-vectors zeroed (`%1909`), then `-2`
-(`%1907`). -/
+/-- `^bb4`: the second encoding does not decode; all six out-vectors zeroed (`%1919`), then `-2`
+(`%1917`). -/
 theorem bb4_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (z : Vector (BitVec 64) 8)
-    (r : BitVec 32) (hz : E.read (%1909) = Ty.wrap z) (hr : E.read (%1907) = .value r)
+    (r : BitVec 32) (hz : E.read (%1919) = Ty.wrap z) (hr : E.read (%1917) = .value r)
     (ha03 : Fits S.mem a03 512) (ha14 : Fits S.mem a14 512) (ha25 : Fits S.mem a25 512)
     (hb03 : Fits S.mem b03 512) (hb14 : Fits S.mem b14 512) (hb25 : Fits S.mem b25 512)
     (K : PoisonOr (Vals [.bv 32] × GlobalState))
@@ -100,21 +100,21 @@ theorem bb4_run (E : ⟪Γ⟫) (S : GlobalState)
   finish_block
   step_loop using bb5_run
 
-/-- `^bb1`: the checks of the second point, `x + y` (`%2106 + %2012`) nonzero as `%2113` is. Both
+/-- `^bb1`: the checks of the second point, `x + y` (`%2116 + %2022`) nonzero as `%2123` is. Both
 nonzero: on to `^bb2` (`hK`'s first case); else `^bb4`'s failure. -/
 theorem bb1_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (x y z : Vector (BitVec 64) 8)
-    (c r : BitVec 32) (hx : E.read (%2106) = Ty.wrap x) (hy : E.read (%2012) = Ty.wrap y)
-    (hc : E.read (%2113) = .value c) (h0 : E.read (%1934) = .value 0)
-    (hz : E.read (%1909) = Ty.wrap z) (hr : E.read (%1907) = .value r) (ha03 : Fits S.mem a03 512)
+    (c r : BitVec 32) (hx : E.read (%2116) = Ty.wrap x) (hy : E.read (%2022) = Ty.wrap y)
+    (hc : E.read (%2123) = .value c) (h0 : E.read (%1944) = .value 0)
+    (hz : E.read (%1919) = Ty.wrap z) (hr : E.read (%1917) = .value r) (ha03 : Fits S.mem a03 512)
     (ha14 : Fits S.mem a14 512) (ha25 : Fits S.mem a25 512) (hb03 : Fits S.mem b03 512)
     (hb14 : Fits S.mem b14 512) (hb25 : Fits S.mem b25 512) (hwf : S.WF)
     (K : PoisonOr (Vals [.bv 32] × GlobalState))
     (hK :
       (if fd_r43x6_is_nonzero.spec (vadd x y) &&& c = 0#32 then
           func.runFrom
-            E[%2117 := vadd x y, %2118 := fd_r43x6_is_nonzero.spec (vadd x y), %2119 :=
-              fd_r43x6_is_nonzero.spec (vadd x y) &&& c, %2120 :=
+            E[%2127 := vadd x y, %2128 := fd_r43x6_is_nonzero.spec (vadd x y), %2129 :=
+              fd_r43x6_is_nonzero.spec (vadd x y) &&& c, %2130 :=
               BitVec.ofBool (fd_r43x6_is_nonzero.spec (vadd x y) &&& c == 0#32)]
             ^bb2 S
         else
@@ -329,11 +329,11 @@ noncomputable def result (S : GlobalState) (A B : Dec) : PoisonOr (Vals [.bv 32]
 signs `x0a x0b` and whether `t1nza t1nzb` are nonzero. -/
 abbrev entry (E : ⟪Γ⟫) (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8)
     (x0a x0b t1nza t1nzb : BitVec 32) : ⟪Γ⟫ :=
-  E[%1899 := quadFoldMask, %1900 := Vector.replicate 8 8796093022207, %1902 := quadShifts, %1903 :=
-    Vector.replicate 8 43, %1905 := sqrtM1, %1906 := 255#8, %1910 := negP, %1911 := one, %1913 :=
-    negBias, %1914 := negSel, %1915 := neg18, %1926 := foldMask, %1927 := foldShifts, %1929 :=
-    foldK, %1934 := 0#32, %1942 := zeroLo, %1950 := oneLo, %1958 := oneHi, %1966 := quad19, %1976 :=
-    x0a, %1978 := x0b, %1982 := ya, %1984 := yb, %2081 := xa, %2086 := xb, %2112 := t1nza, %2113 :=
+  E[%1909 := quadFoldMask, %1910 := Vector.replicate 8 8796093022207, %1912 := quadShifts, %1913 :=
+    Vector.replicate 8 43, %1915 := sqrtM1, %1916 := 255#8, %1920 := negP, %1921 := one, %1923 :=
+    negBias, %1924 := negSel, %1925 := neg18, %1936 := foldMask, %1937 := foldShifts, %1939 :=
+    foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi, %1976 := quad19, %1986 :=
+    x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 := xb, %2122 := t1nza, %2123 :=
     t1nzb]
 
 /-- `^bb2`: both encodings decode; finish both points and store them as QUADs. -/
@@ -389,12 +389,12 @@ theorem bb2_run (E : ⟪Γ⟫) (S₀ : GlobalState)
 theorem entry_eq (E : ⟪Γ⟫) (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8)
     (x0a x0b t1nza t1nzb : BitVec 32)
     (hR :
-      E ⊨ [%1899 := quadFoldMask, %1900 := Vector.replicate 8 8796093022207, %1902 := quadShifts,
-        %1903 := Vector.replicate 8 43, %1905 := sqrtM1, %1906 := 255#8, %1910 := negP, %1911 :=
-        one, %1913 := negBias, %1914 := negSel, %1915 := neg18, %1926 := foldMask, %1927 :=
-        foldShifts, %1929 := foldK, %1934 := 0#32, %1942 := zeroLo, %1950 := oneLo, %1958 := oneHi,
-        %1966 := quad19, %1976 := x0a, %1978 := x0b, %1982 := ya, %1984 := yb, %2081 := xa, %2086 :=
-        xb, %2112 := t1nza, %2113 := t1nzb]) :
+      E ⊨ [%1909 := quadFoldMask, %1910 := Vector.replicate 8 8796093022207, %1912 := quadShifts,
+        %1913 := Vector.replicate 8 43, %1915 := sqrtM1, %1916 := 255#8, %1920 := negP, %1921 :=
+        one, %1923 := negBias, %1924 := negSel, %1925 := neg18, %1936 := foldMask, %1937 :=
+        foldShifts, %1939 := foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi,
+        %1976 := quad19, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 :=
+        xb, %2122 := t1nza, %2123 := t1nzb]) :
     entry E sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb = E := by
   simp only [entry]
   repeat rw [Env.write_of_read]
@@ -405,12 +405,12 @@ theorem bb2_run' (E : ⟪Γ⟫) (S₀ : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get)
     (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8) (x0a x0b t1nza t1nzb : BitVec 32)
     (hR :
-      E ⊨ [%1899 := quadFoldMask, %1900 := Vector.replicate 8 8796093022207, %1902 := quadShifts,
-        %1903 := Vector.replicate 8 43, %1905 := sqrtM1, %1906 := 255#8, %1910 := negP, %1911 :=
-        one, %1913 := negBias, %1914 := negSel, %1915 := neg18, %1926 := foldMask, %1927 :=
-        foldShifts, %1929 := foldK, %1934 := 0#32, %1942 := zeroLo, %1950 := oneLo, %1958 := oneHi,
-        %1966 := quad19, %1976 := x0a, %1978 := x0b, %1982 := ya, %1984 := yb, %2081 := xa, %2086 :=
-        xb, %2112 := t1nza, %2113 := t1nzb])
+      E ⊨ [%1909 := quadFoldMask, %1910 := Vector.replicate 8 8796093022207, %1912 := quadShifts,
+        %1913 := Vector.replicate 8 43, %1915 := sqrtM1, %1916 := 255#8, %1920 := negP, %1921 :=
+        one, %1923 := negBias, %1924 := negSel, %1925 := neg18, %1936 := foldMask, %1937 :=
+        foldShifts, %1939 := foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi,
+        %1976 := quad19, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 :=
+        xb, %2122 := t1nza, %2123 := t1nzb])
     (ht1nza01 : t1nza = 0 ∨ t1nza = 1) (ht1nzb01 : t1nzb = 0 ∨ t1nzb = 1)
     (ha03 : Fits S₀.mem a03 512) (ha14 : Fits S₀.mem a14 512) (ha25 : Fits S₀.mem a25 512)
     (hb03 : Fits S₀.mem b03 512) (hb14 : Fits S₀.mem b14 512) (hb25 : Fits S₀.mem b25 512)

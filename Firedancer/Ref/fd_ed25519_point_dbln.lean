@@ -42,7 +42,7 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
     (K : PoisonOr β) :
     ∀ m k (t : PointLimbs) (S : GlobalState) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value a) (.value n)).get →
-        (E ⊨ [%1991 := 1#8, %1992 := tp, %1996 := BitVec.ofNat 8 k]) →
+        (E ⊨ [%2006 := 1#8, %2007 := tp, %2011 := BitVec.ofNat 8 k]) →
         k + m + 1 = n.toNat →
         1 ≤ k →
         n.toNat ≤ 255 →
@@ -53,7 +53,7 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
         S.mem.readPoint tp = t →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value a) (.value n)).get →
-            (E' ⊨ [%1992 := tp]) →
+            (E' ⊨ [%2007 := tp]) →
             S' =
               { alloc := ⟨S.alloc.nextFreeBlock + 5 * (m + 1)⟩,
                 mem :=

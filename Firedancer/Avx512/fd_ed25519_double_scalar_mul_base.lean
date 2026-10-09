@@ -87,11 +87,11 @@ def ladderBlocks (w1 w2 : Vector Int 256) : (i : Nat) → i < 256 → Nat
   | 0, _ => 6 + digitBlocks w1[0] + digitBlocks w2[0]
   | i + 1, h => 6 + digitBlocks w1[i + 1] + digitBlocks w2[i + 1] + ladderBlocks w1 w2 i (by omega)
 
-/-- The blocks the function allocates, its callees' included: 147 before the main loop. -/
+/-- The blocks the function allocates, its callees' included: 149 before the main loop. -/
 def blocks (n1 n2 : BitVec 256) : Nat :=
   let n1slide := fd_curve25519_scalar_wnaf.wnaf n1 4
   let n2slide := fd_curve25519_scalar_wnaf.wnaf n2 8
-  147 +
+  149 +
     match start n1slide n2slide 255 (by decide) with
     | some i => ladderBlocks n1slide n2slide i i.isLt
     | none => 0
@@ -142,15 +142,14 @@ theorem TableAt.of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v} (hf : F
 
 /-- The entry block's registers that later blocks read. -/
 abbrev EntryRegs (tbl n1s n2s ai a2 tp : Pointer) (E : ⟪Γ⟫) : Prop :=
-  E ⊨ [%1510 := 1#32, %1513 := 1#64, %1514 := 8#64, %1515 := 255#32, %1516 := 0#16,
-    %1517 := 4294967295#32, %1518 := 1#16, %1519 := tbl, %1520 := 0#64,
-    %1521 := 18446744073709551615#64, %1522 := 0#32, %1523 := n1s, %1524 := n2s, %1525 := ai,
-    %1526 := a2, %1527 := tp]
+  E ⊨ [%1512 := 1#32, %1515 := 1#64, %1516 := 8#64, %1517 := 255#32, %1518 := 0#16, %1519 :=
+    4294967295#32, %1520 := 1#16, %1521 := tbl, %1522 := 0#64, %1523 := 18446744073709551615#64,
+    %1524 := 0#32, %1525 := n1s, %1526 := n2s, %1527 := ai, %1528 := a2, %1529 := tp]
 
 /-- The registers the main loop reads, `i` aside. -/
 abbrev LoopRegs (tbl n1s n2s ai tp : Pointer) (E : ⟪Γ⟫) : Prop :=
-  E ⊨ [%1510 := 1#32, %1516 := 0#16, %1518 := 1#16, %1519 := tbl, %1520 := 0#64,
-    %1521 := 18446744073709551615#64, %1523 := n1s, %1524 := n2s, %1525 := ai, %1527 := tp]
+  E ⊨ [%1512 := 1#32, %1518 := 0#16, %1520 := 1#16, %1521 := tbl, %1522 := 0#64, %1523 :=
+    18446744073709551615#64, %1525 := n1s, %1526 := n2s, %1527 := ai, %1529 := tp]
 
 attribute [local mlir_transport] TableAt.storeQuad
 
@@ -216,7 +215,7 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (hw : -15 ≤ w1[i] ∧ w1[i] ≤ 15) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1550 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id) (hra : r.id ≠ ai.id)
     (hta : tp.id ≠ ai.id) (htn : tp.id ≠ n1s.id) (hn1o : n1s.offset.toNat + 512 < 2 ^ 64)
     (haio : ai.offset.toNat + 192 * 8 < 2 ^ 64) (hrv : S.mem.readQuad r = R)
@@ -225,7 +224,7 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
           LoopRegs tbl n1s n2s ai tp E' →
-          (E' ⊨ [%1550 := BitVec.ofNat 64 i]) →
+          (E' ⊨ [%1552 := BitVec.ofNat 64 i]) →
           S' =
             { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i]⟩,
               mem := (S.mem.storeQuad tp (add1 AI w1[i] R).2).storeQuad r (add1 AI w1[i] R).1 } →
@@ -308,7 +307,7 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (hw : -255 ≤ w2[i] ∧ w2[i] ≤ 255) (R T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1550 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id) (hrb : r.id ≠ tbl.id)
     (hn2o : n2s.offset.toNat + 512 < 2 ^ 64) (htbo : tbl.offset.toNat + 192 * 128 < 2 ^ 64)
     (hrv : S.mem.readQuad r = R) (htv : S.mem.readQuad tp = T) (hn2s : SlidesAt S.mem n2s w2)
@@ -317,7 +316,7 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
           LoopRegs tbl n1s n2s ai tp E' →
-          (E' ⊨ [%1550 := BitVec.ofNat 64 i]) →
+          (E' ⊨ [%1552 := BitVec.ofNat 64 i]) →
           S' =
             { alloc := ⟨S.alloc.nextFreeBlock + digitBlocks w2[i]⟩,
               mem :=
@@ -400,7 +399,7 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1550 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id)
     (htv : S.mem.readQuad tp = T)
     (hexit :
@@ -415,7 +414,7 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
           ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
             E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
               LoopRegs tbl n1s n2s ai tp E' →
-              (E' ⊨ [%1550 := BitVec.ofNat 64 j]) →
+              (E' ⊨ [%1552 := BitVec.ofNat 64 j]) →
               S' = { S with mem := S.mem.storeQuad r T } →
               (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S' >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb16 S >>= g) = K := by
@@ -446,7 +445,7 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1550 := BitVec.ofNat 64 i])
+    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i])
     (hF : LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B) (hrv : S.mem.readQuad r = R)
     (hexit :
       i = 0 →
@@ -464,7 +463,7 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
           ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
             E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
               LoopRegs tbl n1s n2s ai tp E' →
-              (E' ⊨ [%1550 := BitVec.ofNat 64 j]) →
+              (E' ⊨ [%1552 := BitVec.ofNat 64 j]) →
               S' =
                 { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i] + digitBlocks w2[i]⟩,
                   mem :=
@@ -519,7 +518,7 @@ theorem main_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     ∀ i (hi : i < 256) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
         LoopRegs tbl n1s n2s ai tp E →
-        (E ⊨ [%1550 := BitVec.ofNat 64 i]) →
+        (E ⊨ [%1552 := BitVec.ofNat 64 i]) →
         LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B →
         S.mem.readQuad r = R →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState) (T' : Quad),
@@ -570,14 +569,14 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
     (hR : LoopRegs tbl n1s n2s ai tp E)
-    (hR' : E ⊨ [%1517 := 4294967295#32, %1522 := 0#32, %1538 := BitVec.ofNat 32 i])
+    (hR' : E ⊨ [%1519 := 4294967295#32, %1524 := 0#32, %1540 := BitVec.ofNat 32 i])
     (hn1s : SlidesAt S.mem n1s w1) (hn2s : SlidesAt S.mem n2s w2)
     (hfound :
       ¬(w1[i] = 0 ∧ w2[i] = 0) →
         ∀ E' : ⟪Γ⟫,
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
             LoopRegs tbl n1s n2s ai tp E' →
-            (E' ⊨ [%1550 := BitVec.ofNat 64 i]) →
+            (E' ⊨ [%1552 := BitVec.ofNat 64 i]) →
             (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S >>= g) = K)
     (hnone :
       w1[i] = 0 ∧ w2[i] = 0 →
@@ -592,7 +591,7 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
             ∀ E' : ⟪Γ⟫,
               E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
                 LoopRegs tbl n1s n2s ai tp E' →
-                (E' ⊨ [%1517 := 4294967295#32, %1522 := 0#32, %1538 := BitVec.ofNat 32 j]) →
+                (E' ⊨ [%1519 := 4294967295#32, %1524 := 0#32, %1540 := BitVec.ofNat 32 j]) →
                 (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb3 S >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb3 S >>= g) = K := by
   obtain ⟨hf1, hl1⟩ := hn1s i hi
@@ -659,13 +658,13 @@ theorem skip_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     ∀ i (hi : i < 256) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
         LoopRegs tbl n1s n2s ai tp E →
-        (E ⊨ [%1517 := 4294967295#32, %1522 := 0#32, %1538 := BitVec.ofNat 32 i]) →
+        (E ⊨ [%1519 := 4294967295#32, %1524 := 0#32, %1540 := BitVec.ofNat 32 i]) →
         (∀ j,
           start w1 w2 i hi = some j →
             ∀ E' : ⟪Γ⟫,
               E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
                 LoopRegs tbl n1s n2s ai tp E' →
-                (E' ⊨ [%1550 := BitVec.ofNat 64 j.val]) →
+                (E' ⊨ [%1552 := BitVec.ofNat 64 j.val]) →
                 (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S >>= g) = K) →
         (start w1 w2 i hi = none →
           ∀ E' : ⟪Γ⟫,
@@ -709,7 +708,7 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi1 : 1 ≤ i)
     (hi : i < 8) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : EntryRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1531 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : EntryRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1533 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (ha2 : S.mem.QuadFit a2) (htp : S.mem.QuadFit tp)
     (hP : S.mem.QuadFit (ai.add (BitVec.ofNat 64 (192 * (i - 1)))))
     (hQ : S.mem.QuadFit (ai.add (BitVec.ofNat 64 (192 * i))))
@@ -728,7 +727,7 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
         ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
             EntryRegs tbl n1s n2s ai a2 tp E' →
-            (E' ⊨ [%1531 := BitVec.ofNat 64 (i + 1)]) →
+            (E' ⊨ [%1533 := BitVec.ofNat 64 (i + 1)]) →
             S' = tableStep tp ai A2 P i S →
             (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb2 S' >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb2 S >>= g) = K := by
@@ -840,7 +839,7 @@ theorem table_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector In
     ∀ m i (S : GlobalState) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
         EntryRegs tbl n1s n2s ai a2 tp E →
-        (E ⊨ [%1531 := BitVec.ofNat 64 i]) →
+        (E ⊨ [%1533 := BitVec.ofNat 64 i]) →
         1 ≤ i →
         i + m = 8 →
         i < 8 →
@@ -902,7 +901,7 @@ theorem blocks_of_none {x1 x2 : BitVec 256}
       start (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) 255
           (by decide) =
         none) :
-    blocks x1 x2 = 147 := by
+    blocks x1 x2 = 149 := by
   unfold blocks
   dsimp only
   rw [h]
@@ -929,7 +928,7 @@ theorem blocks_of_some {x1 x2 : BitVec 256} {j : Fin 256}
           (by decide) =
         some j) :
     blocks x1 x2 =
-      147 +
+      149 +
         ladderBlocks (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) j
           j.isLt := by
   unfold blocks

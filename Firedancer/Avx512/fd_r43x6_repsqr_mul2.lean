@@ -32,14 +32,14 @@ section Proof
 /-- `^bb1`'s env: the constants, the loop's `xa xb` and its counter `k`. -/
 abbrev fd_r43x6_repsqr_mul2.hdr (E : ⟪fd_r43x6_repsqr_mul2.Γ⟫) (k : Nat)
     (xa xb : Vector (BitVec 64) 8) : ⟪fd_r43x6_repsqr_mul2.Γ⟫ :=
-  E[%448 := 0#64, %449 := foldMask, %450 := foldShifts, %451 := (Ty.vec 8 64).poisoned, %452 := foldK,
-    %453 := 18446744073709551615#64, %455 := xa, %456 := xb, %457 := BitVec.ofNat 64 k]
+  E[%443 := 0#64, %444 := foldMask, %445 := foldShifts, %446 := (Ty.vec 8 64).poisoned, %447 := foldK,
+    %448 := 18446744073709551615#64, %450 := xa, %451 := xb, %452 := BitVec.ofNat 64 k]
 
-/-- `^bb2`'s env on leaving the loop: the constants, and the squarings `xa xb` in `%471 %470`. -/
+/-- `^bb2`'s env on leaving the loop: the constants, and the squarings `xa xb` in `%466 %465`. -/
 abbrev fd_r43x6_repsqr_mul2.exit (E : ⟪fd_r43x6_repsqr_mul2.Γ⟫) (xa xb : Vector (BitVec 64) 8) :
     ⟪fd_r43x6_repsqr_mul2.Γ⟫ :=
-  E[%449 := foldMask, %450 := foldShifts, %451 := (Ty.vec 8 64).poisoned, %452 := foldK, %470 := xb,
-    %471 := xa]
+  E[%444 := foldMask, %445 := foldShifts, %446 := (Ty.vec 8 64).poisoned, %447 := foldK, %465 := xb,
+    %466 := xa]
 
 /-- The counter's `n - 1` (`add nsw n, -1`) does not overflow. -/
 theorem dec_nsw (k : Nat) (h0 : 0 < k) (h : k < 2 ^ 63) :
@@ -60,7 +60,7 @@ theorem dec_eq (k : Nat) (h0 : 0 < k) (h : k < 2 ^ 63) :
   omega
 
 /-- The loop from `^bb1` with counter `k`, in continuation form: after `k` iterations, `^bb2` runs
-with `%471`, `%470` holding `k` folded squarings of `xa`, `xb`. -/
+with `%466`, `%465` holding `k` folded squarings of `xa`, `xb`. -/
 theorem fd_r43x6_repsqr_mul2.loop (S : GlobalState) (hwf : S.WF)
     (K : PoisonOr (Vals [] × GlobalState)) :
     ∀ k (xa xb : Vector (BitVec 64) 8) E,

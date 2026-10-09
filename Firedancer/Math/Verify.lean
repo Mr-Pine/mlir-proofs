@@ -271,8 +271,9 @@ public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 *
     (A := fd_ed25519_point_neg.spec Ap) (n1 := k) (n2 := S) heN bXN hYA bTN hZA hzA hkl
     (by have := Ed25519.ell_lt; omega)
   rw [hT] at heQ bQ
-  rw [fd_ed25519_point_eq_z1.spec_val ⟨heQ.1, heQ.2.1, heQ.2.2.1⟩ bQ.1 bQ.2.1 bQ.2.2.2.loose
-    hXR.loose hYR.loose]
+  rw [fd_ed25519_verify_equation.spec,
+    fd_ed25519_point_eq_z1.spec_val ⟨heQ.1, heQ.2.1, heQ.2.2.1⟩ bQ.1 bQ.2.1 bQ.2.2.2.loose
+      hXR.loose hYR.loose]
   obtain ⟨vx, vy⟩ := PointLimbs.ext_val_xy heR hzR
   rw [vx, vy, hk]
   generalize Ed25519.natLE (Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)) % Ed25519.ell = n

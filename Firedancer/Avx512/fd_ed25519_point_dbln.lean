@@ -40,37 +40,37 @@ theorem repeat_eq_iter (j : Nat) (P : Quad) : Nat.repeat (geDbl quadMul quadSqr)
 /-- The registers of the entry block that the loop and its exit read: the constants, the six
 temporaries, and the pointers to `r`'s second and third vectors. -/
 abbrev LoopEnv (E : ⟪Γ⟫) (r z0 z1 z2 z3 z4 z5 : Pointer) : Prop :=
-  E ⊨ [%3041 := .value 1#8,
-    %3042 := Ty.wrap #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
+  E ⊨ [%3051 := .value 1#8,
+    %3052 := Ty.wrap #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
       1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64],
-    %3043 := Ty.wrap (Vector.replicate 8 1048576#64),
-    %3044 := Ty.wrap #v[159383552#64, 159383552#64, 159383552#64, 159383552#64, 1048576#64,
+    %3053 := Ty.wrap (Vector.replicate 8 1048576#64),
+    %3054 := Ty.wrap #v[159383552#64, 159383552#64, 159383552#64, 159383552#64, 1048576#64,
       1048576#64, 1048576#64, 1048576#64],
-    %3045 := Ty.wrap (Vector.replicate 8 8796093022207#64),
-    %3047 := Ty.wrap #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
-    %3048 := Ty.wrap (Vector.replicate 8 43#64),
-    %3049 := Ty.wrap (Vector.replicate 8 18446744073708503040#64),
-    %3050 := Ty.wrap #v[18446744073550168064#64, 18446744073550168064#64, 18446744073550168064#64,
+    %3055 := Ty.wrap (Vector.replicate 8 8796093022207#64),
+    %3057 := Ty.wrap #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
+    %3058 := Ty.wrap (Vector.replicate 8 43#64),
+    %3059 := Ty.wrap (Vector.replicate 8 18446744073708503040#64),
+    %3060 := Ty.wrap #v[18446744073550168064#64, 18446744073550168064#64, 18446744073550168064#64,
       18446744073550168064#64, 18446744073708503040#64, 18446744073708503040#64,
       18446744073708503040#64, 18446744073708503040#64],
-    %3059 := Vector.replicate 8 PoisonOr.poison,
-    %3060 := Ty.wrap #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64],
-    %3073 := #v[.poison, .value 8796093022189#64, .value 8796093022189#64, .poison, .poison,
+    %3069 := Vector.replicate 8 PoisonOr.poison,
+    %3070 := Ty.wrap #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64],
+    %3083 := #v[.poison, .value 8796093022189#64, .value 8796093022189#64, .poison, .poison,
       .value 8796093022207#64, .value 8796093022207#64, .poison],
-    %3081 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
+    %3091 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
       .value 8796093022207#64, .value 8796093022207#64, .poison],
-    %3089 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
+    %3099 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
       .value 1099511627775#64, .value 1099511627775#64, .poison],
-    %3097 := #v[.value 8796093022189#64, .poison, .poison, .poison, .value 8796093022207#64,
+    %3107 := #v[.value 8796093022189#64, .poison, .poison, .poison, .value 8796093022207#64,
       .poison, .poison, .poison],
-    %3105 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 8796093022207#64,
+    %3115 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 8796093022207#64,
       .poison, .poison, .poison],
-    %3113 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 1099511627775#64,
+    %3123 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 1099511627775#64,
       .poison, .poison, .poison],
-    %3121 := #v[.poison, .poison, .poison, .poison, .value 19#64, .value 19#64, .value 19#64,
+    %3131 := #v[.poison, .poison, .poison, .poison, .value 19#64, .value 19#64, .value 19#64,
       .value 19#64],
-    %3128 := z0, %3129 := z1, %3130 := z2, %3131 := z3, %3132 := z4, %3133 := z5,
-    %3222 := r.add 64#64, %3225 := r.add 128#64]
+    %3138 := z0, %3139 := z1, %3140 := z2, %3141 := z3, %3142 := z4, %3143 := z5,
+    %3232 := r.add 64#64, %3235 := r.add 128#64]
 
 /-- The lanes of a folded point are below `2^44`. -/
 abbrev Folded (P : Quad) : Prop :=
@@ -87,8 +87,8 @@ theorem storeVec_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id.id) :
 
 /-- The loop's header `^bb3` holding `P` and the counter `k`. -/
 abbrev hdr (E : ⟪Γ⟫) (P : Quad) (k : Nat) : ⟪Γ⟫ :=
-  E[%3227 := Ty.wrap P.P25, %3228 := Ty.wrap P.P14, %3229 := Ty.wrap P.P03,
-    %3230 := .value (BitVec.ofNat 8 k)]
+  E[%3237 := Ty.wrap P.P25, %3238 := Ty.wrap P.P14, %3239 := Ty.wrap P.P03,
+    %3240 := .value (BitVec.ofNat 8 k)]
 
 /-- One trip through `^bb3` on `P` at counter `k`: `geDbl P` into the registers, the temporaries
 written; then back to the header if `k + 1 < n`, else to the exit. -/
@@ -115,10 +115,10 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
     (hexit :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value a) (.value n)).get →
-          (E' ⊨ [%3222 := r.add 64#64, %3225 := r.add 128#64,
-            %3311 := Ty.wrap (geDbl quadMul quadSqr P).P03,
-            %3313 := Ty.wrap (geDbl quadMul quadSqr P).P14,
-            %3315 := Ty.wrap (geDbl quadMul quadSqr P).P25]) →
+          (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64,
+            %3321 := Ty.wrap (geDbl quadMul quadSqr P).P03,
+            %3323 := Ty.wrap (geDbl quadMul quadSqr P).P14,
+            %3325 := Ty.wrap (geDbl quadMul quadSqr P).P25]) →
           S'.WF → S'.mem.QuadFit r → S'.alloc = S.alloc →
           S'.mem.eraseFrom b = S.mem.eraseFrom b →
           ¬((BitVec.ofNat 8 k + 1#8).setWidth 32).ult n = true →
@@ -184,9 +184,9 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
         z4.id ≠ z5.id →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value a) (.value n)).get →
-            (E' ⊨ [%3222 := r.add 64#64, %3225 := r.add 128#64,
-              %3311 := Ty.wrap (iter (m + 1) P).P03, %3313 := Ty.wrap (iter (m + 1) P).P14,
-              %3315 := Ty.wrap (iter (m + 1) P).P25]) →
+            (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64,
+              %3321 := Ty.wrap (iter (m + 1) P).P03, %3323 := Ty.wrap (iter (m + 1) P).P14,
+              %3325 := Ty.wrap (iter (m + 1) P).P25]) →
             S'.WF → S'.mem.QuadFit r → S'.alloc = S.alloc →
             S'.mem.eraseFrom b = S.mem.eraseFrom b →
             (fd_ed25519_point_dbln.runFrom E' 1 S' >>= g) = K) →

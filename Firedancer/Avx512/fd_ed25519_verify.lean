@@ -13,9 +13,7 @@ public import Firedancer.Ref.fd_sha512_append
 public import Firedancer.Ref.fd_sha512_fini
 public import Firedancer.Avx512.fd_ed25519_point_frombytes_2x
 public import Firedancer.Avx512.fd_ed25519_affine_is_small_order
-public import Firedancer.Avx512.fd_ed25519_point_neg
-public import Firedancer.Avx512.fd_ed25519_double_scalar_mul_base
-public import Firedancer.Avx512.fd_ed25519_point_eq_z1
+public import Firedancer.Avx512.fd_ed25519_verify_equation
 public import Firedancer.Avx512.Mlir.fd_ed25519_verify
 
 namespace MLIR.Firedancer.Avx512
@@ -35,9 +33,9 @@ open Firedancer.Ref
 noncomputable def fd_ed25519_verify.spec (tbl : Nat → Quad) (msgSz : BitVec 64)
     (msg : BitVec (8 * msgSz.toNat)) (r S publicKey : BitVec 256) (buf0 : BitVec 1024) :
     fd_ed25519_verify.Result :=
-  -- the four locals' blocks, and `frombytes_2x`'s
-  let blocks := 4 + 30
-  if !fd_curve25519_scalar_validate.spec S then ⟨-1#32, none, 4⟩
+  -- the three locals' blocks, and `frombytes_2x`'s
+  let blocks := 3 + 30
+  if !fd_curve25519_scalar_validate.spec S then ⟨-1#32, none, 3⟩
   else
     let (res, Aprime, R) := fd_ed25519_point_frombytes_2x.spec publicKey r
     if res ≠ 0#32 then ⟨if res = -1#32 then -2#32 else -1#32, none, blocks⟩
@@ -52,8 +50,7 @@ noncomputable def fd_ed25519_verify.spec (tbl : Nat → Quad) (msgSz : BitVec 64
           let Rcmp := fd_ed25519_double_scalar_mul_base.spec tbl k Aneg S
           ⟨if fd_ed25519_point_eq_z1.spec Rcmp R = 0#32 then -3#32 else 0#32, some sha4,
             blocks + 16 + fd_ed25519_verify.hashBlocks buf0 r publicKey msgSz msg +
-              fd_ed25519_double_scalar_mul_base.blocks k S +
-              3⟩
+              fd_ed25519_verify_equation.blocks k S⟩
 
 end
 
@@ -106,8 +103,8 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
     (hmsg_sha : msg.id ≠ sha.id) (hk_sha : k.id ≠ sha.id)
     (hK :
       (fd_ed25519_verify.bb5.runBodyFrom
-            E[%724 := .value sha, %725 := .value sha, %726 := .value sha, %727 := .value sha, %728 :=
-              .value k]
+            E[%723 := .value sha, %724 := .value sha, %725 := .value sha, %726 := .value sha,
+              %727 := .value k]
             6
             {
               alloc :=
@@ -204,11 +201,10 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
   have hread_buf : S.mem.readAt sha 1024 = S₀.mem.readAt sha 1024 := by rw [hS]
   block_init
   iterate 7 step_pure
-  -- fd_ed25519_point_t Aprime[1], R[1]; uchar k[64]; fd_ed25519_point_t Rcmp[1];
+  -- fd_ed25519_point_t Aprime[1], R[1]; uchar k[64];
   step_alloca with A
   step_alloca with R
   step_alloca with k
-  step_alloca with Rc
   -- uchar const * S = sig + 32;
   step_pure
   -- if( !fd_curve25519_scalar_validate( S ) ) return FD_ED25519_ERR_SIG;
@@ -321,16 +317,10 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           have hk32 : ¬k.offset.uaddOverflow 32#64 := by simp [BitVec.uaddOverflow, hk_off]
           have hk64 : ¬k.offset.uaddOverflow 64#64 := by simp [BitVec.uaddOverflow, hk_off]
           step_call using fd_curve25519_scalar_reduce.call_eq consuming hread_k
-          -- fd_ed25519_point_neg( Aprime, Aprime );
-          step_pure
-          step_call using (fd_ed25519_point_neg.call_eq (hsep := .inl rfl))
-          -- fd_ed25519_double_scalar_mul_base( Rcmp, k, Aprime, S );
-          have hRc_pt := MemoryState.QuadFit.of_fits hRc_fits hRc_off
-          step_call using fd_ed25519_double_scalar_mul_base.call_eq
-          -- if( fd_ed25519_point_eq_z1( Rcmp, R ) ) return FD_ED25519_SUCCESS;
+          -- if( fd_ed25519_verify_equation( k, Aprime, S, R ) ) return FD_ED25519_SUCCESS;
           -- return FD_ED25519_ERR_MSG;
-          step_call using fd_ed25519_point_eq_z1.call_eq
-          iterate 4 step_pure
+          step_call using fd_ed25519_verify_equation.call_eq
+          iterate 3 step_pure
           finish_block
           block_init
           iterate 2 step_pure
@@ -345,7 +335,8 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           simp only [fd_ed25519_verify.spec, hv, hfb, hres0, hsoA, hsoR, hH,
             fd_ed25519_verify.Result.mem, ite_ofBool_beq]
           simp
-          omega
+          -- `verify_equation.spec` unfolds to the `if`'s condition
+          exact ⟨rfl, by omega⟩
 
 end Proof
 

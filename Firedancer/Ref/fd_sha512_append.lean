@@ -545,8 +545,8 @@ theorem toNat_and_neg128 (n : BitVec 64) :
 
 /-- `^bb7`, the leftover of the `n` bytes at `d`. -/
 abbrev hdr7 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%1031 := .value 0#64, %1037 := .value 127#64, %1038 := .value 18446744073709551488#64,
-    %1041 := .value (sha.add 200#64), %1063 := .value d, %1064 := .value n]
+  E[%1035 := .value 0#64, %1041 := .value 127#64, %1042 := .value 18446744073709551488#64,
+    %1045 := .value (sha.add 200#64), %1067 := .value d, %1068 := .value n]
 
 /-- "Buffer any leftover bytes", then return `sha`. -/
 theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
@@ -618,7 +618,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
 
 /-- `^bb5`, the bulk of the `n` bytes at `d`. -/
 abbrev hdr5 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  (hdr7 sha d n E)[%1036 := .value 7#64, %1040 := .value (sha.add 128#64)]
+  (hdr7 sha d n E)[%1040 := .value 7#64, %1044 := .value (sha.add 128#64)]
 
 /-- "Append the bulk of the data", then the leftover. -/
 theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))

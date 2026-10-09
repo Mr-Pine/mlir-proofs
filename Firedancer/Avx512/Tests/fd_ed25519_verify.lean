@@ -20,7 +20,7 @@ example :
         (BitVec.ofNat 256
           7237005577332262213973186563042994240857116359379907606001950938285454250989)
         0#256 0#1024
-    res.ret = -1#32 ∧ res.sha = none ∧ res.blocks = 4 := by
+    res.ret = -1#32 ∧ res.sha = none ∧ res.blocks = 3 := by
   have h :
     fd_curve25519_scalar_validate.spec
         (BitVec.ofNat 256

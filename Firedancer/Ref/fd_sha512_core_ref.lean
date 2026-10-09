@@ -253,7 +253,7 @@ def compress (state : Vector (BitVec 64) 8) (block : BitVec 1024) : Vector (BitV
   addWords state (loop2 16 (loop1 block 0 state) (X0 block))
 
 /-- The blocks `j, j + 1, …` of `data`, `n` of them, compressed into `state` in order
-(`W += 16UL`). -/
+(`W += 16UL*sizeof(ulong)`). -/
 def compressFrom (data : BitVec w) : (j n : Nat) → Vector (BitVec 64) 8 → Vector (BitVec 64) 8
   | _, 0, state => state
   | j, n + 1, state =>
@@ -289,12 +289,12 @@ theorem sigma1_eq (x : BitVec 64) : ROTR x 19#32 ^^^ x >>> 6 ^^^ ROTR x 61#32 = 
   rw [sigma1]; ac_rfl
 
 theorem Ch_eq (x y z : BitVec 64) :
-    z &&& (x ^^^ 18446744073709551615#64) ||| y &&& x = Ch x y z := by
+    x &&& y ||| z &&& (x ^^^ 18446744073709551615#64) = Ch x y z := by
   rw [Ch]; bv_decide
 
-/-- `Ch`'s `or disjoint` holds: `~x & z` and `x & y` do not overlap. -/
+/-- `Ch`'s `or disjoint` holds: `x & y` and `~x & z` do not overlap. -/
 theorem Ch_disjoint (x y z : BitVec 64) :
-    z &&& (x ^^^ 18446744073709551615#64) &&& (y &&& x) = 0#64 := by
+    x &&& y &&& (z &&& (x ^^^ 18446744073709551615#64)) = 0#64 := by
   bv_decide
 
 theorem Maj_eq (x y z : BitVec 64) : x &&& (y ^^^ z) ^^^ y &&& z = Maj x y z := by
@@ -360,6 +360,27 @@ theorem gep_of_offset_zero {p : Pointer} (hp : p.offset = 0) (i : Nat) :
   simp [BitVec.uaddOverflow, hp]
   omega
 
+/-- `i << 3`, `W`'s byte offset of word `i`: `i * 8`. -/
+theorem ofNat_shiftLeft_3 (i : Nat) : BitVec.ofNat 64 i <<< 3 = BitVec.ofNat 64 (i * 8) := by
+  apply BitVec.eq_of_toNat_eq
+  simp [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq]
+
+/-- `i << 3`'s `nuw` holds: no bit is shifted out. -/
+theorem ofNat_mul8_ushiftRight_3 {i : Nat} (h : i < 16) :
+    BitVec.ofNat 64 (i * 8) >>> 3 = BitVec.ofNat 64 i := by
+  apply BitVec.eq_of_toNat_eq
+  simp [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  omega
+
+/-- `i << 3`'s `nsw` holds: the result's sign is clear. -/
+theorem ofNat_mul8_sshiftRight_3 {i : Nat} (h : i < 16) :
+    (BitVec.ofNat 64 (i * 8)).sshiftRight 3 = BitVec.ofNat 64 i := by
+  rw [BitVec.sshiftRight_eq_of_msb_false
+      (by
+        simp [BitVec.msb_eq_decide]; omega),
+    ← BitVec.ushiftRight_eq]
+  exact ofNat_mul8_ushiftRight_3 h
+
 /-- Slot `m % 16` of `X` fits. -/
 theorem fits_slot {m : MemoryState} {X : Pointer} (hX : X.offset = 0) (h : Fits m X 1024)
     (k : Nat) : Fits m (X.add (BitVec.ofNat 64 (k % 16 * 8))) 64 :=
@@ -384,21 +405,21 @@ theorem fits_K {m : MemoryState} {Kp : Pointer} (hK : Kp.offset = 0) (h : Fits m
 
 /-- `^bb0`'s constants, which every later block reads. -/
 abbrev consts (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%866 := .value 1#32, %867 := .value 16#64, %868 := .value 0#64, %869 := .value 14#32,
-    %870 := .value 18#32, %871 := .value 41#32, %872 := .value 18446744073709551615#64,
-    %874 := .value 28#32, %875 := .value 34#32, %876 := .value 39#32, %877 := .value 1#64,
-    %878 := .value 15#64, %879 := .value 14#64, %880 := .value 8#32, %881 := .value 7#64,
-    %882 := .value 19#32, %883 := .value 61#32, %884 := .value 6#64, %885 := .value 9#64,
-    %886 := .value 80#64]
+  E[%868 := .value 1#32, %869 := .value 16#64, %870 := .value 0#64, %871 := .value 3#64,
+    %872 := .value 14#32, %873 := .value 18#32, %874 := .value 41#32,
+    %875 := .value 18446744073709551615#64, %877 := .value 28#32, %878 := .value 34#32,
+    %879 := .value 39#32, %880 := .value 1#64, %881 := .value 15#64, %882 := .value 14#64,
+    %883 := .value 8#32, %884 := .value 7#64, %885 := .value 19#32, %886 := .value 61#32,
+    %887 := .value 6#64, %888 := .value 9#64, %889 := .value 80#64]
 
 /-- `^bb1`, a block's start: the constants, `K`, `X`, `&state[1 … 7]`, the state words
 `h0 … h7` (also `a … h`), `W` and the blocks left. -/
 abbrev hdr1 (st X Kp Wp : Pointer) (h0 h1 h2 h3 h4 h5 h6 h7 cnt : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  (consts E)[%873 := .value Kp, %887 := .value X, %888 := .value (st.add 8#64), %889 :=
-    .value (st.add 16#64), %890 := .value (st.add 24#64), %891 := .value (st.add 32#64), %892 :=
-    .value (st.add 40#64), %893 := .value (st.add 48#64), %894 := .value (st.add 56#64), %903 :=
-    .value h7, %904 := .value h6, %905 := .value h5, %906 := .value h4, %907 := .value h3, %908 :=
-    .value h2, %909 := .value h1, %910 := .value h0, %911 := .value Wp, %912 := .value cnt]
+  (consts E)[%876 := .value Kp, %890 := .value X, %891 := .value (st.add 8#64), %892 :=
+    .value (st.add 16#64), %893 := .value (st.add 24#64), %894 := .value (st.add 32#64), %895 :=
+    .value (st.add 40#64), %896 := .value (st.add 48#64), %897 := .value (st.add 56#64), %906 :=
+    .value h7, %907 := .value h6, %908 := .value h5, %909 := .value h4, %910 := .value h3, %911 :=
+    .value h2, %912 := .value h1, %913 := .value h0, %914 := .value Wp, %915 := .value cnt]
 
 /-- `hdr1` with the state words `H`. -/
 abbrev hdr1v (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
@@ -419,23 +440,23 @@ abbrev xNew (x0 x1 x9 x14 : BitVec 64) : BitVec 64 :=
 /-- `^bb2`, the first loop at round `i`, on `a … h`. -/
 abbrev hdr2 (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) (i : Nat) : ⟪Γ⟫ :=
-  (hdr1v st X Kp Wp H cnt E)[%913 := .value a, %914 := .value b, %915 := .value c,
-    %916 := .value d, %917 := .value (BitVec.ofNat 64 i), %918 := .value h, %919 := .value g,
-    %920 := .value f, %921 := .value e]
+  (hdr1v st X Kp Wp H cnt E)[%916 := .value a, %917 := .value b, %918 := .value c,
+    %919 := .value d, %920 := .value e, %921 := .value f, %922 := .value (BitVec.ofNat 64 i),
+    %923 := .value h, %924 := .value g]
 
 /-- `^bb3`, the second loop at round `i`, on `a … h`. -/
 abbrev hdr3 (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) (i : Nat) : ⟪Γ⟫ :=
-  (hdr1v st X Kp Wp H cnt E)[%955 := .value a, %956 := .value b, %957 := .value c,
-    %958 := .value d, %959 := .value (BitVec.ofNat 64 i), %960 := .value h, %961 := .value g,
-    %962 := .value f, %963 := .value e]
+  (hdr1v st X Kp Wp H cnt E)[%959 := .value a, %960 := .value b, %961 := .value c,
+    %962 := .value d, %963 := .value e, %964 := .value f, %965 := .value (BitVec.ofNat 64 i),
+    %966 := .value h, %967 := .value g]
 
 /-- `^bb4`, after the last round, with `a … h`. -/
 abbrev exit3 (st X Kp Wp : Pointer) (h0 h1 h2 h3 h4 h5 h6 h7 cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) : ⟪Γ⟫ :=
-  (hdr1 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 cnt E)[%955 := .value b, %956 := .value c,
-    %957 := .value d, %961 := .value h, %962 := .value g, %963 := .value f, %1016 := .value e,
-    %1018 := .value a]
+  (hdr1 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 cnt E)[%959 := .value b, %960 := .value c,
+    %961 := .value d, %963 := .value f, %964 := .value g, %967 := .value h, %1020 := .value e,
+    %1022 := .value a]
 
 /-- `hdr2` on `a … h = v`. -/
 abbrev hdr2v (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
@@ -712,17 +733,12 @@ theorem words_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitV
   have fk := fits_K hKo hKf (by omega : i < 80)
   have hi64 : i % 18446744073709551616 = i := Nat.mod_eq_of_lt (by omega)
   have hi8 : i * 8 < 18446744073709551616 := by omega
-  have gw :
-    Operation.gep (.value (BitVec.ofNat 64 (i * 8))) (.value Wp) =
-      .value (Wp.add (BitVec.ofNat 64 (i * 8))) := by
-    rw [gep_value]
-    simp [BitVec.uaddOverflow]
-    omega
   have o1 := saddOverflow_ofNat (i := i) (k := 1) (by omega)
   have o1' := uaddOverflow_ofNat (i := i) (k := 1) (by omega)
   block_init
-  -- X[i] = fd_ulong_bswap( W[i] );
-  step_pure [hi64, hi8, gw]
+  -- X[i] = fd_ulong_bswap( FD_LOAD( ulong, W + i*sizeof(ulong) ) );
+  step_pure [ofNat_shiftLeft_3, ofNat_mul8_ushiftRight_3 hi, ofNat_mul8_sshiftRight_3 hi]
+  step_pure [Nat.mod_eq_of_lt hi8, hi8]
   step_load consuming hw
   step_call using fd_ulong_bswap.call_eq
   step_pure [hi64, hi8, gep_of_offset_zero hX i]
@@ -1008,8 +1024,8 @@ theorem ofNat_add_neg_one (r : Nat) :
   generalize BitVec.ofNat 64 r = x
   bv_decide
 
-/-- `^bb4`: `state[k] += …`, `W += 16UL`, `--block_cnt`; then `^bb5` after the last block, else
-`^bb1`. -/
+/-- `^bb4`: `state[k] += …`, `W += 16UL*sizeof(ulong)`, `--block_cnt`; then `^bb5` after the
+last block, else `^bb1`. -/
 theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
     (h0 h1 h2 h3 h4 h5 h6 h7 a b c d e f g h : BitVec 64) (r : Nat) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState))
@@ -1060,7 +1076,7 @@ theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
   step_store
   step_pure [BitVec.add_comm h h7]
   step_store
-  -- W += 16UL; } while( --block_cnt );
+  -- W += 16UL*sizeof(ulong); } while( --block_cnt );
   step_pure
   step_pure
   step_pure [saddOverflow_sub_one hr, ofNat_add_neg_one]
@@ -1314,7 +1330,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
   func_init
   have hdata₀ : Fits S₀.mem data (1024 * n.toNat) := hS ▸ hdata
   block_init
-  iterate 7 step_pure
+  iterate 8 step_pure
   step_addressof fd_sha512_core_ref_K.value_eq with Kp
   iterate 13 step_pure
   step_alloca with X

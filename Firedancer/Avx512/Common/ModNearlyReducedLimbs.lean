@@ -4,7 +4,6 @@ public import MLIR.Semantics.Func
 public import MLIR.Run.Call
 public import MLIR.Run.BasicBlock
 public import MLIR.Run.Tactic
-public import Firedancer.Avx512.fd_long_if
 public import Firedancer.Avx512.Common.BiasedCarryPropagateLimbs
 import Std.Tactic.BVDecide
 
@@ -24,7 +23,7 @@ def modNearlyReducedLimbs (x : Limbs) : Limbs :=
   let y5 := x.y5 + y.c
   let c := y5.sshiftRight 40
   let y5 := y5 &&& m40
-  -- `r = y - if(!q,19,0)`
+  -- `r = y - (19 & ((q-1)>>63))`: `19` unless `q` (`0` or `1` here)
   let r := carryLimbs (y.y0 - if c = 0 then 19 else 0) y.y1 y.y2 y.y3 y.y4
   ⟨r.y0, r.y1, r.y2, r.y3, r.y4, y5 + r.c⟩
 
@@ -173,22 +172,21 @@ theorem runBodyFrom_modAddRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
 theorem sshiftRight43_saddOverflow (a b : BitVec 64) (hb : b < 0x80000000000#64) :
     (a.sshiftRight 43).saddOverflow b = false := by bv_decide
 
-/-- A limb below `2^43` minus `0` or `19` does not overflow. -/
-theorem ssubOverflow_ite (a : BitVec 64) (ha : a < 0x80000000000#64) (p : Prop) [Decidable p] :
-    a.ssubOverflow (if p then 0#64 else 19#64) = false := by split <;> bv_decide
+/-- `-19` or `0` plus a limb below `2^43` does not overflow. -/
+theorem saddOverflow_ite (a : BitVec 64) (ha : a < 0x80000000000#64) (p : Prop) [Decidable p] :
+    (if p then 18446744073709551597#64 else 0#64).saddOverflow a = false := by split <;> bv_decide
 
-/-- `r = y - if(!q,19,0)` as sixteen instructions, limbs `0 … 4` left unmasked: limb 5 `x5 + c` into
-`t5`, masked (`m40`) into `y5`, `t5 < 2^40` (`two40`) into `q` and `q32`, `fd_long_if` of it into
-`f`; `y0 - f` into `r0`, then each `rk`'s carry `ck` (`ashr`, `s43`) plus `y(k+1)` into `r(k+1)`,
-`r5` limb 5's. -/
-def modSubRun (x5 c m40 two40 s43 y0 y1 y2 y3 y4 t5 y5 : Dst Γ (.bv 64)) (q : Dst Γ (.bv 1))
-    (q32 : Dst Γ (.bv 32)) (f r0 c0 r1 c1 r2 c2 r3 c3 r4 c4 r5 : Dst Γ (.bv 64)) : List (Instr Γ) :=
+/-- `r = y - (19 & ((q-1)>>63))` as fifteen instructions, limbs `0 … 4` left unmasked: limb 5
+`x5 + c` into `t5`, masked (`m40`) into `y5`, `t5 < 2^40` (`two40`) into `q`, `-19` (`m19`) or `0`
+(`zero`) by it into `f`; `f + y0` into `r0`, then each `rk`'s carry `ck` (`ashr`, `s43`) plus `y(k+1)`
+into `r(k+1)`, `r5` limb 5's. -/
+def modSubRun (x5 c m40 two40 m19 zero s43 y0 y1 y2 y3 y4 t5 y5 : Dst Γ (.bv 64))
+    (q : Dst Γ (.bv 1)) (f r0 c0 r1 c1 r2 c2 r3 c3 r4 c4 r5 : Dst Γ (.bv 64)) : List (Instr Γ) :=
   [.binop (.add { nsw := true, nuw := true }) t5 (.val x5.i x5.h) (.val c.i c.h),
     .binop .and y5 (.val t5.i t5.h) (.val m40.i m40.h),
     .binop (.icmp .ult) q (.val t5.i t5.h) (.val two40.i two40.h),
-    .unop (.zext false) q32 (.val q.i q.h),
-    .call fd_long_if.call (.cons (.val q32.i q32.h) .nil) (.cons f .nil),
-    .binop (.sub { nsw := true }) r0 (.val y0.i y0.h) (.val f.i f.h),
+    .ternop (.select (τ := .bv 64)) f (.val q.i q.h) (.val m19.i m19.h) (.val zero.i zero.h),
+    .binop (.add { nsw := true }) r0 (.val f.i f.h) (.val y0.i y0.h),
     .binop (.ashr false) c0 (.val r0.i r0.h) (.val s43.i s43.h),
     .binop (.add { nsw := true }) r1 (.val c0.i c0.h) (.val y1.i y1.h),
     .binop (.ashr false) c1 (.val r1.i r1.h) (.val s43.i s43.h),
@@ -201,18 +199,18 @@ def modSubRun (x5 c m40 two40 s43 y0 y1 y2 y3 y4 t5 y5 : Dst Γ (.bv 64)) (q : D
     .binop (.add { nsw := true }) r5 (.val c4.i c4.h) (.val y5.i y5.h)]
 
 /-- Where the body at `pos` is `modSubRun` after `modAddRun` (`y0 … y4`, `c` hold its results), and
-`x5` holds `Y5 < 2^41`: running on from `pos` then `g` gives `K` if it does from `pos + 16` with
+`x5` holds `Y5 < 2^41`: running on from `pos` then `g` gives `K` if it does from `pos + 15` with
 `modNearlyReducedLimbs`'s limbs `0 … 4` before their masks in `r0 … r4`, and its limb 5 in `r5`
 (`modNearlyReducedLimbs_eq`). -/
 theorem runBodyFrom_modSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {x5 c m40r two40 s43 y0 y1 y2 y3 y4 t5 y5 : Dst Γ (.bv 64)} {q : Dst Γ (.bv 1)}
-    {q32 : Dst Γ (.bv 32)} {f r0 c0 r1 c1 r2 c2 r3 c3 r4 c4 r5 : Dst Γ (.bv 64)}
-    {rest : List (Instr Γ)} {Z0 Z1 Z2 Z3 Z4 Y5 : BitVec 64} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    {x5 c m40r two40 m19 zero s43 y0 y1 y2 y3 y4 t5 y5 : Dst Γ (.bv 64)} {q : Dst Γ (.bv 1)}
+    {f r0 c0 r1 c1 r2 c2 r3 c3 r4 c4 r5 : Dst Γ (.bv 64)} {rest : List (Instr Γ)}
+    {Z0 Z1 Z2 Z3 Z4 Y5 : BitVec 64} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
+    {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        modSubRun x5 c m40r two40 s43 y0 y1 y2 y3 y4 t5 y5 q q32 f r0 c0 r1 c1 r2 c2 r3 c3 r4 c4
-            r5 ++
+        modSubRun x5 c m40r two40 m19 zero s43 y0 y1 y2 y3 y4 t5 y5 q f r0 c0 r1 c1 r2 c2 r3 c3 r4
+            c4 r5 ++
           rest)
     (hR :
       E ⊨ [x5 := Y5, c :=
@@ -239,15 +237,16 @@ theorem runBodyFrom_modSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
         (carryLimbs ((carryLimbs Z0 Z1 Z2 Z3 Z4).y0 + 19) (carryLimbs Z0 Z1 Z2 Z3 Z4).y1
             (carryLimbs Z0 Z1 Z2 Z3 Z4).y2 (carryLimbs Z0 Z1 Z2 Z3 Z4).y3
             (carryLimbs Z0 Z1 Z2 Z3 Z4).y4).y4,
-        m40r := m40, two40 := 1099511627776#64, s43 := 43#64])
-    (hY5 : Y5 < 0x20000000000#64) (hwf : S.WF)
+        m40r := m40, two40 := 1099511627776#64, m19 := 18446744073709551597#64, zero := 0#64, s43 :=
+        43#64])
+    (hY5 : Y5 < 0x20000000000#64)
     (hd :
-      [x5.i, c.i, m40r.i, two40.i, s43.i, y0.i, y1.i, y2.i, y3.i, y4.i, t5.i, y5.i, q.i, q32.i, f.i,
-          r0.i, c0.i, r1.i, c1.i, r2.i, c2.i, r3.i, c3.i, r4.i, c4.i].Nodup)
+      [x5.i, c.i, m40r.i, two40.i, m19.i, zero.i, s43.i, y0.i, y1.i, y2.i, y3.i, y4.i, t5.i, y5.i,
+          q.i, f.i, r0.i, c0.i, r1.i, c1.i, r2.i, c2.i, r3.i, c3.i, r4.i, c4.i].Nodup)
     (hK :
-      ∀ (vt5 vy5 : ⟦.bv 64⟧) (vq : ⟦.bv 1⟧) (vq32 : ⟦.bv 32⟧) (vf vc0 vc1 vc2 vc3 vc4 : ⟦.bv 64⟧),
+      ∀ (vt5 vy5 : ⟦.bv 64⟧) (vq : ⟦.bv 1⟧) (vf vc0 vc1 vc2 vc3 vc4 : ⟦.bv 64⟧),
         (blk.runBodyFrom
-              E[t5 := vt5, y5 := vy5, q := vq, q32 := vq32, f := vf, r0 :=
+              E[t5 := vt5, y5 := vy5, q := vq, f := vf, r0 :=
                 (carrySums
                     ((carryLimbs ((carryLimbs Z0 Z1 Z2 Z3 Z4).y0 + 19)
                           (carryLimbs Z0 Z1 Z2 Z3 Z4).y1 (carryLimbs Z0 Z1 Z2 Z3 Z4).y2
@@ -415,7 +414,7 @@ theorem runBodyFrom_modSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
                       (carryLimbs ((carryLimbs Z0 Z1 Z2 Z3 Z4).y0 + 19)
                           (carryLimbs Z0 Z1 Z2 Z3 Z4).y1 (carryLimbs Z0 Z1 Z2 Z3 Z4).y2
                           (carryLimbs Z0 Z1 Z2 Z3 Z4).y3 (carryLimbs Z0 Z1 Z2 Z3 Z4).y4).y4).c]
-              (pos + 16) S >>=
+              (pos + 15) S >>=
             g) =
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
@@ -434,11 +433,10 @@ theorem runBodyFrom_modSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
   step_pure [o5.1, o5.2] with transparent vt5
   step_pure [o5.1, o5.2] with transparent vy5
   step_pure [o5.1, o5.2] with vq
-  step_pure [o5.1, o5.2] with vq32
-  step_call using fd_long_if.call_eq with transparent vf
+  step_pure with transparent vf
   have h5 : (Y5 + U.c &&& 1099511627775#64) < 0x80000000000#64 := by
     bv_decide (config := { enums := false })
-  step_pure [ssubOverflow_ite _ h0] with vr0
+  step_pure [saddOverflow_ite _ h0] with vr0
   step_pure with transparent vc0
   step_pure [sshiftRight43_saddOverflow _ _ h1] with vr1
   step_pure with transparent vc1
@@ -454,21 +452,21 @@ theorem runBodyFrom_modSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
       ⟨vr0, vr1, vr2, vr3, vr4, vc4⟩ := by
     subst_vars
     have hf :
-      (if (Y5 + U.c).sshiftRight 40 = 0 then (19 : BitVec 64) else 0) =
-        if BitVec.setWidth 32 (BitVec.ofBool ((Y5 + U.c).ult 1099511627776#64)) = 0#32 then 0#64
-        else 19#64 := by
+      (U.y0 - if (Y5 + U.c).sshiftRight 40 = 0 then (19 : BitVec 64) else 0) =
+        (if BitVec.ofBool ((Y5 + U.c).ult 1099511627776#64) = 1#1 then 18446744073709551597#64
+          else 0#64) +
+          U.y0 := by
       bv_decide (config := { enums := false })
-    simp only [fd_long_if.spec]
     rw [hf]
     simp only [carrySums, BitVec.add_comm]
   rw [hE, ←
-    hK (.value vt5) (.value vy5) (.value vq) (.value vq32) (.value vf) (.value vc0) (.value vc1)
-      (.value vc2) (.value vc3) (.value vc4),
+    hK (.value vt5) (.value vy5) (.value vq) (.value vf) (.value vc0) (.value vc1) (.value vc2)
+      (.value vc3) (.value vc4),
     e]
   have e5 : (Y5 + U.c &&& m40) + vc4 = vr5 := by
     subst_vars
     simp only [m40, BitVec.add_comm]
-  rw [e5, hS]
+  rw [e5]
 
 end
 

@@ -19,7 +19,7 @@ private def noTbl : Nat → PointLimbs := fun _ => ⟨0, 0, 0, 0⟩
       (BitVec.ofNat 256
         7237005577332262213973186563042994240857116359379907606001950938285454250989)
       0#256 0#1024
-  res.ret == -1#32 && res.sha.isNone && res.blocks == 4
+  res.ret == -1#32 && res.sha.isNone && res.blocks == 3
 
 -- SHA-512 of 64 zero bytes, as the digest's words lay it out in memory
 #guard

@@ -63,8 +63,8 @@ namespace fd_sha512_fini
 
 /-- `^bb2`, the last block from `buf_used = x`. -/
 abbrev hdr2 (sha : Pointer) (lo hi x : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%811 := .value 1#64, %812 := .value 112#64, %815 := .value (sha.add 128#64), %819 := .value lo,
-    %821 := .value hi, %828 := .value x]
+  E[%813 := .value 1#64, %814 := .value 112#64, %817 := .value (sha.add 128#64), %821 := .value lo,
+    %823 := .value hi, %830 := .value x]
 
 /-- The last block, then the hash stored at `hash`; returns `hash`. -/
 theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) (v : ShaState)
@@ -105,7 +105,7 @@ theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) 
   have hu : (112#64).usubOverflow x = false := by bv_decide
   block_init
   -- fd_memset( buf + buf_used, 0, FD_SHA512_PRIVATE_BUF_MAX-16UL-buf_used );
-  -- (`%arg55` is read through `hArgs`, passed by hand: the step does not use it)
+  -- (`%arg59` is read through `hArgs`, passed by hand: the step does not use it)
   step_pure [hxl, hArgs, fd_sha512_fini.args, Vals.get, gep_value hov]
   step_pure [hs, hu]
   step_call using fd_memset.call_eq [↓hsub] consuming hz
