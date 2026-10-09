@@ -53,6 +53,14 @@ end
 
 section Proof
 
+/-- An `or` of two `fd_f25519_eq` flags is `0` or `1`: it fits `fd_f25519_if`'s `uchar`. -/
+theorem fd_f25519_eq.spec_or_lt (a b c d : Fin 5 → BitVec 64) :
+    (fd_f25519_eq.spec a b).toNat ||| (fd_f25519_eq.spec c d).toNat < 256 := by
+  have h (a b : Fin 5 → BitVec 64) : (fd_f25519_eq.spec a b).toNat < 2 ^ 8 := by
+    simp only [fd_f25519_eq.spec, fd_f25519_is_zero.spec]
+    split <;> decide
+  exact Nat.or_lt_two_pow (h a b) (h c d)
+
 /-! ### The function -/
 
 /-- `fd_f25519_sqrt_ratio` stores `(spec u v).r` at `r` and returns `(spec u v).ret`; `u` and `v`
@@ -177,6 +185,7 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
   clear hsqrtm1_limbs hr_ne_sqrtm1
   -- fd_f25519_if( r, flipped_sign_sqrt|flipped_sign_sqrt_i, r_prime, r );
   step_pure
+  have hcond := fd_f25519_eq.spec_or_lt
   step_call using fd_f25519_if.call_eq consuming hread_r_prime
   name_limbs lr2
   clear hr_prime_limbs hr_ne_r_prime
