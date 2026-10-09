@@ -44,6 +44,9 @@ end
 
 section Proof
 
+/-- A byte shifted right by 7 has a clear sign bit. -/
+private theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
+
 /-- `fd_ed25519_point_frombytes` decodes the 32 bytes at `buf`: when `spec` is a point, it stores it
 at `r` and returns `r`, else it returns null and stores nothing. `buf` is read before `r` is
 written, so `r` may alias it. The globals', temporaries' and callees' blocks are freed again: only
@@ -70,10 +73,10 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
   -- `buf`'s bytes as a read fact, carried past the frame's blocks and stores
   have hbuf_read : S.mem.readAt buf 256 = S₀.mem.readAt buf 256 := by rw [hS]
   block_init
-  iterate 3 step_pure
+  step_pure
   step_addressof fd_f25519_d.value_eq with d
   step_addressof fd_f25519_one.value_eq with one
-  step_pure
+  iterate 3 step_pure
   -- fd_f25519_t x[1], y[1], t[1]; … fd_f25519_t u[1]; fd_f25519_t v[1];
   step_alloca with x
   step_alloca with y
@@ -137,7 +140,10 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
     step_pure with expected_x_sign
     step_call using fd_f25519_sgn.call_eq with sgn_x
     rw [← hlu1, ← hlv1, ← hlx0] at hsgn_x
-    iterate 2 step_pure
+    -- `zext nneg expected_x_sign` needs its sign bit clear
+    have hmsb : expected_x_sign.msb = false := hexpected_x_sign ▸ lshr_seven_msb buf31
+    step_pure [hmsb]
+    step_pure
     finish_block
     case' isFalse =>
       block_init
