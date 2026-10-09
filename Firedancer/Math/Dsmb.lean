@@ -33,7 +33,7 @@ def ExtT (R : PointLimbs) (P : Ed25519.Point) : Prop :=
   R.Ext P.x P.y ∧ R.Tight
 
 /-- The value of `w`'s low `i` digits, `Σ_{k < i} w[k] 2^k`. -/
-def low (w : Vector Int 256) (i : ℕ) : ℤ :=
+@[expose] public def low (w : Vector Int 256) (i : ℕ) : ℤ :=
   ∑ k ∈ Finset.range i, if h : k < 256 then w[k] * 2 ^ k else 0
 
 /-- `ExtT` of equal points. -/
@@ -114,18 +114,20 @@ theorem adds_compl {ai tbl : ℕ → PointLimbs} {PA PB Q : Ed25519.Point} {d1 d
 /-! ## The ladder -/
 
 /-- One more digit. -/
-theorem low_succ (w : Vector Int 256) {i : ℕ} (h : i < 256) :
+public theorem low_succ (w : Vector Int 256) {i : ℕ} (h : i < 256) :
     low w (i + 1) = low w i + w[i] * 2 ^ i := by
   rw [low, Finset.sum_range_succ, dite_eq_left_of_eq_true (eq_true h)]
   rfl
 
 /-- All digits: `w`'s value. -/
-theorem low_256 (w : Vector Int 256) : low w 256 = ∑ i : Fin 256, w[i] * 2 ^ (i : ℕ) := by
+public theorem low_256 (w : Vector Int 256) :
+    low w 256 = ∑ i : Fin 256, w[i] * 2 ^ (i : ℕ) := by
   rw [low, ← Fin.sum_univ_eq_sum_range]
   simp
 
 /-- Zero digits from `j` on add nothing. -/
-theorem low_add {w : Vector Int 256} {j : ℕ} (hz : ∀ k (hk : k < 256), j ≤ k → w[k] = 0) :
+public theorem low_add {w : Vector Int 256} {j : ℕ}
+    (hz : ∀ k (hk : k < 256), j ≤ k → w[k] = 0) :
     ∀ m, j + m ≤ 256 → low w (j + m) = low w j
   | 0, _ => rfl
   | m + 1, h => by
