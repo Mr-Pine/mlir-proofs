@@ -259,15 +259,12 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
   have hrb : S.mem.readQuad b = S₀.mem.readQuad b := by rw [hS]
   block_init
   iterate 25 step_pure
-  iterate 7 step_pattern using runBodyFrom_vecRun
+  iterate 7 step_pattern using runBodyFrom_vecRun inline
   iterate 15 step_alloca
   step_pure
   have hC : fd_ed25519_point_add_with_opts.Consts E := by
     dsimp only [fd_ed25519_point_add_with_opts.Consts]
     env_reads
-    all_goals
-      subst_vars
-      rfl
   finish_block
   · -- `!b_is_precomputed`: FD_R43X6_GE_ADD
     subst hbr

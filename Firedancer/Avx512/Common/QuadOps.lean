@@ -354,7 +354,7 @@ theorem sub_add_lt_ok {x y c : Wwl} (hx : ∀ i : Fin 8, x[i] < 17592186044416#6
 
 section Patterns
 
-attribute [-mlir_operation] zipWith_eq_ofFn Operation.shufflevector
+attribute [-mlir_operation] zipWith_eq_ofFn
 attribute [local mlir_operation] zipWith_shl_wrap
 
 /-- `FD_R43X6_QUAD_PERMUTE( r, imm0,imm1,imm2,imm3, x )`: a shuffle by `m` of each of `x03 x14 x25`
