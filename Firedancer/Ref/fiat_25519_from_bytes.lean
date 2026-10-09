@@ -155,6 +155,9 @@ public theorem fiat_25519_from_bytes.spec_lt (x : BitVec 256) (i : Fin 5) :
   rw [fiat_25519_from_bytes.spec_eq, BitVec.toNat_setWidth]
   exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (BitVec.isLt _)
 
+/-- `x1`'s `zext nneg` holds: `0x7F` clears the sign bit. -/
+theorem fiat_25519_from_bytes.x1_nonneg : (127#8).msb = false := by decide
+
 /-- `x1`'s `shl nuw` holds: seven bits shifted by `44`. -/
 theorem fiat_25519_from_bytes.x1_ushiftRight (b : BitVec 8) :
     (b.setWidth 64 &&& 127#64) <<< 44 >>> 44 = b.setWidth 64 &&& 127#64 := by bv_decide
@@ -256,6 +259,75 @@ theorem fiat_25519_from_bytes.mask_eq {x : BitVec 256} (h : y = (x.extractLsb' k
   · simp [h51, hi, Nat.lt_of_lt_of_le h51 hn]
   · simp [h51]
 
+/-- Bits `i … i + 7` of `x`, widened. -/
+abbrev fiat_25519_from_bytes.byteAt (x : BitVec 256) (i : Nat) : BitVec 64 :=
+  (x.extractLsb' i 8).setWidth 64
+
+/-- `x39`'s `or disjoint`s hold: `arg1[0 … 3]`, `x27`, `x28` and `x26`'s low bits do not overlap. -/
+theorem fiat_25519_from_bytes.x39_disjoint (x : BitVec 256) :
+    byteAt x 40 <<< 40 &&& BitVec.setWidth 64 (x.extractLsb' 0 32) = 0#64 ∧
+      (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32)) &&&
+        byteAt x 32 <<< 32 = 0#64 ∧
+      (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32) ||| byteAt x 32 <<< 32) &&&
+        (byteAt x 48 <<< 48 &&& 1970324836974592#64) = 0#64 := by
+  bv_decide
+
+/-- `x47`'s `or disjoint`s hold: `x40`, `x21 … x25` and `x20`'s low bits do not overlap. -/
+theorem fiat_25519_from_bytes.x47_disjoint (x : BitVec 256) :
+    byteAt x 88 <<< 37 &&& (byteAt x 96 <<< 45 &&& 2216615441596416#64) = 0#64 ∧
+      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64)) &&&
+        byteAt x 80 <<< 29 = 0#64 ∧
+      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
+        byteAt x 80 <<< 29) &&& byteAt x 72 <<< 21 = 0#64 ∧
+      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
+        byteAt x 80 <<< 29 ||| byteAt x 72 <<< 21) &&& byteAt x 64 <<< 13 = 0#64 ∧
+      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
+        byteAt x 80 <<< 29 ||| byteAt x 72 <<< 21 ||| byteAt x 64 <<< 13) &&&
+        byteAt x 56 <<< 5 = 0#64 ∧
+      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
+        byteAt x 80 <<< 29 ||| byteAt x 72 <<< 21 ||| byteAt x 64 <<< 13 ||| byteAt x 56 <<< 5) &&&
+        byteAt x 48 >>> 3 = 0#64 := by
+  bv_decide
+
+/-- `x13 | … | x19`'s `or disjoint`s hold. -/
+theorem fiat_25519_from_bytes.x55_disjoint (x : BitVec 256) :
+    byteAt x 144 <<< 42 &&& byteAt x 152 <<< 50 = 0#64 ∧
+      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50) &&& byteAt x 136 <<< 34 = 0#64 ∧
+      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34) &&&
+        byteAt x 128 <<< 26 = 0#64 ∧
+      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
+        byteAt x 128 <<< 26) &&& byteAt x 120 <<< 18 = 0#64 ∧
+      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
+        byteAt x 128 <<< 26 ||| byteAt x 120 <<< 18) &&& byteAt x 112 <<< 10 = 0#64 ∧
+      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
+        byteAt x 128 <<< 26 ||| byteAt x 120 <<< 18 ||| byteAt x 112 <<< 10) &&&
+        byteAt x 104 <<< 2 = 0#64 := by
+  bv_decide
+
+/-- `x7 | … | x12`'s `or disjoint`s hold. -/
+theorem fiat_25519_from_bytes.x63_disjoint (x : BitVec 256) :
+    byteAt x 192 <<< 39 &&& byteAt x 200 <<< 47 = 0#64 ∧
+      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47) &&& byteAt x 184 <<< 31 = 0#64 ∧
+      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31) &&&
+        byteAt x 176 <<< 23 = 0#64 ∧
+      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31 |||
+        byteAt x 176 <<< 23) &&& byteAt x 168 <<< 15 = 0#64 ∧
+      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31 |||
+        byteAt x 176 <<< 23 ||| byteAt x 168 <<< 15) &&& byteAt x 160 <<< 7 = 0#64 := by
+  bv_decide
+
+/-- `x1 | … | x6`'s `or disjoint`s hold. -/
+theorem fiat_25519_from_bytes.x71_disjoint (x : BitVec 256) :
+    (byteAt x 248 &&& 127#64) <<< 44 &&& byteAt x 240 <<< 36 = 0#64 ∧
+      ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36) &&& byteAt x 232 <<< 28 = 0#64 ∧
+      ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36 ||| byteAt x 232 <<< 28) &&&
+        byteAt x 224 <<< 20 = 0#64 ∧
+      ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36 ||| byteAt x 232 <<< 28 |||
+        byteAt x 224 <<< 20) &&& byteAt x 216 <<< 12 = 0#64 ∧
+      ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36 ||| byteAt x 232 <<< 28 |||
+        byteAt x 224 <<< 20 ||| byteAt x 216 <<< 12) &&& byteAt x 208 <<< 4 = 0#64 := by
+  bv_decide
+
 -- 196 instructions in one block: the steps need more than 300000 heartbeats
 set_option maxHeartbeats 400000 in
 /-- `fiat_25519_from_bytes` stores `spec` of the 32 bytes at `arg1` as limbs at `out1`. The loads
@@ -281,7 +353,7 @@ public theorem fiat_25519_from_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalSt
   step_pure
   step_load
   step_pure
-  step_pure
+  step_pure [x1_nonneg]
   step_pure [x1_ushiftRight, x1_sshiftRight] with x1
   -- x2 = ((uint64_t)(arg1[30]) << 36); … x28 = ((uint64_t)(arg1[4]) << 32);
   byte_shl x2
@@ -316,30 +388,30 @@ public theorem fiat_25519_from_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalSt
   have hw := MemoryState.readAt_of_readAt_low (w := 32) harg1 (by decide) hx
   step_load consuming hw
   iterate 4 step_pure
-  step_pure [hx26, hx27, hx28] with x39
+  step_pure [hx26, hx27, hx28, x39_disjoint] with x39
   rw [x39_eq] at hx39
   -- x47 = (x46 & UINT64_C(0x7ffffffffffff)); the code ors `x40` (`arg1[6] >> 3`), `x21 … x25` and
   -- `x20`'s low bits
   iterate 7 step_pure
-  step_pure [hx20, hx21, hx22, hx23, hx24, hx25] with x47
+  step_pure [hx20, hx21, hx22, hx23, hx24, hx25, x47_disjoint] with x47
   rw [x47_eq] at hx47
   -- x55 = (x13 + x54); the code adds `x48` (`arg1[12] >> 6`) to `x13 | … | x19`
   iterate 7 step_pure
-  step_pure [hx13, hx14, hx15, hx16, hx17, hx18, hx19, x55_no_overflow] with x55
+  step_pure [hx13, hx14, hx15, hx16, hx17, hx18, hx19, x55_disjoint, x55_no_overflow] with x55
   rw [x55_eq] at hx55
   -- x56 = (x55 & UINT64_C(0x7ffffffffffff));
   step_pure with x56
   rw [mask_eq hx55] at hx56
   -- x63 = (x7 + x62); the code adds `x57` (`x55 >> 51`) to `x7 | … | x12`
   iterate 6 step_pure
-  step_pure [hx7, hx8, hx9, hx10, hx11, hx12, x63_no_overflow] with x63
+  step_pure [hx7, hx8, hx9, hx10, hx11, hx12, x63_disjoint, x63_no_overflow] with x63
   rw [x63_eq hx55] at hx63
   -- x64 = (x63 & UINT64_C(0x7ffffffffffff));
   step_pure with x64
   rw [mask_eq hx63] at hx64
   -- x71 = (x1 + x70); the code adds `x65` (`x63 >> 51`) to `x1 | … | x6`
   iterate 6 step_pure
-  step_pure [hx1, hx2, hx3, hx4, hx5, hx6, x71_no_overflow] with x71
+  step_pure [hx1, hx2, hx3, hx4, hx5, hx6, x71_disjoint, x71_no_overflow] with x71
   rw [x71_eq hx63] at hx71
   -- out1[0] = x39; … out1[4] = x71;
   step_store
