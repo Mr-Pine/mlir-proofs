@@ -154,7 +154,7 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
       step_memcpy consuming hT320 hF320
       step_pure [counter_overflow (show i + 1 < 2 ^ 63 by omega)]
       finish_block
-      rename_i S₁ _ _
+      rename_i S₁ _
       have ht₁ : S₁.mem.LimbsFit tmp := by
         have := ht; rw [hS] at this; simpa [MemoryState.LimbsFit, Fits.storeAt_iff] using this
       have hf₁ : S₁.mem.LimbsFit fe := by
@@ -203,15 +203,13 @@ public theorem Fe_sqn.call_eq (out a : Pointer) (n : BitVec 64) (s : GlobalState
   finish_block
   have hsep : tmp.id ≠ fe.id := by
     rw [htmp, hfe]; simp [GlobalState.slot]
-  have haA : ((S₀.alloca 40).alloca 40).mem.LimbsFit a := by
-    have := ha; rw [hS] at this; simpa [MemoryState.LimbsFit, Fits.storeAt_iff] using this
   have hfeA : ((S₀.alloca 40).alloca 40).mem.LimbsFit fe := by
     have := hfe_limbs; rw [hS] at this; simpa [MemoryState.LimbsFit, Fits.storeAt_iff] using this
   have hcopy : S.mem.readLimbs fe = S₀.mem.readLimbs a := by
     rw [hS]
     dsimp only
-    rw [MemoryState.readLimbs_storeAt_readAt haA hfeA,
-      MemoryState.readLimbs_alloca_alloca hwf₀ haL₀]
+    rw [MemoryState.storeAt_readAt_eq_storeLimbs haL₀.fits haL₀.1 hfeA.1,
+      MemoryState.readLimbs_storeLimbs_self hfeA]
   refine
     Fe_sqn.loop out a tmp fe n _ _ n.toNat 0 S E hArgs ?_ (by simp) hn hwf htmp_limbs hfe_limbs hsep
       (hcopy ▸ ha'₀) ?_

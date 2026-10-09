@@ -311,11 +311,8 @@ public theorem Fe_mul.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
             mem :=
               s.mem.storeLimbs out (Fe.mul.spec (s.mem.readLimbs a) (s.mem.readLimbs b)) }) := by
   func_init
-  -- the inputs as read after the two `alloca`s
-  have hA := MemoryState.readLimbs_alloca_alloca (n := 40) (n' := 80) hwf₀ (hS ▸ ha)
-  have hB := MemoryState.readLimbs_alloca_alloca (n := 40) (n' := 80) hwf₀ (hS ▸ hb)
-  have ha₁ := hA ▸ hS ▸ ha'
-  have hb₁ := hB ▸ hS ▸ hb'
+  have ha₁ := hS ▸ ha'
+  have hb₁ := hS ▸ hb'
   have hov := Fe.mul.noOverflow ha₁ hb₁
   have hpre := Fe.mul.cols_pre ha₁ hb₁
   simp only [MemoryState.readLimbs] at hov
@@ -372,8 +369,7 @@ public theorem Fe_mul.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
   -- the columns stored, in Zig's order
   have hcols :
     S.mem.readWide r =
-      Fe.mul.cols (((S₀.alloca 40).alloca 80).mem.readLimbs a)
-        (((S₀.alloca 40).alloca 80).mem.readLimbs b) := by
+      Fe.mul.cols (S₀.mem.readLimbs a) (S₀.mem.readLimbs b) := by
     rw [hS, MemoryState.readWide_stores hrW₀]
     funext i
     fin_cases i <;> simp only [Fe.mul.cols, MemoryState.readLimbs, hc0, hc1, hc2, hc3, hc4] <;> ring
@@ -391,11 +387,10 @@ public theorem Fe_mul.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
         | ⟨2, _⟩ => c2
         | ⟨3, _⟩ => c3
         | ⟨4, _⟩ => c4 : Fin 5 → BitVec 128) =
-      Fe.mul.cols (((S₀.alloca 40).alloca 80).mem.readLimbs a)
-        (((S₀.alloca 40).alloca 80).mem.readLimbs b) := by
+      Fe.mul.cols (S₀.mem.readLimbs a) (S₀.mem.readLimbs b) := by
     funext i
     fin_cases i <;> simp only [Fe.mul.cols, MemoryState.readLimbs, hc0, hc1, hc2, hc3, hc4] <;> ring
-  rw [hS, (MemoryState.readWide_stores hrW₀ c0 c1 c2 c3 c4).trans hcv, hA, hB,
+  rw [hS, (MemoryState.readWide_stores hrW₀ c0 c1 c2 c3 c4).trans hcv,
     MemoryState.readAt_storeLimbs_self (by simpa using htF₀) (by simp [ht_off']), ←
     MemoryState.storeLimbs_eq_storeAt hout.1, Fe.mul.spec]
   erase_frame

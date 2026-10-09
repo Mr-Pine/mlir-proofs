@@ -507,15 +507,10 @@ public theorem Edwards25519_slide.call_eq (out sp : Pointer) (s : GlobalState) (
     intro E₂ hA₂ hR₂
     have hf63 := fits_lane he_fits he_off (j := 63) (by omega)
     have o1 := (Edwards25519_slide.carry_ovf x 63).1
-    have h504 :
-      (BitVec.packLanes (Edwards25519_slide.stage x 63)).extractLsb' 504 8 =
-        Edwards25519.slide.nib x 63 := by
-      rw [show 504 = 63 * 8 from rfl, BitVec.extractLsb'_packLanes _ _ (by omega),
-        Edwards25519_slide.stage_get (by omega)]
     block_init
     step_pure
     step_load
-    rw [h504] at hv42
+    rw [Edwards25519_slide.stage_get (by omega)] at hv42
     subst hv42
     step_pure [o1]
     step_store

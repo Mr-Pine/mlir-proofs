@@ -75,14 +75,6 @@ public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_of_fit {s : Glob
     (s.alloca n).mem.readLimbs p = s.mem.readLimbs p :=
   MemoryState.readLimbs_alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1)
 
-/-- The same after two `alloca`s. -/
-public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_alloca_alloca {s : GlobalState}
-    {p : Pointer} (hwf : s.WF) (h : s.mem.LimbsFit p) :
-    ((s.alloca n).alloca n').mem.readLimbs p = s.mem.readLimbs p := by
-  rw [MemoryState.readLimbs_alloca_of_fit hwf.alloca
-      (MemoryState.LimbsFit.alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1) h),
-    MemoryState.readLimbs_alloca_of_fit hwf h]
-
 /-- Limbs in another block are unaffected by a store. -/
 @[mlir_read]
 public theorem _root_.LeanMLIR.RIR.MemoryState.readLimbs_storeAt_of_id_ne {m : MemoryState}

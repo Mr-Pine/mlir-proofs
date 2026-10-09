@@ -63,8 +63,6 @@ public theorem Scalar_toBytes.call_eq (out l : Pointer) (s : GlobalState) (hwf :
             mem := s.mem.storeAt out (Scalar.toBytes.spec (s.mem.readLimbs l)) }) := by
   func_init
   have hl4' := hS ▸ hl4
-  have hwf₀ : S₀.WF := hS ▸ hwf
-  have hl₀ : S₀.mem.LimbsFit l := hS ▸ hl
   clear hl4
   block_init
   iterate 7 step_pure
@@ -117,7 +115,7 @@ public theorem Scalar_toBytes.call_eq (out l : Pointer) (s : GlobalState) (hwf :
   iterate 2 step_pure
   step_load with v4 hv4
   have h4 : v4 < 4294967296#64 := by
-    rw [hv4, MemoryState.readAt_alloca hwf₀ hl₀.2.2.2.2.2, BitVec.lt_def]; exact hl4'
+    rw [hv4, BitVec.lt_def]; exact hl4'
   have h4' : v4.ult 4294967296#64 = true := by simpa [BitVec.ult, BitVec.lt_def] using h4
   have h4'' : (v4.setWidth 32).setWidth 64 = v4 := by bv_decide
   iterate 4 step_pure [h4']
@@ -130,7 +128,6 @@ public theorem Scalar_toBytes.call_eq (out l : Pointer) (s : GlobalState) (hwf :
   rw [hS]
   erase_frame
   have hf : Fits (S₀.alloca 32).mem buf 256 := hbuf ▸ Fits.allocaPtr (Nat.le_refl _)
-  rw [MemoryState.readAt_alloca hwf₀ hl₀.2.2.2.2.2] at hv4
   rw [readAt_stores_bytes hf hbuf_off, hbuf, readAt_alloca_slot, splice_eq]
   subst hv0 hv1 hv2 hv3 hv4
   rfl

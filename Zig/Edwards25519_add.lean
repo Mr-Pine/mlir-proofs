@@ -251,37 +251,37 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
       (by
         have := hC i; have : (Fe.mul.spec P.z Q.z i <<< 1).toNat < 2 ^ 53 := hDD i; omega)
   step_load with ub0
-  fix_load ub0 hub0(congrFun hread_b 0 : S.mem.readAt b 64 = _)
+  fix_load ub0 hub0(congrFun hread_b_readLimbs 0 : S.mem.readAt b 64 = _)
   step_load with ua0
-  fix_load ua0 hua0(congrFun hread_a 0 : S.mem.readAt a 64 = _)
+  fix_load ua0 hua0(congrFun hread_a_readLimbs 0 : S.mem.readAt a 64 = _)
   step_pure [hyo 0]
   step_pure
   step_load with ub1
-  fix_load ub1 hub1(congrFun hread_b 1 : S.mem.readAt (b.add 8#64) 64 = _)
+  fix_load ub1 hub1(congrFun hread_b_readLimbs 1 : S.mem.readAt (b.add 8#64) 64 = _)
   step_pure
   step_load with ua1
-  fix_load ua1 hua1(congrFun hread_a 1 : S.mem.readAt (a.add 8#64) 64 = _)
+  fix_load ua1 hua1(congrFun hread_a_readLimbs 1 : S.mem.readAt (a.add 8#64) 64 = _)
   step_pure [hyo 1]
   step_pure
   step_load with ub2
-  fix_load ub2 hub2(congrFun hread_b 2 : S.mem.readAt (b.add 16#64) 64 = _)
+  fix_load ub2 hub2(congrFun hread_b_readLimbs 2 : S.mem.readAt (b.add 16#64) 64 = _)
   step_pure
   step_load with ua2
-  fix_load ua2 hua2(congrFun hread_a 2 : S.mem.readAt (a.add 16#64) 64 = _)
+  fix_load ua2 hua2(congrFun hread_a_readLimbs 2 : S.mem.readAt (a.add 16#64) 64 = _)
   step_pure [hyo 2]
   step_pure
   step_load with ub3
-  fix_load ub3 hub3(congrFun hread_b 3 : S.mem.readAt (b.add 24#64) 64 = _)
+  fix_load ub3 hub3(congrFun hread_b_readLimbs 3 : S.mem.readAt (b.add 24#64) 64 = _)
   step_pure
   step_load with ua3
-  fix_load ua3 hua3(congrFun hread_a 3 : S.mem.readAt (a.add 24#64) 64 = _)
+  fix_load ua3 hua3(congrFun hread_a_readLimbs 3 : S.mem.readAt (a.add 24#64) 64 = _)
   step_pure [hyo 3]
   step_pure
   step_load with ub4
-  fix_load ub4 hub4(congrFun hread_b 4 : S.mem.readAt (b.add 32#64) 64 = _)
+  fix_load ub4 hub4(congrFun hread_b_readLimbs 4 : S.mem.readAt (b.add 32#64) 64 = _)
   step_pure
   step_load with ua4
-  fix_load ua4 hua4(congrFun hread_a 4 : S.mem.readAt (a.add 32#64) 64 = _)
+  fix_load ua4 hua4(congrFun hread_a_readLimbs 4 : S.mem.readAt (a.add 32#64) 64 = _)
   step_pure [hyo 4]
   step_store
   iterate 4 
@@ -293,24 +293,24 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
     hread_yv
   -- z = 2d + c, inline
   checkpoint hck1
-  have hrc0 : S.mem.readAt c 64 = _ := congrFun hread_c 0
+  have hrc0 : S.mem.readAt c 64 = _ := congrFun hread_c_readLimbs 0
   step_load
   step_pure [hzo 0]
   step_pure
   step_load with uc1
-  fix_load uc1 huc1(congrFun hread_c 1 : S.mem.readAt (c.add 8#64) 64 = _)
+  fix_load uc1 huc1(congrFun hread_c_readLimbs 1 : S.mem.readAt (c.add 8#64) 64 = _)
   step_pure [hzo 1]
   step_pure
   step_load with uc2
-  fix_load uc2 huc2(congrFun hread_c 2 : S.mem.readAt (c.add 16#64) 64 = _)
+  fix_load uc2 huc2(congrFun hread_c_readLimbs 2 : S.mem.readAt (c.add 16#64) 64 = _)
   step_pure [hzo 2]
   step_pure
   step_load with uc3
-  fix_load uc3 huc3(congrFun hread_c 3 : S.mem.readAt (c.add 24#64) 64 = _)
+  fix_load uc3 huc3(congrFun hread_c_readLimbs 3 : S.mem.readAt (c.add 24#64) 64 = _)
   step_pure [hzo 3]
   step_pure
   step_load with uc4
-  fix_load uc4 huc4(congrFun hread_c 4 : S.mem.readAt (c.add 32#64) 64 = _)
+  fix_load uc4 huc4(congrFun hread_c_readLimbs 4 : S.mem.readAt (c.add 32#64) 64 = _)
   step_pure [hzo 4]
   step_store
   iterate 4 

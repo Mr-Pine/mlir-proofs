@@ -256,15 +256,6 @@ theorem Facts.storePt (h : Facts P x1 x2 T S) (hL : Layout P N) (ht : t ∈ P.te
       h.temps.storePt (fun u hu => (hL.temp u hu).1) ht A, h.d1.storeAt h1 _, h.d2.storeAt h2 _,
       h.t1.storeAt hb _, h.t2.storeAt htb _⟩
 
-/-- `getelementptr` to entry `k ≤ 8` of a table of points. -/
-theorem gep_entry {p : Pointer} (hp : p.offset.toNat + 1512 ≤ 2 ^ 64) (hk : k ≤ 8) :
-    Operation.gep (.value (BitVec.ofNat 64 (k * 168))) (.value p) =
-      .value (p.add (BitVec.ofNat 64 (168 * k))) := by
-  rw [gep_value, Nat.mul_comm]
-  simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq, not_le]
-  rw [Nat.mod_eq_of_lt (show k * 168 < 2 ^ 64 by omega)]
-  omega
-
 /-- `Facts` after a temporary is copied to the accumulator, which then reads the same point. -/
 theorem Facts.copy (h : Facts P x1 x2 T S) (hL : Layout P N) (ht : t ∈ P.temps) :
     Facts P x1 x2 T ⟨S.alloc, S.mem.storeAt P.acc (S.mem.readAt t 1344)⟩ ∧
@@ -363,7 +354,8 @@ theorem digit1_block (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256)
     block_init
     step_pure [hmsb]
     step_pure [hmsb, Nat.mod_eq_of_lt (show d.toNat < 18446744073709551616 by omega),
-      show d.toNat * 168 < 18446744073709551616 by omega, gep_entry hbpo hk]
+      show d.toNat * 168 < 18446744073709551616 by omega]
+    rw [Nat.mul_comm 168] at hTf hTr
     step_call using Edwards25519_add.call_eq_of
     case hF =>
       subst hS'; rw [ZPt.flag_zero]; exact hF.storePt hL (by simp [Ptrs.temps]) (by omega) _
@@ -406,7 +398,8 @@ theorem digit1_block (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256)
       rw [← hm] at hTf hTr hTl hk hmsb
       step_pure [hmsb]
       step_pure [hmsb, Nat.mod_eq_of_lt (show m.toNat < 18446744073709551616 by omega),
-        show m.toNat * 168 < 18446744073709551616 by omega, gep_entry hbpo hk]
+        show m.toNat * 168 < 18446744073709551616 by omega]
+      rw [Nat.mul_comm 168] at hTf hTr
       step_call using Edwards25519_sub.call_eq_of
       case hF =>
         subst hS'; exact hF.storePt hL (by simp [Ptrs.temps]) (by omega) _
@@ -485,7 +478,8 @@ theorem digit2_block (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256)
     block_init
     step_pure [hmsb]
     step_pure [hmsb, Nat.mod_eq_of_lt (show d.toNat < 18446744073709551616 by omega),
-      show d.toNat * 168 < 18446744073709551616 by omega, gep_entry htbo hk]
+      show d.toNat * 168 < 18446744073709551616 by omega]
+    rw [Nat.mul_comm 168] at hTf hTr
     step_call using Edwards25519_add.call_eq_of
     case hF =>
       subst hS'; rw [ZPt.flag_zero]; exact hF.storePt hL (by simp [Ptrs.temps]) (by omega) _
@@ -528,7 +522,8 @@ theorem digit2_block (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256)
       rw [← hm] at hTf hTr hTl hk hmsb
       step_pure [hmsb]
       step_pure [hmsb, Nat.mod_eq_of_lt (show m.toNat < 18446744073709551616 by omega),
-        show m.toNat * 168 < 18446744073709551616 by omega, gep_entry htbo hk]
+        show m.toNat * 168 < 18446744073709551616 by omega]
+      rw [Nat.mul_comm 168] at hTf hTr
       step_call using Edwards25519_sub.call_eq_of
       case hF =>
         subst hS'; exact hF.storePt hL (by simp [Ptrs.temps]) (by omega) _

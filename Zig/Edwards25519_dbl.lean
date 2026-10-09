@@ -265,15 +265,12 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   clear hpc_fits hr_fits
   have hf := hp.2
   step_memcpy consuming hf
-  have hpc_eq : S.mem.readPt pc = S.mem.readPt p := by
-    have h1 := hp
+  have hpc_eq : S.mem.readPt pc = P := by
     have h2 := hpcP
-    rw [hS] at h1 h2 ⊢
-    exact MemoryState.readPt_copy h1 h2 hp_ne_pc.symm rfl
-  have hread_pcy : S.mem.readLimbs (pc.add 40#64) = P.y := by
-    rw [← hread_py]; exact congrArg ZPt.y hpc_eq
-  have hread_pcz : S.mem.readLimbs (pc.add 80#64) = P.z := by
-    rw [← hread_pz]; exact congrArg ZPt.z hpc_eq
+    rw [hS] at h2 ⊢
+    exact (MemoryState.readPt_storeAt_readAt hp₀ ⟨h2.1, Fits.storeAt_iff.mp h2.2⟩).1.trans hP₀
+  have hread_pcy : S.mem.readLimbs (pc.add 40#64) = P.y := congrArg ZPt.y hpc_eq
+  have hread_pcz : S.mem.readLimbs (pc.add 80#64) = P.z := congrArg ZPt.z hpc_eq
   clear hpc_eq hread_pc
   -- t0 = (x + y)²
   step_pure
@@ -297,35 +294,35 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
         have := hX2 i; have := hY2 i; omega)
   step_load
   step_load with ux0
-  fix_load ux0 hux0(congrFun hread_x 0 : S.mem.readAt x 64 = _)
+  fix_load ux0 hux0(congrFun hread_x_readLimbs 0 : S.mem.readAt x 64 = _)
   step_pure [hyo 0]
   step_pure
   step_load with uz1
   fix_load uz1 huz1 hread_z_8
   step_pure
   step_load with ux1
-  fix_load ux1 hux1(congrFun hread_x 1 : S.mem.readAt (x.add 8#64) 64 = _)
+  fix_load ux1 hux1(congrFun hread_x_readLimbs 1 : S.mem.readAt (x.add 8#64) 64 = _)
   step_pure [hyo 1]
   step_pure
   step_load with uz2
   fix_load uz2 huz2 hread_z_16
   step_pure
   step_load with ux2
-  fix_load ux2 hux2(congrFun hread_x 2 : S.mem.readAt (x.add 16#64) 64 = _)
+  fix_load ux2 hux2(congrFun hread_x_readLimbs 2 : S.mem.readAt (x.add 16#64) 64 = _)
   step_pure [hyo 2]
   step_pure
   step_load with uz3
   fix_load uz3 huz3 hread_z_24
   step_pure
   step_load with ux3
-  fix_load ux3 hux3(congrFun hread_x 3 : S.mem.readAt (x.add 24#64) 64 = _)
+  fix_load ux3 hux3(congrFun hread_x_readLimbs 3 : S.mem.readAt (x.add 24#64) 64 = _)
   step_pure [hyo 3]
   step_pure
   step_load with uz4
   fix_load uz4 huz4 hread_z_32
   step_pure
   step_load with ux4
-  fix_load ux4 hux4(congrFun hread_x 4 : S.mem.readAt (x.add 32#64) 64 = _)
+  fix_load ux4 hux4(congrFun hread_x_readLimbs 4 : S.mem.readAt (x.add 32#64) 64 = _)
   step_pure [hyo 4]
   step_store
   iterate 4 

@@ -42,13 +42,12 @@ public theorem Fe_isZero.call_eq (a : Pointer) (s : GlobalState) (hwf : s.WF)
   have ha320 := ha.fits
   have ht320 := ht_limbs.fits
   step_memcpy consuming ha320 ht320
-  have haA : (S₀.alloca 40).mem.LimbsFit a :=
-    MemoryState.LimbsFit.alloca (GlobalState.ne_allocaPtr_of_fits hwf₀ haL₀.2.1) haL₀
   have htA : (S₀.alloca 40).mem.LimbsFit t := MemoryState.LimbsFit.of_fits htF₀ ht_off'
   have hcopy : S.mem.readLimbs t = S₀.mem.readLimbs a := by
     rw [hS]
     dsimp only
-    rw [MemoryState.readLimbs_storeAt_readAt haA htA, MemoryState.readLimbs_alloca_of_fit hwf₀ haL₀]
+    rw [MemoryState.storeAt_readAt_eq_storeLimbs haL₀.fits haL₀.1 htA.1,
+      MemoryState.readLimbs_storeLimbs_self htA]
   have ht' : Fe.Lt (S.mem.readLimbs t) (2 ^ 63) := hcopy ▸ ha'₀
   have hcopy₀ := hcopy
   rw [hS] at hcopy₀

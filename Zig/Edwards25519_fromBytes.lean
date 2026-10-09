@@ -589,11 +589,11 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   have hu0_16 : S.mem.readAt (u0.add 16#64) 64 = U 2 := congrFun hru0 2
   have hu0_24 : S.mem.readAt (u0.add 24#64) 64 = U 3 := congrFun hru0 3
   have hu0_32 : S.mem.readAt (u0.add 32#64) 64 = U 4 := congrFun hru0 4
-  have hvx_0 : S.mem.readAt vxx 64 = VXX 0 := congrFun hread_vxx 0
-  have hvx_8 : S.mem.readAt (vxx.add 8#64) 64 = VXX 1 := congrFun hread_vxx 1
-  have hvx_16 : S.mem.readAt (vxx.add 16#64) 64 = VXX 2 := congrFun hread_vxx 2
-  have hvx_24 : S.mem.readAt (vxx.add 24#64) 64 = VXX 3 := congrFun hread_vxx 3
-  have hvx_32 : S.mem.readAt (vxx.add 32#64) 64 = VXX 4 := congrFun hread_vxx 4
+  have hvx_0 : S.mem.readAt vxx 64 = VXX 0 := congrFun hread_vxx_readLimbs 0
+  have hvx_8 : S.mem.readAt (vxx.add 8#64) 64 = VXX 1 := congrFun hread_vxx_readLimbs 1
+  have hvx_16 : S.mem.readAt (vxx.add 16#64) 64 = VXX 2 := congrFun hread_vxx_readLimbs 2
+  have hvx_24 : S.mem.readAt (vxx.add 24#64) 64 = VXX 3 := congrFun hread_vxx_readLimbs 3
+  have hvx_32 : S.mem.readAt (vxx.add 32#64) 64 = VXX 4 := congrFun hread_vxx_readLimbs 4
   iterate 2 step_load
   step_pure [hpo 0]
   step_pure

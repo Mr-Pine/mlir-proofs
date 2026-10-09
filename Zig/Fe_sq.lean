@@ -167,9 +167,7 @@ public theorem Fe_sq.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
           { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
             mem := s.mem.storeLimbs out (Fe.sq.spec (s.mem.readLimbs a)) }) := by
   func_init
-  -- the input as read after the two `alloca`s
-  have hA := MemoryState.readLimbs_alloca_alloca (n := 80) (n' := 40) hwf₀ (hS ▸ ha)
-  have ha₁ := hA ▸ hS ▸ ha'
+  have ha₁ := hS ▸ ha'
   have hov := Fe.sq.noOverflow ha₁
   have hpre := Fe.sq.cols_pre ha₁
   simp only [MemoryState.readLimbs] at hov
@@ -222,7 +220,7 @@ public theorem Fe_sq.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
         | ⟨2, _⟩ => c2
         | ⟨3, _⟩ => c3
         | ⟨4, _⟩ => c4 : Fin 5 → BitVec 128) =
-      Fe.sq.cols (((S₀.alloca 80).alloca 40).mem.readLimbs a) := by
+      Fe.sq.cols (S₀.mem.readLimbs a) := by
     funext i
     fin_cases i <;>
       simp only [Fe.sq.cols, MemoryState.readLimbs, hc0, hc1, hc2, hc3, hc4, shl1_eq] <;>
@@ -237,7 +235,7 @@ public theorem Fe_sq.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   have ht320 := ht_limbs.fits
   step_memcpy consuming hout320 ht320
   finish_block
-  rw [hS, (MemoryState.readWide_stores hrW₀ c0 c1 c2 c3 c4).trans hcv, hA,
+  rw [hS, (MemoryState.readWide_stores hrW₀ c0 c1 c2 c3 c4).trans hcv,
     MemoryState.readAt_storeLimbs_self (by simpa using htF₀) (by simp [ht_off']), ←
     MemoryState.storeLimbs_eq_storeAt hout.1, Fe.sq.spec]
   erase_frame

@@ -38,6 +38,13 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   func_init
   have hp₀ : S₀.mem.PtFit p := hS ▸ hp
   have hout₀ : S₀.mem.PtFit out := hS ▸ hout
+  -- `p` below the three `alloca`s, as the steps read it
+  have hp1 := hp₀.alloca (n := 40) hwf₀
+  have hp2 := hp1.alloca (n := 40) hwf₀.alloca
+  have hp3 := hp2.alloca (n := 168) hwf₀.alloca.alloca
+  have hP : (((S₀.alloca 40).alloca 40).alloca 168).mem.readAt p 1344 = S₀.mem.readAt p 1344 := by
+    rw [MemoryState.readAt_alloca_of_fits hwf₀.alloca.alloca hp2.2,
+      MemoryState.readAt_alloca_of_fits hwf₀.alloca hp1.2, MemoryState.readAt_alloca_of_fits hwf₀ hp₀.2]
   simp only [MemoryState.readPt] at hx ht
   block_init
   iterate 4 step_pure
@@ -55,7 +62,7 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   have hcopy : S.mem.readPt t6 = S.mem.readPt p := by
     have hpA := hp
     have ht6A := ht6P
-    rw [hS] at hpA ht6A ⊢
+    rw [hS, ← hP] at hpA ht6A ⊢
     simp only [MemoryState.PtFit, Fits.storeAt_iff] at hpA ht6A
     rw [(MemoryState.readPt_storeAt_readAt hpA ht6A).1,
       MemoryState.readPt_storeAt_of_id_ne hp_ne_t6.symm]
@@ -93,9 +100,6 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   rw [hS]
   erase_frame
   -- `p` and its copy at `t6`, as `S₀` holds them
-  have hp1 := hp₀.alloca (n := 40) hwf₀
-  have hp2 := hp1.alloca (n := 40) hwf₀.alloca
-  have hp3 := hp2.alloca (n := 168) hwf₀.alloca.alloca
   have hR : (((S₀.alloca 40).alloca 40).alloca 168).mem.readPt p = S₀.mem.readPt p := by
     rw [MemoryState.readPt_alloca hwf₀.alloca.alloca hp2, MemoryState.readPt_alloca hwf₀.alloca hp1,
       MemoryState.readPt_alloca hwf₀ hp₀]
@@ -106,6 +110,7 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
     have f40 : t6.id ≠ (p.add 40#64).id := by simpa [Pointer.add_id] using hp_ne_t6.symm
     have f80 : t6.id ≠ (p.add 80#64).id := by simpa [Pointer.add_id] using hp_ne_t6.symm
     have hc := congrArg ZPt.t (MemoryState.readPt_storeAt_readAt hp3 ht6A).1
+    rw [hP] at hc
     have hy := congrArg ZPt.y hR
     have hz := congrArg ZPt.z hR
     have ht' := congrArg ZPt.t hR

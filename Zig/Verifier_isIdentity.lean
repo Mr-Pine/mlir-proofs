@@ -53,17 +53,14 @@ public theorem Verifier_isIdentity.call_eq (p : Pointer) (s : GlobalState) (hwf 
   · block_init
     iterate 3 step_pure
     have hA :
-      (((S₀.alloca 40).alloca 168).mem.storeAt c
-              (((S₀.alloca 40).alloca 168).mem.readAt p 1344)).readPt
-          p =
+      (((S₀.alloca 40).alloca 168).mem.storeAt c (S₀.mem.readAt p 1344)).readPt p =
         S₀.mem.readPt p := by
       rw [MemoryState.readPt_storeAt_of_id_ne hp_ne_c.symm,
         MemoryState.readPt_alloca hwf₀.alloca (hp₀.alloca hwf₀), MemoryState.readPt_alloca hwf₀ hp₀]
     have hR : S.mem.readPt c = S₀.mem.readPt p := by
-      have h1 := hp
       have h2 := hcP
-      rw [hS] at h1 h2 ⊢
-      exact (MemoryState.readPt_copy h1 h2 hp_ne_c.symm rfl).trans hA
+      rw [hS] at h2 ⊢
+      exact (MemoryState.readPt_storeAt_readAt hp₀ ⟨h2.1, Fits.storeAt_iff.mp h2.2⟩).1
     have hYd : S.mem.readLimbs (c.add 40#64) = (S₀.mem.readPt p).y := congrArg ZPt.y hR
     have hZd : S.mem.readLimbs (p.add 80#64) = (S₀.mem.readPt p).z := by
       rw [hS]; exact congrArg ZPt.z hA
