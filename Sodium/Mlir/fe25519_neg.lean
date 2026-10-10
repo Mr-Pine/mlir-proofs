@@ -1,0 +1,33 @@
+module
+
+-- sodium-build/out/op/fe25519_neg.mlir
+
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
+public import Sodium.Mlir.fe25519_0
+public import Sodium.Mlir.fe25519_sub
+
+meta import MLIR.Semantics.Func
+meta import Sodium.Mlir.fe25519_0
+meta import Sodium.Mlir.fe25519_sub
+
+namespace MLIR.Sodium
+
+@[expose] public section
+
+mlir_def fe25519_neg :=
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nofree, llvm.noundef, llvm.writeonly}, {llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}], dso_local, function_type = !llvm.func<void (ptr, ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["nofree", "norecurse", "nosync", "ssp", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"]], sym_name = "fe25519_neg", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64}> ({
+^bb0(%arg81: !llvm.ptr, %arg82: !llvm.ptr):
+  %2813 = "llvm.mlir.constant"() <{value = 1 : i32}> : () -> i32
+  %2814 = "llvm.alloca"(%2813) <{alignment = 16 : i64, elem_type = !llvm.array<5 x i64>}> : (i32) -> !llvm.ptr
+  "llvm.intr.lifetime.start"(%2814) : (!llvm.ptr) -> ()
+  "llvm.call"(%2814) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.nonnull, llvm.noundef}], callee = @fe25519_0, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 1, 0>}> : (!llvm.ptr) -> ()
+  "llvm.call"(%arg81, %2814, %arg82) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.nonnull, llvm.noundef}, {llvm.noundef}], callee = @fe25519_sub, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  "llvm.intr.lifetime.end"(%2814) : (!llvm.ptr) -> ()
+  "llvm.return"() : () -> ()
+}) : () -> ()
+  with @fe25519_0 := fe25519_0, @fe25519_sub := fe25519_sub
+
+end
+
+end MLIR.Sodium

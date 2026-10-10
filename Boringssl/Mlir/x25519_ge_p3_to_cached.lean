@@ -1,0 +1,48 @@
+module
+
+-- boringssl-build/out/op/_ZN4bssl22x25519_ge_p3_to_cachedEPNS_9ge_cachedEPKNS_5ge_p3E.mlir
+-- bssl::x25519_ge_p3_to_cached(bssl::ge_cached*, bssl::ge_p3 const*)
+
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
+public import Boringssl.Mlir.fe_copy_lt
+public import Boringssl.Mlir.fe_mul_ltt
+public import Boringssl.Mlir.fe_add
+public import Boringssl.Mlir.fe_sub
+public import Boringssl.Mlir.d2
+
+meta import MLIR.Semantics.Func
+meta import Boringssl.Mlir.fe_copy_lt
+meta import Boringssl.Mlir.fe_mul_ltt
+meta import Boringssl.Mlir.fe_add
+meta import Boringssl.Mlir.fe_sub
+meta import Boringssl.Mlir.d2
+
+namespace MLIR.Boringssl
+
+@[expose] public section
+
+mlir_def x25519_ge_p3_to_cached :=
+"llvm.func"() <{CConv = #llvm.cconv<ccc>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], dso_local, function_type = !llvm.func<void (ptr, ptr)>, linkage = #llvm.linkage<internal>, no_inline, no_unwind, passthrough = ["mustprogress", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"], ["warn-stack-size", "25344"]], sym_name = "_ZN4bssl22x25519_ge_p3_to_cachedEPNS_9ge_cachedEPKNS_5ge_p3E", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 1 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64}> ({
+^bb0(%arg79: !llvm.ptr, %arg80: !llvm.ptr):
+  %1170 = "llvm.mlir.addressof"() <{global_name = @_ZL2d2}> : () -> !llvm.ptr
+  %1171 = "llvm.getelementptr"(%arg80) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 40>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.call"(%arg79, %1171, %arg80) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.nonnull, llvm.noundef}, {llvm.noundef}], callee = @_ZL6fe_addPN4bssl8fe_looseEPKNS_2feES4_, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  %1172 = "llvm.getelementptr"(%arg79) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 40>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.call"(%1172, %1171, %arg80) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}, {llvm.nonnull, llvm.noundef}, {llvm.noundef}], callee = @_ZL6fe_subPN4bssl8fe_looseEPKNS_2feES4_, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  %1173 = "llvm.getelementptr"(%arg79) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 80>}> : (!llvm.ptr) -> !llvm.ptr
+  %1174 = "llvm.getelementptr"(%arg80) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 80>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.call"(%1173, %1174) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}, {llvm.nonnull, llvm.noundef}], callee = @_ZL10fe_copy_ltPN4bssl8fe_looseEPKNS_2feE, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
+  %1175 = "llvm.getelementptr"(%arg79) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 120>}> : (!llvm.ptr) -> !llvm.ptr
+  %1176 = "llvm.getelementptr"(%arg80) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 120>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.call"(%1175, %1176, %1170) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.nonnull, llvm.noundef}, {llvm.nonnull, llvm.noundef}, {llvm.nonnull, llvm.noundef}], callee = @_ZL10fe_mul_lttPN4bssl8fe_looseEPKNS_2feES4_, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+  "llvm.return"() : () -> ()
+}) : () -> ()
+  with @_ZL10fe_copy_ltPN4bssl8fe_looseEPKNS_2feE := fe_copy_lt,
+    @_ZL10fe_mul_lttPN4bssl8fe_looseEPKNS_2feES4_ := fe_mul_ltt,
+    @_ZL6fe_addPN4bssl8fe_looseEPKNS_2feES4_ := fe_add,
+    @_ZL6fe_subPN4bssl8fe_looseEPKNS_2feES4_ := fe_sub, @_ZL2d2 := d2
+
+end
+
+end MLIR.Boringssl

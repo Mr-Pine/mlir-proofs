@@ -1,0 +1,28 @@
+module
+
+-- boringssl-build/out/op/ED25519_verify.mlir
+
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
+public import Boringssl.Mlir.ed25519_verify
+
+meta import MLIR.Semantics.Func
+meta import Boringssl.Mlir.ed25519_verify
+
+namespace MLIR.Boringssl
+
+@[expose] public section
+
+noncomputable mlir_def ED25519_verify :=
+"llvm.func"() <{CConv = #llvm.cconv<ccc>, arg_attrs = [{llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}], dso_local, function_type = !llvm.func<i32 (ptr, i64, ptr, ptr)>, linkage = #llvm.linkage<external>, no_inline, no_unwind, passthrough = ["mustprogress", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"], ["warn-stack-size", "25344"]], res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 2>}], sym_name = "ED25519_verify", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 1 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 1 : i64}> ({
+^bb0(%arg40: !llvm.ptr, %arg41: i64, %arg42: !llvm.ptr, %arg43: !llvm.ptr):
+  %516 = "llvm.mlir.zero"() : () -> !llvm.ptr
+  %517 = "llvm.mlir.constant"() <{value = 0 : i64}> : () -> i64
+  %518 = "llvm.call"(%516, %517, %arg40, %arg41, %arg42, %arg43) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}], callee = @_ZL14ed25519_verifyPKhmS0_mS0_S0_, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 6, 0>, res_attrs = [{llvm.noundef}]}> : (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i32
+  "llvm.return"(%518) : (i32) -> ()
+}) : () -> ()
+  with @_ZL14ed25519_verifyPKhmS0_mS0_S0_ := ed25519_verify
+
+end
+
+end MLIR.Boringssl

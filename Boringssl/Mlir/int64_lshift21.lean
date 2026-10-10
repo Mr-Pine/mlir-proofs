@@ -1,0 +1,25 @@
+module
+
+-- boringssl-build/out/op/_ZL14int64_lshift21l.mlir
+-- int64_lshift21(long)
+
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
+
+meta import MLIR.Semantics.Func
+
+namespace MLIR.Boringssl
+
+@[expose] public section
+
+mlir_def int64_lshift21 :=
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i64, -4398046511104, 4398046511104>}], dso_local, function_type = !llvm.func<i64 (i64)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", ["min-legal-vector-width", "0"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "x86-64"], ["warn-stack-size", "25344"]], res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i64, 0, -2097151>}], sym_name = "_ZL14int64_lshift21l", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+cx8", "+fxsr", "+mmx", "+sse", "+sse2", "+x87"]>, tune_cpu = "generic", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg44: i64):
+  %519 = "llvm.mlir.constant"() <{value = 21 : i64}> : () -> i64
+  %520 = "llvm.shl"(%arg44, %519) <{overflowFlags = 1 : i32}> : (i64, i64) -> i64
+  "llvm.return"(%520) : (i64) -> ()
+}) : () -> ()
+
+end
+
+end MLIR.Boringssl

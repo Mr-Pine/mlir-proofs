@@ -1,0 +1,79 @@
+module
+
+-- sodium-build/out/op/ge25519_double_scalarmult_vartime.Bi.mlir
+
+public import MLIR.Semantics.GlobalInitializer
+public import MLIR.Syntax.Elab
+
+meta import MLIR.Semantics.GlobalInitializer
+
+namespace MLIR.Sodium
+
+@[expose] public section
+
+mlir_const_def ge25519_double_scalarmult_vartime_Bi :=
+"llvm.mlir.global"() <{addr_space = 0 : i32, alignment = 16 : i64, constant, dso_local, global_type = !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, linkage = #llvm.linkage<internal>, sym_name = "ge25519_double_scalarmult_vartime.Bi", unnamed_addr = 0 : i64, visibility_ = 0 : i64}> ({
+  %3323 = "llvm.mlir.undef"() : () -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3324 = "llvm.mlir.constant"() <{value = dense<[1288382639258501, 245678601348599, 269427782077623, 1462984067271730, 137412439391563]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3325 = "llvm.mlir.constant"() <{value = dense<[62697248952638, 204681361388450, 631292143396476, 338455783676468, 1213667448819585]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3326 = "llvm.mlir.constant"() <{value = dense<[301289933810280, 1259582250014073, 1422107436869536, 796239922652654, 1953934009299142]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3327 = "llvm.mlir.constant"() <{value = dense<[1601611775252272, 1720807796594148, 1132070835939856, 1260455018889551, 2147779492816911]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3328 = "llvm.mlir.constant"() <{value = dense<[316559037616741, 2177824224946892, 1459442586438991, 1461528397712656, 751590696113597]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3329 = "llvm.mlir.constant"() <{value = dense<[1850748884277385, 1200145853858453, 1068094770532492, 672251375690438, 1586055907191707]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3330 = "llvm.mlir.constant"() <{value = dense<[769950342298419, 132954430919746, 844085933195555, 974092374476333, 726076285546016]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3331 = "llvm.mlir.constant"() <{value = dense<[425251763115706, 608463272472562, 442562545713235, 837766094556764, 374555092627893]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3332 = "llvm.mlir.constant"() <{value = dense<[1086255230780037, 274979815921559, 1960002765731872, 929474102396301, 1190409889297339]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3333 = "llvm.mlir.constant"() <{value = dense<[665000864555967, 2065379846933859, 370231110385876, 350988370788628, 1233371373142985]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3334 = "llvm.mlir.constant"() <{value = dense<[2019367628972465, 676711900706637, 110710997811333, 1108646842542025, 517791959672113]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3335 = "llvm.mlir.constant"() <{value = dense<[965130719900578, 247011430587952, 526356006571389, 91986625355052, 2157223321444601]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3336 = "llvm.mlir.constant"() <{value = dense<[1802695059465007, 1664899123557221, 593559490740857, 2160434469266659, 927570450755031]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3337 = "llvm.mlir.constant"() <{value = dense<[1725674970513508, 1933645953859181, 1542344539275782, 1767788773573747, 1297447965928905]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3338 = "llvm.mlir.constant"() <{value = dense<[1381809363726107, 1430341051343062, 2061843536018959, 1551778050872521, 2036394857967624]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3339 = "llvm.mlir.constant"() <{value = dense<[1970894096313054, 528066325833207, 1619374932191227, 2207306624415883, 1169170329061080]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3340 = "llvm.mlir.constant"() <{value = dense<[2070390218572616, 1458919061857835, 624171843017421, 1055332792707765, 433987520732508]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3341 = "llvm.mlir.constant"() <{value = dense<[893653801273833, 1168026499324677, 1242553501121234, 1306366254304474, 1086752658510815]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3342 = "llvm.mlir.constant"() <{value = dense<[213454002618221, 939771523987438, 1159882208056014, 317388369627517, 621213314200687]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3343 = "llvm.mlir.constant"() <{value = dense<[1971678598905747, 338026507889165, 762398079972271, 655096486107477, 42299032696322]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3344 = "llvm.mlir.constant"() <{value = dense<[177130678690680, 1754759263300204, 1864311296286618, 1180675631479880, 1292726903152791]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3345 = "llvm.mlir.constant"() <{value = dense<[692896803108118, 500174642072499, 2068223309439677, 1162190621851337, 1426986007309901]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3346 = "llvm.mlir.constant"() <{value = dense<[1070401523076875, 1272492007800961, 1910153608563310, 2075579521696771, 1191169788841221]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3347 = "llvm.mlir.constant"() <{value = dense<[1913163449625248, 460779200291993, 2193883288642314, 1008900146920800, 1721983679009502]> : tensor<5xi64>}> : () -> !llvm.array<5 x i64>
+  %3348 = "llvm.mlir.undef"() : () -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3349 = "llvm.insertvalue"(%3348, %3347) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3350 = "llvm.insertvalue"(%3349, %3346) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3351 = "llvm.insertvalue"(%3350, %3345) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3352 = "llvm.insertvalue"(%3348, %3342) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3353 = "llvm.insertvalue"(%3352, %3343) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3354 = "llvm.insertvalue"(%3353, %3344) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3355 = "llvm.insertvalue"(%3348, %3339) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3356 = "llvm.insertvalue"(%3355, %3340) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3357 = "llvm.insertvalue"(%3356, %3341) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3358 = "llvm.insertvalue"(%3348, %3336) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3359 = "llvm.insertvalue"(%3358, %3337) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3360 = "llvm.insertvalue"(%3359, %3338) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3361 = "llvm.insertvalue"(%3348, %3333) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3362 = "llvm.insertvalue"(%3361, %3334) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3363 = "llvm.insertvalue"(%3362, %3335) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3364 = "llvm.insertvalue"(%3348, %3330) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3365 = "llvm.insertvalue"(%3364, %3331) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3366 = "llvm.insertvalue"(%3365, %3332) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3367 = "llvm.insertvalue"(%3348, %3327) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3368 = "llvm.insertvalue"(%3367, %3328) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3369 = "llvm.insertvalue"(%3368, %3329) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3370 = "llvm.insertvalue"(%3348, %3324) <{position = array<i64: 0>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3371 = "llvm.insertvalue"(%3370, %3325) <{position = array<i64: 1>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3372 = "llvm.insertvalue"(%3371, %3326) <{position = array<i64: 2>}> : (!llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>, !llvm.array<5 x i64>) -> !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>
+  %3373 = "llvm.insertvalue"(%3323, %3372) <{position = array<i64: 0>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3374 = "llvm.insertvalue"(%3373, %3369) <{position = array<i64: 1>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3375 = "llvm.insertvalue"(%3374, %3366) <{position = array<i64: 2>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3376 = "llvm.insertvalue"(%3375, %3363) <{position = array<i64: 3>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3377 = "llvm.insertvalue"(%3376, %3360) <{position = array<i64: 4>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3378 = "llvm.insertvalue"(%3377, %3357) <{position = array<i64: 5>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3379 = "llvm.insertvalue"(%3378, %3354) <{position = array<i64: 6>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  %3380 = "llvm.insertvalue"(%3379, %3351) <{position = array<i64: 7>}> : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>, !llvm.struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>) -> !llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>
+  "llvm.return"(%3380) : (!llvm.array<8 x struct<"struct.ge25519_p2", (array<5 x i64>, array<5 x i64>, array<5 x i64>)>>) -> ()
+}) : () -> ()
+
+end
+
+end MLIR.Sodium
