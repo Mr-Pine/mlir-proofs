@@ -19,7 +19,8 @@ private def pack (l : List Nat) : BitVec 512 :=
 /-- The limbs at `h` if they are `spec` of the element at `a`, `a` is unchanged and the counter
 moved on by one block. -/
 private def out (ab : BitVec 512) : Option (List Nat) :=
-  let s : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨64, ab⟩)]⟩⟩
+  let s : GlobalState :=
+    ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 64 ab)]⟩⟩
   match
     fd_f25519_canonical_limbs.eval 1 (fd_f25519_canonical_limbs.args (.value h) (.value a)) s with
   | .value (some .nil, s') =>

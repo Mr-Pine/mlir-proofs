@@ -18,7 +18,7 @@ private def bytes (f : Nat → Nat) : BitVec 1536 :=
 
 /-- `a` and `b` holding `ab` and `bb`. -/
 private def state (ab bb : BitVec 1536) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨192, ab⟩), (⟨1⟩, ⟨192, bb⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 192 ab), (⟨1⟩, .ofBytes 192 bb)]⟩⟩
 
 /-- Whether `fd_ed25519_point_affine_eq(a, b)` returns `spec` of the points, and that is `r`. -/
 private def check (ab bb : BitVec 1536) (r : BitVec 32) : Bool :=

@@ -38,7 +38,7 @@ theorem laneIf_0001_permute (A X : Quad5) :
 /-- `fd_ed25519_point_neg_precomputed` stores `spec` of the point at `a` at `r`, which is `a`
 itself or in another block, and returns `r`; its five `wl_permute` calls' unions are freed. -/
 public theorem fd_ed25519_point_neg_precomputed.call_eq (r a : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a) (hsep : r = a ∨ r.id ≠ a.id) :
+    (hwf : s.WF) (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a) (hsep : r = a ∨ r.id ≠ a.id) :
     fd_ed25519_point_neg_precomputed.call
         (fd_ed25519_point_neg_precomputed.args (.value r) (.value a)) s =
       .value

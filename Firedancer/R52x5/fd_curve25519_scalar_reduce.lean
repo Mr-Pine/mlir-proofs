@@ -4587,7 +4587,7 @@ theorem fd_curve25519_scalar_reduce.run497 {β : Type} {out inp : Pointer}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {s0_5 s1_9 s2_10 s3_11 s4_12 s5_13 s6_12 s7_13 s8_13 s9_13 s10_13 t907 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get) (hwf : S.WF)
-    (hout : Fits S.mem out (8 * 32))
+    (hout : Room S.mem out (8 * 32))
     (h934 :
       E ⊨ [rir_reg% fd_curve25519_scalar_reduce.hty 496 :=
         Ty.wrap
@@ -6251,7 +6251,7 @@ theorem fd_curve25519_scalar_reduce.pack_eq
 /-- `reduce` stores `spec` of the 64 bytes at `inp` as the 32 bytes at `out`, and returns `out`. The
 loads all come before the store, so `out` may alias `inp`. -/
 public theorem fd_curve25519_scalar_reduce.call_eq (out inp : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : Fits s.mem out (8 * 32)) (hin : Fits s.mem inp (8 * 64))
+    (hwf : s.WF) (hout : Room s.mem out (8 * 32)) (hin : Fits s.mem inp (8 * 64))
     (hin_off : ¬inp.offset.uaddOverflow 64#64) :
     fd_curve25519_scalar_reduce.call (fd_curve25519_scalar_reduce.args (.value out) (.value inp))
         s =

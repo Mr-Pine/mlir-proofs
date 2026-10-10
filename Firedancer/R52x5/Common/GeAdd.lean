@@ -180,7 +180,7 @@ def qpMulLoadRun (z0 z1 z2 z3 z4 : Dst Γ .ptr) (p : Reg Γ .ptr) (g1 g2 g3 g4 :
 /-- Where the body at `pos` is `qpMulLoadRun`, `x0 … x4` hold `X`, `p` the point `P` and
 `z0 … z4` five slots in distinct blocks: running on from `pos` then `g` gives `K` if it does from
 `pos + 25` with `P`'s `wl_t`s in `y0 … y4`, `P + 32 k` in `gk` and their product with `X` in
-`q0 … q4` and left in the slots. -/
+`q0 … q4` and left in the slots, their lifetimes ended (`callTmp5`). -/
 theorem runBodyFrom_qpMulLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {z0 z1 z2 z3 z4 : Dst Γ .ptr} {p : Reg Γ .ptr} {g1 g2 g3 g4 : Dst Γ .ptr}
     {x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64} {rest : List (Instr Γ)}
@@ -199,8 +199,10 @@ theorem runBodyFrom_qpMulLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
       [z0.i, z1.i, z2.i, z3.i, z4.i, x0.i, x1.i, x2.i, x3.i, x4.i, y0.i, g1.i, y1.i, g2.i, y2.i,
           g3.i, y3.i, g4.i, y4.i].Nodup)
     (hZ :
-      Fits S.mem Z0 256 ∧
-        Fits S.mem Z1 256 ∧ Fits S.mem Z2 256 ∧ Fits S.mem Z3 256 ∧ Fits S.mem Z4 256)
+      InBounds S.mem Z0 256 ∧
+        InBounds S.mem Z1 256 ∧
+        InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hPZ : P.id ≠ Z0.id ∧ P.id ≠ Z1.id ∧ P.id ≠ Z2.id ∧ P.id ≠ Z3.id ∧ P.id ≠ Z4.id)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -223,13 +225,14 @@ theorem runBodyFrom_qpMulLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
             (pos + 25)
             { alloc := S.alloc,
               mem :=
-                S.mem.storeTmp5 Z0 Z1 Z2 Z3 Z4
+                S.mem.callTmp5 Z0 Z1 Z2 Z3 Z4
                   (fd_r52x5_quad_mul_fast.spec X (S.mem.readQuad5 P)) } >>=
           g) =
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
+  obtain ⟨hP0, hP1, hP2, hP3, hP4⟩ := hPZ
   obtain ⟨hp1, hp2, hp3⟩ := hp
   iterate 5 step_pure
   step_load [ofFn_extractVecElem_readAt] with v0
@@ -272,9 +275,9 @@ def geAddEndRun (c0 c1 c2 c3 e0 e1 e2 e3 : Reg Γ (.bv 32))
 
 /-- Where the body at `pos` is `geAddEndRun`, `x0 … x4` hold `X`, `p` the point `P` and
 `z0 … z4` five slots in distinct blocks: running on from `pos` then `g` gives `K` if it does from
-`pos + 50`, ten blocks on, with the product left in the slots and reduced at `P`, in any env with
-the same arguments: the writes are dropped, as `add_with_opts`'s past register 512 defeat the
-steps. -/
+`pos + 50`, ten blocks on, with the product left in the ended slots and reduced at `P`, in any
+env with the same arguments: the writes are dropped, as `add_with_opts`'s past register 512 defeat
+the steps. -/
 theorem runBodyFrom_geAddEndRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {c0 c1 c2 c3 e0 e1 e2 e3 : Reg Γ (.bv 32)}
     {x0 x1 x2 x3 x4 tb0 tb1 tb2 tb3 tb4 ta0 ta1 ta2 ta3 ta4 : Dst Γ Ty4x64}
@@ -295,10 +298,12 @@ theorem runBodyFrom_geAddEndRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
         X.P3, x4 := X.P4, z0 := Z0, z1 := Z1, z2 := Z2, z3 := Z3, z4 := Z4, p := P, k :=
         (Vector.replicate 4 51#64 : Wl), mask := (Vector.replicate 4 2251799813685247#64 : Wl),
         r19 := (Vector.replicate 4 19#64 : Wl)])
-    (hwf : S.WF) (hP : S.mem.Quad5Fit P)
+    (hwf : S.WF) (hP : S.mem.Quad5Room P)
     (hZ :
-      Fits S.mem Z0 256 ∧
-        Fits S.mem Z1 256 ∧ Fits S.mem Z2 256 ∧ Fits S.mem Z3 256 ∧ Fits S.mem Z4 256)
+      InBounds S.mem Z0 256 ∧
+        InBounds S.mem Z1 256 ∧
+        InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hPZ : P.id ≠ Z0.id ∧ P.id ≠ Z1.id ∧ P.id ≠ Z2.id ∧ P.id ≠ Z3.id ∧ P.id ≠ Z4.id)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -322,7 +327,7 @@ theorem runBodyFrom_geAddEndRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
           (blk.runBodyFrom E' (pos + 50)
                 { alloc := ⟨S.alloc.nextFreeBlock + 10⟩,
                   mem :=
-                    (S.mem.storeTmp5 Z0 Z1 Z2 Z3 Z4
+                    (S.mem.callTmp5 Z0 Z1 Z2 Z3 Z4
                           (fd_r52x5_quad_mul_fast.spec (X.permute 0 3 3 0)
                             (X.permute 2 1 2 1))).storeQuad5
                       P
@@ -333,6 +338,7 @@ theorem runBodyFrom_geAddEndRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
+  obtain ⟨hP0, hP1, hP2, hP3, hP4⟩ := hPZ
   obtain ⟨hp1, hp2, hp3, hp4⟩ := hp
   step_pattern using runBodyFrom_permuteRun 0 3 3 0 inline
   step_pattern using runBodyFrom_permuteRun 2 1 2 1 inline

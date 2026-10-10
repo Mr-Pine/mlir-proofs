@@ -17,7 +17,8 @@ private def aBytes : BitVec 1536 :=
 private def state : GlobalState :=
   ⟨⟨6⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨64, 7⟩), (⟨2⟩, ⟨64, 7⟩), (⟨3⟩, ⟨64, 7⟩), (⟨4⟩, ⟨64, 7⟩), (⟨5⟩, ⟨192, aBytes⟩)]⟩⟩
+        [(⟨1⟩, .ofBytes 64 7), (⟨2⟩, .ofBytes 64 7), (⟨3⟩, .ofBytes 64 7), (⟨4⟩, .ofBytes 64 7),
+          (⟨5⟩, .ofBytes 192 aBytes)]⟩⟩
 
 -- `x, y, z, t` hold `a`'s coordinates: lane `j` of `Q0 … Q4`, then three zeros
 #guard

@@ -11,7 +11,7 @@ private def p : Pointer :=
 
 /-- One 32-byte block holding `bytes`. -/
 private def state (bytes : BitVec 256) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨32, bytes⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 32 bytes)]⟩⟩
 
 /-- The returned pointer, or `none` for UB / out of fuel. -/
 private def out (bytes : BitVec 256) (q : ⟦Ty.ptr⟧ := .value p) : Option (PoisonOr Pointer) :=

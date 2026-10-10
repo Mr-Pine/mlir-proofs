@@ -52,13 +52,13 @@ points at `Pa0 … Pa4` (when both decode) and `Pb0 … Pb4`, and counts `blocks
 public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb : Pointer)
     (s : GlobalState) (hwf : s.WF)
     (hO :
-      Fits s.mem Pa0 256 ∧
-        Fits s.mem Pa1 256 ∧
-        Fits s.mem Pa2 256 ∧
-        Fits s.mem Pa3 256 ∧
-        Fits s.mem Pa4 256 ∧
-        Fits s.mem Pb0 256 ∧
-        Fits s.mem Pb1 256 ∧ Fits s.mem Pb2 256 ∧ Fits s.mem Pb3 256 ∧ Fits s.mem Pb4 256)
+      Room s.mem Pa0 256 ∧
+        Room s.mem Pa1 256 ∧
+        Room s.mem Pa2 256 ∧
+        Room s.mem Pa3 256 ∧
+        Room s.mem Pa4 256 ∧
+        Room s.mem Pb0 256 ∧
+        Room s.mem Pb1 256 ∧ Room s.mem Pb2 256 ∧ Room s.mem Pb3 256 ∧ Room s.mem Pb4 256)
     (hsa : Fits s.mem sa 256) (hsb : Fits s.mem sb 256) (hsa_off : ¬sa.offset.uaddOverflow 32#64)
     (hsb_off : ¬sb.offset.uaddOverflow 32#64) :
     fd_r52x5_ge_decode2.call (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb) s =
@@ -98,9 +98,10 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
   have hG : Globals S₀ S.mem :=
     ⟨hgsq_fits, hgone_fits, hgd_fits, fd_f25519_sqrtm1.readVec hread_gsq,
       fd_f25519_one.readVec hread_gone, fd_f25519_d.readVec hread_gd⟩
-  have hI : Inv S₀ S.mem 0 (allocas S slotSizes) :=
-    ⟨WF_allocas _ _ hwf, frame_allocas hwf hS3, by
-      rw [eraseFrom_allocas _ _ (by omega), ← hS3, hwf.eraseFrom], by
+  have hI :
+    Inv S₀ S.mem 0 { allocas S slotSizes with mem := startFields (allocas S slotSizes).mem S₀ } :=
+    ⟨WF_startFields (WF_allocas _ _ hwf), frame_allocas hwf hS3, by
+      rw [eraseFrom_startFields, eraseFrom_allocas _ _ (by omega), ← hS3, hwf.eraseFrom], by
       rw [alloc_allocas, hS3, show slotSizes.length = 201 by simp [slotSizes]]⟩
   rw [bb0_allocas hS3]
   obtain ⟨Eent, hEnt⟩ : ∃ X, X = writeSlots E S₀ 3 slotDsts := ⟨_, rfl⟩
@@ -114,11 +115,14 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
         subst hE; exact rir_rfl%)
   have hsa_lt : sa.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hsa₀.mem
   have hsb_lt : sb.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hsb₀.mem
+  -- the field elements' lifetimes start
+  refine starts_run (B := S₀) (by chain_reads) ?_
   refine
     fields_run (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256) hArgsE (by chain_reads) hI hG
-      (fits_allocas_of slotSizes S hwf hsa) (fits_allocas_of slotSizes S hwf hsb)
+      (fits_startFields_of (fits_allocas_of slotSizes S hwf hsa) (by omega))
+      (fits_startFields_of (fits_allocas_of slotSizes S hwf hsb) (by omega))
       ((hI.readAt (by omega)).trans hsA) ((hI.readAt (by omega)).trans hsB) hsa_off hsb_off hsa_lt
-      hsb_lt fun E1 S1 hA1 hW1 hR1 hI1 hy hu hv huv3 hyb hub hvb huv3b => ?_
+      hsb_lt fun E1 S1 hA1 hW1 hR1 hI1 hF1 hy hu hv huv3 hyb hub hvb huv3b => ?_
   -- `FD_R52X5_POW22523_QUAD( _Qx, _Quv )`: `^bb0`'s part, the loop of `20`
   refine head0_run _ hA1 (by chain_reads) hI1 fun Eh0 Sh0 hAh0 hWh0 hRh0 hIh0 hKh0 => ?_
   refine head1_run _ _ _ hAh0 (by chain_reads) hIh0 fun Eh1 Sh1 hAh1 hWh1 hRh1 hIh1 hKh1 => ?_
@@ -177,17 +181,21 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
       hKl8
   refine
     bb7_run _ _ _ (pre (S₀.mem.readAt sa 256)) (pre (S₀.mem.readAt sb 256)) _ _ (hWl8.1.trans hAb5)
-      (by chain_reads) hIl8 ((hk 4 (by decide) (by decide)).trans hu)
-      ((hk 5 (by decide) (by decide)).trans hv) ((hk 10 (by decide) (by decide)).trans huv3)
-      ((hk 13 (by decide) (by decide)).trans hub) ((hk 14 (by decide) (by decide)).trans hvb)
-      ((hk 19 (by decide) (by decide)).trans huv3b) ((hk 3 (by decide) (by decide)).trans hy)
-      ((hk 12 (by decide) (by decide)).trans hyb) ?_ ?_
-  · intro E10 S10 hA10 hW10 Qx DA DB hR10 hI10 hy10 hyb10 hx10 hxb10 hok
+      (by chain_reads) hIl8 ((hk 4 (by decide) (by decide)).1.trans hu)
+      ((hk 5 (by decide) (by decide)).1.trans hv) ((hk 10 (by decide) (by decide)).1.trans huv3)
+      ((hk 13 (by decide) (by decide)).1.trans hub) ((hk 14 (by decide) (by decide)).1.trans hvb)
+      ((hk 19 (by decide) (by decide)).1.trans huv3b) ((hk 3 (by decide) (by decide)).1.trans hy)
+      ((hk 12 (by decide) (by decide)).1.trans hyb)
+      (fun j h3 hj => (hk j h3 (by omega)).2 (hF1 j h3 hj)) ?_ ?_
+  · intro E10 S10 hA10 hW10 Qx DA DB hR10 hI10 hy10 hyb10 hx10 hxb10 hf3 hf12 hf21 hf29 hok
     refine bb10_run DB.t1nz DB.t2nz (by chain_reads) ?_ ?_
     · intro E12 hA12 hW12 hokb
       refine
         bb12_run DA DB (hA12.trans hA10) (by chain_reads) (is_nonzero_01 _) (is_nonzero_01 _) hI10
-          hG ⟨ha0, ha1, ha2, ha3, ha4, hb0, hb1, hb2, hb3, hb4⟩ hy10 hyb10 hx10 hxb10
+          hG ⟨ha0, ha1, ha2, ha3, ha4, hb0, hb1, hb2, hb3, hb4⟩ hy10 hyb10 hx10 hxb10 hf3 hf12 hf21
+          hf29
+          (by
+            dsimp only [EndRegs]; chain_reads)
           ⟨by
             have := hwf₀.lt ha0₀.mem; omega, by
             have := hwf₀.lt ha1₀.mem; omega, by
@@ -227,8 +235,10 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
       rw [halloc, halloc10]
       rfl
     · intro E11 hA11 hW11 hnb
-      rw [bb11_run (hA11.trans hA10) (by chain_reads) (hI10.fits hb0) (hI10.fits hb1)
-          (hI10.fits hb2) (hI10.fits hb3) (hI10.fits hb4)]
+      rw [bb11_run (B := S₀) (hA11.trans hA10) (by chain_reads) (hI10.room hb0) (hI10.room hb1)
+          (hI10.room hb2) (hI10.room hb3) (hI10.room hb4)
+          (by
+            dsimp only [EndRegs]; chain_reads)]
       have halloc10 := hI10.alloc
       have herase := hI10.erase
       have hokA :
@@ -248,16 +258,18 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
         simp only [fd_r52x5_ge_decode2.spec, Dec.err, hokA, hnB, bne_self_eq_false, bne_iff_ne,
           ne_eq, not_false_eq_true, Bool.false_eq_true, ↓reduceIte]
       rw [hspec]
-      simp only [storeOut, blocks, show (-2 : BitVec 32) ≠ 0 by decide, ↓reduceIte,
-        MemoryState.eraseFrom_storeTmp5]
+      simp only [storeOut, blocks, show (-2 : BitVec 32) ≠ 0 by decide, ↓reduceIte]
       rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ S₀.alloc.nextFreeBlock + 3 by omega),
-        herase, hM0]
+        eraseFrom_endFields, MemoryState.eraseFrom_storeTmp5, herase,
+        MemoryState.eraseFrom_storeTmp5, hM0]
       obtain ⟨⟨n⟩, m10⟩ := S10
       simp only at halloc10 ⊢
       rw [halloc10]
   · intro E9 S9 hA9 hW9 hI9 herr
-    rw [bb9_run hA9 (by chain_reads) (hI9.fits (hS ▸ hb0)) (hI9.fits (hS ▸ hb1))
-        (hI9.fits (hS ▸ hb2)) (hI9.fits (hS ▸ hb3)) (hI9.fits (hS ▸ hb4))]
+    rw [bb9_run (B := S₀) hA9 (by chain_reads) (hI9.room (hS ▸ hb0)) (hI9.room (hS ▸ hb1))
+        (hI9.room (hS ▸ hb2)) (hI9.room (hS ▸ hb3)) (hI9.room (hS ▸ hb4))
+        (by
+          dsimp only [EndRegs]; chain_reads)]
     have herr' :
       (decs (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)).1.t2nz &&&
           (decs (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)).1.t1nz ≠
@@ -272,10 +284,10 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
     rw [hspec]
     have halloc := hI9.alloc
     have herase := hI9.erase
-    simp only [storeOut, blocks, show (-1 : BitVec 32) ≠ 0 by decide, ↓reduceIte,
-      MemoryState.eraseFrom_storeTmp5]
+    simp only [storeOut, blocks, show (-1 : BitVec 32) ≠ 0 by decide, ↓reduceIte]
     rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ S₀.alloc.nextFreeBlock + 3 by omega),
-      herase, hM0]
+      eraseFrom_endFields, MemoryState.eraseFrom_storeTmp5, herase, MemoryState.eraseFrom_storeTmp5,
+      hM0]
     obtain ⟨⟨n⟩, m9⟩ := S9
     simp only at halloc ⊢
     rw [halloc]

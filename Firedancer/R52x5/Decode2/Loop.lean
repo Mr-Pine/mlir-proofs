@@ -143,13 +143,13 @@ theorem iter2 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact Writes.refl _ _ _
     · env_reads
     · rw [hS]
-      simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+      simp (disch := decide) only [eraseFrom_callTmp5_slot]
       exact herase
     · rw [hS]
       exact halloc
     · rw [hS]
       exact
-        (Keeps.refl _ _).storeTmp5 111 112 113 114 115 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 111 112 113 114 115 (by decide) (by decide) (by decide)
           (by decide) (by decide)
   · step_loop using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
@@ -158,12 +158,12 @@ theorem iter2 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
     · rw [← hS]
       refine ⟨hwf, hF, ?_, ?_⟩
       · rw [hS]
-        simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+        simp (disch := decide) only [eraseFrom_callTmp5_slot]
         exact herase
       · rw [hS]
         exact halloc
     · exact
-        (Keeps.refl _ _).storeTmp5 111 112 113 114 115 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 111 112 113 114 115 (by decide) (by decide) (by decide)
           (by decide) (by decide)
 
 /-! ### `^bb4`: `_t1` squared, `50` times in all -/
@@ -203,13 +203,13 @@ theorem iter4 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact Writes.refl _ _ _
     · env_reads
     · rw [hS]
-      simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+      simp (disch := decide) only [eraseFrom_callTmp5_slot]
       exact herase
     · rw [hS]
       exact halloc
     · rw [hS]
       exact
-        (Keeps.refl _ _).storeTmp5 141 142 143 144 145 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 141 142 143 144 145 (by decide) (by decide) (by decide)
           (by decide) (by decide)
   · step_loop using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
@@ -218,12 +218,12 @@ theorem iter4 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
     · rw [← hS]
       refine ⟨hwf, hF, ?_, ?_⟩
       · rw [hS]
-        simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+        simp (disch := decide) only [eraseFrom_callTmp5_slot]
         exact herase
       · rw [hS]
         exact halloc
     · exact
-        (Keeps.refl _ _).storeTmp5 141 142 143 144 145 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 141 142 143 144 145 (by decide) (by decide) (by decide)
           (by decide) (by decide)
 
 /-! ### `^bb6`: `_t2` squared, `100` times in all -/
@@ -263,13 +263,13 @@ theorem iter6 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact Writes.refl _ _ _
     · env_reads
     · rw [hS]
-      simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+      simp (disch := decide) only [eraseFrom_callTmp5_slot]
       exact herase
     · rw [hS]
       exact halloc
     · rw [hS]
       exact
-        (Keeps.refl _ _).storeTmp5 156 157 158 159 160 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 156 157 158 159 160 (by decide) (by decide) (by decide)
           (by decide) (by decide)
   · step_loop using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
@@ -278,12 +278,12 @@ theorem iter6 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
     · rw [← hS]
       refine ⟨hwf, hF, ?_, ?_⟩
       · rw [hS]
-        simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+        simp (disch := decide) only [eraseFrom_callTmp5_slot]
         exact herase
       · rw [hS]
         exact halloc
     · exact
-        (Keeps.refl _ _).storeTmp5 156 157 158 159 160 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 156 157 158 159 160 (by decide) (by decide) (by decide)
           (by decide) (by decide)
 
 /-! ### `^bb8`: `_t1` squared, `50` times in all -/
@@ -323,13 +323,13 @@ theorem iter8 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact Writes.refl _ _ _
     · env_reads
     · rw [hS]
-      simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+      simp (disch := decide) only [eraseFrom_callTmp5_slot]
       exact herase
     · rw [hS]
       exact halloc
     · rw [hS]
       exact
-        (Keeps.refl _ _).storeTmp5 171 172 173 174 175 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 171 172 173 174 175 (by decide) (by decide) (by decide)
           (by decide) (by decide)
   · step_loop using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
@@ -338,12 +338,12 @@ theorem iter8 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
     · rw [← hS]
       refine ⟨hwf, hF, ?_, ?_⟩
       · rw [hS]
-        simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+        simp (disch := decide) only [eraseFrom_callTmp5_slot]
         exact herase
       · rw [hS]
         exact halloc
     · exact
-        (Keeps.refl _ _).storeTmp5 171 172 173 174 175 (by decide) (by decide) (by decide)
+        (Keeps.refl _ _).callTmp5 171 172 173 174 175 (by decide) (by decide) (by decide)
           (by decide) (by decide)
 
 /-- The loop at `^bb2`, from `iter2`. -/

@@ -18,7 +18,7 @@ private def pack (l : List Nat) : BitVec 512 :=
 private def state : GlobalState :=
   ⟨⟨6⟩,
     ⟨Std.ExtHashMap.ofList
-        ((List.range 6).map fun k => (⟨k⟩, ⟨64, pack ((List.range 5).map (· + k + 1))⟩))⟩⟩
+        ((List.range 6).map fun k => (⟨k⟩, .ofBytes 64 (pack ((List.range 5).map (· + k + 1)))))⟩⟩
 
 /-- `fd_f25519_mul2(r1, a1, b1, r2, a2, b2)` on blocks `[r1, a1, b1, r2, a2, b2]`: the state after,
 or `none` for UB. -/

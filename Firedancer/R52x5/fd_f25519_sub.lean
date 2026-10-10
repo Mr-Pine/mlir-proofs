@@ -26,7 +26,7 @@ section Proof
 /-- `fd_f25519_sub( r, a, b )` stores `spec` of the elements at `a` and `b` at `r` and returns
 `r`; `r` may alias `a` or `b`. -/
 public theorem fd_f25519_sub.call_eq (r a b : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : Fits s.mem r 512) (ha : Fits s.mem a 512) (hb : Fits s.mem b 512) :
+    (hr : Room s.mem r 512) (ha : Fits s.mem a 512) (hb : Fits s.mem b 512) :
     fd_f25519_sub.call (fd_f25519_sub.args (.value r) (.value a) (.value b)) s =
       .value
         (.cons (.value r) .nil,

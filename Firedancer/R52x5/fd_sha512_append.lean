@@ -81,7 +81,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
     have hX :
       S.mem.readAt (d.add (n &&& 18446744073709551488#64)) (8 * (n &&& 127#64).toNat) =
         D.extractLsb' (1024 * (n >>> 7).toNat) (8 * (n &&& 127#64).toNat) := by
-      rw [MemoryState.readAt_add_of_readAt hd hoff
+      rw [MemoryState.readAt_add_of_readAt hd.inBounds hoff
           (by
             rw [toNat_and_neg128, toNat_and_127]; omega)
           hD,
@@ -341,7 +341,7 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
             BitVec.toNat_sub_of_le
               (by
                 rw [BitVec.le_def]; omega)
-          rw [MemoryState.readAt_add_of_readAt hdata hov'
+          rw [MemoryState.readAt_add_of_readAt hdata.inBounds hov'
               (by
                 rw [hsub]; omega)
               hD]

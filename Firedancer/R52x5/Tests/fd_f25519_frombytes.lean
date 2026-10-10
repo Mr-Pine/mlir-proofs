@@ -17,7 +17,8 @@ private def value (x : Wwl) : Nat :=
 
 /-- A 64-byte block for `r`, and the 32 bytes `bytes` at byte 8 of a 40-byte block. -/
 private def state (bytes : BitVec 256) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨40, bytes.setWidth 320 <<< 64⟩)]⟩⟩
+  ⟨⟨2⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 40 (bytes.setWidth 320 <<< 64))]⟩⟩
 
 /-- `r` is returned and holds `spec bytes`: Ref's limbs, `bytes` mod `2^255` mod `p`, lanes 5-7
 zero. -/

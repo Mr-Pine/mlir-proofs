@@ -37,13 +37,15 @@ public theorem fd_f25519_sgn.call_eq (a : Pointer) (s : GlobalState) (hwf : s.WF
   -- ulong h[5];
   step_alloca with h
   step_pure
-  have hh_limbs : S.mem.LimbsFit h := .of_fits hh_fits hh_off
+  have hh_limbs : S.mem.LimbsRoom h := .of_room hroom_h hh_off
   rw [hS] at hh_limbs
   -- fd_f25519_canonical_limbs( h, a );
   step_call using fd_f25519_canonical_limbs.call_eq
   generalize hl : fd_f25519_canonical_limbs.spec (S₀.mem.readVec a) = l at hS
   have hread_h : S.mem.readAt h 64 = l 0 := by
     rw [hS]; exact congrFun (MemoryState.readLimbs_storeLimbs_self hh_limbs) 0
+  have hh_fit : S.mem.LimbsFit h := by
+    rw [hS]; exact .storeLimbs_self hh_limbs
   -- return (int)(h[0] & 1);
   step_load
   iterate 3 step_pure

@@ -92,8 +92,8 @@ attribute [local mlir_operation] vpmadd52l_wl vpmadd52h_wl zipWith_add_wl zipWit
 
 /-- `fd_r52x5_quad_sqr_fast` stores `spec`'s `wl_t`s at `_z0 … _z4`, in that order. -/
 public theorem fd_r52x5_quad_sqr_fast.call_eq (_z0 _z1 _z2 _z3 _z4 : Pointer) (X : Quad5)
-    (s : GlobalState) (hwf : s.WF) (h0 : Fits s.mem _z0 256) (h1 : Fits s.mem _z1 256)
-    (h2 : Fits s.mem _z2 256) (h3 : Fits s.mem _z3 256) (h4 : Fits s.mem _z4 256) :
+    (s : GlobalState) (hwf : s.WF) (h0 : Room s.mem _z0 256) (h1 : Room s.mem _z1 256)
+    (h2 : Room s.mem _z2 256) (h3 : Room s.mem _z3 256) (h4 : Room s.mem _z4 256) :
     fd_r52x5_quad_sqr_fast.call
         (fd_r52x5_quad_sqr_fast.args (.value _z0) (.value _z1) (.value _z2) (.value _z3)
           (.value _z4) (Ty.wrap X.P0) (Ty.wrap X.P1) (Ty.wrap X.P2) (Ty.wrap X.P3) (Ty.wrap X.P4))

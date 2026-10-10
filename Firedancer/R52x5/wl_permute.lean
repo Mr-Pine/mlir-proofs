@@ -31,7 +31,7 @@ private theorem lane_fits {m : MemoryState} {t : Pointer} (h : Fits m t 256) (ho
 private theorem lane_read {m : MemoryState} {t : Pointer} {x : Wl} (h : Fits m t 256)
     (ho : t.offset = 0) (hr : m.readAt t 256 = BitVec.packLanes x) (hk : k < 4) :
     m.readAt (t.add (BitVec.ofNat 64 (k * 8))) 64 = x[k] := by
-  rw [MemoryState.readAt_add_of_readAt h
+  rw [MemoryState.readAt_add_of_readAt h.inBounds
       (by
         simp [BitVec.uaddOverflow, ho]; omega)
       (by
@@ -45,8 +45,8 @@ set_option hygiene false in
 /-- `u.l[k] = t.l[ imm_ik ]`'s `zext`, `getelementptr` and `load`, the lane named `v`. -/
 local macro "lane " hk:ident v:ident : tactic =>
   `(tactic|
-    ( have hf := lane_fits ht_fits ht_off $hk
-      have hr := lane_read ht_fits ht_off hread_t $hk
+    ( have hf := lane_fits hfits_t ht_off $hk
+      have hr := lane_read hfits_t ht_off hread_t $hk
       obtain ⟨hm, hmod, hmul⟩ := idx_facts $hk
       step_pure
       step_pure [hm, hmod, hmul]

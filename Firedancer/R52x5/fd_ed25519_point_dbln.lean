@@ -57,17 +57,18 @@ abbrev hdr (E : ⟪Γ⟫) (P : Quad5) (k : Nat) : ⟪Γ⟫ :=
   E[%4391 := Ty.wrap P.P4, %4392 := Ty.wrap P.P3, %4393 := Ty.wrap P.P2, %4394 := Ty.wrap P.P1,
     %4395 := Ty.wrap P.P0, %4396 := .value (BitVec.ofNat 8 k)]
 
-/-- The loop's facts about a state: well-formed, the point `r` and the ten temporaries fit. -/
+/-- The loop's facts about a state: well-formed, room for the point `r`, the ten temporaries in
+bounds (dead between their uses). -/
 abbrev Inv (S : GlobalState) (r z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Pointer) : Prop :=
   S.WF ∧
-    S.mem.Quad5Fit r ∧
-    Fits S.mem z0 256 ∧
-    Fits S.mem z1 256 ∧
-    Fits S.mem z2 256 ∧
-    Fits S.mem z3 256 ∧
-    Fits S.mem z4 256 ∧
-    Fits S.mem z5 256 ∧
-    Fits S.mem z6 256 ∧ Fits S.mem z7 256 ∧ Fits S.mem z8 256 ∧ Fits S.mem z9 256
+    S.mem.Quad5Room r ∧
+    InBounds S.mem z0 256 ∧
+    InBounds S.mem z1 256 ∧
+    InBounds S.mem z2 256 ∧
+    InBounds S.mem z3 256 ∧
+    InBounds S.mem z4 256 ∧
+    InBounds S.mem z5 256 ∧
+    InBounds S.mem z6 256 ∧ InBounds S.mem z7 256 ∧ InBounds S.mem z8 256 ∧ InBounds S.mem z9 256
 
 /-- The temporaries: five distinct blocks each for the square and the product, all from block `b`
 on. -/
@@ -96,7 +97,7 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
     (P : Quad5) (S : GlobalState) (E : ⟪Γ⟫) (g : Vals [.ptr] × GlobalState → PoisonOr β)
     (K : PoisonOr β) (hArgs : E.args = (args (.value r) (.value a) (.value n)).get)
     (hR : LoopEnv E r z0 z1 z2 z3 z4 z5 z6 z7 z8 z9) (hI : Inv S r z0 z1 z2 z3 z4 z5 z6 z7 z8 z9)
-    (hZ : Slots b z0 z1 z2 z3 z4 z5 z6 z7 z8 z9)
+    (hZ : Slots b z0 z1 z2 z3 z4 z5 z6 z7 z8 z9) (hrb : r.id.id < b)
     (hback :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value a) (.value n)).get →
@@ -113,7 +114,7 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
             r.add 128#64, %4588 := (geDbl P).P0, %4590 := (geDbl P).P1, %4592 := (geDbl P).P2,
             %4594 := (geDbl P).P3, %4596 := (geDbl P).P4]) →
           S'.WF →
-          S'.mem.Quad5Fit r →
+          S'.mem.Quad5Room r →
           S'.alloc = ⟨S.alloc.nextFreeBlock + 30⟩ →
           S'.mem.eraseFrom b = S.mem.eraseFrom b →
           ¬((BitVec.ofNat 8 k + 1#8).setWidth 32).ult n = true →
@@ -121,6 +122,20 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
     (fd_ed25519_point_dbln.runFrom (hdr E P k) 3 S >>= g) = K := by
   obtain ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hI
   obtain ⟨hne, hne', hb0, hb1, hb2, hb3, hb4, hb5, hb6, hb7, hb8, hb9⟩ := hZ
+  have hrz {z : Pointer} (hb : b ≤ z.id.id) : r.id ≠ z.id := fun h => by
+    rw [h] at hrb
+    omega
+  have hr0 := hrz hb0
+  have hr1 := hrz hb1
+  have hr2 := hrz hb2
+  have hr3 := hrz hb3
+  have hr4 := hrz hb4
+  have hr5 := hrz hb5
+  have hr6 := hrz hb6
+  have hr7 := hrz hb7
+  have hr8 := hrz hb8
+  have hr9 := hrz hb9
+  clear hrz hrb
   block_init
   -- FD_R52X5_QUAD_PERMUTE( _ta, 1,0,3,2, P1 ), FD_R52X5_QUAD_ADD_FAST( _ta, _ta, P1 )
   step_pattern using runBodyFrom_permuteRun 1 0 3 2 inline
@@ -166,18 +181,18 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
       env_reads
     · rw [← hS]
       exact ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩
-    · rw [MemoryState.eraseFrom_storeTmp5_of_le hb5 hb6 hb7 hb8 hb9,
-        MemoryState.eraseFrom_storeTmp5_of_le hb0 hb1 hb2 hb3 hb4]
+    · rw [MemoryState.eraseFrom_callTmp5_of_le hb5 hb6 hb7 hb8 hb9,
+        MemoryState.eraseFrom_callTmp5_of_le hb0 hb1 hb2 hb3 hb4]
   · step_loop using hexit
-    rw [MemoryState.eraseFrom_storeTmp5_of_le hb5 hb6 hb7 hb8 hb9,
-      MemoryState.eraseFrom_storeTmp5_of_le hb0 hb1 hb2 hb3 hb4]
+    rw [MemoryState.eraseFrom_callTmp5_of_le hb5 hb6 hb7 hb8 hb9,
+      MemoryState.eraseFrom_callTmp5_of_le hb0 hb1 hb2 hb3 hb4]
 
 /-- The loop from `^bb3` at counter `k` with `P` in the registers and `m + 1` trips left: at the
 exit the registers hold `iter (m + 1) P`; `30 (m + 1)` blocks used, only the temporaries
 written. -/
 theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Pointer) (b : Nat)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
-    (hZ : Slots b z0 z1 z2 z3 z4 z5 z6 z7 z8 z9) :
+    (hZ : Slots b z0 z1 z2 z3 z4 z5 z6 z7 z8 z9) (hrb : r.id.id < b) :
     ∀ m k (P : Quad5) (S : GlobalState) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value a) (.value n)).get →
         LoopEnv E r z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 →
@@ -190,7 +205,7 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
               r.add 128#64, %4588 := (iter (m + 1) P).P0, %4590 := (iter (m + 1) P).P1, %4592 :=
               (iter (m + 1) P).P2, %4594 := (iter (m + 1) P).P3, %4596 := (iter (m + 1) P).P4]) →
             S'.WF →
-            S'.mem.Quad5Fit r →
+            S'.mem.Quad5Room r →
             S'.alloc = ⟨S.alloc.nextFreeBlock + 30 * (m + 1)⟩ →
             S'.mem.eraseFrom b = S.mem.eraseFrom b →
             (fd_ed25519_point_dbln.runFrom E' 1 S' >>= g) = K) →
@@ -199,7 +214,7 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
   induction m with
   | zero =>
     intro k P S E hArgs hR hk hn hI hK
-    refine trip r a n z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 b k P S E g K hArgs hR hI hZ ?_ ?_
+    refine trip r a n z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 b k P S E g K hArgs hR hI hZ hrb ?_ ?_
     · -- around again: impossible, the counter has reached `n`
       intro _ _ _ _ _ _ _ hbr
       have : (BitVec.setWidth 32 (BitVec.ofNat 8 k + 1#8)).toNat = k + 1 := by
@@ -211,7 +226,7 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
       exact hK E' S' h1 h2 h3 h4 h5 h6
   | succ m ih =>
     intro k P S E hArgs hR hk hn hI hK
-    refine trip r a n z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 b k P S E g K hArgs hR hI hZ ?_ ?_
+    refine trip r a n z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 b k P S E g K hArgs hR hI hZ hrb ?_ ?_
     · -- around again, one trip fewer
       intro E' S' g1 g2 g3 ha hm _
       refine ih (k + 1) _ S' E' g1 g2 (by omega) hn g3 fun E'' S'' f1 f2 f3 f4 f5 f6 => ?_
@@ -235,7 +250,7 @@ set_option maxHeartbeats 400000 in
 `r`, for `1 ≤ n < 256` (the C counter is a `uchar`); `r` may be `a`. Its twenty temporaries and
 thirty `wl_permute` calls per doubling use up `20 + 30 n` block ids. -/
 public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a)
+    (hwf : s.WF) (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a)
     (hn : 1 ≤ n.toNat ∧ n.toNat < 256) :
     fd_ed25519_point_dbln.call (fd_ed25519_point_dbln.args (.value r) (.value a) (.value n)) s =
       .value
@@ -248,6 +263,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
   func_init
   have hra : S.mem.readQuad5 a = S₀.mem.readQuad5 a := by rw [hS]
   have hro := hr.1
+  have hrb : r.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt (hS ▸ hr.2.1 : Room S₀.mem r 256).mem
   block_init
   iterate 12 step_pure
   iterate 20 step_alloca
@@ -305,10 +321,10 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     have hI :
       fd_ed25519_point_dbln.Inv S r (S₀.slot 10) (S₀.slot 11) (S₀.slot 12) (S₀.slot 13) (S₀.slot 14)
         (S₀.slot 15) (S₀.slot 16) (S₀.slot 17) (S₀.slot 18) (S₀.slot 19) :=
-      ⟨hwf, hr, hv22_fits, hv23_fits, hv24_fits, hv25_fits, hv26_fits, hv27_fits, hv28_fits,
-        hv29_fits, hv30_fits, hv31_fits⟩
+      ⟨hwf, hr, hv22_bounds, hv23_bounds, hv24_bounds, hv25_bounds, hv26_bounds, hv27_bounds,
+        hv28_bounds, hv29_bounds, hv30_bounds, hv31_bounds⟩
     step_loop using
-      fd_ed25519_point_dbln.loop r a n _ _ _ _ _ _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ hZ
+      fd_ed25519_point_dbln.loop r a n _ _ _ _ _ _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ hZ hrb
         (n.toNat - 2) 1
     · dsimp only [fd_ed25519_point_dbln.LoopEnv]
       env_reads

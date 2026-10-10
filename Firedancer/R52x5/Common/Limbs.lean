@@ -50,18 +50,31 @@ theorem GlobalState.WF_storeWv {s : GlobalState} :
       ({ s with mem := m } : GlobalState).WF := by
   simp [MemoryState.storeWv]
 
-/-- `storeWv` keeps every block and its length. -/
+/-- `storeWv` keeps every block, its length and lifetime. -/
 @[simp, mlir_state]
-theorem Fits.storeWv_iff {m : MemoryState} : Fits (m.storeWv q v) p w ↔ Fits m p w := by
+theorem Room.storeWv_iff {m : MemoryState} : Room (m.storeWv q v) p w ↔ Room m p w := by
   simp [MemoryState.storeWv]
 
 @[mlir_mem, mlir_transport]
 theorem Fits.storeWv {m : MemoryState} (h : Fits m p w) : Fits (m.storeWv q v) p w :=
-  Fits.storeWv_iff.mpr h
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem Room.storeWv {m : MemoryState} (h : Room m p w) : Room (m.storeWv q v) p w :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeWv {m : MemoryState} (h : InBounds m p w) : InBounds (m.storeWv q v) p w :=
+  h.storeAt
+
+/-- Lanes stored where there is room are known. -/
+@[mlir_fresh, mlir_mem]
+theorem Fits.storeWv_self {m : MemoryState} (h : Room m p 256) : Fits (m.storeWv p v) p 256 :=
+  Fits.storeAt_self h
 
 /-- A read of the stored lanes. -/
 @[mlir_mem, mlir_read]
-theorem MemoryState.readAt_storeWv_self {m : MemoryState} (h : Fits m p 256) :
+theorem MemoryState.readAt_storeWv_self {m : MemoryState} (h : InBounds m p 256) :
     (m.storeWv p v).readAt p 256 = BitVec.packLanes v :=
   readAt_storeAt_self h _
 
@@ -71,9 +84,9 @@ theorem MemoryState.readAt_storeWv_disjoint {m : MemoryState}
     (h : (Range.of p 256).Disjoint (Range.of q w)) : (m.storeWv p v).readAt q w = m.readAt q w :=
   readAt_storeAt_disjoint h _
 
-/-- Lanes stored where they fit read back. -/
+/-- Lanes stored in bounds read back. -/
 @[mlir_state, mlir_frame, mlir_read]
-theorem MemoryState.readWv_storeWv_self {m : MemoryState} (h : Fits m p 256) :
+theorem MemoryState.readWv_storeWv_self {m : MemoryState} (h : InBounds m p 256) :
     (m.storeWv p v).readWv p = v :=
   readWv_packLanes (readAt_storeWv_self h)
 
@@ -128,24 +141,34 @@ theorem GlobalState.WF.storeWv_allocaPtr {s : GlobalState} (h : s.WF) :
 /-- Reading lanes elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
 theorem MemoryState.readWv_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n).mem.readWv p = s.mem.readWv p := by
+    (s.alloca n d).mem.readWv p = s.mem.readWv p := by
   simp only [readWv, readAt, GlobalState.getElem?_alloca hne]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readWv_lifetimeStart {m : MemoryState} :
+    (m.lifetimeStart q).readWv p = m.readWv p := by simp only [readWv, readAt_lifetimeStart]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readWv_lifetimeEnd {m : MemoryState} :
+    (m.lifetimeEnd q).readWv p = m.readWv p := by simp only [readWv, readAt_lifetimeEnd]
 
 /-- Lanes outside a new block: the lanes before it. -/
 @[mlir_read]
 theorem MemoryState.readWv_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : p.id ≠ b) :
     (m.addBlock b n x).readWv p = m.readWv p := by simp only [readWv, readAt_addBlock_of_id_ne h]
 
-/-- Lanes that fit before a new block: the lanes before it. -/
+/-- Lanes in bounds before a new block: the lanes before it. -/
 @[mlir_read]
 theorem MemoryState.readWv_addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
-    (h : Fits s.mem p 256) :
+    (h : InBounds s.mem p 256) :
     (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).readWv p = s.mem.readWv p := by
   simp only [readWv, readAt_addBlock hwf h]
 
 /-- A read of four lanes at byte `o` of a known read: its bits. -/
 theorem MemoryState.readWv_add_of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v}
-    (hf : Fits m p v) (h : m.readAt p v = x) (hp : p.offset.toNat + o + 32 ≤ 2 ^ 64)
+    (hf : InBounds m p v) (h : m.readAt p v = x) (hp : p.offset.toNat + o + 32 ≤ 2 ^ 64)
     (hv : 8 * o + 256 ≤ v) :
     m.readWv (p.add (BitVec.ofNat 64 o)) =
       Vector.ofFn fun i => x.extractLsb' (8 * o + 64 * i.val) 64 := by
@@ -171,55 +194,33 @@ theorem MemoryState.readWv_add_of_readAt {m : MemoryState} {p : Pointer} {x : Bi
 
 /-! ### `storeLimbsV` -/
 
-/-- The five limbs at `p` lie in one block: a 320-bit read there fits. -/
-theorem MemoryState.LimbsFit.fits {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
-    Fits m p 320 := by
-  obtain ⟨ho, -, -, -, -, ⟨blk, hblk, hsz⟩⟩ := h
-  refine ⟨blk, hblk, ?_⟩
+/-- The five limbs at `p` lie in one live block: room for 320 bits there. -/
+theorem MemoryState.LimbsRoom.room320 {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
+    Room m p 320 := by
+  obtain ⟨ho, -, -, -, -, ⟨blk, hblk, hl, hsz⟩⟩ := h
+  refine ⟨blk, hblk, hl, ?_⟩
   rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
     Pointer.offsetInBits_add_limb ho (by omega)] at hsz
   unfold Pointer.offsetInBits
   omega
 
+/-- The five limbs at `p` known: 320 known bits there. -/
+theorem MemoryState.LimbsFit.fits {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
+    Fits m p 320 := by
+  obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
+  have hov : ∀ off : BitVec 64, off.toNat ≤ 32 → ¬p.offset.uaddOverflow off := by
+    intro off hoff
+    simp [BitVec.uaddOverflow]
+    omega
+  have h01 : Fits m p 128 := Fits.append (hov 8#64 (by decide)) rfl rfl h0 h1
+  have h02 : Fits m p 192 := Fits.append (hov 16#64 (by decide)) rfl rfl h01 h2
+  have h03 : Fits m p 256 := Fits.append (hov 24#64 (by decide)) rfl rfl h02 h3
+  exact Fits.append (hov 32#64 (by decide)) rfl rfl h03 h4
+
 /-- A store of a value cast to an equal width is a store of the value. -/
 theorem MemoryState.storeAt_cast {m : MemoryState} {x : BitVec w} (h : w = w') :
     m.storeAt p (x.cast h) = m.storeAt p x := by
   subst h; rfl
-
-open Memory in
-/-- Two adjacent stores are one store of both values, the later one above. -/
-theorem MemoryState.storeAt_storeAt_append {m : MemoryState} {p : Pointer} {x : BitVec a}
-    {y : BitVec b} (hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k)) (ha : a = 8 * k)
-    (hk : k < 2 ^ 64) :
-    (m.storeAt p x).storeAt (p.add (BitVec.ofNat 64 k)) y = m.storeAt p (y ++ x) := by
-  cases hb : m[p.id]? with
-  | none =>
-    have hn :
-      ∀ {m' : MemoryState} {q : Pointer} {w} {z : BitVec w},
-        m'[q.id]? = none → m'.storeAt q z = m' := by
-      intro m' q w z hq
-      simp [MemoryState.storeAt, hq]
-    rw [hn hb, hn (q := p.add _) hb, hn hb]
-  | some blk =>
-    rw [MemoryState.getElem?_eq] at hb
-    have hid : (p.add (BitVec.ofNat 64 k)).id = p.id := rfl
-    have hoff : (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + a := by
-      rw [Pointer.offsetInBits_add hov, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hk]
-      omega
-    have hsp :
-      spliceBits (spliceBits blk.bytes p.offsetInBits x) (p.offsetInBits + a) y =
-        spliceBits blk.bytes p.offsetInBits (y ++ x) := by
-      apply BitVec.eq_of_getLsbD_eq
-      intro i hi
-      simp only [getLsbD_spliceBits, BitVec.getLsbD_append]
-      grind
-    simp only [MemoryState.storeAt, MemoryState.getElem?_eq, hb, hid,
-      Std.ExtHashMap.getElem?_insert_self, hoff, hsp]
-    congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro j
-    simp only [Std.ExtHashMap.getElem?_insert]
-    split <;> rfl
 
 /-- Four lanes' bits, lane 0 lowest. -/
 theorem BitVec.packLanes_four (a b c d : BitVec 64) :
@@ -240,7 +241,7 @@ theorem BitVec.packLanes_four (a b c d : BitVec 64) :
     grind
 
 /-- The vector store of limbs is the five limb stores. -/
-theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsFit p) :
+theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsRoom p) :
     m.storeLimbsV p l = m.storeLimbs p l := by
   have hov (k : Nat) (hk : k ≤ 32) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
     have := h.1
@@ -255,9 +256,9 @@ theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsFit p) :
     storeAt_storeAt_append (hov 24 (by omega)) rfl (by omega)]
 
 /-- Limbs 0-3 stored and read back as one `<4 x i64>`. -/
-theorem MemoryState.readAt_storeLimbs_wv {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
+theorem MemoryState.readAt_storeLimbs_wv {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
     (m.storeLimbs p l).readAt p 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
-  have hf : Fits m p 256 := h.fits.mono (by omega)
+  have hf : InBounds m p 256 := h.room320.inBounds.mono (by omega)
   rw [← MemoryState.storeLimbsV_eq h, MemoryState.storeLimbsV, MemoryState.readAt_storeAt_disjoint,
     MemoryState.readAt_storeWv_self hf]
   simp only [Range.Disjoint, Range.of]
@@ -281,12 +282,21 @@ theorem GlobalState.WF_storeLimbsV {s : GlobalState} :
   simp [MemoryState.storeLimbsV, MemoryState.storeWv]
 
 @[simp, mlir_state]
-theorem Fits.storeLimbsV_iff {m : MemoryState} : Fits (m.storeLimbsV q l) p w ↔ Fits m p w := by
+theorem Room.storeLimbsV_iff {m : MemoryState} : Room (m.storeLimbsV q l) p w ↔ Room m p w := by
   simp [MemoryState.storeLimbsV, MemoryState.storeWv]
 
 @[mlir_mem, mlir_transport]
 theorem Fits.storeLimbsV {m : MemoryState} (h : Fits m p w) : Fits (m.storeLimbsV q l) p w :=
-  Fits.storeLimbsV_iff.mpr h
+  h.storeAt.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem Room.storeLimbsV {m : MemoryState} (h : Room m p w) : Room (m.storeLimbsV q l) p w :=
+  h.storeAt.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeLimbsV {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeLimbsV q l) p w :=
+  h.storeAt.storeAt
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.storeWv (h : MemoryState.LimbsFit m p) :
@@ -302,6 +312,26 @@ theorem MemoryState.LimbsFit.storeVec (h : MemoryState.LimbsFit m p) :
 theorem MemoryState.LimbsFit.storeLimbsV (h : MemoryState.LimbsFit m p) :
     MemoryState.LimbsFit (m.storeLimbsV q l) p :=
   h.storeAt.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeWv (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeWv q v) p :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeVec (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeVec q v) p :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeLimbsV (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeLimbsV q l) p :=
+  h.storeAt.storeAt
+
+-- the Fit-to-Room projection last among the transports (see `Firedancer.Common.Point`)
+attribute [-mlir_transport] MemoryState.LimbsFit.room
+
+attribute [mlir_transport] MemoryState.LimbsFit.room
 
 end
 

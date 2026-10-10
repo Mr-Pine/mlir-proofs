@@ -27,7 +27,7 @@ section Proof
 /-- `fd_f25519_canonical_limbs( h, a )` stores `spec` of the element at `a` as limbs at `h`;
 `fd_f25519_reduce`'s temporary moves the counter on by one block. -/
 public theorem fd_f25519_canonical_limbs.call_eq (h a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hh : s.mem.LimbsFit h) (ha : Fits s.mem a 512) :
+    (hh : s.mem.LimbsRoom h) (ha : Fits s.mem a 512) :
     fd_f25519_canonical_limbs.call (fd_f25519_canonical_limbs.args (.value h) (.value a)) s =
       .value
         (.nil,

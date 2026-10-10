@@ -14,7 +14,8 @@ private def src : Pointer :=
 
 /-- A 16-byte destination of `0xaa` bytes and a 16-byte source holding `bytes`. -/
 private def state (bytes : BitVec 128) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨16, (0xaa#8).replicate 16⟩), (⟨1⟩, ⟨16, bytes⟩)]⟩⟩
+  ⟨⟨2⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 16 ((0xaa#8).replicate 16)), (⟨1⟩, .ofBytes 16 bytes)]⟩⟩
 
 /-- The destination's bytes, or `none` for UB / out of fuel. -/
 private def out (dst source : Pointer) (sz : BitVec 64) (bytes : BitVec 128) :

@@ -18,7 +18,7 @@ private def ell : Nat :=
 
 /-- The 64 bytes `x` at `inp`, 32 zero bytes at `out`. -/
 private def state (x : BitVec 512) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, x⟩), (⟨2⟩, ⟨32, 0#256⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 64 x), (⟨2⟩, .ofBytes 32 (0#256))]⟩⟩
 
 /-- The returned pointer and the 32 bytes at `out` after the run, or `none` for UB / out of fuel. -/
 private def run (x : BitVec 512) (o : ⟦Ty.ptr⟧ := .value out) :

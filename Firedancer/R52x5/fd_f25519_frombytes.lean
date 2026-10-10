@@ -46,7 +46,7 @@ section Proof
 /-- `fd_f25519_frombytes( r, buf )` stores `spec` of the 32 bytes at `buf` at `r` and returns
 `r`. -/
 public theorem fd_f25519_frombytes.call_eq (r buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : Fits s.mem r 512) (hbuf : Fits s.mem buf 256)
+    (hr : Room s.mem r 512) (hbuf : Fits s.mem buf 256)
     (hbuf_off : ¬buf.offset.uaddOverflow 32#64) :
     fd_f25519_frombytes.call (fd_f25519_frombytes.args (.value r) (.value buf)) s =
       .value

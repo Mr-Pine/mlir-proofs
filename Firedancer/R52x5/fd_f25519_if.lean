@@ -35,7 +35,7 @@ theorem fd_f25519_if.mask_one (h : (Ty.bv 8).width = (Ty.bv 8).width) (k : Fin 8
 /-- `fd_f25519_if( r, cond, a0, a1 )` stores `spec` at `r` and returns `r`, for `cond` `0` or `1`
 (the compiled `trunc nuw nsw` to a byte); `r` may alias `a0` or `a1`. -/
 public theorem fd_f25519_if.call_eq (r : Pointer) (cond : BitVec 32) (a0 a1 : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hc : cond = 0 ∨ cond = 1) (hr : Fits s.mem r 512)
+    (s : GlobalState) (hwf : s.WF) (hc : cond = 0 ∨ cond = 1) (hr : Room s.mem r 512)
     (ha0 : Fits s.mem a0 512) (ha1 : Fits s.mem a1 512) :
     fd_f25519_if.call (fd_f25519_if.args (.value r) (.value cond) (.value a0) (.value a1)) s =
       .value

@@ -149,7 +149,7 @@ public theorem fd_ed25519_base_point_wnaf_table.readQuad5 {m : MemoryState} {p :
         Ty.flatBits fd_ed25519_base_point_wnaf_table.lit (w := 196608) (hw := rfl))
     (hj : j < 128) :
     m.readQuad5 (p.add (BitVec.ofNat 64 (192 * j))) = fd_ed25519_base_point_wnaf_table.point j := by
-  rw [MemoryState.readQuad5_add_of_readAt hf h
+  rw [MemoryState.readQuad5_add_of_readAt hf.inBounds h
       (by
         rw [ho]; simp; omega)
       (by omega),

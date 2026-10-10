@@ -18,13 +18,13 @@ section Proof
 /-- `fd_f25519_reduce( out, in )` stores the limbs of `fold in` at `out`; its temporary `h` is
 freed, the counter moves on by one block. -/
 public theorem fd_f25519_reduce.call_eq (out : Pointer) (x : Wwl) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) :
+    (hout : s.mem.LimbsRoom out) :
     fd_f25519_reduce.call (fd_f25519_reduce.args (.value out) (Ty.wrap x)) s =
       .value
         (.nil,
           { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem := s.mem.storeLimbs out (limbs (fold x)) }) := by
-  have hout256 : Fits s.mem out 256 := hout.fits.mono (by omega)
+  have hout256 : Room s.mem out 256 := hout.room320.mono (by omega)
   rw [← MemoryState.storeLimbsV_eq hout]
   func_init
   block_init

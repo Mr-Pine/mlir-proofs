@@ -99,7 +99,7 @@ abbrev limbsOf (a0 a1 a2 a3 a4 : BitVec 64) : Fin 5 → BitVec 64 := fun i =>
   #v[a0, a1, a2, a3, a4][i]
 
 /-- Limbs stored in pairs (`dx[0..1]`, `dx[2..3]`, then `dx[4]`): the five limb stores. -/
-theorem MemoryState.storeAt_limbPairs {m : MemoryState} (h : m.LimbsFit p) :
+theorem MemoryState.storeAt_limbPairs {m : MemoryState} (h : m.LimbsRoom p) :
     ((m.storeAt p (BitVec.packLanes #v[a0, a1])).storeAt (p.add 16#64)
             (BitVec.packLanes #v[a2, a3])).storeAt
         (p.add 32#64) a4 =
@@ -120,7 +120,7 @@ theorem MemoryState.storeAt_limbPairs {m : MemoryState} (h : m.LimbsFit p) :
   rfl
 
 /-- `storeAt_limbPairs` for `dx` and `dy` stored alternately. -/
-theorem MemoryState.storeAt_limbPairs₂ {m : MemoryState} (hp : m.LimbsFit p) (hq : m.LimbsFit q)
+theorem MemoryState.storeAt_limbPairs₂ {m : MemoryState} (hp : m.LimbsRoom p) (hq : m.LimbsRoom q)
     (hne : q.id ≠ p.id) :
     (((((m.storeAt p (BitVec.packLanes #v[a0, a1])).storeAt q (BitVec.packLanes #v[b0, b1])).storeAt
                     (p.add 16#64) (BitVec.packLanes #v[a2, a3])).storeAt
@@ -158,13 +158,13 @@ theorem MemoryState.readAt_limbs12 {m : MemoryState} (hf : m.LimbsFit p) (h : m.
     simp only [BitVec.uaddOverflow, Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat,
       decide_eq_true_eq]
     omega
-  have hf8 : Fits m (p.add 8#64) 128 :=
-    Fits.add_of_le
+  have hf8 : InBounds m (p.add 8#64) 128 :=
+    InBounds.add_of_le
       (by
         have := hf.1
         simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq]
         omega)
-      (by decide) hf.fits
+      (by decide) hf.room.room320.inBounds
   have e0 :=
     MemoryState.readAt_of_readAt_le (m := m) (p := p.add 8#64) (v := 128) (w := 64) (by decide) rfl
   have e1 := MemoryState.readAt_add_of_readAt hf8 hov (w := 64) (by decide) rfl
@@ -187,7 +187,7 @@ theorem MemoryState.readAt_limbs0123 {m : MemoryState} (hf : m.LimbsFit p) (h : 
     have := hf.1
     simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq]
     omega
-  have hf256 : Fits m p 256 := hf.fits.mono (by omega)
+  have hf256 : InBounds m p 256 := hf.room.room320.inBounds.mono (by omega)
   have e0 := MemoryState.readAt_of_readAt_le (m := m) (p := p) (v := 256) (w := 64) (by decide) rfl
   have e1 := MemoryState.readAt_add_of_readAt hf256 (hov 8 (by omega)) (w := 64) (by decide) rfl
   have e2 := MemoryState.readAt_add_of_readAt hf256 (hov 16 (by omega)) (w := 64) (by decide) rfl
@@ -261,7 +261,7 @@ public theorem fd_r52x5_ge_is_eq.call_eq (A B : Quad5) (s : GlobalState) (hwf : 
   -- FD_R52X5_QUAD_MUL_FAST( A, A, B ); FD_R52X5_QUAD_REDUCE( A, A );
   step_pattern using runBodyFrom_qpMulRun (X := A.permute 2 0 2 1) (Y := B.permute 0 2 1 2) inline
   step_pattern using runBodyFrom_reduceRun inline
-  clear hread_z0 hread_z1 hread_z2 hread_z3 hread_z4 hz0_fits hz1_fits hz2_fits hz3_fits hz4_fits
+  clear hz0_bounds hz1_bounds hz2_bounds hz3_bounds hz4_bounds
   -- FD_R52X5_QUAD_PERMUTE( D, 1,0,3,2, A );
   step_pattern using runBodyFrom_permuteRun 1 0 3 2 inline
   -- FD_R52X5_QUAD_NEGATE_LAZY( A, A ); FD_R52X5_QUAD_ADD_FAST( D, D, A ); as D - A + 32p
@@ -291,16 +291,18 @@ public theorem fd_r52x5_ge_is_eq.call_eq (A B : Quad5) (s : GlobalState) (hwf : 
   iterate 2 step_pure
   step_store
   -- the six stores are `dx`'s and `dy`'s limbs
-  have hdx₀ : S.mem.LimbsFit dx := .of_fits hdx_fits hdx_off
-  have hdy₀ : S.mem.LimbsFit dy := .of_fits hdy_fits hdy_off
+  have hdx₀ : S.mem.LimbsRoom dx := .of_room hroom_dx hdx_off
+  have hdy₀ : S.mem.LimbsRoom dy := .of_room hroom_dy hdy_off
   rw [hS] at hdx₀ hdy₀
-  simp only [MemoryState.LimbsFit, Fits.storeAt_iff] at hdx₀ hdy₀
+  simp only [MemoryState.LimbsRoom, Room.storeAt_iff] at hdx₀ hdy₀
   have hyx : dy.id ≠ dx.id := by
     rw [hdx, hdy]; exact GlobalState.slot_id_ne (by decide)
   rw [MemoryState.storeAt_limbPairs₂ hdx₀ hdy₀ hyx] at hS
   -- fd_r52x5_reduce( dx ); fd_r52x5_reduce( dy );
-  have hdx_lf : S.mem.LimbsFit dx := .of_fits hdx_fits hdx_off
-  have hdy_lf : S.mem.LimbsFit dy := .of_fits hdy_fits hdy_off
+  have hdx_lf : S.mem.LimbsFit dx := by
+    rw [hS]; exact MemoryState.LimbsFit.storeLimbs (MemoryState.LimbsFit.storeLimbs_self hdx₀)
+  have hdy_lf : S.mem.LimbsFit dy := by
+    rw [hS]; exact MemoryState.LimbsFit.storeLimbs_self (MemoryState.LimbsRoom.storeLimbs hdy₀)
   step_call using fd_r52x5_reduce.call_eq
   step_call using fd_r52x5_reduce.call_eq
   clear hdx₀ hdy₀
@@ -312,6 +314,14 @@ public theorem fd_r52x5_ge_is_eq.call_eq (A B : Quad5) (s : GlobalState) (hwf : 
   rw [hY, eq_comm] at hread_dy
   have hread_dx8 := MemoryState.readAt_limbs12 hdx_lf hX
   have hread_dy0 := MemoryState.readAt_limbs0123 hdy_lf hY
+  have hfdx8 : Fits S.mem (dx.add 8#64) 128 :=
+    Fits.add_of_le
+      (by
+        have := hdx_lf.1
+        simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq]
+        omega)
+      (by decide) hdx_lf.fits
+  have hfdy : Fits S.mem dy 256 := hdy_lf.fits.mono (by omega)
   step_load [MemoryState.readAt_limb0 hX]
   step_load [MemoryState.readAt_limb3 hX]
   step_load [MemoryState.readAt_limb4 hX]

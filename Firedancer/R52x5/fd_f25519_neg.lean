@@ -26,7 +26,7 @@ section Proof
 /-- `fd_f25519_neg( r, a )` stores `spec` of the element at `a` at `r` and returns `r`; `r` may
 alias `a`. -/
 public theorem fd_f25519_neg.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : Fits s.mem r 512) (ha : Fits s.mem a 512) :
+    (hr : Room s.mem r 512) (ha : Fits s.mem a 512) :
     fd_f25519_neg.call (fd_f25519_neg.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,

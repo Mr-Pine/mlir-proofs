@@ -30,7 +30,7 @@ private def A : Quad5 :=
 
 /-- The point `A` at block 0, 192 bytes. -/
 private def state : GlobalState :=
-  let m : MemoryState := ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨192, 0⟩)]⟩
+  let m : MemoryState := ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 192 0)]⟩
   ⟨⟨1⟩, m.storeQuad5 ⟨⟨0⟩, 0⟩ A⟩
 
 /-- `spec A` stored in place; each coordinate `121666 (Y - X)`, `121666 (X + Y)`, `2 · 121666 Z`,

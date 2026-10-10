@@ -34,7 +34,7 @@ private def A : Quad5 :=
 
 /-- Points `a` (block 0) and `r` (block 1), 192 bytes each, `A` at `a`. -/
 private def state : GlobalState :=
-  let m : MemoryState := ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨192, 0⟩), (⟨1⟩, ⟨192, 0⟩)]⟩
+  let m : MemoryState := ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 192 0), (⟨1⟩, .ofBytes 192 0)]⟩
   ⟨⟨2⟩, m.storeQuad5 ⟨⟨0⟩, 0⟩ A⟩
 
 /-- `2 A` stored at `r`, `r` returned: `[E F, G H, F G, E H]` mod `p` for `A = X², B = Y²,

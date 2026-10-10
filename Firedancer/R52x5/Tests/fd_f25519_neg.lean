@@ -24,7 +24,7 @@ private def value (x : Wwl) : Nat :=
 
 /-- Two 64-byte blocks: `r` zeroed, `a` holding `ab`. -/
 private def state (ab : BitVec 512) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, ab⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 ab)]⟩⟩
 
 /-- `q` is returned and holds `spec a`: `-a` mod `p`, lanes 0-4 below `2^52`, 5-7 zero. -/
 private def check (ab : BitVec 512) (q : Pointer := r) : Bool :=

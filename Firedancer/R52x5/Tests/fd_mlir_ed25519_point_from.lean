@@ -17,8 +17,8 @@ private def fe (b : Nat) : BitVec 512 :=
 private def state : GlobalState :=
   ⟨⟨5⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨0⟩, ⟨192, 7⟩), (⟨1⟩, ⟨64, fe 1000⟩), (⟨2⟩, ⟨64, fe 2000⟩), (⟨3⟩, ⟨64, fe 3000⟩),
-          (⟨4⟩, ⟨64, fe 4000⟩)]⟩⟩
+        [(⟨0⟩, .ofBytes 192 7), (⟨1⟩, .ofBytes 64 (fe 1000)), (⟨2⟩, .ofBytes 64 (fe 2000)),
+          (⟨3⟩, .ofBytes 64 (fe 3000)), (⟨4⟩, .ofBytes 64 (fe 4000))]⟩⟩
 
 -- as `fd_ed25519_point_from`: limb `i` of `x, y, z, t` in `Qi`
 #guard

@@ -23,12 +23,12 @@ theorem GlobalState.WF.resultMem {s : GlobalState} {res : fd_ed25519_verify.Resu
         h1.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
   · exact h1
 
-/-- What `fd_ed25519_verify` leaves keeps every range fitting. -/
+/-- What `fd_ed25519_verify` leaves keeps known ranges known. -/
 theorem Fits.resultMem {m : MemoryState} {res : fd_ed25519_verify.Result} (h : Fits m q w) :
     Fits (res.mem m sha) q w := by
   unfold fd_ed25519_verify.Result.mem
   split
-  · simpa only [Fits.storeSha_iff, Fits.initStores_iff] using h
+  · exact h.initStores.storeSha
   · exact h
 
 theorem MemoryState.ShaFit.resultMem {m : MemoryState} {res : fd_ed25519_verify.Result}

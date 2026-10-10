@@ -31,7 +31,7 @@ attribute [local mlir_operation] zipWith_sub_wl
 /-- `fd_ed25519_point_neg` stores `spec` of the point at `a` at `r`, which is `a` itself or in
 another block, and returns `r`. -/
 public theorem fd_ed25519_point_neg.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a) (hsep : r = a ∨ r.id ≠ a.id) :
+    (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a) (hsep : r = a ∨ r.id ≠ a.id) :
     fd_ed25519_point_neg.call (fd_ed25519_point_neg.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,

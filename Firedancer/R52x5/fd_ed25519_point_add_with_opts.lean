@@ -56,9 +56,11 @@ theorem table_run0 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       E ⊨ [%3293 := z0, %3294 := z1, %3295 := z2, %3296 := z3, %3297 := z4, %3298 := z5, %3299 :=
         z6, %3300 := z7, %3301 := z8, %3302 := z9])
     (hwf : S.WF) (ha : S.mem.Quad5Fit a) (hb : S.mem.Quad5Fit b)
+    (hbz : b.id ≠ z0.id ∧ b.id ≠ z1.id ∧ b.id ≠ z2.id ∧ b.id ≠ z3.id ∧ b.id ≠ z4.id)
     (hz :
-      Fits S.mem z0 256 ∧
-        Fits S.mem z1 256 ∧ Fits S.mem z2 256 ∧ Fits S.mem z3 256 ∧ Fits S.mem z4 256)
+      InBounds S.mem z0 256 ∧
+        InBounds S.mem z1 256 ∧
+        InBounds S.mem z2 256 ∧ InBounds S.mem z3 256 ∧ InBounds S.mem z4 256)
     (hne :
       z1.id ≠ z0.id ∧
         z2.id ≠ z0.id ∧
@@ -80,17 +82,18 @@ theorem table_run0 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
                 (Quad5.laneIf 1 1 0 0 (S.mem.readQuad5 a).diffSum (S.mem.readQuad5 a)).reduce
                 (S.mem.readQuad5 b)) →
           (blk.runBodyFrom E' 107
-                { alloc := ⟨S.alloc.nextFreeBlock + 5⟩,
-                  mem := S.mem.storeTmp5 z0 z1 z2 z3 z4 M } >>=
+                { alloc := ⟨S.alloc.nextFreeBlock + 5⟩, mem := S.mem.callTmp5 z0 z1 z2 z3 z4 M } >>=
               g) =
             K) :
     (blk.runBodyFrom E 0 S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hz
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
+  obtain ⟨hb0, hb1, hb2, hb3, hb4⟩ := hbz
   generalize hA : S.mem.readQuad5 a = A at hK
   -- FD_R52X5_QUAD_DIFF_SUM( _ta, P1 )
   step_pattern using runBodyFrom_permuteLoadRun 1 0 3 2 inline
   obtain rfl := hA.symm.trans _hA
+  clear ha
   step_pattern using runBodyFrom_negateLazyRun inline
   step_pattern using runBodyFrom_laneIfRun0 1 0 1 0 inline
   step_pattern using runBodyFrom_addFastRun inline
@@ -114,10 +117,12 @@ theorem table_run107 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       E ⊨ [%3298 := z5, %3299 := z6, %3300 := z7, %3301 := z8, %3302 := z9, %3336 :=
         wlBytes (laneMask 1 0 1 0), %3406 := M.P0, %3407 := M.P1, %3408 := M.P2, %3409 := M.P3,
         %3410 := M.P4])
-    (hwf : S.WF) (hr : S.mem.Quad5Fit r)
+    (hwf : S.WF) (hr : S.mem.Quad5Room r)
+    (hrz : r.id ≠ z5.id ∧ r.id ≠ z6.id ∧ r.id ≠ z7.id ∧ r.id ≠ z8.id ∧ r.id ≠ z9.id)
     (hz :
-      Fits S.mem z5 256 ∧
-        Fits S.mem z6 256 ∧ Fits S.mem z7 256 ∧ Fits S.mem z8 256 ∧ Fits S.mem z9 256)
+      InBounds S.mem z5 256 ∧
+        InBounds S.mem z6 256 ∧
+        InBounds S.mem z7 256 ∧ InBounds S.mem z8 256 ∧ InBounds S.mem z9 256)
     (hne :
       z6.id ≠ z5.id ∧
         z7.id ≠ z5.id ∧
@@ -131,13 +136,14 @@ theorem table_run107 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
           (blk.runBodyFrom E' 212
                 { alloc := ⟨S.alloc.nextFreeBlock + 20⟩,
                   mem :=
-                    (S.mem.storeTmp5 z5 z6 z7 z8 z9 (tailMul M)).storeQuad5 r
+                    (S.mem.callTmp5 z5 z6 z7 z8 z9 (tailMul M)).storeQuad5 r
                       (tailMul M).reduce } >>=
               g) =
             K) :
     (blk.runBodyFrom E 107 S >>= g) = K := by
   obtain ⟨hz5, hz6, hz7, hz8, hz9⟩ := hz
   obtain ⟨h65, h75, h85, h95, h76, h86, h96, h87, h97, h98⟩ := hne
+  obtain ⟨hr5, hr6, hr7, hr8, hr9⟩ := hrz
   -- FD_R52X5_QUAD_PERMUTE( _ta, 0,1,3,2, _ta ); FD_R52X5_QUAD_DIFF_SUM( _ta, _ta )
   step_pattern using runBodyFrom_permuteRun 0 1 3 2 inline
   step_pattern using runBodyFrom_permuteRun 1 0 3 2 inline
@@ -210,8 +216,9 @@ theorem add_run145 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
         %3644 := T.P4])
     (hwf : S.WF) (ha : S.mem.Quad5Fit a)
     (hz :
-      Fits S.mem z0 256 ∧
-        Fits S.mem z1 256 ∧ Fits S.mem z2 256 ∧ Fits S.mem z3 256 ∧ Fits S.mem z4 256)
+      InBounds S.mem z0 256 ∧
+        InBounds S.mem z1 256 ∧
+        InBounds S.mem z2 256 ∧ InBounds S.mem z3 256 ∧ InBounds S.mem z4 256)
     (hne :
       z1.id ≠ z0.id ∧
         z2.id ≠ z0.id ∧
@@ -232,8 +239,7 @@ theorem add_run145 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
               fd_r52x5_quad_mul_fast.spec
                 (Quad5.laneIf 1 1 0 0 (S.mem.readQuad5 a).diffSum (S.mem.readQuad5 a)).reduce T) →
           (blk.runBodyFrom E' 240
-                { alloc := ⟨S.alloc.nextFreeBlock + 5⟩,
-                  mem := S.mem.storeTmp5 z0 z1 z2 z3 z4 M } >>=
+                { alloc := ⟨S.alloc.nextFreeBlock + 5⟩, mem := S.mem.callTmp5 z0 z1 z2 z3 z4 M } >>=
               g) =
             K) :
     (blk.runBodyFrom E 145 S >>= g) = K := by
@@ -243,6 +249,7 @@ theorem add_run145 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
   -- FD_R52X5_QUAD_DIFF_SUM( _ta, P1 )
   step_pattern using runBodyFrom_permuteLoadRun 1 0 3 2 inline
   obtain rfl := hA.symm.trans _hA
+  clear ha
   step_pattern using runBodyFrom_negateLazyRun inline
   step_pattern using runBodyFrom_laneIfMaskRun 1 0 1 0 inline
   step_pattern using runBodyFrom_addFastRun inline
@@ -266,10 +273,12 @@ theorem add_run240 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       E ⊨ [%3308 := z5, %3309 := z6, %3310 := z7, %3311 := z8, %3312 := z9, %3521 :=
         wlBytes (laneMask 1 0 1 0), %3724 := M.P0, %3725 := M.P1, %3726 := M.P2, %3727 := M.P3,
         %3728 := M.P4])
-    (hwf : S.WF) (hr : S.mem.Quad5Fit r)
+    (hwf : S.WF) (hr : S.mem.Quad5Room r)
+    (hrz : r.id ≠ z5.id ∧ r.id ≠ z6.id ∧ r.id ≠ z7.id ∧ r.id ≠ z8.id ∧ r.id ≠ z9.id)
     (hz :
-      Fits S.mem z5 256 ∧
-        Fits S.mem z6 256 ∧ Fits S.mem z7 256 ∧ Fits S.mem z8 256 ∧ Fits S.mem z9 256)
+      InBounds S.mem z5 256 ∧
+        InBounds S.mem z6 256 ∧
+        InBounds S.mem z7 256 ∧ InBounds S.mem z8 256 ∧ InBounds S.mem z9 256)
     (hne :
       z6.id ≠ z5.id ∧
         z7.id ≠ z5.id ∧
@@ -283,13 +292,14 @@ theorem add_run240 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
           (blk.runBodyFrom E' 345
                 { alloc := ⟨S.alloc.nextFreeBlock + 20⟩,
                   mem :=
-                    (S.mem.storeTmp5 z5 z6 z7 z8 z9 (tailMul M)).storeQuad5 r
+                    (S.mem.callTmp5 z5 z6 z7 z8 z9 (tailMul M)).storeQuad5 r
                       (tailMul M).reduce } >>=
               g) =
             K) :
     (blk.runBodyFrom E 240 S >>= g) = K := by
   obtain ⟨hz5, hz6, hz7, hz8, hz9⟩ := hz
   obtain ⟨h65, h75, h85, h95, h76, h86, h96, h87, h97, h98⟩ := hne
+  obtain ⟨hr5, hr6, hr7, hr8, hr9⟩ := hrz
   -- FD_R52X5_QUAD_PERMUTE( _ta, 0,1,3,2, _ta ); FD_R52X5_QUAD_DIFF_SUM( _ta, _ta )
   step_pattern using runBodyFrom_permuteRun 0 1 3 2 inline
   step_pattern using runBodyFrom_permuteRun 1 0 3 2 inline
@@ -309,7 +319,7 @@ end fd_ed25519_point_add_with_opts
 /-- `fd_ed25519_point_add_with_opts` stores `spec` of the points at `a` and `b` at `r` and returns
 `r`; `r` may be `a` or `b`. Its twenty product slots and `wl_permute`'s unions are freed. -/
 public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : BitVec 32)
-    (s : GlobalState) (hwf : s.WF) (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a)
+    (s : GlobalState) (hwf : s.WF) (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a)
     (hb : s.mem.Quad5Fit b) :
     fd_ed25519_point_add_with_opts.call
         (fd_ed25519_point_add_with_opts.args (.value r) (.value a) (.value b) (.value pre)) s =

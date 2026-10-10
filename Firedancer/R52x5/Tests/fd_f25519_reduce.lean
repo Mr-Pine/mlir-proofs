@@ -13,7 +13,7 @@ private def out : Pointer :=
 
 /-- The limbs at `out` if they are those of `fold x` and the counter moved on by one block. -/
 private def limbsOut (x : Wwl) : Option (List (BitVec 64)) :=
-  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩)]⟩⟩
+  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0)]⟩⟩
   match fd_f25519_reduce.eval 1 (fd_f25519_reduce.args (.value out) (Ty.wrap x)) s with
   | .value (some .nil, s') =>
     let l := (List.range 5).map fun i => s'.mem.readLimbs out (Fin.ofNat 5 i)

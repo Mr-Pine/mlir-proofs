@@ -391,7 +391,7 @@ theorem runBodyFrom_reduceStoreRun_as {blk : BasicBlock Γ tRets bp} {E : ⟪Γ�
     (hd :
       [s0.i, s1.i, s2.i, s3.i, s4.i, k.i, mask.i, r19.i, c0.i, c1.i, c2.i, c3.i, c4.i, a0.i, d0.i,
           a1.i, d1.i, a2.i, d2.i, a3.i, d3.i, a4.i].Nodup)
-    (hwf : S.WF) (hP : S.mem.Quad5Fit P)
+    (hwf : S.WF) (hP : S.mem.Quad5Room P)
     (hK :
       ∀ (D : Quad5) (_hD : Q.reduce = D) (vc0 vc1 vc2 vc3 vc4 va0 va1 va2 va3 va4 : ⟦Ty4x64⟧),
         (blk.runBodyFrom

@@ -64,16 +64,16 @@ theorem bb7c0_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      ((((Keeps.refl _ _).storeTmp5 176 177 178 179 180 (by decide) (by decide) (by decide)
-                (by decide) (by decide)).storeTmp5
+      ((((Keeps.refl _ _).callTmp5 176 177 178 179 180 (by decide) (by decide) (by decide)
+                (by decide) (by decide)).callTmp5
             181 182 183 184 185 (by decide) (by decide) (by decide) (by decide)
-            (by decide)).storeTmp5
+            (by decide)).callTmp5
         186 187 188 189 190 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `%1584`: `2^51 - 1` in lanes 0 and 1, lanes 2 and 3 poison. -/
@@ -104,6 +104,8 @@ theorem add_mask2 (x y : Wl) :
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
   all_goals simp [Ty.wrap_vec, Operation.add, wl_add, wl_and, wl_shru, mask51_add_shr51]
 
+-- a QUAD site's ten lifetime markers and `ea eb`'s ends, each an effectful step
+set_option maxHeartbeats 300000 in
 /-- `^bb7`'s last `QP_MUL` (`D = _t0 A`), its limbs `0` and `1` taken apart into `xa` and `xb`. -/
 theorem bb7b_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
     {K : PoisonOr β} {B : GlobalState} {M : MemoryState} {c : Nat} (T A : Quad5)
@@ -126,16 +128,22 @@ theorem bb7b_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ ×
         (((Vector.replicate 8 PoisonOr.poison).set 5 (PoisonOr.value 0#64) (by decide)).set 6
               (PoisonOr.value 0#64) (by decide)).set
           7 (PoisonOr.value 0#64) (by decide),
-        rir_reg% hty 64 := B.slot 21, rir_reg% hty 72 := B.slot 29])
+        rir_reg% hty 64 := B.slot 21, rir_reg% hty 72 := B.slot 29, rir_reg% hty 82 := B.slot 39,
+        rir_reg% hty 83 := B.slot 40])
     (hI : Inv B M c S)
     (hK :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         Writes Ein E' 1291 1331 →
           Inv B M c S' →
-          (∀ j, 3 ≤ j → j < 21 → S'.mem.readVec (B.slot j) = S.mem.readVec (B.slot j)) →
+          (∀ j,
+            3 ≤ j →
+              j < 21 →
+              S'.mem.readVec (B.slot j) = S.mem.readVec (B.slot j) ∧
+                (Fits S.mem (B.slot j) 512 → Fits S'.mem (B.slot j) 512)) →
           S'.mem.readVec (B.slot 21) = (mulQ T A).unpack.1 →
           S'.mem.readVec (B.slot 29) = (mulQ T A).unpack.2.1 →
-          (bb7.runBodyFrom E' 152 S' >>= g) = K) :
+          Fits S'.mem (B.slot 21) 512 →
+          Fits S'.mem (B.slot 29) 512 → (bb7.runBodyFrom E' 152 S' >>= g) = K) :
     (bb7.runBodyFrom Ein 97 S >>= g) = K := by
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   have hz0 := hF.tmp 191
@@ -147,7 +155,9 @@ theorem bb7b_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ ×
   step_call using fd_r52x5_quad_mul_fast.call_eq
   iterate 5 step_load [ofFn_extractVecElem_readAt] inline
   clear hz0 hz1 hz2 hz3 hz4
+  clear_facts_at (B.slot 191) (B.slot 192) (B.slot 193) (B.slot 194) (B.slot 195)
   iterate 5 step_pure
+  rw [← MemoryState.callTmp5.eq_1] at hS
   iterate 5 step_pure with transparent vc
   step_pure with transparent va
   step_pure [reduce_P0, reduce_mul]
@@ -167,20 +177,33 @@ theorem bb7b_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ ×
   iterate 2 step_pure
   refine
     hK E S ?_ ⟨hwf, hF, ?_, ?_⟩ ?_ (MemoryState.readVec_packLanes (by assumption))
-      (MemoryState.readVec_packLanes (by assumption))
+      (MemoryState.readVec_packLanes (by assumption)) (by mem_fact) (by mem_fact)
   · rw [hE]
     repeat refine Writes.write ?_ (by decide)
     exact Writes.refl _ _ _
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot, eraseFrom_storeAt_slot]
+    simp (disch := decide) only [eraseFrom_lifetimeEnd_slot, eraseFrom_callTmp5_slot,
+      eraseFrom_storeAt_slot]
     exact herase
   · rw [hS]
     exact halloc
   · intro j h3 hj
-    rw [hS]
-    simp only [readVec_storeAt_of_id_ne (GlobalState.slot_id_ne (show 29 ≠ j by omega)),
-      readVec_storeAt_of_id_ne (GlobalState.slot_id_ne (show 21 ≠ j by omega))]
-    rw [readVec_storeTmp5_of_id_ne] <;> exact GlobalState.slot_id_ne (by omega)
+    refine ⟨?_, fun hf => ?_⟩
+    · rw [hS]
+      simp only [MemoryState.readVec_lifetimeEnd,
+        readVec_storeAt_of_id_ne (GlobalState.slot_id_ne (show 29 ≠ j by omega)),
+        readVec_storeAt_of_id_ne (GlobalState.slot_id_ne (show 21 ≠ j by omega))]
+      rw [readVec_callTmp5_of_id_ne] <;> exact GlobalState.slot_id_ne (by omega)
+    · rw [hS]
+      dsimp only
+      refine
+        Fits.lifetimeEnd (Fits.lifetimeEnd ?_ (GlobalState.slot_id_ne (by omega)))
+          (GlobalState.slot_id_ne (by omega))
+      refine Fits.storeAt (Fits.storeAt ?_)
+      exact
+        hf.callTmp5 (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
+          (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
+          (GlobalState.slot_id_ne (by omega))
 
 /-- `buf[31] >> 7` is `0` or `1`: its `zext nneg` is no poison. -/
 theorem shr7_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
@@ -219,11 +242,13 @@ theorem bb7_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
         rir_reg% hty 64 := B.slot 21, rir_reg% hty 65 := B.slot 22, rir_reg% hty 66 := B.slot 23,
         rir_reg% hty 67 := B.slot 24, rir_reg% hty 68 := B.slot 25, rir_reg% hty 72 := B.slot 29,
         rir_reg% hty 73 := B.slot 30, rir_reg% hty 74 := B.slot 31, rir_reg% hty 75 := B.slot 32,
-        rir_reg% hty 76 := B.slot 33, rir_reg% hty 33 := 0#32])
+        rir_reg% hty 76 := B.slot 33, rir_reg% hty 82 := B.slot 39, rir_reg% hty 83 := B.slot 40,
+        rir_reg% hty 33 := 0#32])
     (hI : Inv B M c S) (hu : S.mem.readVec (B.slot 4) = A.u) (hv : S.mem.readVec (B.slot 5) = A.v)
     (huv3 : S.mem.readVec (B.slot 10) = A.uv3) (hub : S.mem.readVec (B.slot 13) = Bp.u)
     (hvb : S.mem.readVec (B.slot 14) = Bp.v) (huv3b : S.mem.readVec (B.slot 19) = Bp.uv3)
     (hy : S.mem.readVec (B.slot 3) = A.y) (hyb : S.mem.readVec (B.slot 12) = Bp.y)
+    (hfits : ∀ j, 3 ≤ j → j < 21 → Fits S.mem (B.slot j) 512)
     (hK :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get →
@@ -239,6 +264,10 @@ theorem bb7_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
               S'.mem.readVec (B.slot 12) = Bp.y →
               S'.mem.readVec (B.slot 21) = DA.x →
               S'.mem.readVec (B.slot 29) = DB.x →
+              Fits S'.mem (B.slot 3) 512 →
+              Fits S'.mem (B.slot 12) 512 →
+              Fits S'.mem (B.slot 21) 512 →
+              Fits S'.mem (B.slot 29) 512 →
               DA.t2nz &&& DA.t1nz = 0 → (fd_r52x5_ge_decode2.runFrom E' 10 S' >>= g) = K))
     (hK9 :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
@@ -266,37 +295,39 @@ theorem bb7_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   refine
     bb7c0_run T1 T0 hArgs (by chain_reads) ⟨hwf₀, hF₀, herase₀, halloc₀⟩
       fun E1 S1 hA1 hB1 hR1 hI1 hK1 => ?_
-  refine bb7b_run _ Aq (by chain_reads) hI1 fun E2 S2 hB2 hI2 hk2 hxa hxb => ?_
+  refine bb7b_run _ Aq (by chain_reads) hI1 fun E2 S2 hB2 hI2 hk2 hxa hxb hfxa hfxb => ?_
   obtain ⟨hwf, hF, herase, halloc⟩ := hI2
   have r3 : S2.mem.readVec (B.slot 3) = A.y :=
-    (hk2 3 (by omega) (by omega)).trans ((hK1 3 (by omega) (by omega)).trans hy)
+    (hk2 3 (by omega) (by omega)).1.trans ((hK1 3 (by omega) (by omega)).1.trans hy)
   have r12 : S2.mem.readVec (B.slot 12) = Bp.y :=
-    (hk2 12 (by omega) (by omega)).trans ((hK1 12 (by omega) (by omega)).trans hyb)
+    (hk2 12 (by omega) (by omega)).1.trans ((hK1 12 (by omega) (by omega)).1.trans hyb)
   have r4 : S2.mem.readVec (B.slot 4) = A.u :=
-    (hk2 4 (by omega) (by omega)).trans ((hK1 4 (by omega) (by omega)).trans hu)
+    (hk2 4 (by omega) (by omega)).1.trans ((hK1 4 (by omega) (by omega)).1.trans hu)
   have r5 : S2.mem.readVec (B.slot 5) = A.v :=
-    (hk2 5 (by omega) (by omega)).trans ((hK1 5 (by omega) (by omega)).trans hv)
+    (hk2 5 (by omega) (by omega)).1.trans ((hK1 5 (by omega) (by omega)).1.trans hv)
   have r10 : S2.mem.readVec (B.slot 10) = A.uv3 :=
-    (hk2 10 (by omega) (by omega)).trans ((hK1 10 (by omega) (by omega)).trans huv3)
+    (hk2 10 (by omega) (by omega)).1.trans ((hK1 10 (by omega) (by omega)).1.trans huv3)
   have r13 : S2.mem.readVec (B.slot 13) = Bp.u :=
-    (hk2 13 (by omega) (by omega)).trans ((hK1 13 (by omega) (by omega)).trans hub)
+    (hk2 13 (by omega) (by omega)).1.trans ((hK1 13 (by omega) (by omega)).1.trans hub)
   have r14 : S2.mem.readVec (B.slot 14) = Bp.v :=
-    (hk2 14 (by omega) (by omega)).trans ((hK1 14 (by omega) (by omega)).trans hvb)
+    (hk2 14 (by omega) (by omega)).1.trans ((hK1 14 (by omega) (by omega)).1.trans hvb)
   have r19 : S2.mem.readVec (B.slot 19) = Bp.uv3 :=
-    (hk2 19 (by omega) (by omega)).trans ((hK1 19 (by omega) (by omega)).trans huv3b)
-  clear hk2 hK1 hu hv huv3 hub hvb huv3b hy hyb
-  have f4 := hF.vec 4
-  have f5 := hF.vec 5
-  have f10 := hF.vec 10
-  have f13 := hF.vec 13
-  have f14 := hF.vec 14
-  have f19 := hF.vec 19
-  have f21 := hF.vec 21
+    (hk2 19 (by omega) (by omega)).1.trans ((hK1 19 (by omega) (by omega)).1.trans huv3b)
+  have hf2 (j : Nat) (h3 : 3 ≤ j) (hj : j < 21) : Fits S2.mem (B.slot j) 512 :=
+    (hk2 j h3 hj).2 ((hK1 j h3 (by omega)).2 (hfits j h3 hj))
+  have f3 := hf2 3 (by omega) (by omega)
+  have f12 := hf2 12 (by omega) (by omega)
+  have f4 := hf2 4 (by omega) (by omega)
+  have f5 := hf2 5 (by omega) (by omega)
+  have f10 := hf2 10 (by omega) (by omega)
+  have f13 := hf2 13 (by omega) (by omega)
+  have f14 := hf2 14 (by omega) (by omega)
+  have f19 := hf2 19 (by omega) (by omega)
+  clear hk2 hK1 hu hv huv3 hub hvb huv3b hy hyb hf2 hfits
   have f22 := hF.vec 22
   have f23 := hF.vec 23
   have f24 := hF.vec 24
   have f25 := hF.vec 25
-  have f29 := hF.vec 29
   have f30 := hF.vec 30
   have f31 := hF.vec 31
   have f32 := hF.vec 32
@@ -371,6 +402,7 @@ theorem bb7_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
       chain_reads
     refine
       hK E S (hW.1.trans (hB0.1.symm.trans hArgs)) hW ?_ hI' ‹_› ‹_› (by rwa [hDA]) (by rwa [hDB])
+        (by mem_fact) (by mem_fact) (by mem_fact) (by mem_fact)
         (by
           rw [hDA]; exact hbr)
     rw [hDA, hDB]

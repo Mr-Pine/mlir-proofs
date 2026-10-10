@@ -17,7 +17,8 @@ private def a1 : Pointer :=
 
 /-- Three 64-byte blocks: `r` zeroed, `a0` and `a1` holding `x0` and `x1`. -/
 private def state (x0 x1 : BitVec 512) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, x0⟩), (⟨2⟩, ⟨64, x1⟩)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 x0), (⟨2⟩, .ofBytes 64 x1)]⟩⟩
 
 /-- The bits at `r` if `r` is returned and holds `spec`, else `none`. -/
 private def out (c : BitVec 32) (x0 x1 : BitVec 512) : Option (BitVec 512) :=

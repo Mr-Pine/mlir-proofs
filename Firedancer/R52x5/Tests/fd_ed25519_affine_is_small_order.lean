@@ -15,7 +15,7 @@ private def bytes (f : Nat → Nat) : BitVec 1536 :=
 
 /-- `a` holding `b`. -/
 private def state (b : BitVec 1536) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, b⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 b)]⟩⟩
 
 /-- Whether `fd_ed25519_affine_is_small_order(a)` returns `spec`, and that is `r`. -/
 private def check (b : BitVec 1536) (r : BitVec 32) : Bool :=

@@ -50,6 +50,7 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
             rir_reg% hty 294 := (quv (pre sA) (pre sB)).P3, rir_reg% hty 302 :=
             (quv (pre sA) (pre sB)).P4]) →
           Inv B M 0 S' →
+          (∀ j, 3 ≤ j → j < 21 → Fits S'.mem (B.slot j) 512) →
           S'.mem.readVec (B.slot 3) = (pre sA).y →
           S'.mem.readVec (B.slot 4) = (pre sA).u →
           S'.mem.readVec (B.slot 5) = (pre sA).v →
@@ -65,11 +66,6 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
   have hd := (hI.readVec (p := B.slot 2) (by simp [GlobalState.slot])).trans hG.d
   clear hG
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
-  step_pure
-  step_load with sa31
-  step_pure
-  step_load with sb31
-  step_pure
   have hsa_ne : sa.id ≠ (B.slot 37).id := fun h => by
     have := congrArg BlockId.id h; simp [GlobalState.slot] at this; omega
   have hsb_ne : sb.id ≠ (B.slot 38).id := fun h => by
@@ -82,6 +78,11 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
   have hb2b := hF.tmp 38
   have ho37 : (B.slot 37).offset = 0 := rfl
   have ho38 : (B.slot 38).offset = 0 := rfl
+  step_pure
+  step_load with sa31
+  step_pure
+  step_load with sb31
+  step_pure
   -- `fd_memcpy( buf2a, bufa, 32UL ); buf2a[31] &= 0x7f;`
   step_call using fd_memcpy.call_eq
   step_pure
@@ -94,6 +95,7 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
   step_load
   step_pure
   step_store
+  clear hsa hsb
   have h3 := hF.vec 3
   have h4 := hF.vec 4
   have h5 := hF.vec 5
@@ -150,8 +152,8 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
   step_call using fd_f25519_mul2.call_eq
   name_vec uv7b
   name_vec uv7a
-  have h39 := hF.vec 39
-  have h40 := hF.vec 40
+  have h39 := hF.arr 39
+  have h40 := hF.arr 40
   have ho39 : (B.slot 39).offset = 0 := rfl
   have ho40 : (B.slot 40).offset = 0 := rfl
   -- `wwl_st( ea, uv7a->el )`, `wwl_st( eb, uv7b->el )`
@@ -183,16 +185,31 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
     exact Writes.refl _ _ _
   subst hsa31 hsb31
   refine
-    hK E S hArgs hBelow ?_ ⟨hwf, hF, ?_, ?_⟩ (by rwa [hA]) (by rwa [hA]) (by rwa [hA]) (by rwa [hA])
-      (by rwa [hB]) (by rwa [hB]) (by rwa [hB]) (by rwa [hB])
+    hK E S hArgs hBelow ?_ ⟨hwf, hF, ?_, ?_⟩ ?_ (by rwa [hA]) (by rwa [hA]) (by rwa [hA])
+      (by rwa [hA]) (by rwa [hB]) (by rwa [hB]) (by rwa [hB]) (by rwa [hB])
   · rw [hA, hB]
     env_reads
   · rw [hS]
     simp (disch := decide) only [eraseFrom_storeVec_slot, eraseFrom_storeAt_slot,
-      eraseFrom_storeAt_slot_add]
+      eraseFrom_storeAt_slot_add, eraseFrom_lifetimeStart_slot]
     exact herase
   · rw [hS]
     exact halloc
+  · -- the field elements stored, known
+    intro j h3 hj
+    obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+      rfl | rfl | rfl :
+      j = 3 ∨
+        j = 4 ∨
+        j = 5 ∨
+        j = 6 ∨
+        j = 7 ∨
+        j = 8 ∨
+        j = 9 ∨
+        j = 10 ∨
+        j = 11 ∨ j = 12 ∨ j = 13 ∨ j = 14 ∨ j = 15 ∨ j = 16 ∨ j = 17 ∨ j = 18 ∨ j = 19 ∨ j = 20 :=
+      by omega
+    all_goals mem_fact
 
 end
 

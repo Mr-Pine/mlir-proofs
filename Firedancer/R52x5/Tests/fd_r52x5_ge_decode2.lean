@@ -25,8 +25,8 @@ private def state (ea eb : Nat) : GlobalState :=
   ⟨⟨12⟩,
     ⟨Std.ExtHashMap.ofList
         ((([0, 1, 2, 3, 4, 6, 7, 8, 9, 10].map fun k =>
-            ((⟨k⟩ : BlockId), (⟨32, 0⟩ : MemoryBlock))) ++
-          [(⟨5⟩, ⟨32, BitVec.ofNat 256 ea⟩), (⟨11⟩, ⟨32, BitVec.ofNat 256 eb⟩)]))⟩⟩
+            ((⟨k⟩ : BlockId), (.ofBytes 32 0 : MemoryBlock))) ++
+          [(⟨5⟩, .ofBytes 32 (BitVec.ofNat 256 ea)), (⟨11⟩, .ofBytes 32 (BitVec.ofNat 256 eb))]))⟩⟩
 
 /-- The QUAD in the five blocks from `k`. -/
 private def quadAt (m : MemoryState) (k : Nat) : Quad5 :=

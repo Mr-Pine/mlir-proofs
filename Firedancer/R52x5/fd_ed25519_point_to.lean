@@ -13,8 +13,8 @@ section Proof
 /-- `fd_ed25519_point_to` stores the coordinates of the point at `a`, unpacked, at `x, y, z, t`, in
 that order. The loads all come before the stores, so the outputs may alias `a` and each other. -/
 public theorem fd_ed25519_point_to.call_eq (x y z t a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (ha : s.mem.Quad5Fit a) (hx : Fits s.mem x 512) (hy : Fits s.mem y 512) (hz : Fits s.mem z 512)
-    (ht : Fits s.mem t 512) :
+    (ha : s.mem.Quad5Fit a) (hx : Room s.mem x 512) (hy : Room s.mem y 512) (hz : Room s.mem z 512)
+    (ht : Room s.mem t 512) :
     fd_ed25519_point_to.call
         (fd_ed25519_point_to.args (.value x) (.value y) (.value z) (.value t) (.value a)) s =
       .value

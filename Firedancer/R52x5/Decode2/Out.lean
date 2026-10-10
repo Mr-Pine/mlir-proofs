@@ -23,56 +23,63 @@ variable {Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb : Pointer}
 attribute [local mlir_env 1100] read_write_same
 
 /-- `^bb13`: the lifetimes end, `%3038` is returned. -/
-theorem bb13_run {β : Type} {E : ⟪Γ⟫} {S : GlobalState}
+theorem bb13_run {β : Type} {E : ⟪Γ⟫} {S B : GlobalState}
     {g : Vals [.bv 32] × GlobalState → PoisonOr β} (r : BitVec 32)
-    (hr : E.read (rir_reg% hty 1491) = .value r) :
-    (fd_r52x5_ge_decode2.runFrom E 13 S >>= g) = g (.cons (.value r) .nil, S) := by
+    (hr : E.read (rir_reg% hty 1491) = .value r) (hEnd : EndRegs B E) :
+    (fd_r52x5_ge_decode2.runFrom E 13 S >>= g) =
+      g (.cons (.value r) .nil, { S with mem := endFields S.mem B }) := by
+  dsimp only [EndRegs] at hEnd
   block_init
   iterate 36 step_pure
   finish_block
+  rw [hS]
   rfl
 
 /-- `^bb9`: `A` has no root: `Pb` the neutral point, `-1`. -/
-theorem bb9_run {β : Type} {E : ⟪Γ⟫} {S : GlobalState}
+theorem bb9_run {β : Type} {E : ⟪Γ⟫} {S B : GlobalState}
     {g : Vals [.bv 32] × GlobalState → PoisonOr β}
     (hArgs : E.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get)
     (hR :
       E ⊨ [rir_reg% hty 5 := (wl 0 1 1 0 : Wl), rir_reg% hty 4 := (wl_zero : Wl), rir_reg% hty 3 :=
         4294967295#32])
-    (hb0 : Fits S.mem Pb0 256) (hb1 : Fits S.mem Pb1 256) (hb2 : Fits S.mem Pb2 256)
-    (hb3 : Fits S.mem Pb3 256) (hb4 : Fits S.mem Pb4 256) :
+    (hb0 : Room S.mem Pb0 256) (hb1 : Room S.mem Pb1 256) (hb2 : Room S.mem Pb2 256)
+    (hb3 : Room S.mem Pb3 256) (hb4 : Room S.mem Pb4 256) (hEnd : EndRegs B E) :
     (fd_r52x5_ge_decode2.runFrom E 9 S >>= g) =
       g
         (.cons (.value (-1)) .nil,
-          { S with mem := S.mem.storeTmp5 Pb0 Pb1 Pb2 Pb3 Pb4 quadZero }) := by
+          { S with mem := endFields (S.mem.storeTmp5 Pb0 Pb1 Pb2 Pb3 Pb4 quadZero) B }) := by
+  dsimp only [EndRegs] at hEnd
   block_init
   iterate 5 step_store
   finish_block
   rw [bb13_run (-1)
       (by
-        simp only [hE, read_write_same]; rfl),
+        simp only [hE, read_write_same]; rfl)
+      (by env_reads),
     hS]
   rfl
 
 /-- `^bb11`: `B` has no root: `Pb` the neutral point, `-2`. -/
-theorem bb11_run {β : Type} {E : ⟪Γ⟫} {S : GlobalState}
+theorem bb11_run {β : Type} {E : ⟪Γ⟫} {S B : GlobalState}
     {g : Vals [.bv 32] × GlobalState → PoisonOr β}
     (hArgs : E.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get)
     (hR :
       E ⊨ [rir_reg% hty 5 := (wl 0 1 1 0 : Wl), rir_reg% hty 4 := (wl_zero : Wl), rir_reg% hty 2 :=
         4294967294#32])
-    (hb0 : Fits S.mem Pb0 256) (hb1 : Fits S.mem Pb1 256) (hb2 : Fits S.mem Pb2 256)
-    (hb3 : Fits S.mem Pb3 256) (hb4 : Fits S.mem Pb4 256) :
+    (hb0 : Room S.mem Pb0 256) (hb1 : Room S.mem Pb1 256) (hb2 : Room S.mem Pb2 256)
+    (hb3 : Room S.mem Pb3 256) (hb4 : Room S.mem Pb4 256) (hEnd : EndRegs B E) :
     (fd_r52x5_ge_decode2.runFrom E 11 S >>= g) =
       g
         (.cons (.value (-2)) .nil,
-          { S with mem := S.mem.storeTmp5 Pb0 Pb1 Pb2 Pb3 Pb4 quadZero }) := by
+          { S with mem := endFields (S.mem.storeTmp5 Pb0 Pb1 Pb2 Pb3 Pb4 quadZero) B }) := by
+  dsimp only [EndRegs] at hEnd
   block_init
   iterate 5 step_store
   finish_block
   rw [bb13_run (-2)
       (by
-        simp only [hE, read_write_same]; rfl),
+        simp only [hE, read_write_same]; rfl)
+      (by env_reads),
     hS]
   rfl
 
@@ -123,8 +130,9 @@ theorem is_nonzero_01 (a : Wwl) :
 theorem ofBool_setWidth_01 (b : Bool) :
     (BitVec.ofBool b).setWidth 32 = 0 ∨ (BitVec.ofBool b).setWidth 32 = 1 := by cases b <;> decide
 
--- 156 instructions, ten callee states with their read facts, two `FD_R52X5_QUAD_PACK`s
-set_option maxHeartbeats 400000 in
+-- 156 instructions, ten callee states with their read facts, two `FD_R52X5_QUAD_PACK`s whose
+-- arrays' sixteen lifetime markers each carry the points' and field elements' facts
+set_option maxHeartbeats 800000 in
 /-- `^bb12`: both encodings decode: `x` times `√-1` where `t1` is nonzero, negated unless its sign
 is `x_0`, packed with `y`, `1`, `x y` into `Pa` and `Pb`; `0`. -/
 theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
@@ -146,14 +154,16 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
     (ht1a : DA.t1nz = 0 ∨ DA.t1nz = 1) (ht1b : DB.t1nz = 0 ∨ DB.t1nz = 1) (hI : Inv B M c S)
     (hG : Globals B M)
     (hO :
-      Fits M Pa0 256 ∧
-        Fits M Pa1 256 ∧
-        Fits M Pa2 256 ∧
-        Fits M Pa3 256 ∧
-        Fits M Pa4 256 ∧
-        Fits M Pb0 256 ∧ Fits M Pb1 256 ∧ Fits M Pb2 256 ∧ Fits M Pb3 256 ∧ Fits M Pb4 256)
+      Room M Pa0 256 ∧
+        Room M Pa1 256 ∧
+        Room M Pa2 256 ∧
+        Room M Pa3 256 ∧
+        Room M Pa4 256 ∧
+        Room M Pb0 256 ∧ Room M Pb1 256 ∧ Room M Pb2 256 ∧ Room M Pb3 256 ∧ Room M Pb4 256)
     (hy : S.mem.readVec (B.slot 3) = DA.y) (hyb : S.mem.readVec (B.slot 12) = DB.y)
     (hx : S.mem.readVec (B.slot 21) = DA.x) (hxb : S.mem.readVec (B.slot 29) = DB.x)
+    (f3 : Fits S.mem (B.slot 3) 512) (f12 : Fits S.mem (B.slot 12) 512)
+    (f21 : Fits S.mem (B.slot 21) 512) (f29 : Fits S.mem (B.slot 29) 512) (hEnd : EndRegs B Ein)
     (hlt :
       Pa0.id.id < B.alloc.nextFreeBlock + 3 ∧
         Pa1.id.id < B.alloc.nextFreeBlock + 3 ∧
@@ -233,29 +243,65 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   have nPb4_201 : Pb4.id ≠ (B.slot 201).id := ne_slot lb4
   have nPb4_202 : Pb4.id ≠ (B.slot 202).id := ne_slot lb4
   have nPb4_203 : Pb4.id ≠ (B.slot 203).id := ne_slot lb4
+  have nPa0_200 : Pa0.id ≠ (B.slot 200).id := ne_slot la0
+  have nPa0_201 : Pa0.id ≠ (B.slot 201).id := ne_slot la0
+  have nPa0_202 : Pa0.id ≠ (B.slot 202).id := ne_slot la0
+  have nPa0_203 : Pa0.id ≠ (B.slot 203).id := ne_slot la0
+  have nPa1_200 : Pa1.id ≠ (B.slot 200).id := ne_slot la1
+  have nPa1_201 : Pa1.id ≠ (B.slot 201).id := ne_slot la1
+  have nPa1_202 : Pa1.id ≠ (B.slot 202).id := ne_slot la1
+  have nPa1_203 : Pa1.id ≠ (B.slot 203).id := ne_slot la1
+  have nPa2_200 : Pa2.id ≠ (B.slot 200).id := ne_slot la2
+  have nPa2_201 : Pa2.id ≠ (B.slot 201).id := ne_slot la2
+  have nPa2_202 : Pa2.id ≠ (B.slot 202).id := ne_slot la2
+  have nPa2_203 : Pa2.id ≠ (B.slot 203).id := ne_slot la2
+  have nPa3_200 : Pa3.id ≠ (B.slot 200).id := ne_slot la3
+  have nPa3_201 : Pa3.id ≠ (B.slot 201).id := ne_slot la3
+  have nPa3_202 : Pa3.id ≠ (B.slot 202).id := ne_slot la3
+  have nPa3_203 : Pa3.id ≠ (B.slot 203).id := ne_slot la3
+  have nPa4_200 : Pa4.id ≠ (B.slot 200).id := ne_slot la4
+  have nPa4_201 : Pa4.id ≠ (B.slot 201).id := ne_slot la4
+  have nPa4_202 : Pa4.id ≠ (B.slot 202).id := ne_slot la4
+  have nPa4_203 : Pa4.id ≠ (B.slot 203).id := ne_slot la4
+  have nPb0_196 : Pb0.id ≠ (B.slot 196).id := ne_slot lb0
+  have nPb0_197 : Pb0.id ≠ (B.slot 197).id := ne_slot lb0
+  have nPb0_198 : Pb0.id ≠ (B.slot 198).id := ne_slot lb0
+  have nPb0_199 : Pb0.id ≠ (B.slot 199).id := ne_slot lb0
+  have nPb1_196 : Pb1.id ≠ (B.slot 196).id := ne_slot lb1
+  have nPb1_197 : Pb1.id ≠ (B.slot 197).id := ne_slot lb1
+  have nPb1_198 : Pb1.id ≠ (B.slot 198).id := ne_slot lb1
+  have nPb1_199 : Pb1.id ≠ (B.slot 199).id := ne_slot lb1
+  have nPb2_196 : Pb2.id ≠ (B.slot 196).id := ne_slot lb2
+  have nPb2_197 : Pb2.id ≠ (B.slot 197).id := ne_slot lb2
+  have nPb2_198 : Pb2.id ≠ (B.slot 198).id := ne_slot lb2
+  have nPb2_199 : Pb2.id ≠ (B.slot 199).id := ne_slot lb2
+  have nPb3_196 : Pb3.id ≠ (B.slot 196).id := ne_slot lb3
+  have nPb3_197 : Pb3.id ≠ (B.slot 197).id := ne_slot lb3
+  have nPb3_198 : Pb3.id ≠ (B.slot 198).id := ne_slot lb3
+  have nPb3_199 : Pb3.id ≠ (B.slot 199).id := ne_slot lb3
+  have nPb4_196 : Pb4.id ≠ (B.slot 196).id := ne_slot lb4
+  have nPb4_197 : Pb4.id ≠ (B.slot 197).id := ne_slot lb4
+  have nPb4_198 : Pb4.id ≠ (B.slot 198).id := ne_slot lb4
+  have nPb4_199 : Pb4.id ≠ (B.slot 199).id := ne_slot lb4
   clear la0 la1 la2 la3 la4 lb0 lb1 lb2 lb3 lb4
-  replace ha0 := hI.fits ha0
-  replace ha1 := hI.fits ha1
-  replace ha2 := hI.fits ha2
-  replace ha3 := hI.fits ha3
-  replace ha4 := hI.fits ha4
-  replace hb0 := hI.fits hb0
-  replace hb1 := hI.fits hb1
-  replace hb2 := hI.fits hb2
-  replace hb3 := hI.fits hb3
-  replace hb4 := hI.fits hb4
+  replace ha0 := hI.room ha0
+  replace ha1 := hI.room ha1
+  replace ha2 := hI.room ha2
+  replace ha3 := hI.room ha3
+  replace ha4 := hI.room ha4
+  replace hb0 := hI.room hb0
+  replace hb1 := hI.room hb1
+  replace hb2 := hI.room hb2
+  replace hb3 := hI.room hb3
+  replace hb4 := hI.room hb4
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   have hy' : S.mem.readAt (B.slot 3) 512 = BitVec.packLanes DA.y :=
     readAt_eq_packLanes_readVec.trans (by rw [hy])
   have hyb' : S.mem.readAt (B.slot 12) 512 = BitVec.packLanes DB.y :=
     readAt_eq_packLanes_readVec.trans (by rw [hyb])
-  have f3 := hF.vec 3
-  have f12 := hF.vec 12
-  have f21 := hF.vec 21
   have f26 := hF.vec 26
   have f27 := hF.vec 27
   have f28 := hF.vec 28
-  have f29 := hF.vec 29
   have f34 := hF.vec 34
   have f35 := hF.vec 35
   have f36 := hF.vec 36
@@ -288,10 +334,13 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   step_call using fd_f25519_mul2.call_eq
   name_vec xyb
   name_vec xya
-  have f196 := hF.vec 196
-  have f197 := hF.vec 197
-  have f198 := hF.vec 198
-  have f199 := hF.vec 199
+  -- `t3a t3b neg_xa neg_xb` dead, `xya xyb` known
+  clear_facts_at (B.slot 26) (B.slot 28) (B.slot 34) (B.slot 36)
+  clear f27 f35 hg0
+  have f196 := hF.arr 196
+  have f197 := hF.arr 197
+  have f198 := hF.arr 198
+  have f199 := hF.arr 199
   -- `FD_R52X5_QUAD_PACK( *_Pa, xa, ya, one, xya )`
   step_pure
   step_load [ofFn_extractVecElem_readAt_512]
@@ -314,12 +363,13 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   step_store
   step_pattern using runBodyFrom_packLimbRun 4
   step_store
+  clear_facts_at (B.slot 196) (B.slot 197) (B.slot 198) (B.slot 199)
   iterate 4 step_pure
   -- `FD_R52X5_QUAD_PACK( *_Pb, xb, yb, one, xyb )`
-  have f200 := hF.vec 200
-  have f201 := hF.vec 201
-  have f202 := hF.vec 202
-  have f203 := hF.vec 203
+  have f200 := hF.arr 200
+  have f201 := hF.arr 201
+  have f202 := hF.arr 202
+  have f203 := hF.arr 203
   step_pure
   step_load [ofFn_extractVecElem_readAt_512]
   step_call using wwl_st.call_eq
@@ -341,6 +391,7 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   step_store
   step_pattern using runBodyFrom_packLimbRun 4
   step_store
+  clear_facts_at (B.slot 200) (B.slot 201) (B.slot 202) (B.slot 203)
   iterate 4 step_pure
   have hPA : DA.point = Quad5.pack xa' DA.y fd_f25519_one.vec xya := by
     rw [hxya, hxa', hneg_xa, hx_mod_2a, hxa, ht3a]; rfl
@@ -349,10 +400,13 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   finish_block
   rw [bb13_run 0
       (by
-        simp only [hE, read_write_same]; rfl)]
-  refine hK S (by rw [hS]) ?_
-  rw [hS, hPA, hPB]
-  simp (disch := decide) only [eraseFrom_storeVec_slot, MemoryState.eraseFrom_storeAt, herase]
+        simp only [hE, read_write_same]; rfl)
+      (by
+        dsimp only [EndRegs] at hEnd ⊢; env_reads)]
+  refine hK { S with mem := endFields S.mem B } (by rw [hS]) ?_
+  rw [eraseFrom_endFields, hS, hPA, hPB]
+  simp (disch := decide) only [eraseFrom_storeVec_slot, eraseFrom_lifetimeStart_slot,
+    eraseFrom_lifetimeEnd_slot, MemoryState.eraseFrom_storeAt, herase]
   simp only [MemoryState.storeTmp5, MemoryState.storeWv, Quad5.pack, fd_f25519_one.vec]
   rfl
 

@@ -14,7 +14,7 @@ private def junk : BitVec 1536 :=
 
 /-- One 192-byte block for `r`, holding junk. -/
 private def state : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, junk⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 junk)]⟩⟩
 
 -- `r` is returned and holds `quadZero`; the 32 padding bytes stay
 #guard

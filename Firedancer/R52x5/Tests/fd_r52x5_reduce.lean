@@ -15,7 +15,7 @@ private def pack (l : List Nat) : BitVec 320 :=
 
 /-- The limbs at `x` if they are `spec` of those before, else `none`. -/
 private def out (bytes : BitVec 320) : Option (List Nat) :=
-  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, bytes⟩)]⟩⟩
+  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 bytes)]⟩⟩
   match fd_r52x5_reduce.eval 1 (fd_r52x5_reduce.args (.value x)) s with
   | .value (some .nil, s') =>
     let l := s'.mem.readLimbs x

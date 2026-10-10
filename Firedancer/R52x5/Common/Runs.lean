@@ -53,7 +53,8 @@ theorem ofFn_extractVecElem_bytes {m : MemoryState} :
   exact extractLsb'_packLanes_byte _ hk
 
 /-- A point stored by its five `<4 x i64>` stores, as the steps leave them. -/
-theorem _root_.MLIR.MemoryState.storeQuad5_mk {m : MemoryState} {P : Pointer} {x0 x1 x2 x3 x4 : Wl} :
+theorem _root_.MLIR.MemoryState.storeQuad5_mk {m : MemoryState} {P : Pointer}
+    {x0 x1 x2 x3 x4 : Wl} :
     m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ =
       ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
                 (P.add 64#64) (BitVec.packLanes x2)).storeAt
@@ -77,9 +78,9 @@ def bytesRun (x : Reg Γ Ty4x64) (b : Dst Γ Ty32x8) : List (Instr Γ) :=
 
 /-- Where the body at `pos` is `bytesRun` and `x` holds `X`: running on from `pos` then `g` gives
 `K` if it does from `pos + 1` with `wlBytes X` in `b`. -/
-theorem runBodyFrom_bytesRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {x : Reg Γ Ty4x64} {b : Dst Γ Ty32x8} {rest : List (Instr Γ)} {X : Wl}
-    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+theorem runBodyFrom_bytesRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat} {x : Reg Γ Ty4x64}
+    {b : Dst Γ Ty32x8} {rest : List (Instr Γ)} {X : Wl} {S : GlobalState}
+    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody : blk.body.drop pos = bytesRun x b ++ rest) (hx : E ⊨ [x := X])
     (hK : (blk.runBodyFrom E[b := Ty.wrap (wlBytes X)] (pos + 1) S >>= g) = K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
@@ -133,9 +134,9 @@ def wlRun (b : Reg Γ Ty32x8) (x : Dst Γ Ty4x64) : List (Instr Γ) :=
 
 /-- Where the body at `pos` is `wlRun` and `b` holds `X`'s bytes: running on from `pos` then `g`
 gives `K` if it does from `pos + 1` with `X` in `x`. -/
-theorem runBodyFrom_wlRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {b : Reg Γ Ty32x8} {x : Dst Γ Ty4x64} {rest : List (Instr Γ)} {X : Wl}
-    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+theorem runBodyFrom_wlRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat} {b : Reg Γ Ty32x8}
+    {x : Dst Γ Ty4x64} {rest : List (Instr Γ)} {X : Wl} {S : GlobalState}
+    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody : blk.body.drop pos = wlRun b x ++ rest) (hb : E ⊨ [b := wlBytes X])
     (hK : (blk.runBodyFrom E[x := Ty.wrap X] (pos + 1) S >>= g) = K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
@@ -633,7 +634,8 @@ def qpMulRun (z0 z1 z2 z3 z4 : Dst Γ .ptr)
 
 /-- Where the body at `pos` is `qpMulRun`, `x0 … x4` hold `X`, `y0 … y4` hold `Y` and `z0 … z4`
 five slots in distinct blocks: running on from `pos` then `g` gives `K` if it does from `pos + 16`
-with the product (`fd_r52x5_quad_mul_fast.spec X Y`) in `q0 … q4` and left in the slots. -/
+with the product (`fd_r52x5_quad_mul_fast.spec X Y`) in `q0 … q4` and left in the slots, their
+lifetimes ended (`callTmp5`). -/
 theorem runBodyFrom_qpMulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {z0 z1 z2 z3 z4 : Dst Γ .ptr} {x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64}
     {rest : List (Instr Γ)} {X Y : Quad5} {Z0 Z1 Z2 Z3 Z4 : Pointer} {S : GlobalState}
@@ -646,8 +648,9 @@ theorem runBodyFrom_qpMulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
         Y.P2, y3 := Y.P3, y4 := Y.P4, z0 := Z0, z1 := Z1, z2 := Z2, z3 := Z3, z4 := Z4])
     (hwf : S.WF)
     (hZ :
-      Fits S.mem Z0 256 ∧
-        Fits S.mem Z1 256 ∧ Fits S.mem Z2 256 ∧ Fits S.mem Z3 256 ∧ Fits S.mem Z4 256)
+      InBounds S.mem Z0 256 ∧
+        InBounds S.mem Z1 256 ∧
+        InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -664,7 +667,7 @@ theorem runBodyFrom_qpMulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
               Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P4]
             (pos + 16)
             { alloc := S.alloc,
-              mem := S.mem.storeTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_mul_fast.spec X Y) } >>=
+              mem := S.mem.callTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_mul_fast.spec X Y) } >>=
           g) =
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
@@ -726,12 +729,14 @@ theorem runBodyFrom_qpMulGepRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
     (hR :
       E ⊨ [x0 := X.P0, x1 := X.P1, x2 := X.P2, x3 := X.P3, x4 := X.P4, y0 := Y.P0, y1 := Y.P1, y2 :=
         Y.P2, y3 := Y.P3, y4 := Y.P4, z0 := Z0, z1 := Z1, z2 := Z2, z3 := Z3, z4 := Z4, p := P])
-    (hwf : S.WF) (hP : S.mem.Quad5Fit P)
+    (hwf : S.WF) (hP : S.mem.Quad5Room P)
+    (hPZ : P.id ≠ Z0.id ∧ P.id ≠ Z1.id ∧ P.id ≠ Z2.id ∧ P.id ≠ Z3.id ∧ P.id ≠ Z4.id)
     (hp : p ≠ .val g1.i g1.h ∧ p ≠ .val g2.i g2.h ∧ p ≠ .val g3.i g3.h)
     (hd : [z0.i, z1.i, z2.i, z3.i, z4.i, g1.i, g2.i, g3.i, g4.i].Nodup)
     (hZ :
-      Fits S.mem Z0 256 ∧
-        Fits S.mem Z1 256 ∧ Fits S.mem Z2 256 ∧ Fits S.mem Z3 256 ∧ Fits S.mem Z4 256)
+      InBounds S.mem Z0 256 ∧
+        InBounds S.mem Z1 256 ∧
+        InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -748,12 +753,13 @@ theorem runBodyFrom_qpMulGepRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
               Ty.wrap (fd_r52x5_quad_mul_fast.spec X Y).P4, g4 := .value (P.add 128#64)]
             (pos + 20)
             { alloc := S.alloc,
-              mem := S.mem.storeTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_mul_fast.spec X Y) } >>=
+              mem := S.mem.callTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_mul_fast.spec X Y) } >>=
           g) =
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
+  obtain ⟨hP0, hP1, hP2, hP3, hP4⟩ := hPZ
   obtain ⟨hp1, hp2, hp3⟩ := hp
   iterate 5 step_pure
   step_call using fd_r52x5_quad_mul_fast.call_eq
@@ -804,8 +810,9 @@ theorem runBodyFrom_qpSqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
         z3 := Z3, z4 := Z4])
     (hwf : S.WF)
     (hZ :
-      Fits S.mem Z0 256 ∧
-        Fits S.mem Z1 256 ∧ Fits S.mem Z2 256 ∧ Fits S.mem Z3 256 ∧ Fits S.mem Z4 256)
+      InBounds S.mem Z0 256 ∧
+        InBounds S.mem Z1 256 ∧
+        InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -822,7 +829,7 @@ theorem runBodyFrom_qpSqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
               Ty.wrap (fd_r52x5_quad_sqr_fast.spec X).P4]
             (pos + 16)
             { alloc := S.alloc,
-              mem := S.mem.storeTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_sqr_fast.spec X) } >>=
+              mem := S.mem.callTmp5 Z0 Z1 Z2 Z3 Z4 (fd_r52x5_quad_sqr_fast.spec X) } >>=
           g) =
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
@@ -852,10 +859,10 @@ theorem fits_wwl_lane {m : MemoryState} {t : Pointer} (h : Fits m t 512) (ho : t
     h
 
 /-- The `i64` at `t + 8 k` of an array holding `X`: `X[k]`. -/
-theorem readAt_wwl_lane {m : MemoryState} {t : Pointer} {X : Wwl}
-    (h : Fits m t 512) (ho : t.offset = 0) (hr : m.readAt t 512 = BitVec.packLanes X) (hk : k < 8) :
+theorem readAt_wwl_lane {m : MemoryState} {t : Pointer} {X : Wwl} (h : Fits m t 512)
+    (ho : t.offset = 0) (hr : m.readAt t 512 = BitVec.packLanes X) (hk : k < 8) :
     m.readAt (t.add (BitVec.ofNat 64 (8 * k))) 64 = X[k] := by
-  rw [MemoryState.readAt_add_of_readAt h
+  rw [MemoryState.readAt_add_of_readAt h.inBounds
       (by
         simp [BitVec.uaddOverflow, ho]; omega)
       (by
@@ -866,11 +873,11 @@ theorem readAt_wwl_lane {m : MemoryState} {t : Pointer} {X : Wwl}
   rw [e, BitVec.extractLsb'_packLanes X k hk]
 
 /-- The `<4 x i64>` at `t + 8 k` of an array holding `X`: lanes `k … k + 3`. -/
-theorem readAt_wwl_lanes {m : MemoryState} {t : Pointer} {X : Wwl}
-    (h : Fits m t 512) (ho : t.offset = 0) (hr : m.readAt t 512 = BitVec.packLanes X) (hk : k ≤ 4) :
+theorem readAt_wwl_lanes {m : MemoryState} {t : Pointer} {X : Wwl} (h : Fits m t 512)
+    (ho : t.offset = 0) (hr : m.readAt t 512 = BitVec.packLanes X) (hk : k ≤ 4) :
     m.readAt (t.add (BitVec.ofNat 64 (8 * k))) 256 =
       BitVec.packLanes (#v[X[k], X[k + 1], X[k + 2], X[k + 3]] : Wl) := by
-  rw [MemoryState.readAt_add_of_readAt h
+  rw [MemoryState.readAt_add_of_readAt h.inBounds
       (by
         simp [BitVec.uaddOverflow, ho]; omega)
       (by
@@ -1362,7 +1369,7 @@ theorem runBodyFrom_reduceStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
     (hd :
       [s0.i, s1.i, s2.i, s3.i, s4.i, k.i, mask.i, r19.i, c0.i, c1.i, c2.i, c3.i, c4.i, a0.i, d0.i,
           a1.i, d1.i, a2.i, d2.i, a3.i, d3.i, a4.i].Nodup)
-    (hwf : S.WF) (hP : S.mem.Quad5Fit P)
+    (hwf : S.WF) (hP : S.mem.Quad5Room P)
     (hK :
       ∀ vc0 vc1 vc2 vc3 vc4 va0 va1 va2 va3 va4 : ⟦Ty4x64⟧,
         (blk.runBodyFrom
@@ -1446,7 +1453,7 @@ theorem runBodyFrom_reduceCastStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ
     (hd :
       [s0.i, s1.i, s2.i, s3.i, s4.i, k.i, mask.i, r19.i, c0.i, c1.i, c2.i, c3.i, c4.i, b0.i, a0.i,
           d0.i, b1.i, a1.i, d1.i, b2.i, a2.i, d2.i, b3.i, a3.i, d3.i, b4.i, a4.i].Nodup)
-    (hwf : S.WF) (hP : S.mem.Quad5Fit P)
+    (hwf : S.WF) (hP : S.mem.Quad5Room P)
     (hK :
       ∀ vc0 vc1 vc2 vc3 vc4 vb0 va0 vb1 va1 vb2 va2 vb3 va3 vb4 va4 : ⟦Ty4x64⟧,
         (blk.runBodyFrom

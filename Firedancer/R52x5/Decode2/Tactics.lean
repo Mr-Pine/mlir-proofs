@@ -24,10 +24,32 @@ elab "clear_readAts" : tactic =>
         g ← g.tryClear d.fvarId
     replaceMainGoal [g]
 
+/-- `clear_facts_at p…`: drop the memory facts about the objects at the pointers `p…` (`P m p …`
+or `P m (p.add k) …` for a memory `m`), before their lifetimes end. -/
+elab "clear_facts_at" ps:(ppSpace colGt term:max)+ : tactic =>
+  withMainContext do
+    let mut g ← getMainGoal
+    for p in ps do
+      let pe ← instantiateMVars (← Term.elabTerm p none)
+      let base (q : Expr) : Expr := (q.app2? ``Pointer.add).elim q (·.1)
+      for d in ← getLCtx do
+        if d.isImplementationDetail then
+          continue
+        let ty ← instantiateMVars d.type
+        let args := ty.getAppArgs
+        unless ty.getAppFn.isConst && args.size ≥ 2 do
+          continue
+        unless (← inferType args[0]!).isConstOf ``MemoryState do
+          continue
+        if ← isDefEq (base args[1]!) pe then
+          g ← g.tryClear d.fvarId
+    replaceMainGoal [g]
+
 set_option hygiene false in
 /-- `QP_SQR`/`QP_MUL` after its call `c`, through the temporaries `B.slot k … B.slot (k + 4)`
-(`hF` the frame's fit): the call, the loads, then `FD_R52X5_QUAD_REDUCE`, one step each (a pattern
-reads the body by `List.drop`, too deep in `^bb0`). -/
+(`hF` the frame): their starts, the call, the loads, their ends (folded as `callTmp5`), then
+`FD_R52X5_QUAD_REDUCE`, one step each (a pattern reads the body by `List.drop`, too deep in
+`^bb0`). -/
 syntax "qp_site " term:max num : tactic
 
 set_option hygiene false in
@@ -44,7 +66,10 @@ macro_rules
       step_call using $c
       iterate 5 step_load [ofFn_extractVecElem_readAt] inline
       clear hz0 hz1 hz2 hz3 hz4
+      clear_facts_at (B.slot $(n 0)) (B.slot $(n 1)) (B.slot $(n 2)) (B.slot $(n 3))
+        (B.slot $(n 4))
       iterate 5 step_pure
+      rw [← MemoryState.callTmp5.eq_1] at hS
       iterate 5 step_pure with transparent vc
       iterate 5
         step_pure with transparent va

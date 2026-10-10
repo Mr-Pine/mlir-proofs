@@ -16,7 +16,7 @@ private def pack (l : List Nat) : BitVec 512 :=
 /-- The result if it is `spec` of the element at `a`, `a` is unchanged and the counter
 moved on by two blocks; else `none`. -/
 private def out (ab : BitVec 512) : Option (BitVec 32) :=
-  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, ab⟩)]⟩⟩
+  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 ab)]⟩⟩
   match fd_f25519_sgn.eval 1 (fd_f25519_sgn.args (.value a)) s with
   | .value (some (.cons (.value v) .nil), s') =>
     if

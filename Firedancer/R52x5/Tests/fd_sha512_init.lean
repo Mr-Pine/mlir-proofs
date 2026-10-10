@@ -13,7 +13,7 @@ private def sha : Pointer :=
 
 /-- One 256-byte block of `0xaa` bytes. -/
 private def state : GlobalState :=
-  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨256, (0xaa#8).replicate 256⟩)]⟩⟩
+  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 256 ((0xaa#8).replicate 256))]⟩⟩
 
 -- the struct the spec's stores leave: `sha512IV`, nothing buffered or counted, the rest untouched
 #guard

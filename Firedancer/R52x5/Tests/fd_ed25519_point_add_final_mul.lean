@@ -14,7 +14,7 @@ private def a : Pointer :=
 
 /-- Two 192-byte blocks: `r` zeroed, `a` holding `bytes`. -/
 private def state (bytes : BitVec 1536) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨192, bytes⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 192 bytes)]⟩⟩
 
 private def aBytes : BitVec 1536 :=
   BitVec.ofNat 1536 (2 ^ 1500 + 3 * 2 ^ 1000 + 5 * 2 ^ 600 + 12345678901234567890)

@@ -28,7 +28,7 @@ end
 /-- `fd_ed25519_point_sub_with_opts` stores `spec` of the points at `a` and `b` at `r` and returns
 `r`; `r` may be `a` or `b`. -/
 public theorem fd_ed25519_point_sub_with_opts.call_eq (r a b : Pointer) (pre : BitVec 32)
-    (s : GlobalState) (hwf : s.WF) (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a)
+    (s : GlobalState) (hwf : s.WF) (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a)
     (hb : s.mem.Quad5Fit b) :
     fd_ed25519_point_sub_with_opts.call
         (fd_ed25519_point_sub_with_opts.args (.value r) (.value a) (.value b) (.value pre)) s =
@@ -46,8 +46,8 @@ public theorem fd_ed25519_point_sub_with_opts.call_eq (r a b : Pointer) (pre : B
   step_alloca with neg
   step_pure
   step_pure
-  have hneg : S.mem.Quad5Fit neg :=
-    MemoryState.Quad5Fit.of_fits (Fits.mono (by decide) hneg_fits) hneg_off
+  have hneg : S.mem.Quad5Room neg :=
+    MemoryState.Quad5Room.of_room (Room.mono (by decide) hroom_neg) hneg_off
   have hnegb : neg = b ∨ neg.id ≠ b.id := .inr (Ne.symm hb_ne_neg)
   finish_block
   · -- `!b_is_precomputed`: fd_ed25519_point_neg( neg, b )

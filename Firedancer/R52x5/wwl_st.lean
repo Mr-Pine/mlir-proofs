@@ -14,7 +14,7 @@ section Proof
 
 /-- `wwl_st( p, x )` stores the eight lanes of `x` at `p`. -/
 public theorem wwl_st.call_eq (p : Pointer) (x : Wwl) (s : GlobalState) (hwf : s.WF)
-    (hp : Fits s.mem p 512) :
+    (hp : Room s.mem p 512) :
     wwl_st.call (wwl_st.args (.value p) (Ty.wrap x)) s =
       .value (.nil, { s with mem := s.mem.storeVec p x }) := by
   func_init

@@ -11,7 +11,7 @@ private def p : Pointer :=
 
 /-- One 64-byte block of `0xaa` bytes. -/
 private def state : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, (0xaa#8).replicate 64⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 64 ((0xaa#8).replicate 64))]⟩⟩
 
 private def x : Firedancer.Avx512.Wwl :=
   #v[1, 2, 3, 4, 5, 6, 7, 0x8000000000000000]

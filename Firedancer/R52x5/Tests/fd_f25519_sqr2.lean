@@ -18,7 +18,7 @@ private def pack (l : List Nat) : BitVec 512 :=
 private def state : GlobalState :=
   ⟨⟨4⟩,
     ⟨Std.ExtHashMap.ofList
-        ((List.range 4).map fun k => (⟨k⟩, ⟨64, pack ((List.range 5).map (· + k + 1))⟩))⟩⟩
+        ((List.range 4).map fun k => (⟨k⟩, .ofBytes 64 (pack ((List.range 5).map (· + k + 1)))))⟩⟩
 
 /-- `r1` and `r2` hold the squares, the second of its input after the first store. -/
 private def check (ks : List Nat) : Bool :=

@@ -59,16 +59,16 @@ theorem bb1c0_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      ((((Keeps.refl _ _).storeTmp5 116 117 118 119 120 (by decide) (by decide) (by decide)
-                (by decide) (by decide)).storeTmp5
+      ((((Keeps.refl _ _).callTmp5 116 117 118 119 120 (by decide) (by decide) (by decide)
+                (by decide) (by decide)).callTmp5
             121 122 123 124 125 (by decide) (by decide) (by decide) (by decide)
-            (by decide)).storeTmp5
+            (by decide)).callTmp5
         126 127 128 129 130 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `^bb1`'s sites `93` to `186`. -/
@@ -104,16 +104,16 @@ theorem bb1c1_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      ((((Keeps.refl _ _).storeTmp5 126 127 128 129 130 (by decide) (by decide) (by decide)
-                (by decide) (by decide)).storeTmp5
+      ((((Keeps.refl _ _).callTmp5 126 127 128 129 130 (by decide) (by decide) (by decide)
+                (by decide) (by decide)).callTmp5
             126 127 128 129 130 (by decide) (by decide) (by decide) (by decide)
-            (by decide)).storeTmp5
+            (by decide)).callTmp5
         126 127 128 129 130 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `^bb1`'s sites `186` to `279`. -/
@@ -149,16 +149,16 @@ theorem bb1c2_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      ((((Keeps.refl _ _).storeTmp5 126 127 128 129 130 (by decide) (by decide) (by decide)
-                (by decide) (by decide)).storeTmp5
+      ((((Keeps.refl _ _).callTmp5 126 127 128 129 130 (by decide) (by decide) (by decide)
+                (by decide) (by decide)).callTmp5
             126 127 128 129 130 (by decide) (by decide) (by decide) (by decide)
-            (by decide)).storeTmp5
+            (by decide)).callTmp5
         126 127 128 129 130 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `^bb1`'s sites `279` to `372`. -/
@@ -198,16 +198,16 @@ theorem bb1c3_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      ((((Keeps.refl _ _).storeTmp5 126 127 128 129 130 (by decide) (by decide) (by decide)
-                (by decide) (by decide)).storeTmp5
+      ((((Keeps.refl _ _).callTmp5 126 127 128 129 130 (by decide) (by decide) (by decide)
+                (by decide) (by decide)).callTmp5
             126 127 128 129 130 (by decide) (by decide) (by decide) (by decide)
-            (by decide)).storeTmp5
+            (by decide)).callTmp5
         131 132 133 134 135 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `^bb1`'s sites `372` to `403`. -/
@@ -240,14 +240,14 @@ theorem bb1c4_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      ((Keeps.refl _ _).storeTmp5 136 137 138 139 140 (by decide) (by decide) (by decide)
-        (by decide) (by decide))
+      ((Keeps.refl _ _).callTmp5 136 137 138 139 140 (by decide) (by decide) (by decide) (by decide)
+        (by decide))
 
 /-- `^bb1`: `_t1 = _t2 _t1`, squared `10` times, `_t0 = _t1 _t0`, `_t1 = _t0²`; on to `^bb4`. -/
 theorem bb1_run {β : Type} {E : ⟪Γ⟫} {S : GlobalState}
@@ -369,14 +369,14 @@ theorem bb3c0_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      (((Keeps.refl _ _).storeTmp5 146 147 148 149 150 (by decide) (by decide) (by decide)
-            (by decide) (by decide)).storeTmp5
+      (((Keeps.refl _ _).callTmp5 146 147 148 149 150 (by decide) (by decide) (by decide)
+            (by decide) (by decide)).callTmp5
         151 152 153 154 155 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `^bb3`: `_t1 = _t1 _t0`, `_t2 = _t1²`; on to `^bb6`. -/
@@ -449,14 +449,14 @@ theorem bb5c0_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ �
     exact Writes.refl _ _ _
   · env_reads
   · rw [hS]
-    simp (disch := decide) only [eraseFrom_storeTmp5_slot]
+    simp (disch := decide) only [eraseFrom_callTmp5_slot]
     exact herase
   · rw [hS]
     exact halloc
   · rw [hS]
     exact
-      (((Keeps.refl _ _).storeTmp5 161 162 163 164 165 (by decide) (by decide) (by decide)
-            (by decide) (by decide)).storeTmp5
+      (((Keeps.refl _ _).callTmp5 161 162 163 164 165 (by decide) (by decide) (by decide)
+            (by decide) (by decide)).callTmp5
         166 167 168 169 170 (by decide) (by decide) (by decide) (by decide) (by decide))
 
 /-- `^bb5`: `_t1 = _t2 _t1`, `_t1 = _t1²`; on to `^bb8`. -/

@@ -13,7 +13,7 @@ section Proof
 /-- `fd_ed25519_point_add_final_mul_projective` copies the point at `a` to `r`, which is `a` or in
 another block, and returns `r`. -/
 public theorem fd_ed25519_point_add_final_mul_projective.call_eq (r a : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a) (hsep : r = a ∨ r.id ≠ a.id) :
+    (hwf : s.WF) (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a) (hsep : r = a ∨ r.id ≠ a.id) :
     fd_ed25519_point_add_final_mul_projective.call
         (fd_ed25519_point_add_final_mul_projective.args (.value r) (.value a)) s =
       .value (.cons (.value r) .nil, { s with mem := s.mem.storeQuad5 r (s.mem.readQuad5 a) }) := by

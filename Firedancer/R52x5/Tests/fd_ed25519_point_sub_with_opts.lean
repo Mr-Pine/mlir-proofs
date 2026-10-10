@@ -42,7 +42,9 @@ private def A : Quad5 :=
 /-- Blocks 0-3, a point each: `X` at 0, `Y` at 1, `Y`'s precomputed form at 2, 3 for the result. -/
 private def state (X Y : Quad5) : GlobalState :=
   let m : MemoryState :=
-    ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨192, 0⟩), (⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨192, 0⟩), (⟨3⟩, ⟨192, 0⟩)]⟩
+    ⟨Std.ExtHashMap.ofList
+        [(⟨0⟩, .ofBytes 192 0), (⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 192 0),
+          (⟨3⟩, .ofBytes 192 0)]⟩
   ⟨⟨4⟩,
     ((m.storeQuad5 ⟨⟨0⟩, 0⟩ X).storeQuad5 ⟨⟨1⟩, 0⟩ Y).storeQuad5 ⟨⟨2⟩, 0⟩
       (fd_curve25519_into_precomputed.spec Y)⟩

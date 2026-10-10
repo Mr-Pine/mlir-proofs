@@ -46,7 +46,7 @@ public theorem fd_f25519_is_zero.call_eq (a : Pointer) (s : GlobalState) (hwf : 
   -- ulong h[5];
   step_alloca with h
   step_pure
-  have hh_limbs : S.mem.LimbsFit h := .of_fits hh_fits hh_off
+  have hh_limbs : S.mem.LimbsRoom h := .of_room hroom_h hh_off
   rw [hS] at hh_limbs
   -- fd_f25519_canonical_limbs( h, a );
   step_call using fd_f25519_canonical_limbs.call_eq
@@ -55,6 +55,9 @@ public theorem fd_f25519_is_zero.call_eq (a : Pointer) (s : GlobalState) (hwf : 
     rw [hS]; exact MemoryState.readAt_storeLimbs_wv hh_limbs
   have hread_h_32 : S.mem.readAt (h.add 32#64) 64 = l 4 := by
     rw [hS]; exact congrFun (MemoryState.readLimbs_storeLimbs_self hh_limbs) 4
+  have hh_fit : S.mem.LimbsFit h := by
+    rw [hS]; exact .storeLimbs_self hh_limbs
+  have hh256 : Fits S.mem h 256 := hh_fit.fits.mono (by omega)
   -- return (h[0] | h[1] | h[2] | h[3] | h[4]) == 0;
   step_load
   step_pure

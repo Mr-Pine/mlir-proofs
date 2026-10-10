@@ -30,7 +30,7 @@ private def value (l : Fin 5 → BitVec 64) : Nat :=
 
 /-- Two 64-byte blocks: `r` zeroed, `a` holding `ab`. -/
 private def state (ab : BitVec 512) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, ab⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 ab)]⟩⟩
 
 /-- `r` is returned and holds `spec a`. -/
 private def runs (ab : BitVec 512) (q : Pointer := a) : Bool :=

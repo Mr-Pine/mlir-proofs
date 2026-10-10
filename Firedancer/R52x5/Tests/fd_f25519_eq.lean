@@ -18,7 +18,7 @@ private def pack (l : List Nat) : BitVec 512 :=
 
 /-- Two 64-byte blocks, `a` and `b` holding `ab` and `bb`. -/
 private def state (ab bb : BitVec 512) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, ab⟩), (⟨1⟩, ⟨64, bb⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 ab), (⟨1⟩, .ofBytes 64 bb)]⟩⟩
 
 /-- `eq a q`'s result if it is `spec` of the inputs, the inputs are unchanged and the counter
 moved on by three blocks; else `none`. -/

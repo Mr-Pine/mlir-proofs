@@ -8,7 +8,7 @@ namespace MLIR.Firedancer.R52x5
 
 /-- Five 32-byte blocks `0 … 4` for the out-pointers. -/
 private def state : GlobalState :=
-  ⟨⟨5⟩, ⟨Std.ExtHashMap.ofList ((List.range 5).map fun i => (⟨i⟩, ⟨32, 0⟩))⟩⟩
+  ⟨⟨5⟩, ⟨Std.ExtHashMap.ofList ((List.range 5).map fun i => (⟨i⟩, .ofBytes 32 0))⟩⟩
 
 private def z (i : Nat) : Pointer :=
   ⟨⟨i⟩, 0⟩

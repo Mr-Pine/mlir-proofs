@@ -35,7 +35,17 @@ abbrev MemoryState.Quad5Fit (m : MemoryState) (p : Pointer) : Prop :=
     Fits m (p.add 32#64) 256 ∧
     Fits m (p.add 64#64) 256 ∧ Fits m (p.add 96#64) 256 ∧ Fits m (p.add 128#64) 256
 
-attribute [mlir_mem] MemoryState.Quad5Fit
+/-- Room for the point at `p` (an output), and its offsets do not wrap. -/
+abbrev MemoryState.Quad5Room (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 160 ≤ 2 ^ 64 ∧
+    Room m p 256 ∧
+    Room m (p.add 32#64) 256 ∧
+    Room m (p.add 64#64) 256 ∧ Room m (p.add 96#64) 256 ∧ Room m (p.add 128#64) 256
+
+attribute [mlir_mem] MemoryState.Quad5Fit MemoryState.Quad5Room
+
+theorem MemoryState.Quad5Fit.room {m : MemoryState} (h : m.Quad5Fit p) : m.Quad5Room p :=
+  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.room⟩
 
 /-! ### Fit -/
 
@@ -63,17 +73,47 @@ theorem MemoryState.Quad5Fit.fits_4 {m : MemoryState} (h : m.Quad5Fit p) :
     Fits m (p.add 128#64) 256 :=
   h.2.2.2.2.2
 
+@[mlir_transport]
+theorem MemoryState.Quad5Room.room_0 {m : MemoryState} (h : m.Quad5Room p) : Room m p 256 :=
+  h.2.1
+
+@[mlir_transport]
+theorem MemoryState.Quad5Room.room_1 {m : MemoryState} (h : m.Quad5Room p) :
+    Room m (p.add 32#64) 256 :=
+  h.2.2.1
+
+@[mlir_transport]
+theorem MemoryState.Quad5Room.room_2 {m : MemoryState} (h : m.Quad5Room p) :
+    Room m (p.add 64#64) 256 :=
+  h.2.2.2.1
+
+@[mlir_transport]
+theorem MemoryState.Quad5Room.room_3 {m : MemoryState} (h : m.Quad5Room p) :
+    Room m (p.add 96#64) 256 :=
+  h.2.2.2.2.1
+
+@[mlir_transport]
+theorem MemoryState.Quad5Room.room_4 {m : MemoryState} (h : m.Quad5Room p) :
+    Room m (p.add 128#64) 256 :=
+  h.2.2.2.2.2
+
+theorem MemoryState.Quad5Room.no_wrap {m : MemoryState} (h : m.Quad5Room p) {off : BitVec 64}
+    (hoff : off.toNat ≤ 128) : ¬p.offset.uaddOverflow off := by
+  have := h.1
+  simp only [BitVec.uaddOverflow, decide_eq_true_eq]
+  omega
+
 theorem MemoryState.Quad5Fit.no_wrap {m : MemoryState} (h : m.Quad5Fit p) {off : BitVec 64}
     (hoff : off.toNat ≤ 128) : ¬p.offset.uaddOverflow off := by
   have := h.1
   simp only [BitVec.uaddOverflow, decide_eq_true_eq]
   omega
 
-/-- `Q1 … Q4` together, as `memset` writes them. -/
-theorem MemoryState.Quad5Fit.fits_1_4 {m : MemoryState} (h : m.Quad5Fit p) :
-    Fits m (p.add 32#64) 1024 := by
-  obtain ⟨blk, hblk, hsz⟩ := h.fits_4
-  refine ⟨blk, hblk, ?_⟩
+/-- Room for `Q1 … Q4` together, as `memset` writes them. -/
+theorem MemoryState.Quad5Room.room_1_4 {m : MemoryState} (h : m.Quad5Room p) :
+    Room m (p.add 32#64) 1024 := by
+  obtain ⟨blk, hblk, hl, hsz⟩ := h.room_4
+  refine ⟨blk, hblk, hl, ?_⟩
   have h1 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 32#64) (by decide))
   have h2 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 128#64) (by decide))
   simp only [BitVec.toNat_ofNat] at h1 h2
@@ -116,7 +156,7 @@ theorem MemoryState.Quad5Fit.storeQuad5 {m : MemoryState} (h : m.Quad5Fit q) :
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Quad5Fit.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.Quad5Fit q) :
-    (s.alloca n).mem.Quad5Fit q :=
+    (s.alloca n d).mem.Quad5Fit q :=
   ⟨h.1, h.2.1.alloca hwf, h.2.2.1.alloca hwf, h.2.2.2.1.alloca hwf, h.2.2.2.2.1.alloca hwf,
     h.2.2.2.2.2.alloca hwf⟩
 
@@ -126,11 +166,97 @@ theorem MemoryState.Quad5Fit.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.
   ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.1.addBlock hwf, h.2.2.2.2.1.addBlock hwf,
     h.2.2.2.2.2.addBlock hwf⟩
 
-/-- A point fits before a store if it fits after it. -/
-theorem MemoryState.Quad5Fit.of_storeQuad5 {m : MemoryState} (h : (m.storeQuad5 p P).Quad5Fit q) :
-    m.Quad5Fit q := by
-  simpa only [MemoryState.Quad5Fit, MemoryState.storeQuad5, MemoryState.storeTmp5,
-    MemoryState.storeWv, Fits.storeAt_iff] using h
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeAt {m : MemoryState} {x : BitVec w} (h : m.Quad5Room q) :
+    (m.storeAt p x).Quad5Room q :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.1.storeAt, h.2.2.2.2.1.storeAt, h.2.2.2.2.2.storeAt⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeWv {m : MemoryState} (h : m.Quad5Room q) :
+    (m.storeWv p v).Quad5Room q :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeVec {m : MemoryState} (h : m.Quad5Room q) :
+    (m.storeVec p v).Quad5Room q :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeLimbs {m : MemoryState} (h : m.Quad5Room q) :
+    (m.storeLimbs p l).Quad5Room q :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeLimbsV {m : MemoryState} (h : m.Quad5Room q) :
+    (m.storeLimbsV p l).Quad5Room q :=
+  h.storeAt.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeTmp5 {m : MemoryState} (h : m.Quad5Room q) :
+    (m.storeTmp5 t0 t1 t2 t3 t4 Q).Quad5Room q :=
+  h.storeWv.storeWv.storeWv.storeWv.storeWv
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.storeQuad5 {m : MemoryState} (h : m.Quad5Room q) :
+    (m.storeQuad5 p Q).Quad5Room q :=
+  h.storeTmp5
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.Quad5Room q) :
+    (s.alloca n d).mem.Quad5Room q :=
+  ⟨h.1, h.2.1.alloca hwf, h.2.2.1.alloca hwf, h.2.2.2.1.alloca hwf, h.2.2.2.2.1.alloca hwf,
+    h.2.2.2.2.2.alloca hwf⟩
+
+@[mlir_transport]
+theorem MemoryState.Quad5Room.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
+    (h : s.mem.Quad5Room q) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).Quad5Room q :=
+  ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.1.addBlock hwf, h.2.2.2.2.1.addBlock hwf,
+    h.2.2.2.2.2.addBlock hwf⟩
+
+/-- Room for a point before a store if there is room after it. -/
+theorem MemoryState.Quad5Room.of_storeQuad5 {m : MemoryState} (h : (m.storeQuad5 p P).Quad5Room q) :
+    m.Quad5Room q := by
+  simpa only [MemoryState.Quad5Room, MemoryState.storeQuad5, MemoryState.storeTmp5,
+    MemoryState.storeWv, Room.storeAt_iff] using h
+
+/-- A point stored where there is room is known. -/
+@[mlir_fresh, mlir_mem]
+theorem MemoryState.Quad5Fit.storeQuad5_self {m : MemoryState} {p : Pointer} (h : m.Quad5Room p) :
+    (m.storeQuad5 p Q).Quad5Fit p := by
+  obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
+  exact
+    ⟨ho, (Fits.storeAt_self h0).storeAt.storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h1.storeAt).storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h2.storeAt.storeAt).storeAt.storeAt,
+      (Fits.storeAt_self h3.storeAt.storeAt.storeAt).storeAt,
+      Fits.storeAt_self h4.storeAt.storeAt.storeAt.storeAt⟩
+
+/-! A callee's five out-pointers, each stored where there is room: known. -/
+
+@[mlir_fresh]
+theorem Fits.storeTmp5_0 {m : MemoryState} (h : Room m t0 256) :
+    Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) t0 256 :=
+  (Fits.storeAt_self h).storeAt.storeAt.storeAt.storeAt
+
+@[mlir_fresh]
+theorem Fits.storeTmp5_1 {m : MemoryState} (h : Room m t1 256) :
+    Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) t1 256 :=
+  (Fits.storeAt_self h.storeAt).storeAt.storeAt.storeAt
+
+@[mlir_fresh]
+theorem Fits.storeTmp5_2 {m : MemoryState} (h : Room m t2 256) :
+    Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) t2 256 :=
+  (Fits.storeAt_self h.storeAt.storeAt).storeAt.storeAt
+
+@[mlir_fresh]
+theorem Fits.storeTmp5_3 {m : MemoryState} (h : Room m t3 256) :
+    Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) t3 256 :=
+  (Fits.storeAt_self h.storeAt.storeAt.storeAt).storeAt
+
+@[mlir_fresh]
+theorem Fits.storeTmp5_4 {m : MemoryState} (h : Room m t4 256) :
+    Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) t4 256 :=
+  Fits.storeAt_self h.storeAt.storeAt.storeAt.storeAt
 
 /-- A 1280-bit block from its start holds one point. -/
 theorem MemoryState.Quad5Fit.of_fits {m : MemoryState} (h : Fits m p 1280) (ho : p.offset = 0) :
@@ -144,6 +270,19 @@ theorem MemoryState.Quad5Fit.of_fits {m : MemoryState} (h : Fits m p 1280) (ho :
       Fits.add_of_le (hov _ (by decide)) (by decide) h,
       Fits.add_of_le (hov _ (by decide)) (by decide) h,
       Fits.add_of_le (hov _ (by decide)) (by decide) h⟩
+
+/-- A 1280-bit live block from its start has room for one point. -/
+theorem MemoryState.Quad5Room.of_room {m : MemoryState} (h : Room m p 1280) (ho : p.offset = 0) :
+    m.Quad5Room p := by
+  have hov (off : BitVec 64) (hoff : off.toNat ≤ 128) : ¬p.offset.uaddOverflow off := by
+    simp only [BitVec.uaddOverflow, ho, decide_eq_true_eq]
+    simp
+    omega
+  exact
+    ⟨by simp [ho], h.mono (by omega), Room.add_of_le (hov _ (by decide)) (by decide) h,
+      Room.add_of_le (hov _ (by decide)) (by decide) h,
+      Room.add_of_le (hov _ (by decide)) (by decide) h,
+      Room.add_of_le (hov _ (by decide)) (by decide) h⟩
 
 /-- Entry `k` of a table of `n` points from `p`, 192 bytes apart, fits where the table does. -/
 theorem MemoryState.Quad5Fit.entry {m : MemoryState} {p : Pointer} (h : Fits m p (1536 * n))
@@ -175,24 +314,74 @@ theorem MemoryState.Quad5Fit.entry {m : MemoryState} {p : Pointer} (h : Fits m p
   · rw [show (128#64 : BitVec 64) = BitVec.ofNat 64 128 from rfl, hadd]
     exact hf 128 (by omega)
 
+/-- Room for entry `k` of a table of `n` points from `p`, 192 bytes apart, where there is room for
+the table. -/
+theorem MemoryState.Quad5Room.entry {m : MemoryState} {p : Pointer} (h : Room m p (1536 * n))
+    (hp : p.offset.toNat + 192 * n < 2 ^ 64) (hk : k < n) :
+    m.Quad5Room (p.add (BitVec.ofNat 64 (192 * k))) := by
+  have hf (o : Nat) (ho : o + 32 ≤ 192) : Room m (p.add (BitVec.ofNat 64 (192 * k + o))) 256 :=
+    Room.add_of_le
+      (by
+        simp [BitVec.uaddOverflow]; omega)
+      (by
+        simp; omega)
+      h
+  have hoff : (p.add (BitVec.ofNat 64 (192 * k))).offset.toNat = p.offset.toNat + 192 * k := by
+    simp only [Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat]
+    omega
+  have hadd (o : Nat) :
+    (p.add (BitVec.ofNat 64 (192 * k))).add (BitVec.ofNat 64 o) =
+      p.add (BitVec.ofNat 64 (192 * k + o)) := by
+    rw [Pointer.add_add, BitVec.ofNat_add]
+  have hf0 := hf 0 (by omega)
+  simp only [Nat.add_zero] at hf0
+  refine ⟨by omega, hf0, ?_, ?_, ?_, ?_⟩
+  · rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl, hadd]
+    exact hf 32 (by omega)
+  · rw [show (64#64 : BitVec 64) = BitVec.ofNat 64 64 from rfl, hadd]
+    exact hf 64 (by omega)
+  · rw [show (96#64 : BitVec 64) = BitVec.ofNat 64 96 from rfl, hadd]
+    exact hf 96 (by omega)
+  · rw [show (128#64 : BitVec 64) = BitVec.ofNat 64 128 from rfl, hadd]
+    exact hf 128 (by omega)
+
 /-! ### State -/
 
 @[simp, mlir_state]
-theorem Fits.storeTmp5_iff {m : MemoryState} :
-    Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w ↔ Fits m p w := by simp [MemoryState.storeTmp5]
+theorem Room.storeTmp5_iff {m : MemoryState} :
+    Room (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w ↔ Room m p w := by simp [MemoryState.storeTmp5]
 
 @[mlir_mem, mlir_transport]
 theorem Fits.storeTmp5 {m : MemoryState} (h : Fits m p w) :
     Fits (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w :=
-  Fits.storeTmp5_iff.mpr h
+  h.storeWv.storeWv.storeWv.storeWv.storeWv
+
+@[mlir_mem, mlir_transport]
+theorem Room.storeTmp5 {m : MemoryState} (h : Room m p w) :
+    Room (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w :=
+  Room.storeTmp5_iff.mpr h
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeTmp5 {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w :=
+  h.storeWv.storeWv.storeWv.storeWv.storeWv
 
 @[simp, mlir_state]
-theorem Fits.storeQuad5_iff {m : MemoryState} : Fits (m.storeQuad5 q Q) p w ↔ Fits m p w :=
-  Fits.storeTmp5_iff
+theorem Room.storeQuad5_iff {m : MemoryState} : Room (m.storeQuad5 q Q) p w ↔ Room m p w :=
+  Room.storeTmp5_iff
 
 @[mlir_mem, mlir_transport]
 theorem Fits.storeQuad5 {m : MemoryState} (h : Fits m p w) : Fits (m.storeQuad5 q Q) p w :=
   Fits.storeTmp5 h
+
+@[mlir_mem, mlir_transport]
+theorem Room.storeQuad5 {m : MemoryState} (h : Room m p w) : Room (m.storeQuad5 q Q) p w :=
+  Room.storeTmp5 h
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeQuad5 {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeQuad5 q Q) p w :=
+  InBounds.storeTmp5 h
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.storeTmp5 (h : MemoryState.LimbsFit m p) :
@@ -202,6 +391,16 @@ theorem MemoryState.LimbsFit.storeTmp5 (h : MemoryState.LimbsFit m p) :
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.storeQuad5 (h : MemoryState.LimbsFit m p) :
     MemoryState.LimbsFit (m.storeQuad5 q Q) p :=
+  h.storeTmp5
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeTmp5 (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeTmp5 t0 t1 t2 t3 t4 Q) p :=
+  h.storeWv.storeWv.storeWv.storeWv.storeWv
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeQuad5 (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeQuad5 q Q) p :=
   h.storeTmp5
 
 @[simp, mlir_mem]
@@ -264,7 +463,7 @@ theorem Range.disjoint_wl_base {p : Pointer} {b : BitVec 64} (hp : p.offset.toNa
 /-- A read at one `wl_t` of a point, past a store to another. -/
 @[mlir_read]
 theorem MemoryState.readAt_storeAt_wl {m : MemoryState} {p : Pointer} {a b : BitVec 64}
-    {x : BitVec v} (h : m.Quad5Fit p) (ha : a.toNat ≤ 128) (hb : b.toNat ≤ 128)
+    {x : BitVec v} (h : m.Quad5Room p) (ha : a.toNat ≤ 128) (hb : b.toNat ≤ 128)
     (hab : a.toNat + 32 ≤ b.toNat ∨ b.toNat + 32 ≤ a.toNat) (hv : v ≤ 256) (hw : w ≤ 256) :
     (m.storeAt (p.add a) x).readAt (p.add b) w = m.readAt (p.add b) w := by
   have := Range.disjoint_wl (a := a.toNat) (b := b.toNat) h.1 ha hb hab hv hw
@@ -274,14 +473,14 @@ theorem MemoryState.readAt_storeAt_wl {m : MemoryState} {p : Pointer} {a b : Bit
 /-- `readAt_storeAt_wl` for a store to `Q0`. -/
 @[mlir_read]
 theorem MemoryState.readAt_storeAt_wl_base {m : MemoryState} {p : Pointer} {b : BitVec 64}
-    {x : BitVec v} (h : m.Quad5Fit p) (hb : b.toNat ≤ 128) (h32 : 32 ≤ b.toNat) (hv : v ≤ 256)
+    {x : BitVec v} (h : m.Quad5Room p) (hb : b.toNat ≤ 128) (h32 : 32 ≤ b.toNat) (hv : v ≤ 256)
     (hw : w ≤ 256) : (m.storeAt p x).readAt (p.add b) w = m.readAt (p.add b) w :=
   readAt_storeAt_disjoint (Range.disjoint_wl_base h.1 hb h32 hv hw) _
 
 /-- `readAt_storeAt_wl` for a read of `Q0`. -/
 @[mlir_read]
 theorem MemoryState.readAt_storeAt_wl_of_base {m : MemoryState} {p : Pointer} {a : BitVec 64}
-    {x : BitVec v} (h : m.Quad5Fit p) (ha : a.toNat ≤ 128) (h32 : 32 ≤ a.toNat) (hv : v ≤ 256)
+    {x : BitVec v} (h : m.Quad5Room p) (ha : a.toNat ≤ 128) (h32 : 32 ≤ a.toNat) (hv : v ≤ 256)
     (hw : w ≤ 256) : (m.storeAt (p.add a) x).readAt p w = m.readAt p w :=
   readAt_storeAt_disjoint (Range.disjoint_wl_base h.1 ha h32 hw hv).symm _
 
@@ -309,8 +508,8 @@ theorem MemoryState.readAt_storeTmp5_of_id_ne {m : MemoryState} {q : Pointer} (h
 /-! The callee's out-pointers in five blocks, each read back. -/
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_0 {m : MemoryState} (h : Fits m t0 256) (h1 : t1.id ≠ t0.id)
-    (h2 : t2.id ≠ t0.id) (h3 : t3.id ≠ t0.id) (h4 : t4.id ≠ t0.id) :
+theorem MemoryState.readAt_storeTmp5_0 {m : MemoryState} (h : InBounds m t0 256)
+    (h1 : t1.id ≠ t0.id) (h2 : t2.id ≠ t0.id) (h3 : t3.id ≠ t0.id) (h4 : t4.id ≠ t0.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t0 256 = BitVec.packLanes Q.P0 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h1) : (Range.of t1 256).Disjoint _),
@@ -320,8 +519,8 @@ theorem MemoryState.readAt_storeTmp5_0 {m : MemoryState} (h : Fits m t0 256) (h1
     readAt_storeAt_self h]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_1 {m : MemoryState} (h : Fits m t1 256) (h2 : t2.id ≠ t1.id)
-    (h3 : t3.id ≠ t1.id) (h4 : t4.id ≠ t1.id) :
+theorem MemoryState.readAt_storeTmp5_1 {m : MemoryState} (h : InBounds m t1 256)
+    (h2 : t2.id ≠ t1.id) (h3 : t3.id ≠ t1.id) (h4 : t4.id ≠ t1.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t1 256 = BitVec.packLanes Q.P1 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h2) : (Range.of t2 256).Disjoint _),
@@ -330,8 +529,8 @@ theorem MemoryState.readAt_storeTmp5_1 {m : MemoryState} (h : Fits m t1 256) (h2
     readAt_storeAt_self h.storeAt]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_2 {m : MemoryState} (h : Fits m t2 256) (h3 : t3.id ≠ t2.id)
-    (h4 : t4.id ≠ t2.id) :
+theorem MemoryState.readAt_storeTmp5_2 {m : MemoryState} (h : InBounds m t2 256)
+    (h3 : t3.id ≠ t2.id) (h4 : t4.id ≠ t2.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t2 256 = BitVec.packLanes Q.P2 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h3) : (Range.of t3 256).Disjoint _),
@@ -339,14 +538,15 @@ theorem MemoryState.readAt_storeTmp5_2 {m : MemoryState} (h : Fits m t2 256) (h3
     readAt_storeAt_self h.storeAt.storeAt]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_3 {m : MemoryState} (h : Fits m t3 256) (h4 : t4.id ≠ t3.id) :
+theorem MemoryState.readAt_storeTmp5_3 {m : MemoryState} (h : InBounds m t3 256)
+    (h4 : t4.id ≠ t3.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t3 256 = BitVec.packLanes Q.P3 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h4) : (Range.of t4 256).Disjoint _),
     readAt_storeAt_self h.storeAt.storeAt.storeAt]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_4 {m : MemoryState} (h : Fits m t4 256) :
+theorem MemoryState.readAt_storeTmp5_4 {m : MemoryState} (h : InBounds m t4 256) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t4 256 = BitVec.packLanes Q.P4 := by
   simp only [storeTmp5, storeWv, readAt_storeAt_self h.storeAt.storeAt.storeAt.storeAt]
 
@@ -374,9 +574,9 @@ theorem MemoryState.readQuad5_storeQuad5_of_id_ne {m : MemoryState} {p q : Point
     (h : p.id ≠ q.id) : (m.storeQuad5 p P).readQuad5 q = m.readQuad5 q :=
   readQuad5_storeTmp5_of_id_ne h h h h h
 
-/-- A point stored where it fits reads back. -/
+/-- A point stored where there is room reads back. -/
 @[mlir_read]
-theorem MemoryState.readQuad5_storeQuad5_self {m : MemoryState} {p : Pointer} (h : m.Quad5Fit p) :
+theorem MemoryState.readQuad5_storeQuad5_self {m : MemoryState} {p : Pointer} (h : m.Quad5Room p) :
     (m.storeQuad5 p P).readQuad5 p = P := by
   have hd (a b : BitVec 64) (ha : a.toNat ≤ 128) (hb : b.toNat ≤ 128)
     (hab : a.toNat + 32 ≤ b.toNat ∨ b.toNat + 32 ≤ a.toNat) :
@@ -390,22 +590,23 @@ theorem MemoryState.readQuad5_storeQuad5_self {m : MemoryState} {p : Pointer} (h
   · rw [readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
       readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
       readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
-      readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm, readWv_storeWv_self h.2.1]
+      readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
+      readWv_storeWv_self h.2.1.inBounds]
   · rw [readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
       readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
       readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
-      readWv_storeWv_self h.2.2.1.storeWv]
+      readWv_storeWv_self h.2.2.1.storeWv.inBounds]
   · rw [readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
       readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
-      readWv_storeWv_self h.2.2.2.1.storeWv.storeWv]
+      readWv_storeWv_self h.2.2.2.1.storeWv.storeWv.inBounds]
   · rw [readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
-      readWv_storeWv_self h.2.2.2.2.1.storeWv.storeWv.storeWv]
-  · rw [readWv_storeWv_self h.2.2.2.2.2.storeWv.storeWv.storeWv.storeWv]
+      readWv_storeWv_self h.2.2.2.2.1.storeWv.storeWv.storeWv.inBounds]
+  · rw [readWv_storeWv_self h.2.2.2.2.2.storeWv.storeWv.storeWv.storeWv.inBounds]
 
 /-- A point elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
 theorem MemoryState.readQuad5_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n).mem.readQuad5 p = s.mem.readQuad5 p := by
+    (s.alloca n d).mem.readQuad5 p = s.mem.readQuad5 p := by
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa using hne
   simp only [readQuad5, readWv_alloca hne, readWv_alloca (hne' _)]
 
@@ -417,14 +618,15 @@ theorem MemoryState.readQuad5_addBlock_of_id_ne {m : MemoryState} {x : BitVec v}
 
 @[mlir_read]
 theorem MemoryState.readQuad5_addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
-    (h : s.mem.Quad5Fit p) :
+    (h : s.mem.Quad5Room p) :
     (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).readQuad5 p = s.mem.readQuad5 p := by
-  simp only [readQuad5, readWv_addBlock hwf h.2.1, readWv_addBlock hwf h.2.2.1,
-    readWv_addBlock hwf h.2.2.2.1, readWv_addBlock hwf h.2.2.2.2.1, readWv_addBlock hwf h.2.2.2.2.2]
+  simp only [readQuad5, readWv_addBlock hwf h.2.1.inBounds, readWv_addBlock hwf h.2.2.1.inBounds,
+    readWv_addBlock hwf h.2.2.2.1.inBounds, readWv_addBlock hwf h.2.2.2.2.1.inBounds,
+    readWv_addBlock hwf h.2.2.2.2.2.inBounds]
 
 /-- The point at byte `o` of a known read: its bits. -/
 theorem MemoryState.readQuad5_add_of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v}
-    (hf : Fits m p v) (h : m.readAt p v = x) (hp : p.offset.toNat + o + 160 ≤ 2 ^ 64)
+    (hf : InBounds m p v) (h : m.readAt p v = x) (hp : p.offset.toNat + o + 160 ≤ 2 ^ 64)
     (hv : 8 * o + 1280 ≤ v) : m.readQuad5 (p.add (BitVec.ofNat 64 o)) = quad5At x (8 * o) := by
   have hadd (c : Nat) :
     (p.add (BitVec.ofNat 64 o)).add (BitVec.ofNat 64 c) = p.add (BitVec.ofNat 64 (o + c)) := by
@@ -443,25 +645,10 @@ theorem MemoryState.readQuad5_add_of_readAt {m : MemoryState} {p : Pointer} {x :
 
 /-! ### Stores -/
 
-private theorem storeAt_storeAt_same {m : MemoryState} {p : Pointer} {x y : BitVec w} :
-    (m.storeAt p x).storeAt p y = m.storeAt p y := by
-  rcases m with ⟨mm⟩
-  unfold MemoryState.storeAt
-  cases hb : (⟨mm⟩ : MemoryState)[p.id]? with
-  | none => simp [hb]
-  | some blk =>
-    simp only [MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_insert_self] at hb ⊢
-    simp only [Memory.spliceBits_spliceBits_self]
-    congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro a
-    simp only [Std.ExtHashMap.getElem?_insert]
-    split <;> rfl
-
 /-- Lanes stored twice at the same place: the second. -/
 theorem MemoryState.storeWv_storeWv_self {m : MemoryState} :
     (m.storeWv p v).storeWv p v' = m.storeWv p v' :=
-  storeAt_storeAt_same
+  storeAt_storeAt_self
 
 /-- Four lanes read, packed: the bits read. -/
 theorem MemoryState.packLanes_readWv {m : MemoryState} :
@@ -502,10 +689,10 @@ theorem MemoryState.storeTmp5_storeTmp5_self {m : MemoryState} (h01 : t0.id ≠ 
   simp only [storeTmp5, storeWv]
   -- each second store moved down to the first, which it replaces
   rw [storeAt_comm (d h04.symm), storeAt_comm (d h03.symm), storeAt_comm (d h02.symm),
-    storeAt_comm (d h01.symm), storeAt_storeAt_same, storeAt_comm (d h14.symm),
-    storeAt_comm (d h13.symm), storeAt_comm (d h12.symm), storeAt_storeAt_same,
-    storeAt_comm (d h24.symm), storeAt_comm (d h23.symm), storeAt_storeAt_same,
-    storeAt_comm (d h34.symm), storeAt_storeAt_same, storeAt_storeAt_same]
+    storeAt_comm (d h01.symm), storeAt_storeAt_self, storeAt_comm (d h14.symm),
+    storeAt_comm (d h13.symm), storeAt_comm (d h12.symm), storeAt_storeAt_self,
+    storeAt_comm (d h24.symm), storeAt_comm (d h23.symm), storeAt_storeAt_self,
+    storeAt_comm (d h34.symm), storeAt_storeAt_self, storeAt_storeAt_self]
 
 /-- A point stored twice at the same place: the second. -/
 theorem MemoryState.storeQuad5_storeQuad5_self {m : MemoryState} {p : Pointer}
@@ -521,14 +708,14 @@ theorem MemoryState.storeQuad5_storeQuad5_self {m : MemoryState} {p : Pointer}
   rw [storeAt_comm ((d0 128#64 (by decide) (by decide)).symm),
     storeAt_comm ((d0 96#64 (by decide) (by decide)).symm),
     storeAt_comm ((d0 64#64 (by decide) (by decide)).symm),
-    storeAt_comm ((d0 32#64 (by decide) (by decide)).symm), storeAt_storeAt_same,
+    storeAt_comm ((d0 32#64 (by decide) (by decide)).symm), storeAt_storeAt_self,
     storeAt_comm (d 128#64 32#64 (by decide) (by decide) (by decide)),
     storeAt_comm (d 96#64 32#64 (by decide) (by decide) (by decide)),
-    storeAt_comm (d 64#64 32#64 (by decide) (by decide) (by decide)), storeAt_storeAt_same,
+    storeAt_comm (d 64#64 32#64 (by decide) (by decide) (by decide)), storeAt_storeAt_self,
     storeAt_comm (d 128#64 64#64 (by decide) (by decide) (by decide)),
-    storeAt_comm (d 96#64 64#64 (by decide) (by decide) (by decide)), storeAt_storeAt_same,
-    storeAt_comm (d 128#64 96#64 (by decide) (by decide) (by decide)), storeAt_storeAt_same,
-    storeAt_storeAt_same]
+    storeAt_comm (d 96#64 64#64 (by decide) (by decide) (by decide)), storeAt_storeAt_self,
+    storeAt_comm (d 128#64 96#64 (by decide) (by decide) (by decide)), storeAt_storeAt_self,
+    storeAt_storeAt_self]
 
 /-- Points in different blocks: their stores commute. -/
 theorem MemoryState.storeQuad5_comm {m : MemoryState} {p q : Pointer} (h : p.id ≠ q.id) :
@@ -670,29 +857,188 @@ theorem MemoryState.readAt_storeQuad5_of_id_ne {m : MemoryState} {p q : Pointer}
 /-! The `wl_t`s of a stored point, as loads read them. -/
 
 @[mlir_read]
-theorem MemoryState.readAt_storeQuad5_0 {m : MemoryState} (h : m.Quad5Fit p) :
+theorem MemoryState.readAt_storeQuad5_0 {m : MemoryState} (h : m.Quad5Room p) :
     (m.storeQuad5 p Q).readAt p 256 = BitVec.packLanes Q.P0 := by
   rw [← packLanes_readWv, ← congrArg Quad5.P0 (readQuad5_storeQuad5_self (P := Q) h)]; rfl
 
 @[mlir_read]
-theorem MemoryState.readAt_storeQuad5_1 {m : MemoryState} (h : m.Quad5Fit p) :
+theorem MemoryState.readAt_storeQuad5_1 {m : MemoryState} (h : m.Quad5Room p) :
     (m.storeQuad5 p Q).readAt (p.add 32#64) 256 = BitVec.packLanes Q.P1 := by
   rw [← packLanes_readWv, ← congrArg Quad5.P1 (readQuad5_storeQuad5_self (P := Q) h)]; rfl
 
 @[mlir_read]
-theorem MemoryState.readAt_storeQuad5_2 {m : MemoryState} (h : m.Quad5Fit p) :
+theorem MemoryState.readAt_storeQuad5_2 {m : MemoryState} (h : m.Quad5Room p) :
     (m.storeQuad5 p Q).readAt (p.add 64#64) 256 = BitVec.packLanes Q.P2 := by
   rw [← packLanes_readWv, ← congrArg Quad5.P2 (readQuad5_storeQuad5_self (P := Q) h)]; rfl
 
 @[mlir_read]
-theorem MemoryState.readAt_storeQuad5_3 {m : MemoryState} (h : m.Quad5Fit p) :
+theorem MemoryState.readAt_storeQuad5_3 {m : MemoryState} (h : m.Quad5Room p) :
     (m.storeQuad5 p Q).readAt (p.add 96#64) 256 = BitVec.packLanes Q.P3 := by
   rw [← packLanes_readWv, ← congrArg Quad5.P3 (readQuad5_storeQuad5_self (P := Q) h)]; rfl
 
 @[mlir_read]
-theorem MemoryState.readAt_storeQuad5_4 {m : MemoryState} (h : m.Quad5Fit p) :
+theorem MemoryState.readAt_storeQuad5_4 {m : MemoryState} (h : m.Quad5Room p) :
     (m.storeQuad5 p Q).readAt (p.add 128#64) 256 = BitVec.packLanes Q.P4 := by
   rw [← packLanes_readWv, ← congrArg Quad5.P4 (readQuad5_storeQuad5_self (P := Q) h)]; rfl
+
+/-! ### Lifetime markers -/
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readQuad5_lifetimeStart {m : MemoryState} :
+    (m.lifetimeStart q).readQuad5 p = m.readQuad5 p := by
+  simp only [readQuad5, readWv_lifetimeStart]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readQuad5_lifetimeEnd {m : MemoryState} :
+    (m.lifetimeEnd q).readQuad5 p = m.readQuad5 p := by simp only [readQuad5, readWv_lifetimeEnd]
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Fit.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.Quad5Fit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).Quad5Fit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart (hne' _), h.2.2.2.1.lifetimeStart (hne' _),
+      h.2.2.2.2.1.lifetimeStart (hne' _), h.2.2.2.2.2.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Fit.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.Quad5Fit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).Quad5Fit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd (hne' _), h.2.2.2.1.lifetimeEnd (hne' _),
+      h.2.2.2.2.1.lifetimeEnd (hne' _), h.2.2.2.2.2.lifetimeEnd (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.Quad5Room p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).Quad5Room p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart (hne' _), h.2.2.2.1.lifetimeStart (hne' _),
+      h.2.2.2.2.1.lifetimeStart (hne' _), h.2.2.2.2.2.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.Quad5Room p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).Quad5Room p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd (hne' _), h.2.2.2.1.lifetimeEnd (hne' _),
+      h.2.2.2.2.1.lifetimeEnd (hne' _), h.2.2.2.2.2.lifetimeEnd (hne' _)⟩
+
+/-! ### A callee's five temporaries, live for its call -/
+
+/-- `t0 … t4` started, `Q` stored there by a callee, then ended: an `FD_R52X5_QUAD_MUL_FAST`'s or
+`SQR_FAST`'s temporaries. -/
+def MemoryState.callTmp5 (m : MemoryState) (t0 t1 t2 t3 t4 : Pointer) (Q : Quad5) : MemoryState :=
+  ((((((((((m.lifetimeStart t0).lifetimeStart t1).lifetimeStart t2).lifetimeStart t3).lifetimeStart
+                            t4).storeTmp5
+                        t0 t1 t2 t3 t4 Q).lifetimeEnd
+                    t4).lifetimeEnd
+                t3).lifetimeEnd
+            t2).lifetimeEnd
+        t1).lifetimeEnd
+    t0
+
+@[simp, mlir_mem]
+theorem GlobalState.WF_callTmp5 {s : GlobalState} :
+    ({ s with mem := m.callTmp5 t0 t1 t2 t3 t4 Q } : GlobalState).WF ↔
+      ({ s with mem := m } : GlobalState).WF := by
+  simp [MemoryState.callTmp5, MemoryState.storeTmp5, MemoryState.storeWv]
+
+@[mlir_transport]
+theorem GlobalState.WF.callTmp5 {s : GlobalState} (h : s.WF) :
+    ({ s with mem := s.mem.callTmp5 t0 t1 t2 t3 t4 Q } : GlobalState).WF :=
+  GlobalState.WF_callTmp5.mpr h
+
+@[mlir_transport]
+theorem GlobalState.WF.callTmp5_mk {a : AllocState} {m : MemoryState}
+    (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.callTmp5 t0 t1 t2 t3 t4 Q⟩ : GlobalState).WF :=
+  GlobalState.WF.callTmp5 (s := ⟨a, m⟩) h
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.callTmp5 {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.callTmp5 t0 t1 t2 t3 t4 Q) p w := by
+  unfold MemoryState.callTmp5
+  repeat
+    first
+    | exact h
+    | apply InBounds.lifetimeEnd
+    | apply InBounds.storeTmp5
+    | apply InBounds.lifetimeStart
+
+@[mlir_mem, mlir_transport]
+theorem Room.callTmp5 {m : MemoryState} (h : Room m p w) (h0 : p.id ≠ t0.id) (h1 : p.id ≠ t1.id)
+    (h2 : p.id ≠ t2.id) (h3 : p.id ≠ t3.id) (h4 : p.id ≠ t4.id) :
+    Room (m.callTmp5 t0 t1 t2 t3 t4 Q) p w :=
+  have h' :=
+    ((((h.lifetimeStart h0).lifetimeStart h1).lifetimeStart h2).lifetimeStart h3).lifetimeStart h4
+  ((((h'.storeTmp5.lifetimeEnd h4).lifetimeEnd h3).lifetimeEnd h2).lifetimeEnd h1).lifetimeEnd h0
+
+@[mlir_mem, mlir_transport]
+theorem Fits.callTmp5 {m : MemoryState} (h : Fits m p w) (h0 : p.id ≠ t0.id) (h1 : p.id ≠ t1.id)
+    (h2 : p.id ≠ t2.id) (h3 : p.id ≠ t3.id) (h4 : p.id ≠ t4.id) :
+    Fits (m.callTmp5 t0 t1 t2 t3 t4 Q) p w :=
+  have h' :=
+    ((((h.lifetimeStart h0).lifetimeStart h1).lifetimeStart h2).lifetimeStart h3).lifetimeStart h4
+  ((((h'.storeTmp5.lifetimeEnd h4).lifetimeEnd h3).lifetimeEnd h2).lifetimeEnd h1).lifetimeEnd h0
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Fit.callTmp5 {m : MemoryState} (h : m.Quad5Fit p) (h0 : p.id ≠ t0.id)
+    (h1 : p.id ≠ t1.id) (h2 : p.id ≠ t2.id) (h3 : p.id ≠ t3.id) (h4 : p.id ≠ t4.id) :
+    (m.callTmp5 t0 t1 t2 t3 t4 Q).Quad5Fit p :=
+  have h' :=
+    ((((h.lifetimeStart h0).lifetimeStart h1).lifetimeStart h2).lifetimeStart h3).lifetimeStart h4
+  ((((h'.storeTmp5.lifetimeEnd h4).lifetimeEnd h3).lifetimeEnd h2).lifetimeEnd h1).lifetimeEnd h0
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Quad5Room.callTmp5 {m : MemoryState} (h : m.Quad5Room p) (h0 : p.id ≠ t0.id)
+    (h1 : p.id ≠ t1.id) (h2 : p.id ≠ t2.id) (h3 : p.id ≠ t3.id) (h4 : p.id ≠ t4.id) :
+    (m.callTmp5 t0 t1 t2 t3 t4 Q).Quad5Room p :=
+  have h' :=
+    ((((h.lifetimeStart h0).lifetimeStart h1).lifetimeStart h2).lifetimeStart h3).lifetimeStart h4
+  ((((h'.storeTmp5.lifetimeEnd h4).lifetimeEnd h3).lifetimeEnd h2).lifetimeEnd h1).lifetimeEnd h0
+
+/-- A read past a call's temporaries, in another block. -/
+@[mlir_read]
+theorem MemoryState.readAt_callTmp5_of_id_ne {m : MemoryState} {q : Pointer} (h0 : t0.id ≠ q.id)
+    (h1 : t1.id ≠ q.id) (h2 : t2.id ≠ q.id) (h3 : t3.id ≠ q.id) (h4 : t4.id ≠ q.id) :
+    (m.callTmp5 t0 t1 t2 t3 t4 Q).readAt q w = m.readAt q w := by
+  simp only [callTmp5, readAt_lifetimeEnd, readAt_storeTmp5_of_id_ne h0 h1 h2 h3 h4,
+    readAt_lifetimeStart]
+
+/-- A point past a call's temporaries, in other blocks. -/
+@[mlir_read]
+theorem MemoryState.readQuad5_callTmp5_of_id_ne {m : MemoryState} {q : Pointer} (h0 : t0.id ≠ q.id)
+    (h1 : t1.id ≠ q.id) (h2 : t2.id ≠ q.id) (h3 : t3.id ≠ q.id) (h4 : t4.id ≠ q.id) :
+    (m.callTmp5 t0 t1 t2 t3 t4 Q).readQuad5 q = m.readQuad5 q := by
+  simp only [callTmp5, readQuad5_lifetimeEnd, readQuad5_storeTmp5_of_id_ne h0 h1 h2 h3 h4,
+    readQuad5_lifetimeStart]
+
+@[mlir_frame, mlir_erase]
+theorem MemoryState.eraseFrom_callTmp5 {m : MemoryState} :
+    (m.callTmp5 t0 t1 t2 t3 t4 Q).eraseFrom n = (m.eraseFrom n).callTmp5 t0 t1 t2 t3 t4 Q := by
+  simp only [callTmp5, eraseFrom_lifetimeEnd, eraseFrom_storeTmp5, eraseFrom_lifetimeStart]
+
+@[mlir_frame, mlir_erase]
+theorem MemoryState.callTmp5_eraseFrom_of_le {m : MemoryState} (h0 : n ≤ t0.id.id)
+    (h1 : n ≤ t1.id.id) (h2 : n ≤ t2.id.id) (h3 : n ≤ t3.id.id) (h4 : n ≤ t4.id.id) :
+    (m.eraseFrom n).callTmp5 t0 t1 t2 t3 t4 Q = m.eraseFrom n := by
+  simp only [callTmp5, lifetimeStart_eraseFrom_of_le, storeTmp5, storeWv, storeAt_eraseFrom_of_le,
+    lifetimeEnd_eraseFrom_of_le, h0, h1, h2, h3, h4]
+
+/-- A call's temporaries in the frame, dropped before the erase moves past them. -/
+@[mlir_erase high]
+theorem MemoryState.eraseFrom_callTmp5_of_le {m : MemoryState} (h0 : n ≤ t0.id.id)
+    (h1 : n ≤ t1.id.id) (h2 : n ≤ t2.id.id) (h3 : n ≤ t3.id.id) (h4 : n ≤ t4.id.id) :
+    (m.callTmp5 t0 t1 t2 t3 t4 Q).eraseFrom n = m.eraseFrom n := by
+  rw [eraseFrom_callTmp5, callTmp5_eraseFrom_of_le h0 h1 h2 h3 h4]
+
+-- the Fit-to-Room projections last among the transports (see `Firedancer.Common.Point`)
+attribute [-mlir_transport] MemoryState.LimbsFit.room MemoryState.PointFit.room
+
+attribute [mlir_transport] MemoryState.LimbsFit.room MemoryState.PointFit.room
+  MemoryState.Quad5Fit.room
 
 end
 

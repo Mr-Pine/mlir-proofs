@@ -23,7 +23,7 @@ section Proof
 /-- `fd_ed25519_partial_dbl` stores `spec` of the point at `a` at `r` and returns `r`; `r` may be
 `a`. Its ten temporaries and thirty `wl_permute` calls use up forty block ids. -/
 public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.Quad5Fit r) (ha : s.mem.Quad5Fit a) :
+    (hr : s.mem.Quad5Room r) (ha : s.mem.Quad5Fit a) :
     fd_ed25519_partial_dbl.call (fd_ed25519_partial_dbl.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,
