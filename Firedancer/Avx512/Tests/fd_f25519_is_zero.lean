@@ -15,7 +15,7 @@ private def pack (l : List Nat) : BitVec 512 :=
 
 /-- The result if it is `spec` of the lanes, else `none`. -/
 private def out (bytes : BitVec 512) : Option (BitVec 32) :=
-  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, bytes⟩)]⟩⟩
+  let s : GlobalState := ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 bytes)]⟩⟩
   match fd_f25519_is_zero.eval 1 (fd_f25519_is_zero.args (.value a)) s with
   | .value (some (.cons (.value v) .nil), _) =>
     if v == fd_f25519_is_zero.spec (s.mem.readVec a) then some v else none
@@ -25,15 +25,21 @@ private def out (bytes : BitVec 512) : Option (BitVec 32) :=
 #guard out 0 == some 1
 
 #guard
-  out (pack [8796093022189, 8796093022207, 8796093022207, 8796093022207, 8796093022207,
-    1099511627775]) == some 1
+  out
+      (pack
+        [8796093022189, 8796093022207, 8796093022207, 8796093022207, 8796093022207,
+          1099511627775]) ==
+    some 1
 
 -- `1`, `p + 1`, and zero with lane 7 set
 #guard out (pack [1]) == some 0
 
 #guard
-  out (pack [8796093022190, 8796093022207, 8796093022207, 8796093022207, 8796093022207,
-    1099511627775]) == some 0
+  out
+      (pack
+        [8796093022190, 8796093022207, 8796093022207, 8796093022207, 8796093022207,
+          1099511627775]) ==
+    some 0
 
 #guard out (pack [0, 0, 0, 0, 0, 0, 0, 1]) == some 0
 

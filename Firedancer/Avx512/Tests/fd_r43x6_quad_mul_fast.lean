@@ -19,7 +19,7 @@ private def z25 : Pointer :=
 
 /-- Three zeroed 64-byte blocks. -/
 private def state : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, 0⟩), (⟨2⟩, ⟨64, 0⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 0), (⟨2⟩, .ofBytes 64 0)]⟩⟩
 
 /-- Four elements in the QUAD layout: limbs `k` and `k + 3` of each in `qk`. -/
 private def quad (x y z t : Wwl) (k : Nat) : Wwl :=
@@ -41,12 +41,12 @@ private def check (xs ys : List Wwl) : Bool :=
   | .value (some .nil, s') =>
     let r := (s'.mem.readVec z03, s'.mem.readVec z14, s'.mem.readVec z25)
     r == fd_r43x6_quad_mul_fast.spec (qx 0) (qx 1) (qx 2) (qy 0) (qy 1) (qy 2) &&
-      (List.range 4).all fun e =>
-        unquad r.1 r.2.1 r.2.2 e == fd_r43x6_mul_fast.spec xs[e]! ys[e]!
+      (List.range 4).all fun e => unquad r.1 r.2.1 r.2.2 e == fd_r43x6_mul_fast.spec xs[e]! ys[e]!
   | _ => false
 
 #guard
-  check [#v[1, 2, 3, 4, 5, 6, 0, 0], #v[7, 8, 9, 10, 11, 12, 0, 0], #v[0, 0, 0, 0, 0, 1, 0, 0],
+  check
+    [#v[1, 2, 3, 4, 5, 6, 0, 0], #v[7, 8, 9, 10, 11, 12, 0, 0], #v[0, 0, 0, 0, 0, 1, 0, 0],
       #v[2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 0, 0]]
     [#v[13, 14, 15, 16, 17, 18, 0, 0], #v[1, 0, 0, 0, 0, 0, 0, 0],
       #v[2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 0, 0],

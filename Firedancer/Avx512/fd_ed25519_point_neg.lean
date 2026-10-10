@@ -33,13 +33,12 @@ def negSub (A : Quad) : Quad :=
     #v[17592186044414#64 - A.P25[0], A.P25[1], A.P25[2], 17592186044414#64 - A.P25[3],
       2199023255550#64 - A.P25[4], A.P25[5], A.P25[6], 2199023255550#64 - A.P25[7]]⟩
 
-theorem p_add_p_sub (c x : BitVec 64) : c + (c - x) = (c + c) - x := by
-  bv_decide
+theorem p_add_p_sub (c x : BitVec 64) : c + (c - x) = (c + c) - x := by bv_decide
 
 theorem laneSubFast_neg (A : Quad) : A.laneSubFast 1 0 0 1 quadP A = negSub A := by
   rcases A with ⟨a, b, c⟩
   simp only [Quad.laneSubFast, Quad.laneAddFast, negSub, quadP, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _|_|_|_|_|_|_|_|i := i
+  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -55,10 +54,11 @@ theorem fd_ed25519_point_neg.spec_eq (A : Quad) :
 /-- `fd_ed25519_point_neg` stores `spec` of the point at `a` at `r`, which is `a` itself or in
 another block, and returns `r`. -/
 public theorem fd_ed25519_point_neg.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.QuadFit r) (ha : s.mem.QuadFit a) (hsep : r = a ∨ r.id ≠ a.id) :
+    (hr : s.mem.QuadRoom r) (ha : s.mem.QuadFit a) (hsep : r = a ∨ r.id ≠ a.id) :
     fd_ed25519_point_neg.call (fd_ed25519_point_neg.args (.value r) (.value a)) s =
-      .value (.cons (.value r) .nil,
-        { s with mem := s.mem.storeQuad r (fd_ed25519_point_neg.spec (s.mem.readQuad a)) }) := by
+      .value
+        (.cons (.value r) .nil,
+          { s with mem := s.mem.storeQuad r (fd_ed25519_point_neg.spec (s.mem.readQuad a)) }) := by
   rcases hsep with rfl | hsep
   all_goals
     func_init
@@ -87,10 +87,12 @@ public theorem fd_ed25519_point_neg.call_eq (r a : Pointer) (s : GlobalState) (h
     step_pattern using runBodyFrom_foldUnsignedStoreRun'
     finish_block
     rw [hS, MemoryState.storeAt_03_14_twice hr.1, fd_ed25519_point_neg.spec_eq]
-  · have e : negSub (S₀.mem.readQuad r) = ⟨n03, n14, n25⟩ := by rw [hn03, hn14, hn25]; rfl
+  · have e : negSub (S₀.mem.readQuad r) = ⟨n03, n14, n25⟩ := by
+      rw [hn03, hn14, hn25]; rfl
     rw [e, _hu]
     rfl
-  · have e : negSub (S₀.mem.readQuad a) = ⟨n03, n14, n25⟩ := by rw [hn03, hn14, hn25]; rfl
+  · have e : negSub (S₀.mem.readQuad a) = ⟨n03, n14, n25⟩ := by
+      rw [hn03, hn14, hn25]; rfl
     rw [e, _hu]
     rfl
 

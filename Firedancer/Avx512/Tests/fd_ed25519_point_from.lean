@@ -17,8 +17,8 @@ private def vec (k : Nat) : BitVec 512 :=
 private def state : GlobalState :=
   ⟨⟨6⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨64, vec 1⟩), (⟨3⟩, ⟨64, vec 2⟩), (⟨4⟩, ⟨64, vec 3⟩),
-          (⟨5⟩, ⟨64, vec 4⟩)]⟩⟩
+        [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 64 (vec 1)), (⟨3⟩, .ofBytes 64 (vec 2)),
+          (⟨4⟩, .ofBytes 64 (vec 3)), (⟨5⟩, .ofBytes 64 (vec 4))]⟩⟩
 
 -- `r` is returned and holds `spec` of the four elements
 #guard

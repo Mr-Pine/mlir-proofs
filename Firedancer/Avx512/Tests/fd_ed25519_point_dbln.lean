@@ -19,11 +19,12 @@ private def aBytes : BitVec 1536 :=
 
 /-- `a` holding `aBytes`, `r` zero. -/
 private def state : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨192, aBytes⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 192 aBytes)]⟩⟩
 
 /-- `r` holds `spec` of the point at `a` and `n`, and `r` is returned. -/
 private def check (n : Nat) : Bool :=
-  match fd_ed25519_point_dbln.eval 10
+  match
+    fd_ed25519_point_dbln.eval 10
       (fd_ed25519_point_dbln.args (.value r) (.value a) (.value (BitVec.ofNat 32 n))) state with
   | .value (some (.cons (.value p) .nil), s') =>
     let P := s'.mem.readQuad r

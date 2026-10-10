@@ -5,8 +5,8 @@ public import MLIR.Semantics.Effectful.Memory.Fits
 public import Firedancer.Avx512.Common.Wwl
 
 /-! A `wwl_t` (an `fd_f25519_t`, 64 bytes) and a `wv_t` (32 bytes) in memory: read and store
-functions in the shape the steps produce, and their lemmas for the step tactics. An object's fit
-predicate is the plain `Fits m p 512` (`256`), which the framework already transports. -/
+functions in the shape the steps produce, and their lemmas for the step tactics. An object's
+predicates are the plain `Fits`/`Room m p 512` (`256`), which the framework already transports. -/
 
 namespace MLIR
 
@@ -28,8 +28,7 @@ def MemoryState.storeVec (m : MemoryState) (p : Pointer) (v : Wwl) : MemoryState
 
 /-- The lanes of a 512-bit read. -/
 theorem MemoryState.readVec_eq_of_readAt {m : MemoryState} (h : m.readAt p 512 = x) :
-    m.readVec p = Vector.ofFn fun i => Ty.extractVecElem 8 64 i x := by
-  rw [readVec, h]
+    m.readVec p = Vector.ofFn fun i => Ty.extractVecElem 8 64 i x := by rw [readVec, h]
 
 /-- Lanes stored and read back. -/
 @[simp]
@@ -60,31 +59,66 @@ theorem GlobalState.WF_storeVec {s : GlobalState} :
       ({ s with mem := m } : GlobalState).WF := by
   simp [MemoryState.storeVec]
 
-/-- `storeVec` keeps every block and its length. -/
+/-- `storeVec` keeps every block, its length and lifetime. -/
 @[simp, mlir_state]
-theorem Fits.storeVec_iff {m : MemoryState} : Fits (m.storeVec q v) p w ↔ Fits m p w := by
+theorem Room.storeVec_iff {m : MemoryState} : Room (m.storeVec q v) p w ↔ Room m p w := by
   simp [MemoryState.storeVec]
 
+/-- `storeVec` keeps every block and its length. -/
+@[simp, mlir_state]
+theorem InBounds.storeVec_iff {m : MemoryState} :
+    InBounds (m.storeVec q v) p w ↔ InBounds m p w := by simp [MemoryState.storeVec]
+
+/-- `storeVec` keeps known bits known. -/
 @[mlir_mem, mlir_transport]
 theorem Fits.storeVec {m : MemoryState} (h : Fits m p w) : Fits (m.storeVec q v) p w :=
-  Fits.storeVec_iff.mpr h
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem Room.storeVec {m : MemoryState} (h : Room m p w) : Room (m.storeVec q v) p w :=
+  Room.storeVec_iff.mpr h
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeVec {m : MemoryState} (h : InBounds m p w) : InBounds (m.storeVec q v) p w :=
+  InBounds.storeVec_iff.mpr h
+
+/-- Lanes stored where there is room are known. -/
+@[mlir_fresh, mlir_mem]
+theorem Fits.storeVec_self {m : MemoryState} (h : Room m p 512) : Fits (m.storeVec p v) p 512 :=
+  Fits.storeAt_self h
+
+/-- Lanes stored where there is room stay known past the next store (a callee's two outputs),
+where the steps only take `storeVec_self` at the last store. -/
+@[mlir_fresh]
+theorem Fits.storeVec_self_storeVec {m : MemoryState} (h : Room m p 512) :
+    Fits ((m.storeVec p v).storeVec q v') p 512 :=
+  (Fits.storeVec_self h).storeVec
+
+@[inherit_doc storeVec_self_storeVec, mlir_fresh]
+theorem Fits.storeVec_self_storeVec₂ {m : MemoryState} (h : Room m p 512) :
+    Fits (((m.storeVec p v).storeVec q₁ v₁).storeVec q₂ v₂) p 512 :=
+  (Fits.storeVec_self h).storeVec.storeVec
+
+@[inherit_doc storeVec_self_storeVec, mlir_fresh]
+theorem Fits.storeVec_self_storeVec₃ {m : MemoryState} (h : Room m p 512) :
+    Fits ((((m.storeVec p v).storeVec q₁ v₁).storeVec q₂ v₂).storeVec q₃ v₃) p 512 :=
+  (Fits.storeVec_self h).storeVec.storeVec.storeVec
 
 /-- A read of the stored lanes. -/
 @[mlir_mem, mlir_read]
-theorem MemoryState.readAt_storeVec_self {m : MemoryState} (h : Fits m p 512) :
+theorem MemoryState.readAt_storeVec_self {m : MemoryState} (h : InBounds m p 512) :
     (m.storeVec p v).readAt p 512 = BitVec.packLanes v :=
   readAt_storeAt_self h _
 
 /-- A read disjoint from the stored lanes. -/
 @[mlir_mem, mlir_read]
 theorem MemoryState.readAt_storeVec_disjoint {m : MemoryState}
-    (h : (Range.of p 512).Disjoint (Range.of q w)) :
-    (m.storeVec p v).readAt q w = m.readAt q w :=
+    (h : (Range.of p 512).Disjoint (Range.of q w)) : (m.storeVec p v).readAt q w = m.readAt q w :=
   readAt_storeAt_disjoint h _
 
-/-- Lanes stored where they fit read back. -/
+/-- Lanes stored in bounds read back. -/
 @[mlir_state, mlir_frame, mlir_read]
-theorem MemoryState.readVec_storeVec_self {m : MemoryState} (h : Fits m p 512) :
+theorem MemoryState.readVec_storeVec_self {m : MemoryState} (h : InBounds m p 512) :
     (m.storeVec p v).readVec p = v :=
   readVec_packLanes (readAt_storeVec_self h)
 
@@ -124,8 +158,18 @@ theorem GlobalState.WF.storeVec_allocaPtr {s : GlobalState} (h : s.WF) :
 /-- Reading lanes elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
 theorem MemoryState.readVec_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n).mem.readVec p = s.mem.readVec p := by
+    (s.alloca n d).mem.readVec p = s.mem.readVec p := by
   simp only [readVec, readAt, GlobalState.getElem?_alloca hne]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readVec_lifetimeStart {m : MemoryState} :
+    (m.lifetimeStart q).readVec p = m.readVec p := by simp only [readVec, readAt_lifetimeStart]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readVec_lifetimeEnd {m : MemoryState} :
+    (m.lifetimeEnd q).readVec p = m.readVec p := by simp only [readVec, readAt_lifetimeEnd]
 
 /-- Lane `k` of a field-element global's bits: lane `k` of its vector. -/
 theorem extractVecElem_flatBits (lit : ⟦Ty.array 1 (.struct [.vec 8 64])⟧ᵣ)

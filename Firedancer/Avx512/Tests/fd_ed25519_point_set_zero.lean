@@ -11,7 +11,7 @@ private def r : Pointer :=
 
 /-- One 192-byte block for `r`, holding junk. -/
 private def state : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, BitVec.ofNat 1536 (2 ^ 1530 - 12345)⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 (BitVec.ofNat 1536 (2 ^ 1530 - 12345)))]⟩⟩
 
 -- `r` is returned and holds `spec`
 #guard

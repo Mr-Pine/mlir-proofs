@@ -8,6 +8,7 @@ public import Firedancer.Avx512.fd_r43x6_quad_sqr_fast
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
 import Std.Data.ExtHashMap.Lemmas
+import Firedancer.Common.Memory
 
 /-! Points in memory: `fd_ed25519_point_t`'s `FD_R43X6_QUAD`, three vectors of eight 64-bit lanes
 at byte offsets 0, 64, 128, read and stored as a whole. -/
@@ -55,9 +56,10 @@ def Quad.laneSubFast (S : Quad) (i0 i1 i2 i3 : Nat) (P Q : Quad) : Quad :=
 /-- `FD_R43X6_QUAD_PERMUTE( D, imm0,imm1,imm2,imm3, S )`: coordinate `j` of `D` is coordinate
 `immj` of `S`. -/
 def Quad.permute (i0 i1 i2 i3 : Nat) (S : Quad) : Quad :=
-  let p := wwl (BitVec.ofNat 64 i0) (BitVec.ofNat 64 i1) (BitVec.ofNat 64 i2) (BitVec.ofNat 64 i3)
-    (BitVec.ofNat 64 (4 + i0)) (BitVec.ofNat 64 (4 + i1)) (BitVec.ofNat 64 (4 + i2))
-    (BitVec.ofNat 64 (4 + i3))
+  let p :=
+    wwl (BitVec.ofNat 64 i0) (BitVec.ofNat 64 i1) (BitVec.ofNat 64 i2) (BitVec.ofNat 64 i3)
+      (BitVec.ofNat 64 (4 + i0)) (BitVec.ofNat 64 (4 + i1)) (BitVec.ofNat 64 (4 + i2))
+      (BitVec.ofNat 64 (4 + i3))
   ⟨wwl_permute p S.P03, wwl_permute p S.P14, wwl_permute p S.P25⟩
 
 /-- `FD_R43X6_QUAD_FOLD_UNSIGNED( R, P )`. -/
@@ -174,8 +176,10 @@ abbrev m4340 : Wwl :=
 /-- `FD_R43X6_QUAD_FOLD_UNSIGNED` as compiled: `19 Ph25` as a product, the sums in the code's
 operand order. -/
 def Quad.foldUnsignedC (P : Quad) : Quad :=
-  ⟨wwl_add (wwl_pack_halves (wwl_mul (wwl_shru_vector P.P25 s4340) (wwl_bcast 19#64)) 1
-        (wwl_shru_vector P.P25 s4340) 0) (wwl_and P.P03 (Vector.replicate 8 8796093022207#64)),
+  ⟨wwl_add
+      (wwl_pack_halves (wwl_mul (wwl_shru_vector P.P25 s4340) (wwl_bcast 19#64)) 1
+        (wwl_shru_vector P.P25 s4340) 0)
+      (wwl_and P.P03 (Vector.replicate 8 8796093022207#64)),
     wwl_add (wwl_and P.P14 (Vector.replicate 8 8796093022207#64))
       (wwl_shru_vector P.P03 (Vector.replicate 8 43#64)),
     wwl_add (wwl_and P.P25 m4340) (wwl_shru_vector P.P14 (Vector.replicate 8 43#64))⟩
@@ -217,8 +221,9 @@ def Quad.foldSignedC' (P : Quad) : Quad :=
   let h25 := wwl_shr_vector d25 s4340
   ⟨wwl_add (wwl_add (wwl_pack_halves (wwl_mul h25 (wwl_bcast 19#64)) 1 h25 0) bias03)
       (wwl_and d03 (Vector.replicate 8 8796093022207#64)),
-    wwl_add (wwl_add (wwl_and d14 (Vector.replicate 8 8796093022207#64))
-      (Vector.replicate 8 1048576#64)) h03,
+    wwl_add
+      (wwl_add (wwl_and d14 (Vector.replicate 8 8796093022207#64)) (Vector.replicate 8 1048576#64))
+      h03,
     wwl_add (wwl_add h14 (Vector.replicate 8 1048576#64)) (wwl_and d25 m4340)⟩
 
 /-- `X` as `FD_R43X6_QUAD_UNPACK` gives it: six limbs, then two zero lanes. -/
@@ -255,7 +260,15 @@ abbrev MemoryState.QuadFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 192 ≤ 2 ^ 64 ∧
     Fits m p 512 ∧ Fits m (p.add 64#64) 512 ∧ Fits m (p.add 128#64) 512
 
-attribute [mlir_mem] MemoryState.QuadFit
+/-- Room for a point at `p` (an output), and its offsets do not wrap. -/
+abbrev MemoryState.QuadRoom (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 192 ≤ 2 ^ 64 ∧
+    Room m p 512 ∧ Room m (p.add 64#64) 512 ∧ Room m (p.add 128#64) 512
+
+attribute [mlir_mem] MemoryState.QuadFit MemoryState.QuadRoom
+
+theorem MemoryState.QuadFit.room {m : MemoryState} (h : m.QuadFit p) : m.QuadRoom p :=
+  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.room⟩
 
 /-! ### Lanes -/
 
@@ -264,30 +277,31 @@ set_option hygiene false in
 `rw` or `rfl` on such lanes can unfold the `BitVec` literals for minutes. -/
 macro "wwl_lanes" : tactic =>
   `(tactic|
-      simp only [wwl_add, wwl_sub, wwl_and, wwv_add_if, wwl_shru, wwl_shru_vector, wwl_pack_halves,
-        wwl_mul, wwl_shl, wwl_shr, wwl_shr_vector, wwl_shl_vector, wwl_permute, wwl_bcast, wwl,
-        quadMask, Vector.getElem_ofFn, Fin.getElem_fin,
-        Vector.getElem_replicate, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ,
-        List.getElem_cons_zero, BitVec.toNat_ofNat, Nat.reduceMod, Nat.reducePow, m43, m40,
-        BitVec.reduceToNat, BitVec.reduceGetLsb, Nat.reduceAdd, Nat.reduceMul, Nat.reduceSub,
-        Nat.reduceLT, Bool.false_eq_true, ↓reduceIte, ↓reduceDIte, decide_true, decide_false])
+    simp only [wwl_add, wwl_sub, wwl_and, wwv_add_if, wwl_shru, wwl_shru_vector, wwl_pack_halves,
+      wwl_mul, wwl_shl, wwl_shr, wwl_shr_vector, wwl_shl_vector, wwl_permute, wwl_bcast, wwl,
+      quadMask, Vector.getElem_ofFn, Fin.getElem_fin, Vector.getElem_replicate, Vector.getElem_mk,
+      List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero, BitVec.toNat_ofNat,
+      Nat.reduceMod, Nat.reducePow, m43, m40, BitVec.reduceToNat, BitVec.reduceGetLsb,
+      Nat.reduceAdd, Nat.reduceMul, Nat.reduceSub, Nat.reduceLT, Bool.false_eq_true, ↓reduceIte,
+      ↓reduceDIte, decide_true, decide_false])
 
 set_option hygiene false in
 /-- `quad_lanes`: a `Quad` equation of lane operations, lane by lane. -/
 macro "quad_lanes" : tactic =>
-  `(tactic| (
-    simp only [Quad.permute, Quad.laneAddFast, Quad.laneSubFast, Quad.addSel, Quad.subSel,
-      Quad.perm4, quadP, Quad.mk.injEq, Nat.reduceAdd]
-    refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _|_|_|_|_|_|_|_|i := i
-    all_goals
-      first
-      | omega
-      | try simp only [wwl_add_sel, wwl_sub_sel, wwl_perm4, Bool.cond_true, Bool.cond_false]
-        wwl_lanes
+  `(tactic|
+    ( simp only [Quad.permute, Quad.laneAddFast, Quad.laneSubFast, Quad.addSel, Quad.subSel,
+        Quad.perm4, quadP, Quad.mk.injEq, Nat.reduceAdd]
+      refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+      all_goals
         first
-        | done
-        | simp only [add_sub_comm', add_self_eq_shl, BitVec.shiftLeft_zero,
-            BitVec.ofNat_eq_ofNat]))
+        | omega
+        | try simp only [wwl_add_sel, wwl_sub_sel, wwl_perm4, Bool.cond_true, Bool.cond_false]
+          wwl_lanes
+          first
+          | done
+          |
+            simp only [add_sub_comm', add_self_eq_shl, BitVec.shiftLeft_zero,
+              BitVec.ofNat_eq_ofNat]))
 
 /-- Bit `i` of packed lanes: bit `i % 64` of lane `i / 64`. -/
 theorem BitVec.getLsbD_packLanes (v : Vector (BitVec 64) 8) (hi : i < 512) :
@@ -395,8 +409,7 @@ theorem zipWith_sub_nsw_wrap (x y : ⟦.vec 8 64⟧ᵣ)
 
 /-! ### The fold as compiled -/
 
-theorem foldUnsigned_lane (x : BitVec 64) : x + ((x <<< 1) + (x <<< 4)) = x * 19#64 := by
-  bv_decide
+theorem foldUnsigned_lane (x : BitVec 64) : x + ((x <<< 1) + (x <<< 4)) = x * 19#64 := by bv_decide
 
 theorem mul19_add_mask_no_overflow (x y : BitVec 64) :
     (x >>> 40 * 19#64).saddOverflow (y &&& 8796093022207#64) = false ∧
@@ -421,7 +434,7 @@ theorem mask40_add_shr43_no_overflow (x y : BitVec 64) :
 theorem Quad.foldUnsigned_eq (P : Quad) : P.foldUnsigned = P.foldUnsignedC := by
   rcases P with ⟨a, b, c⟩
   simp only [Quad.foldUnsigned, Quad.foldUnsignedC, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _|_|_|_|_|_|_|_|i := i
+  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -434,13 +447,15 @@ theorem Quad.foldUnsigned_eq (P : Quad) : P.foldUnsigned = P.foldUnsignedC := by
 theorem fold_ok03 (c a : Wwl) :
     ∀ i : Fin 8,
       (wwl_pack_halves (wwl_mul (wwl_shru_vector c s4340) (wwl_bcast 19#64)) 1
-            (wwl_shru_vector c s4340) 0)[i].saddOverflow
-          (wwl_and a (Vector.replicate 8 8796093022207#64))[i] = false ∧
+                  (wwl_shru_vector c s4340) 0)[i].saddOverflow
+            (wwl_and a (Vector.replicate 8 8796093022207#64))[i] =
+          false ∧
         (wwl_pack_halves (wwl_mul (wwl_shru_vector c s4340) (wwl_bcast 19#64)) 1
-            (wwl_shru_vector c s4340) 0)[i].uaddOverflow
-          (wwl_and a (Vector.replicate 8 8796093022207#64))[i] = false := by
+                  (wwl_shru_vector c s4340) 0)[i].uaddOverflow
+            (wwl_and a (Vector.replicate 8 8796093022207#64))[i] =
+          false := by
   intro ⟨i, hi⟩
-  obtain _|_|_|_|_|_|_|_|i := i
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -453,7 +468,7 @@ theorem fold_ok (m a b : Wwl) (hm : m = Vector.replicate 8 8796093022207#64 ∨ 
         (wwl_and a m)[i].uaddOverflow (wwl_shru_vector b (Vector.replicate 8 43#64))[i] =
           false := by
   intro ⟨i, hi⟩
-  rcases hm with rfl | rfl <;> obtain _|_|_|_|_|_|_|_|i := i
+  rcases hm with rfl | rfl <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -462,15 +477,15 @@ theorem fold_ok (m a b : Wwl) (hm : m = Vector.replicate 8 8796093022207#64 ∨ 
 
 /-! ### The signed fold as compiled -/
 
-theorem sub_bias (x : BitVec 64) : x - 1048576#64 = x + 18446744073708503040#64 := by
-  bv_decide
+theorem sub_bias (x : BitVec 64) : x - 1048576#64 = x + 18446744073708503040#64 := by bv_decide
 
 /-! The signed fold's lanes, C's against the compiled. -/
 
 theorem foldSigned_lane03 (a c : BitVec 64) :
     (a - 159383552 &&& 8796093022207#64) +
         ((c - 1048576).sshiftRight 40 +
-            ((c - 1048576).sshiftRight 40 <<< 1 + (c - 1048576).sshiftRight 40 <<< 4) + 159383552) =
+          ((c - 1048576).sshiftRight 40 <<< 1 + (c - 1048576).sshiftRight 40 <<< 4) +
+          159383552) =
       (a + 18446744073550168064#64 &&& 8796093022207#64) + 159383552#64 +
         (c + 18446744073708503040#64).sshiftRight 40 * 19#64 := by
   bv_decide
@@ -508,7 +523,7 @@ theorem foldSigned_lane25 (b c : BitVec 64) :
 theorem Quad.foldSigned_eq (P : Quad) : P.foldSigned = P.foldSignedC := by
   rcases P with ⟨a, b, c⟩
   simp only [Quad.foldSigned, Quad.foldSignedC, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _|_|_|_|_|_|_|_|i := i
+  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   -- `P03`
   iterate 4
     · wwl_lanes
@@ -540,7 +555,7 @@ theorem mask_add_bias03_ok (d : Wwl) :
       (wwl_and d (Vector.replicate 8 8796093022207#64))[i].saddOverflow bias03[i] = false ∧
         (wwl_and d (Vector.replicate 8 8796093022207#64))[i].uaddOverflow bias03[i] = false := by
   intro ⟨i, hi⟩
-  obtain _|_|_|_|_|_|_|_|i := i
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -552,7 +567,7 @@ theorem shr_add_bias_ok (d s : Wwl) (hs : s = Vector.replicate 8 43#64 ∨ s = s
     ∀ i : Fin 8,
       (wwl_shr_vector d s)[i].saddOverflow (Vector.replicate 8 1048576#64)[i] = false := by
   intro ⟨i, hi⟩
-  rcases hs with rfl | rfl <;> obtain _|_|_|_|_|_|_|_|i := i
+  rcases hs with rfl | rfl <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -564,11 +579,15 @@ theorem shr43_add_bias_add_mask_ok (d e m : Wwl)
     (hm : m = Vector.replicate 8 8796093022207#64 ∨ m = m4340) :
     ∀ i : Fin 8,
       (wwl_add (wwl_shr_vector d (Vector.replicate 8 43#64))
-            (Vector.replicate 8 1048576#64))[i].saddOverflow (wwl_and e m)[i] = false ∧
+                  (Vector.replicate 8 1048576#64))[i].saddOverflow
+            (wwl_and e m)[i] =
+          false ∧
         (wwl_add (wwl_shr_vector d (Vector.replicate 8 43#64))
-            (Vector.replicate 8 1048576#64))[i].uaddOverflow (wwl_and e m)[i] = false := by
+                  (Vector.replicate 8 1048576#64))[i].uaddOverflow
+            (wwl_and e m)[i] =
+          false := by
   intro ⟨i, hi⟩
-  rcases hm with rfl | rfl <;> obtain _|_|_|_|_|_|_|_|i := i
+  rcases hm with rfl | rfl <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -589,11 +608,13 @@ theorem Quad.foldSignedC_eq' (P : Quad) : P.foldSignedC = P.foldSignedC' := by
 theorem mask_add_bias_ok (d : Wwl) :
     ∀ i : Fin 8,
       (wwl_and d (Vector.replicate 8 8796093022207#64))[i].saddOverflow
-          (Vector.replicate 8 1048576#64)[i] = false ∧
+            (Vector.replicate 8 1048576#64)[i] =
+          false ∧
         (wwl_and d (Vector.replicate 8 8796093022207#64))[i].uaddOverflow
-          (Vector.replicate 8 1048576#64)[i] = false := by
+            (Vector.replicate 8 1048576#64)[i] =
+          false := by
   intro ⟨i, hi⟩
-  obtain _|_|_|_|_|_|_|_|i := i
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -604,10 +625,11 @@ theorem mask_add_bias_ok (d : Wwl) :
 theorem mask_add_bias_add_shr_ok (d e : Wwl) :
     ∀ i : Fin 8,
       (wwl_add (wwl_and e (Vector.replicate 8 8796093022207#64))
-          (Vector.replicate 8 1048576#64))[i].saddOverflow
-        (wwl_shr_vector d (Vector.replicate 8 43#64))[i] = false := by
+                (Vector.replicate 8 1048576#64))[i].saddOverflow
+          (wwl_shr_vector d (Vector.replicate 8 43#64))[i] =
+        false := by
   intro ⟨i, hi⟩
-  obtain _|_|_|_|_|_|_|_|i := i
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -659,14 +681,11 @@ def Quad.perm4 (i0 i1 i2 i3 : Nat) (P : Quad) : Quad :=
 
 end Firedancer.Avx512
 
-theorem add_sub_comm' (a b c : BitVec 64) : a + (b - c) = a - c + b := by
-  bv_decide
+theorem add_sub_comm' (a b c : BitVec 64) : a + (b - c) = a - c + b := by bv_decide
 
-theorem add_self_eq_shl (x : BitVec 64) : x + x = x <<< 1 := by
-  bv_decide
+theorem add_self_eq_shl (x : BitVec 64) : x + x = x <<< 1 := by bv_decide
 
-theorem Quad.permute_1120 (P : Quad) : P.permute 1 1 2 0 = P.perm4 1 1 2 0 := by
-  quad_lanes
+theorem Quad.permute_1120 (P : Quad) : P.permute 1 1 2 0 = P.perm4 1 1 2 0 := by quad_lanes
 
 /-- `Z` doubled, as the code does it: shifted left by one. -/
 theorem Quad.laneAddFast_0010_self (P : Quad) :
@@ -676,35 +695,30 @@ theorem Quad.laneAddFast_0010_self (P : Quad) :
         wwl_shl_vector P.P25 #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64]⟩ := by
   quad_lanes
 
-theorem Quad.permute_1032 (P : Quad) : P.permute 1 0 3 2 = P.perm4 1 0 3 2 := by
-  quad_lanes
+theorem Quad.permute_1032 (P : Quad) : P.permute 1 0 3 2 = P.perm4 1 0 3 2 := by quad_lanes
 
 /-! ### Bounds on folded lanes -/
 
 theorem fold_lane_lt (x y : BitVec 64) :
-    x >>> 40 * 19#64 + (y &&& 8796093022207#64) < 17592186044416#64 := by
-  bv_decide
+    x >>> 40 * 19#64 + (y &&& 8796093022207#64) < 17592186044416#64 := by bv_decide
 
 theorem fold_lane_lt' (x y : BitVec 64) :
-    x >>> 43 + (y &&& 8796093022207#64) < 17592186044416#64 := by
-  bv_decide
+    x >>> 43 + (y &&& 8796093022207#64) < 17592186044416#64 := by bv_decide
 
 theorem fold_lane_lt14 (x y : BitVec 64) :
-    (y &&& 8796093022207#64) + x >>> 43 < 17592186044416#64 := by
-  bv_decide
+    (y &&& 8796093022207#64) + x >>> 43 < 17592186044416#64 := by bv_decide
 
 theorem fold_lane_lt25 (x y : BitVec 64) :
-    (y &&& 1099511627775#64) + x >>> 43 < 17592186044416#64 := by
-  bv_decide
+    (y &&& 1099511627775#64) + x >>> 43 < 17592186044416#64 := by bv_decide
 
 /-- The unsigned fold's lanes are below `2^44`. -/
 theorem Quad.foldUnsignedC_lt {P : Quad} {a b c : Wwl} (h : P.foldUnsignedC = ⟨a, b, c⟩) :
-    (∀ i : Fin 8, a[i] < 17592186044416#64) ∧ (∀ i : Fin 8, b[i] < 17592186044416#64) ∧
-      ∀ i : Fin 8, c[i] < 17592186044416#64 := by
+    (∀ i : Fin 8, a[i] < 17592186044416#64) ∧
+      (∀ i : Fin 8, b[i] < 17592186044416#64) ∧ ∀ i : Fin 8, c[i] < 17592186044416#64 := by
   rcases P with ⟨p, q, r⟩
   simp only [Quad.foldUnsignedC, Quad.mk.injEq] at h
   obtain ⟨rfl, rfl, rfl⟩ := h
-  refine ⟨?_, ?_, ?_⟩ <;> intro ⟨i, hi⟩ <;> obtain _|_|_|_|_|_|_|_|i := i
+  refine ⟨?_, ?_, ?_⟩ <;> intro ⟨i, hi⟩ <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -714,7 +728,7 @@ theorem Quad.foldUnsignedC_lt {P : Quad} {a b c : Wwl} (h : P.foldUnsignedC = �
 theorem wwl_perm4_lt {x : Wwl} {B : BitVec 64} (h : ∀ i : Fin 8, x[i] < B) (i0 i1 i2 i3 : Nat) :
     ∀ i : Fin 8, (wwl_perm4 i0 i1 i2 i3 x)[i] < B := by
   intro ⟨i, hi⟩
-  obtain _|_|_|_|_|_|_|_|i := i
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -723,12 +737,10 @@ theorem wwl_perm4_lt {x : Wwl} {B : BitVec 64} (h : ∀ i : Fin 8, x[i] < B) (i0
       exact h ⟨_, Nat.mod_lt _ (by decide)⟩
 
 theorem sub_lane_ok {a b : BitVec 64} (ha : a < 17592186044416#64) (hb : b < 17592186044416#64) :
-    a.ssubOverflow b = false := by
-  bv_decide
+    a.ssubOverflow b = false := by bv_decide
 
 theorem sub_add_lane_ok {a b c : BitVec 64} (ha : a < 17592186044416#64)
-    (hb : b < 17592186044416#64) (hc : c < 17592186044416#64) :
-    (a - b).saddOverflow c = false := by
+    (hb : b < 17592186044416#64) (hc : c < 17592186044416#64) : (a - b).saddOverflow c = false := by
   bv_decide
 
 theorem wwl_perm4_lt_of_eq {x v : Wwl} {B : BitVec 64} {i0 i1 i2 i3 : Nat}
@@ -741,21 +753,24 @@ theorem sub_lt_ok {x y : Wwl} (hx : ∀ i : Fin 8, x[i] < 17592186044416#64)
   fun i => sub_lane_ok (hx i) (hy i)
 
 theorem add_lane_ok {a c : BitVec 64} (ha : a < 17592186044416#64) (hc : c < 17592186044416#64) :
-    a.saddOverflow c = false := by
-  bv_decide
+    a.saddOverflow c = false := by bv_decide
 
 theorem shr40_mul19_no_overflow (x : BitVec 64) :
-    (x >>> 40).smulOverflow 19#64 = false ∧ (x >>> 40).umulOverflow 19#64 = false := by
-  bv_decide
+    (x >>> 40).smulOverflow 19#64 = false ∧ (x >>> 40).umulOverflow 19#64 = false := by bv_decide
 
 /-- A signed carry by 40 times `19`: no signed overflow. -/
 theorem sshr40_mul19_no_overflow (x : BitVec 64) :
-    (x.sshiftRight 40).smulOverflow 19#64 = false := by
-  bv_decide
+    (x.sshiftRight 40).smulOverflow 19#64 = false := by bv_decide
 
 /-! ### Fit -/
 
 theorem MemoryState.QuadFit.no_wrap {m : MemoryState} (h : m.QuadFit p) {off : BitVec 64}
+    (hoff : off.toNat ≤ 128) : ¬p.offset.uaddOverflow off := by
+  have := h.1
+  simp only [BitVec.uaddOverflow, decide_eq_true_eq]
+  omega
+
+theorem MemoryState.QuadRoom.no_wrap {m : MemoryState} (h : m.QuadRoom p) {off : BitVec 64}
     (hoff : off.toNat ≤ 128) : ¬p.offset.uaddOverflow off := by
   have := h.1
   simp only [BitVec.uaddOverflow, decide_eq_true_eq]
@@ -773,10 +788,10 @@ theorem MemoryState.QuadFit.fits_25 {m : MemoryState} (h : m.QuadFit p) :
   h.2.2.2
 
 /-- `P14` and `P25` together, as `memset` writes them. -/
-theorem MemoryState.QuadFit.fits_14_25 {m : MemoryState} (h : m.QuadFit p) :
-    Fits m (p.add 64#64) 1024 := by
-  obtain ⟨blk, hblk, hsz⟩ := h.2.2.2
-  refine ⟨blk, hblk, ?_⟩
+theorem MemoryState.QuadRoom.room_14_25 {m : MemoryState} (h : m.QuadRoom p) :
+    Room m (p.add 64#64) 1024 := by
+  obtain ⟨blk, hblk, hl, hsz⟩ := h.2.2.2
+  refine ⟨blk, hblk, hl, ?_⟩
   have h1 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 64#64) (by decide))
   have h2 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 128#64) (by decide))
   simp only [BitVec.toNat_ofNat] at h1 h2
@@ -788,8 +803,18 @@ theorem MemoryState.QuadFit.storeAt {m : MemoryState} {x : BitVec w} (h : m.Quad
   ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.storeAt⟩
 
 @[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.storeAt {m : MemoryState} {x : BitVec w} (h : m.QuadRoom q) :
+    (m.storeAt p x).QuadRoom q :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.storeAt⟩
+
+@[mlir_mem, mlir_transport]
 theorem MemoryState.QuadFit.storeVec {m : MemoryState} (h : m.QuadFit q) :
     (m.storeVec p v).QuadFit q :=
+  h.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.storeVec {m : MemoryState} (h : m.QuadRoom q) :
+    (m.storeVec p v).QuadRoom q :=
   h.storeAt
 
 @[mlir_mem, mlir_transport]
@@ -797,19 +822,78 @@ theorem Fits.storeQuad {m : MemoryState} (h : Fits m p w) : Fits (m.storeQuad q 
   (h.storeAt.storeAt.storeAt : Fits (((m.storeAt _ _).storeAt _ _).storeAt _ _) p w)
 
 @[mlir_mem, mlir_transport]
+theorem Room.storeQuad {m : MemoryState} (h : Room m p w) : Room (m.storeQuad q P) p w :=
+  (h.storeAt.storeAt.storeAt : Room (((m.storeAt _ _).storeAt _ _).storeAt _ _) p w)
+
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeQuad {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeQuad q P) p w :=
+  (h.storeAt.storeAt.storeAt : InBounds (((m.storeAt _ _).storeAt _ _).storeAt _ _) p w)
+
+@[mlir_mem, mlir_transport]
 theorem MemoryState.QuadFit.storeQuad {m : MemoryState} (h : m.QuadFit q) :
     (m.storeQuad p P).QuadFit q :=
   (h.storeAt.storeAt.storeAt : (((m.storeAt _ _).storeAt _ _).storeAt _ _).QuadFit q)
 
 @[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.storeQuad {m : MemoryState} (h : m.QuadRoom q) :
+    (m.storeQuad p P).QuadRoom q :=
+  (h.storeAt.storeAt.storeAt : (((m.storeAt _ _).storeAt _ _).storeAt _ _).QuadRoom q)
+
+/-- A point stored where there is room is known. -/
+@[mlir_fresh, mlir_mem]
+theorem MemoryState.QuadFit.storeQuad_self {m : MemoryState} (h : m.QuadRoom p) :
+    (m.storeQuad p P).QuadFit p :=
+  ⟨h.1, (Fits.storeAt_self h.2.1).storeAt.storeAt, (Fits.storeAt_self h.2.2.1.storeAt).storeAt,
+    Fits.storeAt_self h.2.2.2.storeAt.storeAt⟩
+
+/-- A point stored vector by vector where there is room is known, as a store pattern leaves it. -/
+@[mlir_fresh, mlir_mem]
+theorem MemoryState.QuadFit.storeAt_quad_self {m : MemoryState} {a b c : BitVec 512}
+    (h : m.QuadRoom p) :
+    (((m.storeAt p a).storeAt (p.add 64#64) b).storeAt (p.add 128#64) c).QuadFit p :=
+  ⟨h.1, (Fits.storeAt_self h.2.1).storeAt.storeAt, (Fits.storeAt_self h.2.2.1.storeAt).storeAt,
+    Fits.storeAt_self h.2.2.2.storeAt.storeAt⟩
+
+@[mlir_mem, mlir_transport]
 theorem MemoryState.QuadFit.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.QuadFit q) :
-    (s.alloca n).mem.QuadFit q :=
+    (s.alloca n d).mem.QuadFit q :=
+  ⟨h.1, h.2.1.alloca hwf, h.2.2.1.alloca hwf, h.2.2.2.alloca hwf⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.QuadRoom q) :
+    (s.alloca n d).mem.QuadRoom q :=
   ⟨h.1, h.2.1.alloca hwf, h.2.2.1.alloca hwf, h.2.2.2.alloca hwf⟩
 
 @[mlir_transport]
 theorem MemoryState.QuadFit.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
     (h : s.mem.QuadFit q) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).QuadFit q :=
   ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.addBlock hwf⟩
+
+@[mlir_transport]
+theorem MemoryState.QuadRoom.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
+    (h : s.mem.QuadRoom q) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).QuadRoom q :=
+  ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.addBlock hwf⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadFit.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.QuadFit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).QuadFit p :=
+  ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart hne, h.2.2.2.lifetimeStart hne⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadFit.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.QuadFit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).QuadFit p :=
+  ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd hne, h.2.2.2.lifetimeEnd hne⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.QuadRoom p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).QuadRoom p :=
+  ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart hne, h.2.2.2.lifetimeStart hne⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.QuadRoom p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).QuadRoom p :=
+  ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd hne, h.2.2.2.lifetimeEnd hne⟩
 
 /-- A 192-byte block from its start holds one point. -/
 theorem MemoryState.QuadFit.of_fits {m : MemoryState} (h : Fits m p 1536) (ho : p.offset = 0) :
@@ -818,8 +902,20 @@ theorem MemoryState.QuadFit.of_fits {m : MemoryState} (h : Fits m p 1536) (ho : 
     simp only [BitVec.uaddOverflow, ho, decide_eq_true_eq]
     simp
     omega
-  exact ⟨by simp [ho], h.mono (by omega), Fits.add_of_le (hov _ (by decide)) (by decide) h,
-    Fits.add_of_le (hov _ (by decide)) (by decide) h⟩
+  exact
+    ⟨by simp [ho], h.mono (by omega), Fits.add_of_le (hov _ (by decide)) (by decide) h,
+      Fits.add_of_le (hov _ (by decide)) (by decide) h⟩
+
+/-- A live 192-byte block from its start has room for one point. -/
+theorem MemoryState.QuadRoom.of_room {m : MemoryState} (h : Room m p 1536) (ho : p.offset = 0) :
+    m.QuadRoom p := by
+  have hov (off : BitVec 64) (hoff : off.toNat ≤ 128) : ¬p.offset.uaddOverflow off := by
+    simp only [BitVec.uaddOverflow, ho, decide_eq_true_eq]
+    simp
+    omega
+  exact
+    ⟨by simp [ho], h.mono (by omega), Room.add_of_le (hov _ (by decide)) (by decide) h,
+      Room.add_of_le (hov _ (by decide)) (by decide) h⟩
 
 /-! ### State -/
 
@@ -851,9 +947,8 @@ theorem MemoryState.readQuad_storeQuad_of_id_ne {m : MemoryState} {p q : Pointer
   have h1 (k : BitVec 64) : (Range.of p 512).Disjoint (Range.of (q.add k) 512) :=
     Or.inl (by simpa [Range.of, Pointer.add] using h)
   have h2 : (Range.of p 512).Disjoint (Range.of q 512) := Or.inl (by simpa [Range.of] using h)
-  simp only [MemoryState.readQuad, MemoryState.storeQuad, MemoryState.readVec,
-    MemoryState.storeVec, MemoryState.readAt_storeAt_disjoint,
-    h', h0, h1, h2]
+  simp only [MemoryState.readQuad, MemoryState.storeQuad, MemoryState.readVec, MemoryState.storeVec,
+    MemoryState.readAt_storeAt_disjoint, h', h0, h1, h2]
 
 @[mlir_read]
 theorem MemoryState.readQuad_storeAt_of_id_ne {m : MemoryState} {p q : Pointer} {x : BitVec w}
@@ -861,8 +956,7 @@ theorem MemoryState.readQuad_storeAt_of_id_ne {m : MemoryState} {p q : Pointer} 
   have h' (k : BitVec 64) : (Range.of p w).Disjoint (Range.of (q.add k) 512) :=
     Or.inl (by simpa [Range.of, Pointer.add] using h)
   have h2 : (Range.of p w).Disjoint (Range.of q 512) := Or.inl (by simpa [Range.of] using h)
-  simp only [MemoryState.readQuad, MemoryState.readVec, MemoryState.readAt_storeAt_disjoint, h',
-    h2]
+  simp only [MemoryState.readQuad, MemoryState.readVec, MemoryState.readAt_storeAt_disjoint, h', h2]
 
 theorem Range.disjoint_quad {p : Pointer} {a b : Nat} (hp : p.offset.toNat + 192 ≤ 2 ^ 64)
     (ha : a ≤ 128) (hb : b ≤ 128) (hab : a + 64 ≤ b ∨ b + 64 ≤ a) :
@@ -878,18 +972,17 @@ theorem Range.disjoint_quad {p : Pointer} {a b : Nat} (hp : p.offset.toNat + 192
 theorem Pointer.add_zero_quad (p : Pointer) : p.add (BitVec.ofNat 64 0) = p := by simp [Pointer.add]
 
 @[mlir_read]
-theorem MemoryState.readQuad_storeQuad_self {m : MemoryState} {p : Pointer} (h : m.QuadFit p) :
+theorem MemoryState.readQuad_storeQuad_self {m : MemoryState} {p : Pointer} (h : m.QuadRoom p) :
     (m.storeQuad p P).readQuad p = P := by
   have d01 := Range.disjoint_quad h.1 (a := 0) (b := 64) (by omega) (by omega) (by omega)
   have d02 := Range.disjoint_quad h.1 (a := 0) (b := 128) (by omega) (by omega) (by omega)
   have d12 := Range.disjoint_quad h.1 (a := 64) (b := 128) (by omega) (by omega) (by omega)
   rw [Pointer.add_zero_quad] at d01 d02
-  simp only [MemoryState.readQuad, MemoryState.storeQuad, MemoryState.readVec,
-    MemoryState.storeVec]
+  simp only [MemoryState.readQuad, MemoryState.storeQuad, MemoryState.readVec, MemoryState.storeVec]
   rw [MemoryState.readAt_storeAt_disjoint d02.symm, MemoryState.readAt_storeAt_disjoint d01.symm,
-    MemoryState.readAt_storeAt_self h.fits_03, MemoryState.readAt_storeAt_disjoint d12.symm,
-    MemoryState.readAt_storeAt_self (h.fits_14.storeAt),
-    MemoryState.readAt_storeAt_self (h.fits_25.storeAt.storeAt)]
+    MemoryState.readAt_storeAt_self h.2.1.inBounds, MemoryState.readAt_storeAt_disjoint d12.symm,
+    MemoryState.readAt_storeAt_self h.2.2.1.inBounds.storeAt,
+    MemoryState.readAt_storeAt_self h.2.2.2.inBounds.storeAt.storeAt]
   simp only [Ty.extractVecElem_packLanes]
   rcases P with ⟨a, b, c⟩
   congr <;> ext i hi <;> simp
@@ -897,10 +990,22 @@ theorem MemoryState.readQuad_storeQuad_self {m : MemoryState} {p : Pointer} (h :
 /-- A point elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
 theorem MemoryState.readQuad_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n).mem.readQuad p = s.mem.readQuad p := by
+    (s.alloca n d).mem.readQuad p = s.mem.readQuad p := by
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add] using hne
   simp only [MemoryState.readQuad, MemoryState.readVec, MemoryState.readAt,
     GlobalState.getElem?_alloca hne, GlobalState.getElem?_alloca (hne' _)]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readQuad_lifetimeStart {m : MemoryState} :
+    (m.lifetimeStart q).readQuad p = m.readQuad p := by
+  simp only [MemoryState.readQuad, MemoryState.readVec_lifetimeStart]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readQuad_lifetimeEnd {m : MemoryState} :
+    (m.lifetimeEnd q).readQuad p = m.readQuad p := by
+  simp only [MemoryState.readQuad, MemoryState.readVec_lifetimeEnd]
 
 @[mlir_read]
 theorem MemoryState.readQuad_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} (h : p.id ≠ b) :
@@ -915,29 +1020,10 @@ theorem MemoryState.readQuad_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} 
 theorem MemoryState.storeAt_append {m : MemoryState} {p : Pointer} {x : BitVec w} {y : BitVec v}
     {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 = w) :
     m.storeAt p (y ++ x) = (m.storeAt p x).storeAt (p.add off) y := by
-  have hid : (p.add off).id = p.id := rfl
-  cases h : m[p.id]? with
-  | none =>
-    simp [MemoryState.storeAt, h]
-  | some blk =>
-    rcases m with ⟨mm⟩
-    simp only [MemoryState.getElem?_eq] at h
-    have h2 : (⟨mm⟩ : MemoryState).storeAt p x =
-        ⟨mm.insert p.id { blk with bytes := spliceBits blk.bytes p.offsetInBits x }⟩ := by
-      simp [MemoryState.storeAt, MemoryState.getElem?_eq, h]
-    rw [h2]
-    simp only [MemoryState.storeAt, MemoryState.getElem?_eq, h, hid,
-      Std.ExtHashMap.getElem?_insert_self, MemoryState.mk.injEq]
-    apply Std.ExtHashMap.ext_getElem?
-    intro k
-    simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
-    split
-    · congr 2
-      apply BitVec.eq_of_getLsbD_eq
-      intro i hi
-      simp only [getLsbD_spliceBits, Pointer.offsetInBits_add hov, BitVec.getLsbD_append]
-      grind
-    · rfl
+  have h :=
+    MemoryState.storeAt_storeAt_append (m := m) (x := x) (y := y) (k := off.toNat)
+      (by simpa using hov) (by omega) off.isLt
+  simpa using h.symm
 
 /-- `memset` of 128 zero bytes at a point's `P14`: its `P14` and `P25` zeroed. -/
 theorem MemoryState.storeAt_zero_14_25 {m : MemoryState} {p : Pointer}
@@ -957,46 +1043,24 @@ theorem MemoryState.storeAt_zero_14_25 {m : MemoryState} {p : Pointer}
 
 /-- A second store to the same range replaces the first. -/
 theorem MemoryState.storeAt_storeAt_same {m : MemoryState} {p : Pointer} {x y : BitVec w} :
-    (m.storeAt p x).storeAt p y = m.storeAt p y := by
-  cases h : m[p.id]? with
-  | none =>
-    simp [MemoryState.storeAt, h]
-  | some blk =>
-    rcases m with ⟨mm⟩
-    simp only [MemoryState.getElem?_eq] at h
-    simp only [MemoryState.storeAt, MemoryState.getElem?_eq, h,
-      Std.ExtHashMap.getElem?_insert_self, spliceBits_spliceBits_self, MemoryState.mk.injEq]
-    apply Std.ExtHashMap.ext_getElem?
-    intro k
-    simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
-    split <;> rfl
+    (m.storeAt p x).storeAt p y = m.storeAt p y :=
+  MemoryState.storeAt_storeAt_self
 
 /-- Stores to disjoint ranges commute. -/
 theorem MemoryState.storeAt_swap {m : MemoryState} {p q : Pointer} {x : BitVec v} {y : BitVec w}
     (h : (Range.of p v).Disjoint (Range.of q w)) :
     (m.storeAt p x).storeAt q y = (m.storeAt q y).storeAt p x := by
-  rcases m with ⟨mm⟩
   by_cases hid : p.id = q.id
   · simp only [Range.Disjoint, Range.of, hid, ne_eq, not_true_eq_false, false_or] at h
-    cases hb : mm[q.id]? with
-    | none => simp [MemoryState.storeAt, MemoryState.getElem?_eq, hid, hb]
-    | some blk =>
-      simp only [MemoryState.storeAt, MemoryState.getElem?_eq, hid, hb,
-        Std.ExtHashMap.getElem?_insert_self, MemoryState.mk.injEq]
-      rw [spliceBits_comm_of_disjoint _ _ _ _ _ (by omega)]
-      apply Std.ExtHashMap.ext_getElem?
-      intro a
-      simp only [Std.ExtHashMap.getElem?_insert]
-      split <;> rfl
-  · have hqp : q.id ≠ p.id := Ne.symm hid
-    cases hp : mm[p.id]? <;> cases hq : mm[q.id]? <;>
-      simp only [MemoryState.storeAt, MemoryState.getElem?_eq, hp, hq,
-        Std.ExtHashMap.getElem?_insert, beq_iff_eq, hid, hqp, ite_false]
+    simp only [MemoryState.storeAt, MemoryState.storeDef, hid,
+      MemoryState.modifyBlock_modifyBlock_self]
     congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro a
-    simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
-    grind
+    funext blk
+    simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
+    exact
+      ⟨heq_of_eq (spliceBits_comm_of_disjoint _ _ _ _ _ (by omega)),
+        heq_of_eq (spliceBits_comm_of_disjoint _ _ _ _ _ (by omega))⟩
+  · exact MemoryState.modifyBlock_comm hid
 
 /-- `P03` and `P14` stored twice, then `P25`: the second stores. -/
 theorem MemoryState.storeAt_03_14_twice {m : MemoryState} {p : Pointer}
@@ -1013,7 +1077,8 @@ theorem MemoryState.storeAt_03_14_twice {m : MemoryState} {p : Pointer}
 theorem MemoryState.storeAt_quad_twice {m : MemoryState} {p : Pointer}
     (h : p.offset.toNat + 192 ≤ 2 ^ 64) {a b c x y z : BitVec 512} :
     (((((m.storeAt p a).storeAt (p.add 64#64) b).storeAt (p.add 128#64) c).storeAt p x).storeAt
-          (p.add 64#64) y).storeAt (p.add 128#64) z =
+            (p.add 64#64) y).storeAt
+        (p.add 128#64) z =
       ((m.storeAt p x).storeAt (p.add 64#64) y).storeAt (p.add 128#64) z := by
   have d20 := Range.disjoint_quad h (a := 128) (b := 0) (by omega) (by omega) (by omega)
   have d21 := Range.disjoint_quad h (a := 128) (b := 64) (by omega) (by omega) (by omega)
@@ -1039,9 +1104,10 @@ theorem MemoryState.storeQuad_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id.
 section Patterns
 
 attribute [-mlir_operation] zipWith_eq_ofFn
-attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap
-  zipWith_mul_wrap zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap
-  zipWith_add_nsw_nuw_wrap zipWith_sub_nsw_wrap
+
+attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_wrap zipWith_mul_wrap
+  zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap zipWith_add_nsw_nuw_wrap
+  zipWith_sub_nsw_wrap
 
 /-! ### `FD_R43X6_QUAD_FOLD_UNSIGNED` as compiled, a pattern -/
 
@@ -1051,7 +1117,8 @@ lanes 4-7), the low bits `l03 l14 l25` (`mk43`, `mk4340` hold the masks), `p`'s 
 bottom half into `c`. -/
 def foldUnsignedRun
     (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14 l25 r25 :
-      Dst Γ (.vec 8 64)) : List (Instr Γ) :=
+      Dst Γ (.vec 8 64)) :
+    List (Instr Γ) :=
   [.binop (.vector (.lshr false)) h03 (.val x03.i x03.h) (.val sh43.i sh43.h),
     .binop (.vector (.lshr false)) h14 (.val x14.i x14.h) (.val sh43.i sh43.h),
     .binop (.vector (.lshr false)) h25 (.val x25.i x25.h) (.val sh4340.i sh4340.h),
@@ -1080,13 +1147,14 @@ theorem runBodyFrom_foldUnsignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫
     (hbody :
       blk.body.drop pos =
         foldUnsignedRun x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14 l25
-            r25 ++ rest)
+            r25 ++
+          rest)
     (hR :
-      E ⊨ [x03 := X03, x14 := X14, x25 := X25, sh43 := Vector.replicate 8 43#64,
-        sh4340 := #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
-        mk43 := Vector.replicate 8 8796093022207#64,
-        mk4340 := #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
-          1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64]])
+      E ⊨ [x03 := X03, x14 := X14, x25 := X25, sh43 := Vector.replicate 8 43#64, sh4340 :=
+        #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64], mk43 :=
+        Vector.replicate 8 8796093022207#64, mk4340 :=
+        #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64, 1099511627775#64,
+          1099511627775#64, 1099511627775#64, 1099511627775#64]])
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes)
     (hd :
       [x03.i, x14.i, x25.i, sh43.i, sh4340.i, k19.i, mk43.i, mk4340.i, h03.i, h14.i, h25.i, p.i,
@@ -1104,17 +1172,21 @@ theorem runBodyFrom_foldUnsignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫
   step_pure with transparent uh03
   step_pure with transparent uh14
   step_pure with transparent uh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shru_vector, shr40_mul19_no_overflow]
-    with transparent up
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shru_vector,
+    shr40_mul19_no_overflow] with transparent up
   step_pure with ul03
   step_pure with uc
-  have huc' : uc =
+  have huc' :
+    uc =
       wwl_pack_halves (wwl_mul (wwl_shru_vector X25 s4340) (wwl_bcast 19#64)) 1
         (wwl_shru_vector X25 s4340) 0 := by
     rw [huc]
     ext i hi : 1
-    obtain _|_|_|_|_|_|_|_|i := i
-    all_goals first | omega | wwl_lanes
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+    all_goals
+      first
+      | omega
+      | wwl_lanes
   have hok03 := fold_ok03 X25 X03
   rw [← hul03, ← huc'] at hok03
   step_pure with uf03
@@ -1134,8 +1206,10 @@ theorem runBodyFrom_foldUnsignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫
 
 /-- `foldUnsignedRun` with each result stored as it is formed: `r03` at `q`, `r14` at `g1`
 (`q + 64`, by a `getelementptr`), `r25` at `g2` (`q + 128`). -/
-def foldUnsignedStoreRun (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14
-    l25 r25 : Dst Γ (.vec 8 64)) (q : Reg Γ .ptr) (g1 g2 : Dst Γ .ptr) : List (Instr Γ) :=
+def foldUnsignedStoreRun
+    (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14 l25 r25 :
+      Dst Γ (.vec 8 64))
+    (q : Reg Γ .ptr) (g1 g2 : Dst Γ .ptr) : List (Instr Γ) :=
   [.binop (.vector (.lshr false)) h03 (.val x03.i x03.h) (.val sh43.i sh43.h),
     .binop (.vector (.lshr false)) h14 (.val x14.i x14.h) (.val sh43.i sh43.h),
     .binop (.vector (.lshr false)) h25 (.val x25.i x25.h) (.val sh4340.i sh4340.h),
@@ -1144,15 +1218,12 @@ def foldUnsignedStoreRun (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p 
     .binop (.shufflevector #v[some 4, some 5, some 6, some 7, some 8, some 9, some 10, some 11]) c
       (.val p.i p.h) (.val h25.i h25.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r03 (.val c.i c.h) (.val l03.i l03.h),
-    .store q (.val r03.i r03.h),
-    .binop (.vector .and) l14 (.val x14.i x14.h) (.val mk43.i mk43.h),
+    .store q (.val r03.i r03.h), .binop (.vector .and) l14 (.val x14.i x14.h) (.val mk43.i mk43.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r14 (.val l14.i l14.h) (.val h03.i h03.h),
-    .unop (.gepConst 64) g1 q,
-    .store (.val g1.i g1.h) (.val r14.i r14.h),
+    .unop (.gepConst 64) g1 q, .store (.val g1.i g1.h) (.val r14.i r14.h),
     .binop (.vector .and) l25 (.val x25.i x25.h) (.val mk4340.i mk4340.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r25 (.val l25.i l25.h) (.val h14.i h14.h),
-    .unop (.gepConst 128) g2 q,
-    .store (.val g2.i g2.h) (.val r25.i r25.h)]
+    .unop (.gepConst 128) g2 q, .store (.val g2.i g2.h) (.val r25.i r25.h)]
 
 /-- Where the body at `pos` is `foldUnsignedStoreRun`, `x03 x14 x25` hold `X`, `q` the point `Q`
 and the others the constants: running on from `pos` then `g` gives `K` if it does from `pos + 16`
@@ -1160,21 +1231,21 @@ with `Quad.foldUnsignedC X` (as `u03 u14 u25`) in `r03 r14 r25` and stored at `Q
 theorem runBodyFrom_foldUnsignedStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14 l25 r25 :
       Dst Γ (.vec 8 64)}
-    {q : Reg Γ .ptr} {g1 g2 : Dst Γ .ptr}
-    {rest : List (Instr Γ)} {X03 X14 X25 : Wwl}
-    {Q : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    {q : Reg Γ .ptr} {g1 g2 : Dst Γ .ptr} {rest : List (Instr Γ)} {X03 X14 X25 : Wwl} {Q : Pointer}
+    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        foldUnsignedStoreRun x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14
-            r14 l25 r25 q g1 g2 ++ rest)
+        foldUnsignedStoreRun x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14
+            l25 r25 q g1 g2 ++
+          rest)
     (hR :
-      E ⊨ [x03 := X03, x14 := X14, x25 := X25, sh43 := Vector.replicate 8 43#64,
-        sh4340 := #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
-        mk43 := Vector.replicate 8 8796093022207#64,
-        mk4340 := #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
-          1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64]])
+      E ⊨ [x03 := X03, x14 := X14, x25 := X25, sh43 := Vector.replicate 8 43#64, sh4340 :=
+        #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64], mk43 :=
+        Vector.replicate 8 8796093022207#64, mk4340 :=
+        #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64, 1099511627775#64,
+          1099511627775#64, 1099511627775#64, 1099511627775#64]])
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes) (hq : E.read q = .value Q)
-    (hqg : q ≠ .val g1.i g1.h) (hwf : S.WF) (hQ : S.mem.QuadFit Q)
+    (hqg : q ≠ .val g1.i g1.h) (hwf : S.WF) (hQ : S.mem.QuadRoom Q)
     (hd :
       [x03.i, x14.i, x25.i, sh43.i, sh4340.i, k19.i, mk43.i, mk4340.i, h03.i, h14.i, h25.i, p.i,
           l03.i, c.i, r03.i, l14.i, r14.i, l25.i, g1.i, r25.i, g2.i].Nodup)
@@ -1183,8 +1254,8 @@ theorem runBodyFrom_foldUnsignedStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪
         (_hu : Quad.foldUnsignedC ⟨X03, X14, X25⟩ = ⟨u03, u14, u25⟩),
         (blk.runBodyFrom
               E[h03 := vh03, h14 := vh14, h25 := vh25, p := vp, l03 := vl03, c := vc, r03 :=
-                Ty.wrap u03, l14 := vl14, r14 := Ty.wrap u14, g1 := .value (Q.add 64#64),
-                l25 := vl25, r25 := Ty.wrap u25, g2 := .value (Q.add 128#64)]
+                Ty.wrap u03, l14 := vl14, r14 := Ty.wrap u14, g1 := .value (Q.add 64#64), l25 :=
+                vl25, r25 := Ty.wrap u25, g2 := .value (Q.add 128#64)]
               (pos + 16)
               { alloc := S.alloc,
                 mem :=
@@ -1197,17 +1268,21 @@ theorem runBodyFrom_foldUnsignedStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪
   step_pure with transparent uh03
   step_pure with transparent uh14
   step_pure with transparent uh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shru_vector, shr40_mul19_no_overflow]
-    with transparent up
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shru_vector,
+    shr40_mul19_no_overflow] with transparent up
   step_pure with ul03
   step_pure with uc
-  have huc' : uc =
+  have huc' :
+    uc =
       wwl_pack_halves (wwl_mul (wwl_shru_vector X25 s4340) (wwl_bcast 19#64)) 1
         (wwl_shru_vector X25 s4340) 0 := by
     rw [huc]
     ext i hi : 1
-    obtain _|_|_|_|_|_|_|_|i := i
-    all_goals first | omega | wwl_lanes
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+    all_goals
+      first
+      | omega
+      | wwl_lanes
   have hok03 := fold_ok03 X25 X03
   rw [← hul03, ← huc'] at hok03
   step_pure with uf03
@@ -1231,8 +1306,10 @@ theorem runBodyFrom_foldUnsignedStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪
   exact hK _ _ _ _ _ _ _ _ _ _ _ e
 
 /-- `foldUnsignedStoreRun` with `q + 64` and `q + 128` computed before, in `g1` and `g2`. -/
-def foldUnsignedStoreRun' (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14
-    l25 r25 : Dst Γ (.vec 8 64)) (q : Reg Γ .ptr) (g1 g2 : Dst Γ .ptr) : List (Instr Γ) :=
+def foldUnsignedStoreRun'
+    (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14 l25 r25 :
+      Dst Γ (.vec 8 64))
+    (q : Reg Γ .ptr) (g1 g2 : Dst Γ .ptr) : List (Instr Γ) :=
   [.binop (.vector (.lshr false)) h03 (.val x03.i x03.h) (.val sh43.i sh43.h),
     .binop (.vector (.lshr false)) h14 (.val x14.i x14.h) (.val sh43.i sh43.h),
     .binop (.vector (.lshr false)) h25 (.val x25.i x25.h) (.val sh4340.i sh4340.h),
@@ -1241,8 +1318,7 @@ def foldUnsignedStoreRun' (x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p
     .binop (.shufflevector #v[some 4, some 5, some 6, some 7, some 8, some 9, some 10, some 11]) c
       (.val p.i p.h) (.val h25.i h25.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r03 (.val c.i c.h) (.val l03.i l03.h),
-    .store q (.val r03.i r03.h),
-    .binop (.vector .and) l14 (.val x14.i x14.h) (.val mk43.i mk43.h),
+    .store q (.val r03.i r03.h), .binop (.vector .and) l14 (.val x14.i x14.h) (.val mk43.i mk43.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r14 (.val l14.i l14.h) (.val h03.i h03.h),
     .store (.val g1.i g1.h) (.val r14.i r14.h),
     .binop (.vector .and) l25 (.val x25.i x25.h) (.val mk4340.i mk4340.h),
@@ -1254,23 +1330,22 @@ and `Q + 128`. -/
 theorem runBodyFrom_foldUnsignedStoreRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14 r14 l25 r25 :
       Dst Γ (.vec 8 64)}
-    {q : Reg Γ .ptr} {g1 g2 : Dst Γ .ptr}
-    {rest : List (Instr Γ)} {X03 X14 X25 : Wwl}
-    {Q : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    {q : Reg Γ .ptr} {g1 g2 : Dst Γ .ptr} {rest : List (Instr Γ)} {X03 X14 X25 : Wwl} {Q : Pointer}
+    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
         foldUnsignedStoreRun' x03 x14 x25 sh43 sh4340 k19 mk43 mk4340 h03 h14 h25 p l03 c r03 l14
-            r14 l25 r25 q g1 g2 ++ rest)
+            r14 l25 r25 q g1 g2 ++
+          rest)
     (hR :
-      E ⊨ [x03 := X03, x14 := X14, x25 := X25, sh43 := Vector.replicate 8 43#64,
-        sh4340 := #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
-        mk43 := Vector.replicate 8 8796093022207#64,
-        mk4340 := #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
-          1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64]])
+      E ⊨ [x03 := X03, x14 := X14, x25 := X25, sh43 := Vector.replicate 8 43#64, sh4340 :=
+        #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64], mk43 :=
+        Vector.replicate 8 8796093022207#64, mk4340 :=
+        #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64, 1099511627775#64,
+          1099511627775#64, 1099511627775#64, 1099511627775#64]])
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes) (hq : E.read q = .value Q)
     (hg1 : E.read (.val g1.i g1.h) = .value (Q.add 64#64))
-    (hg2 : E.read (.val g2.i g2.h) = .value (Q.add 128#64))
-    (hwf : S.WF) (hQ : S.mem.QuadFit Q)
+    (hg2 : E.read (.val g2.i g2.h) = .value (Q.add 128#64)) (hwf : S.WF) (hQ : S.mem.QuadRoom Q)
     (hd :
       [x03.i, x14.i, x25.i, sh43.i, sh4340.i, k19.i, mk43.i, mk4340.i, h03.i, h14.i, h25.i, p.i,
           l03.i, c.i, r03.i, l14.i, r14.i, l25.i, g1.i, r25.i, g2.i].Nodup)
@@ -1292,17 +1367,21 @@ theorem runBodyFrom_foldUnsignedStoreRun' {blk : BasicBlock Γ tRets bp} {E : �
   step_pure with transparent uh03
   step_pure with transparent uh14
   step_pure with transparent uh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shru_vector, shr40_mul19_no_overflow]
-    with transparent up
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shru_vector,
+    shr40_mul19_no_overflow] with transparent up
   step_pure with ul03
   step_pure with uc
-  have huc' : uc =
+  have huc' :
+    uc =
       wwl_pack_halves (wwl_mul (wwl_shru_vector X25 s4340) (wwl_bcast 19#64)) 1
         (wwl_shru_vector X25 s4340) 0 := by
     rw [huc]
     ext i hi : 1
-    obtain _|_|_|_|_|_|_|_|i := i
-    all_goals first | omega | wwl_lanes
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+    all_goals
+      first
+      | omega
+      | wwl_lanes
   have hok03 := fold_ok03 X25 X03
   rw [← hul03, ← huc'] at hok03
   step_pure with uf03
@@ -1379,12 +1458,12 @@ def foldSignedRun' (x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 : Dst 
 back, the carry shifts and the low-bit masks. -/
 abbrev FoldSignedConsts (E : ⟪Γ⟫) (nb03 nb sh43 sh4340 mk43 b03 b mk4340 : Dst Γ (.vec 8 64)) :
     Prop :=
-  E ⊨ [nb03 := negBias03, nb := Vector.replicate 8 18446744073708503040#64,
-    sh43 := Vector.replicate 8 43#64,
-    sh4340 := #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
+  E ⊨ [nb03 := negBias03, nb := Vector.replicate 8 18446744073708503040#64, sh43 :=
+    Vector.replicate 8 43#64, sh4340 := #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
     mk43 := Vector.replicate 8 8796093022207#64, b03 := bias03, b := Vector.replicate 8 1048576#64,
-    mk4340 := #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
-      1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64]]
+    mk4340 :=
+    #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64, 1099511627775#64,
+      1099511627775#64, 1099511627775#64, 1099511627775#64]]
 
 /-- Where the body at `pos` is `foldSignedRun`, `x03 x14 x25` hold `X` and the others the
 constants: running on from `pos` then `g` gives `K` if it does from `pos + 17` with
@@ -1397,7 +1476,8 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
     (hbody :
       blk.body.drop pos =
         foldSignedRun x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 d03 d14 d25 h03 h14 h25
-            p l03 c e03 r03 l14 e14 r14 l25 e25 r25 ++ rest)
+            p l03 c e03 r03 l14 e14 r14 l25 e25 r25 ++
+          rest)
     (hR : E ⊨ [x03 := X03, x14 := X14, x25 := X25])
     (hC : FoldSignedConsts E nb03 nb sh43 sh4340 mk43 b03 b mk4340)
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes)
@@ -1409,9 +1489,9 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
       ∀ (vd03 vd14 vd25 vh03 vh14 vh25 vp vl03 vc ve03 vl14 ve14 vl25 ve25 : ⟦.vec 8 64⟧)
         (s03 s14 s25 : Wwl) (_hs : Quad.foldSignedC ⟨X03, X14, X25⟩ = ⟨s03, s14, s25⟩),
         (blk.runBodyFrom
-              E[d03 := vd03, d14 := vd14, d25 := vd25, h03 := vh03, h14 := vh14, h25 := vh25,
-                p := vp, l03 := vl03, c := vc, e03 := ve03, r03 := Ty.wrap s03, l14 := vl14,
-                e14 := ve14, r14 := Ty.wrap s14, l25 := vl25, e25 := ve25, r25 := Ty.wrap s25]
+              E[d03 := vd03, d14 := vd14, d25 := vd25, h03 := vh03, h14 := vh14, h25 := vh25, p :=
+                vp, l03 := vl03, c := vc, e03 := ve03, r03 := Ty.wrap s03, l14 := vl14, e14 := ve14,
+                r14 := Ty.wrap s14, l25 := vl25, e25 := ve25, r25 := Ty.wrap s25]
               (pos + 17) S >>=
             g) =
           K) :
@@ -1422,17 +1502,21 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
   step_pure with sh03
   step_pure with sh14
   step_pure with transparent sh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector, sshr40_mul19_no_overflow]
-    with transparent sp
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector,
+    sshr40_mul19_no_overflow] with transparent sp
   step_pure with sl03
   step_pure with sc03
-  have hsc03' : sc03 =
+  have hsc03' :
+    sc03 =
       wwl_pack_halves (wwl_mul (wwl_shr_vector sd25 s4340) (wwl_bcast 19#64)) 1
         (wwl_shr_vector sd25 s4340) 0 := by
     rw [hsc03]
     ext i hi : 1
-    obtain _|_|_|_|_|_|_|_|i := i
-    all_goals first | omega | wwl_lanes
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+    all_goals
+      first
+      | omega
+      | wwl_lanes
   have hok03 := mask_add_bias03_ok sd03
   rw [← hsl03] at hok03
   step_pure with se03
@@ -1452,8 +1536,8 @@ theorem runBodyFrom_foldSignedRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
   rw [← hsh14, ← hse25, ← hsl25] at hok25'
   step_pure with sf25
   have e : Quad.foldSignedC ⟨X03, X14, X25⟩ = ⟨sf03, sf14, sf25⟩ := by
-    rw [hsf03, hsf14, hsf25, hse03, hse14, hse25, hsl03, hsl14, hsl25, hsh03, hsh14, hsd03,
-      hsd14, hsd25]
+    rw [hsf03, hsf14, hsf25, hse03, hse14, hse25, hsl03, hsl14, hsl25, hsh03, hsh14, hsd03, hsd14,
+      hsd25]
     rfl
   rw [hE]
   exact hK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ e
@@ -1466,8 +1550,9 @@ theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
     {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        foldSignedRun' x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 d03 d14 d25 h03 h14
-            h25 p l03 c e03 r03 l14 e14 r14 l25 e25 r25 ++ rest)
+        foldSignedRun' x03 x14 x25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 d03 d14 d25 h03 h14 h25
+            p l03 c e03 r03 l14 e14 r14 l25 e25 r25 ++
+          rest)
     (hR : E ⊨ [x03 := X03, x14 := X14, x25 := X25])
     (hC : FoldSignedConsts E nb03 nb sh43 sh4340 mk43 b03 b mk4340)
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes)
@@ -1479,9 +1564,9 @@ theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
       ∀ (vd03 vd14 vd25 vh03 vh14 vh25 vp vl03 vc ve03 vl14 ve14 vl25 ve25 : ⟦.vec 8 64⟧)
         (s03 s14 s25 : Wwl) (_hs : Quad.foldSignedC' ⟨X03, X14, X25⟩ = ⟨s03, s14, s25⟩),
         (blk.runBodyFrom
-              E[d03 := vd03, d14 := vd14, d25 := vd25, h03 := vh03, h14 := vh14, h25 := vh25,
-                p := vp, l03 := vl03, c := vc, e03 := ve03, r03 := Ty.wrap s03, l14 := vl14,
-                e14 := ve14, r14 := Ty.wrap s14, l25 := vl25, e25 := ve25, r25 := Ty.wrap s25]
+              E[d03 := vd03, d14 := vd14, d25 := vd25, h03 := vh03, h14 := vh14, h25 := vh25, p :=
+                vp, l03 := vl03, c := vc, e03 := ve03, r03 := Ty.wrap s03, l14 := vl14, e14 := ve14,
+                r14 := Ty.wrap s14, l25 := vl25, e25 := ve25, r25 := Ty.wrap s25]
               (pos + 17) S >>=
             g) =
           K) :
@@ -1492,17 +1577,21 @@ theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
   step_pure with sh03
   step_pure with sh14
   step_pure with transparent sh25
-  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector, sshr40_mul19_no_overflow]
-    with transparent sp
+  step_pure [k19Lanes, zipWith_eq_ofFn, expandOfFn, wwl_shr_vector,
+    sshr40_mul19_no_overflow] with transparent sp
   step_pure with sl03
   step_pure with sc03
-  have hsc03' : sc03 =
+  have hsc03' :
+    sc03 =
       wwl_pack_halves (wwl_mul (wwl_shr_vector sd25 s4340) (wwl_bcast 19#64)) 1
         (wwl_shr_vector sd25 s4340) 0 := by
     rw [hsc03]
     ext i hi : 1
-    obtain _|_|_|_|_|_|_|_|i := i
-    all_goals first | omega | wwl_lanes
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+    all_goals
+      first
+      | omega
+      | wwl_lanes
   step_pure [hsc03'] with se03
   step_pure with sf03
   step_pure with sl14
@@ -1520,13 +1609,16 @@ theorem runBodyFrom_foldSignedRun' {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
   rw [← hsh14, ← hse25, ← hsl25] at hok25'
   step_pure with sf25
   have e : Quad.foldSignedC' ⟨X03, X14, X25⟩ = ⟨sf03, sf14, sf25⟩ := by
-    rw [hsf03, hsf14, hsf25, hse03, hse14, hse25, hsl03, hsl14, hsl25, hsh03, hsh14, hsd03,
-      hsd14, hsd25]
+    rw [hsf03, hsf14, hsf25, hse03, hse14, hse25, hsl03, hsl14, hsl25, hsh03, hsh14, hsd03, hsd14,
+      hsd25]
     rfl
   rw [hE]
   exact hK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ e
 
 end Patterns
+
+-- last: registered early, the transport search backtracks through it for every `Room` fact
+attribute [mlir_transport] MemoryState.QuadFit.room
 
 end
 

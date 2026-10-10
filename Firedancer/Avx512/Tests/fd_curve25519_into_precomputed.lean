@@ -16,11 +16,12 @@ private def rBytes : BitVec 1536 :=
 
 /-- `r` holding `rBytes`. -/
 private def state : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, rBytes⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 rBytes)]⟩⟩
 
 -- `r` holds `spec` of its point
 #guard
-  match fd_curve25519_into_precomputed.eval 1 (fd_curve25519_into_precomputed.args (.value r))
+  match
+    fd_curve25519_into_precomputed.eval 1 (fd_curve25519_into_precomputed.args (.value r))
       state with
   | .value (some .nil, s') =>
     let P := s'.mem.readQuad r

@@ -16,7 +16,7 @@ private def aBytes : BitVec 1536 :=
 
 /-- `r` (zeroed) and `a`. -/
 private def state : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨192, aBytes⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 192 aBytes)]⟩⟩
 
 /-- Whether `r` holds `spec` of `a`'s point after `fd_ed25519_point_neg_precomputed(r, a)`. -/
 private def check (r a : Pointer) : Bool :=

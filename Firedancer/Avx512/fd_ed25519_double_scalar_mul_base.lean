@@ -146,10 +146,10 @@ abbrev EntryRegs (tbl n1s n2s ai a2 tp : Pointer) (E : ⟪Γ⟫) : Prop :=
     4294967295#32, %1520 := 1#16, %1521 := tbl, %1522 := 0#64, %1523 := 18446744073709551615#64,
     %1524 := 0#32, %1525 := n1s, %1526 := n2s, %1527 := ai, %1528 := a2, %1529 := tp]
 
-/-- The registers the main loop reads, `i` aside. -/
-abbrev LoopRegs (tbl n1s n2s ai tp : Pointer) (E : ⟪Γ⟫) : Prop :=
+/-- The registers the main loop and the lifetimes' ends read, `i` aside. -/
+abbrev LoopRegs (tbl n1s n2s ai a2 tp : Pointer) (E : ⟪Γ⟫) : Prop :=
   E ⊨ [%1512 := 1#32, %1518 := 0#16, %1520 := 1#16, %1521 := tbl, %1522 := 0#64, %1523 :=
-    18446744073709551615#64, %1525 := n1s, %1526 := n2s, %1527 := ai, %1529 := tp]
+    18446744073709551615#64, %1525 := n1s, %1526 := n2s, %1527 := ai, %1528 := a2, %1529 := tp]
 
 attribute [local mlir_transport] TableAt.storeQuad
 
@@ -196,6 +196,17 @@ structure LoopFacts (S : GlobalState) (r tp n1s n2s ai tbl : Pointer) (w1 w2 : V
   tblA : TableAt S.mem ai 8 AI
   tblB : TableAt S.mem tbl 128 B
 
+/-- `LoopFacts` before `r` is first stored: room for `r`. -/
+structure EntryFacts (S : GlobalState) (r tp n1s n2s ai tbl : Pointer) (w1 w2 : Vector Int 256)
+    (AI B : Nat → Quad) : Prop where
+  wf : S.WF
+  roomR : S.mem.QuadRoom r
+  fitT : S.mem.QuadFit tp
+  slides1 : SlidesAt S.mem n1s w1
+  slides2 : SlidesAt S.mem n2s w2
+  tblA : TableAt S.mem ai 8 AI
+  tblB : TableAt S.mem tbl 128 B
+
 /-- `LoopFacts` after `t` and `r` are stored, the counter advanced. -/
 theorem LoopFacts.store {S : GlobalState} (h : LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B)
     (hL : Layout r tp n1s n2s ai tbl) (hn : S.alloc.nextFreeBlock ≤ n) :
@@ -211,11 +222,11 @@ theorem LoopFacts.store {S : GlobalState} (h : LoopFacts S r tp n1s n2s ai tbl w
 
 /-- `^bb8`, an iteration's start at `i`: `t = partial_dbl( r )`, then `n1slide[i]`'s add; on to
 `^bb12`. -/
-theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256) (AI : Nat → Quad)
-    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
-    (hw : -15 ≤ w1[i] ∧ w1[i] ≤ 15) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
+theorem head_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 : Vector Int 256)
+    (AI : Nat → Quad) (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat)
+    (hi : i < 256) (hw : -15 ≤ w1[i] ∧ w1[i] ≤ 15) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id) (hra : r.id ≠ ai.id)
     (hta : tp.id ≠ ai.id) (htn : tp.id ≠ n1s.id) (hn1o : n1s.offset.toNat + 512 < 2 ^ 64)
     (haio : ai.offset.toNat + 192 * 8 < 2 ^ 64) (hrv : S.mem.readQuad r = R)
@@ -223,7 +234,7 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
     (hK :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-          LoopRegs tbl n1s n2s ai tp E' →
+          LoopRegs tbl n1s n2s ai a2 tp E' →
           (E' ⊨ [%1552 := BitVec.ofNat 64 i]) →
           S' =
             { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i]⟩,
@@ -303,11 +314,11 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 : Vector Int 256)
       exact congrArg _ (MemoryState.storeQuad_readQuad_self' hr hrv).symm
 
 /-- `^bb12`: `n2slide[i]`'s add; on to `^bb16`. -/
-theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 256) (B : Nat → Quad)
-    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
-    (hw : -255 ≤ w2[i] ∧ w2[i] ≤ 255) (R T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
+theorem digit2_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w2 : Vector Int 256)
+    (B : Nat → Quad) (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat)
+    (hi : i < 256) (hw : -255 ≤ w2[i] ∧ w2[i] ≤ 255) (R T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id) (hrb : r.id ≠ tbl.id)
     (hn2o : n2s.offset.toNat + 512 < 2 ^ 64) (htbo : tbl.offset.toNat + 192 * 128 < 2 ^ 64)
     (hrv : S.mem.readQuad r = R) (htv : S.mem.readQuad tp = T) (hn2s : SlidesAt S.mem n2s w2)
@@ -315,7 +326,7 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
     (hK :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-          LoopRegs tbl n1s n2s ai tp E' →
+          LoopRegs tbl n1s n2s ai a2 tp E' →
           (E' ⊨ [%1552 := BitVec.ofNat 64 i]) →
           S' =
             { alloc := ⟨S.alloc.nextFreeBlock + digitBlocks w2[i]⟩,
@@ -395,17 +406,18 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w2 : Vector Int 25
       rw [MemoryState.storeQuad_readQuad_self' htp htv, MemoryState.storeQuad_readQuad_self' hr hrv]
 
 /-- `^bb16`: `r` a copy of `t`; then out at `i == 0`, else around at `i - 1`. -/
-theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
+theorem tail_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (T : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
+    (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (hr : S.mem.QuadFit r) (htp : S.mem.QuadFit tp) (hrt : r.id ≠ tp.id)
     (htv : S.mem.readQuad tp = T)
     (hexit :
       i = 0 →
         ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            LoopRegs tbl n1s n2s ai a2 tp E' →
             S' = { S with mem := S.mem.storeQuad r T } →
             (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S' >>= g) = K)
     (hback :
@@ -413,7 +425,7 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
         i = j + 1 →
           ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
             E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-              LoopRegs tbl n1s n2s ai tp E' →
+              LoopRegs tbl n1s n2s ai a2 tp E' →
               (E' ⊨ [%1552 := BitVec.ofNat 64 j]) →
               S' = { S with mem := S.mem.storeQuad r T } →
               (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S' >>= g) = K) :
@@ -427,7 +439,7 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
     block_init
     step_call using fd_ed25519_point_add_final_mul.call_eq
     finish_block
-    exact hexit hi0 E S hArgs (by rw [hS])
+    exact hexit hi0 E S hArgs (by env_reads) (by rw [hS])
   case isFalse =>
     have hi0 : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr fun h => hbr (by rw [h])
     block_init
@@ -438,19 +450,20 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai tp : Pointer)
     refine hback (i - 1) (by omega) E S hArgs (by env_reads) (by env_reads) (by rw [hS])
 
 /-- An iteration of the main loop at `i`: `r` and `t` stored by the adds, then `r` a copy of `t`. -/
-theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+theorem main_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int 256)
     (AI B : Nat → Quad) (hL : Layout r tp n1s n2s ai tbl)
     (hw1 : ∀ k (hk : k < 256), (-15 : Int) ≤ w1[k] ∧ w1[k] ≤ 15)
     (hw2 : ∀ k (hk : k < 256), (-255 : Int) ≤ w2[k] ∧ w2[k] ≤ 255)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (R : Quad) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i])
+    (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1552 := BitVec.ofNat 64 i])
     (hF : LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B) (hrv : S.mem.readQuad r = R)
     (hexit :
       i = 0 →
         ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            LoopRegs tbl n1s n2s ai a2 tp E' →
             S' =
               { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i] + digitBlocks w2[i]⟩,
                 mem :=
@@ -462,7 +475,7 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
         i = j + 1 →
           ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
             E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-              LoopRegs tbl n1s n2s ai tp E' →
+              LoopRegs tbl n1s n2s ai a2 tp E' →
               (E' ⊨ [%1552 := BitVec.ofNat 64 j]) →
               S' =
                 { alloc := ⟨S.alloc.nextFreeBlock + 6 + digitBlocks w1[i] + digitBlocks w2[i]⟩,
@@ -472,7 +485,7 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
               (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S' >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb8 S >>= g) = K := by
   refine
-    head_block r n1 a n2 tbl n1s n2s ai tp w1 AI g K i hi (hw1 i hi) R S E hArgs hR hRi hF.wf
+    head_block r n1 a n2 tbl n1s n2s ai a2 tp w1 AI g K i hi (hw1 i hi) R S E hArgs hR hRi hF.wf
       hF.fitR hF.fitT hL.rt hL.ra hL.ta hL.t1 hL.n1o hL.aio hrv hF.slides1 hF.tblA
       fun E₁ S₁ h₁ hR₁ hRi₁ hS₁ => ?_
   have hF₁ :=
@@ -481,15 +494,15 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
         S.alloc.nextFreeBlock + 6 + digitBlocks w1[i]) (by omega)
   have hrv₁ : S₁.mem.readQuad r = (add1 AI w1[i] R).1 := by
     rw [hS₁]
-    exact MemoryState.readQuad_storeQuad_self hF.fitR.storeQuad
+    exact MemoryState.readQuad_storeQuad_self hF.fitR.room.storeQuad
   have htv₁ : S₁.mem.readQuad tp = (add1 AI w1[i] R).2 := by
     rw [hS₁]
     dsimp only
     rw [MemoryState.readQuad_storeQuad_of_id_ne hL.rt]
-    exact MemoryState.readQuad_storeQuad_self hF.fitT
+    exact MemoryState.readQuad_storeQuad_self hF.fitT.room
   refine
-    digit2_block r n1 a n2 tbl n1s n2s ai tp w2 B g K i hi (hw2 i hi) _ _ S₁ E₁ h₁ hR₁ hRi₁ hF₁.wf
-      hF₁.fitR hF₁.fitT hL.rt hL.rb hL.n2o hL.tbo hrv₁ htv₁ hF₁.slides2 hF₁.tblB
+    digit2_block r n1 a n2 tbl n1s n2s ai a2 tp w2 B g K i hi (hw2 i hi) _ _ S₁ E₁ h₁ hR₁ hRi₁
+      hF₁.wf hF₁.fitR hF₁.fitT hL.rt hL.rb hL.n2o hL.tbo hrv₁ htv₁ hF₁.slides2 hF₁.tblB
       fun E₂ S₂ h₂ hR₂ hRi₂ hS₂ => ?_
   have hF₂ :=
     hS₂ ▸
@@ -499,10 +512,10 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     rw [hS₂]
     dsimp only
     rw [MemoryState.readQuad_storeQuad_of_id_ne hL.rt]
-    exact MemoryState.readQuad_storeQuad_self hF₁.fitT
+    exact MemoryState.readQuad_storeQuad_self hF₁.fitT.room
   refine
-      tail_block r n1 a n2 tbl n1s n2s ai tp g K i hi _ S₂ E₂ h₂ hR₂ hRi₂ hF₂.wf hF₂.fitR hF₂.fitT
-        hL.rt htv₂ (fun h0 E₃ S₃ h₃ hS₃ => hexit h0 E₃ S₃ h₃ (hS₃.trans ?_))
+      tail_block r n1 a n2 tbl n1s n2s ai a2 tp g K i hi _ S₂ E₂ h₂ hR₂ hRi₂ hF₂.wf hF₂.fitR
+        hF₂.fitT hL.rt htv₂ (fun h0 E₃ S₃ h₃ hR₃ hS₃ => hexit h0 E₃ S₃ h₃ hR₃ (hS₃.trans ?_))
         (fun j hj E₃ S₃ h₃ hR₃ hRi₃ hS₃ => hback j hj E₃ S₃ h₃ hR₃ hRi₃ (hS₃.trans ?_)) <;>
     · subst hS₂ hS₁
       dsimp only
@@ -510,19 +523,20 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
       rfl
 
 /-- The main loop from `^bb8` at `i`: `r` the ladder from `i` down, `t` some point. -/
-theorem main_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+theorem main_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int 256)
     (AI B : Nat → Quad) (hL : Layout r tp n1s n2s ai tbl)
     (hw1 : ∀ k (hk : k < 256), (-15 : Int) ≤ w1[k] ∧ w1[k] ≤ 15)
     (hw2 : ∀ k (hk : k < 256), (-255 : Int) ≤ w2[k] ∧ w2[k] ≤ 255)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) :
     ∀ i (hi : i < 256) (R : Quad) (S : GlobalState) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-        LoopRegs tbl n1s n2s ai tp E →
+        LoopRegs tbl n1s n2s ai a2 tp E →
         (E ⊨ [%1552 := BitVec.ofNat 64 i]) →
         LoopFacts S r tp n1s n2s ai tbl w1 w2 AI B →
         S.mem.readQuad r = R →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState) (T' : Quad),
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            LoopRegs tbl n1s n2s ai a2 tp E' →
             S' =
               { alloc := ⟨S.alloc.nextFreeBlock + ladderBlocks w1 w2 i hi⟩,
                 mem := (S.mem.storeQuad tp T').storeQuad r (ladder AI B w1 w2 i hi R) } →
@@ -533,16 +547,17 @@ theorem main_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
   | zero =>
     intro hi R S E hArgs hR hRi hF hrv hK
     exact
-      main_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 AI B hL hw1 hw2 g K 0 hi R S E hArgs hR hRi hF hrv
-        (fun _ E' S' h₁ hS' =>
-          hK E' S' (adds AI B w1[0] w2[0] R).2 h₁
+      main_iter r n1 a n2 tbl n1s n2s ai a2 tp w1 w2 AI B hL hw1 hw2 g K 0 hi R S E hArgs hR hRi hF
+        hrv
+        (fun _ E' S' h₁ hR' hS' =>
+          hK E' S' (adds AI B w1[0] w2[0] R).2 h₁ hR'
             (hS'.trans (by simp only [ladderBlocks, ladder, Nat.add_assoc])))
         (fun j hj => absurd hj (by omega))
   | succ j ih =>
     intro hi R S E hArgs hR hRi hF hrv hK
     refine
-      main_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 AI B hL hw1 hw2 g K (j + 1) hi R S E hArgs hR hRi
-        hF hrv (fun h => absurd h (by omega)) fun j' hj E' S' h₁ hR' hRi' hS' => ?_
+      main_iter r n1 a n2 tbl n1s n2s ai a2 tp w1 w2 AI B hL hw1 hw2 g K (j + 1) hi R S E hArgs hR
+        hRi hF hrv (fun h => absurd h (by omega)) fun j' hj E' S' h₁ hR' hRi' hS' => ?_
     obtain rfl : j = j' := by omega
     have hF' :=
       hS' ▸
@@ -550,9 +565,9 @@ theorem main_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
           S.alloc.nextFreeBlock + 6 + digitBlocks w1[j + 1] + digitBlocks w2[j + 1]) (by omega)
     refine
       ih (by omega) (adds AI B w1[j + 1] w2[j + 1] R).2 S' E' h₁ hR' hRi' hF' ?_
-        fun E'' S'' T'' h₂ hS'' => hK E'' S'' T'' h₂ (hS''.trans ?_)
+        fun E'' S'' T'' h₂ hR'' hS'' => hK E'' S'' T'' h₂ hR'' (hS''.trans ?_)
     · rw [hS']
-      exact MemoryState.readQuad_storeQuad_self hF.fitR.storeQuad
+      exact MemoryState.readQuad_storeQuad_self hF.fitR.room.storeQuad
     · subst hS'
       dsimp only
       rw [storeQuad_swap hF.fitT.1 hL.rt.symm, MemoryState.storeQuad_storeQuad_self hF.fitR.1]
@@ -562,20 +577,20 @@ theorem main_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
 
 /-- `^bb3`, the zero-digit search at `i`: on to the main loop at a non-zero digit, out after `0`,
 else around. -/
-theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+theorem skip_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int 256)
     (hn1o : n1s.offset.toNat + 512 < 2 ^ 64) (hn2o : n2s.offset.toNat + 512 < 2 ^ 64)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) (i : Nat) (hi : i < 256)
     (hd1 : (-15 : Int) ≤ w1[i] ∧ w1[i] ≤ 15) (hd2 : (-255 : Int) ≤ w2[i] ∧ w2[i] ≤ 255)
     (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
-    (hR : LoopRegs tbl n1s n2s ai tp E)
+    (hR : LoopRegs tbl n1s n2s ai a2 tp E)
     (hR' : E ⊨ [%1519 := 4294967295#32, %1524 := 0#32, %1540 := BitVec.ofNat 32 i])
     (hn1s : SlidesAt S.mem n1s w1) (hn2s : SlidesAt S.mem n2s w2)
     (hfound :
       ¬(w1[i] = 0 ∧ w2[i] = 0) →
         ∀ E' : ⟪Γ⟫,
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-            LoopRegs tbl n1s n2s ai tp E' →
+            LoopRegs tbl n1s n2s ai a2 tp E' →
             (E' ⊨ [%1552 := BitVec.ofNat 64 i]) →
             (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S >>= g) = K)
     (hnone :
@@ -583,6 +598,7 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
         i = 0 →
         ∀ E' : ⟪Γ⟫,
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+            LoopRegs tbl n1s n2s ai a2 tp E' →
             (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S >>= g) = K)
     (hback :
       w1[i] = 0 ∧ w2[i] = 0 →
@@ -590,7 +606,7 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
           i = j + 1 →
             ∀ E' : ⟪Γ⟫,
               E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-                LoopRegs tbl n1s n2s ai tp E' →
+                LoopRegs tbl n1s n2s ai a2 tp E' →
                 (E' ⊨ [%1519 := 4294967295#32, %1524 := 0#32, %1540 := BitVec.ofNat 32 j]) →
                 (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb3 S >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb3 S >>= g) = K := by
@@ -619,7 +635,10 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
       step_pure [saddOverflow_neg_one32 (show i < 2 ^ 31 by omega)]
       step_pure
       finish_block
-      case isTrue => step_loop using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
+      case isTrue =>
+        step_loop using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
+        dsimp only [LoopRegs]
+        env_reads
       case isFalse =>
         have hi0 : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr fun h => hbr (by rw [h])
         subst hS
@@ -649,7 +668,7 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     exact hfound (fun h => h1 h.1) E hArgs (by env_reads) (by env_reads)
 
 /-- The zero-digit search from `^bb3` at `i`: the main loop from `start`, or out without one. -/
-theorem skip_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 256)
+theorem skip_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int 256)
     (hw1 : ∀ k (hk : k < 256), (-15 : Int) ≤ w1[k] ∧ w1[k] ≤ 15)
     (hw2 : ∀ k (hk : k < 256), (-255 : Int) ≤ w2[k] ∧ w2[k] ≤ 255)
     (hn1o : n1s.offset.toNat + 512 < 2 ^ 64) (hn2o : n2s.offset.toNat + 512 < 2 ^ 64)
@@ -657,18 +676,19 @@ theorem skip_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β) :
     ∀ i (hi : i < 256) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-        LoopRegs tbl n1s n2s ai tp E →
+        LoopRegs tbl n1s n2s ai a2 tp E →
         (E ⊨ [%1519 := 4294967295#32, %1524 := 0#32, %1540 := BitVec.ofNat 32 i]) →
         (∀ j,
           start w1 w2 i hi = some j →
             ∀ E' : ⟪Γ⟫,
               E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
-                LoopRegs tbl n1s n2s ai tp E' →
+                LoopRegs tbl n1s n2s ai a2 tp E' →
                 (E' ⊨ [%1552 := BitVec.ofNat 64 j.val]) →
                 (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb8 S >>= g) = K) →
         (start w1 w2 i hi = none →
           ∀ E' : ⟪Γ⟫,
             E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
+              LoopRegs tbl n1s n2s ai a2 tp E' →
               (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb19 S >>= g) = K) →
         (fd_ed25519_double_scalar_mul_base.runFrom E ^bb3 S >>= g) = K := by
   intro i
@@ -676,14 +696,14 @@ theorem skip_loop (r n1 a n2 tbl n1s n2s ai tp : Pointer) (w1 w2 : Vector Int 25
   | zero =>
     intro hi E hArgs hR hR' hfound hnone
     refine
-      skip_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 hn1o hn2o g K 0 hi (hw1 0 hi) (hw2 0 hi) S E hArgs
-        hR hR' hn1s hn2s (fun h => hfound 0 (by simp [start, h]))
+      skip_iter r n1 a n2 tbl n1s n2s ai a2 tp w1 w2 hn1o hn2o g K 0 hi (hw1 0 hi) (hw2 0 hi) S E
+        hArgs hR hR' hn1s hn2s (fun h => hfound 0 (by simp [start, h]))
         (fun h _ => hnone (by simp [start, h])) fun _ j hj => absurd hj (by omega)
   | succ j ih =>
     intro hi E hArgs hR hR' hfound hnone
     refine
-      skip_iter r n1 a n2 tbl n1s n2s ai tp w1 w2 hn1o hn2o g K (j + 1) hi (hw1 _ hi) (hw2 _ hi) S E
-        hArgs hR hR' hn1s hn2s (fun h => hfound ⟨j + 1, hi⟩ (by simp [start, h]))
+      skip_iter r n1 a n2 tbl n1s n2s ai a2 tp w1 w2 hn1o hn2o g K (j + 1) hi (hw1 _ hi) (hw2 _ hi)
+        S E hArgs hR hR' hn1s hn2s (fun h => hfound ⟨j + 1, hi⟩ (by simp [start, h]))
         (fun _ h => absurd h (by omega)) fun h j' hj E' h₁ h₂ h₃ => ?_
     obtain rfl : j = j' := by omega
     have hs : start w1 w2 (j + 1) hi = start w1 w2 j (by omega) := by simp [start, h]
@@ -709,9 +729,9 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : Quad)
     (hi : i < 8) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
     (hR : EntryRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1533 := BitVec.ofNat 64 i]) (hwf : S.WF)
-    (ha2 : S.mem.QuadFit a2) (htp : S.mem.QuadFit tp)
+    (ha2 : S.mem.QuadFit a2) (htp : S.mem.QuadRoom tp)
     (hP : S.mem.QuadFit (ai.add (BitVec.ofNat 64 (192 * (i - 1)))))
-    (hQ : S.mem.QuadFit (ai.add (BitVec.ofNat 64 (192 * i))))
+    (hQ : S.mem.QuadRoom (ai.add (BitVec.ofNat 64 (192 * i))))
     (haio : ai.offset.toNat + 192 * 8 < 2 ^ 64) (htai : tp.id ≠ ai.id)
     (ha2v : S.mem.readQuad a2 = A2)
     (hPv : S.mem.readQuad (ai.add (BitVec.ofNat 64 (192 * (i - 1)))) = P)
@@ -779,10 +799,10 @@ main loop's other facts. -/
 structure TableFacts (S : GlobalState) (r tp n1s n2s ai tbl a2 : Pointer) (w1 w2 : Vector Int 256)
     (AI B : Nat → Quad) (A2 : Quad) (i : Nat) : Prop where
   wf : S.WF
-  fitR : S.mem.QuadFit r
-  fitT : S.mem.QuadFit tp
+  roomR : S.mem.QuadRoom r
+  roomT : S.mem.QuadRoom tp
   fitA2 : S.mem.QuadFit a2
-  fitAI : Fits S.mem ai (1536 * 8)
+  roomAI : Room S.mem ai (1536 * 8)
   a2v : S.mem.readQuad a2 = A2
   slides1 : SlidesAt S.mem n1s w1
   slides2 : SlidesAt S.mem n2s w2
@@ -799,10 +819,10 @@ theorem TableFacts.step {S : GlobalState}
   wf :=
     (GlobalState.WF.bump h.wf (n := S.alloc.nextFreeBlock + 18)
           (by omega)).storeQuad_mk |>.storeQuad_mk
-  fitR := h.fitR.storeQuad.storeQuad
-  fitT := h.fitT.storeQuad.storeQuad
+  roomR := h.roomR.storeQuad.storeQuad
+  roomT := h.roomT.storeQuad.storeQuad
   fitA2 := h.fitA2.storeQuad.storeQuad
-  fitAI := Fits.storeQuad (Fits.storeQuad h.fitAI)
+  roomAI := Room.storeQuad (Room.storeQuad h.roomAI)
   a2v := by
     rw [MemoryState.readQuad_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hL.aa2),
       MemoryState.readQuad_storeQuad_of_id_ne hL.ta2, h.a2v]
@@ -810,16 +830,18 @@ theorem TableFacts.step {S : GlobalState}
   slides2 := (h.slides2.storeQuad hL.t2).storeQuad (by simpa [Pointer.add_id] using hL.a2')
   tblB := (h.tblB.storeQuad hL.tb).storeQuad (by simpa [Pointer.add_id] using hL.ab)
   tblA := fun k hk => by
-    have hfit := MemoryState.QuadFit.entry h.fitAI hL.aio (show k < 8 by omega)
     have := hL.aio
-    refine ⟨hfit.storeQuad.storeQuad, ?_⟩
     rcases Nat.lt_or_ge k i with hki | hki
-    · rw [MemoryState.readQuad_storeQuad_apart (by omega) (by omega) (by omega),
+    · refine ⟨(h.tblA k hki).1.storeQuad.storeQuad, ?_⟩
+      rw [MemoryState.readQuad_storeQuad_apart (by omega) (by omega) (by omega),
         MemoryState.readQuad_storeQuad_of_id_ne (by simpa [Pointer.add_id] using hL.ta)]
       exact (h.tblA k hki).2
     · obtain rfl : k = i := by omega
-      rw [MemoryState.readQuad_storeQuad_self
-          (MemoryState.QuadFit.entry h.fitAI hL.aio hi).storeQuad]
+      have hroom :=
+        (MemoryState.QuadRoom.entry h.roomAI hL.aio hi).storeQuad (p := tp) (P :=
+          fd_ed25519_point_add_with_opts.spec A2 (aiTable A2 AI0 (k - 1)) 1#32)
+      refine ⟨MemoryState.QuadFit.storeQuad_self hroom, ?_⟩
+      rw [MemoryState.readQuad_storeQuad_self hroom]
       obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
       simp only [aiTable, Nat.add_sub_cancel]
 
@@ -848,7 +870,7 @@ theorem table_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector In
           E'.args = (args (.value r) (.value n1) (.value a) (.value n2)).get →
             EntryRegs tbl n1s n2s ai a2 tp E' →
             S'.alloc.nextFreeBlock = S.alloc.nextFreeBlock + 18 * m →
-            LoopFacts S' r tp n1s n2s ai tbl w1 w2 (aiTable A2 AI0) B →
+            EntryFacts S' r tp n1s n2s ai tbl w1 w2 (aiTable A2 AI0) B →
             S'.mem.eraseFrom N = S.mem.eraseFrom N →
             (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb1 S' >>= g) = K) →
         (fd_ed25519_double_scalar_mul_base.runFrom E ^bb2 S >>= g) = K := by
@@ -861,8 +883,8 @@ theorem table_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector In
     have hstep := hF.step (AI0 := AI0) hL hi1 hi
     refine
       table_iter r n1 a n2 tbl n1s n2s ai a2 tp A2 (aiTable A2 AI0 (i - 1)) g K i hi1 hi S E hArgs
-        hR hRi hF.wf hF.fitA2 hF.fitT (hF.tblA (i - 1) (by omega)).1
-        (MemoryState.QuadFit.entry hF.fitAI hL.aio hi) hL.aio hL.ta hF.a2v
+        hR hRi hF.wf hF.fitA2 hF.roomT (hF.tblA (i - 1) (by omega)).1
+        (MemoryState.QuadRoom.entry hF.roomAI hL.aio hi) hL.aio hL.ta hF.a2v
         (hF.tblA (i - 1) (by omega)).2 ?_ ?_
     · intro h8 E' S' h₁ h₂ hS'
       subst hS'
@@ -870,7 +892,8 @@ theorem table_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector In
       rw [show i + 1 = 8 from h8] at hstep
       exact
         hK E' _ h₁ h₂ rfl
-          ⟨hstep.wf, hstep.fitR, hstep.fitT, hstep.slides1, hstep.slides2, hstep.tblA, hstep.tblB⟩
+          ⟨hstep.wf, hstep.roomR, (MemoryState.QuadFit.storeQuad_self hF.roomT).storeQuad,
+            hstep.slides1, hstep.slides2, hstep.tblA, hstep.tblB⟩
           (eraseFrom_tableStep hNa hNt)
     · intro h8 E' S' h₁ h₂ h₃ hS'
       subst hS'
@@ -944,7 +967,7 @@ open fd_ed25519_double_scalar_mul_base Firedancer.Ref in
 at `a` at `r` and returns `r`; `r` may be any of the inputs: they are read before it is written.
 The block counter advances by `blocks`. -/
 public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.QuadFit r) (hn1 : Fits s.mem n1 (8 * 32))
+    (hwf : s.WF) (hr : s.mem.QuadRoom r) (hn1 : Fits s.mem n1 (8 * 32))
     (hn1o : ¬n1.offset.uaddOverflow 32#64) (ha : s.mem.QuadFit a) (hn2 : Fits s.mem n2 (8 * 32))
     (hn2o : ¬n2.offset.uaddOverflow 32#64) :
     fd_ed25519_double_scalar_mul_base.call
@@ -969,7 +992,7 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   obtain ⟨x2, hx2⟩ : ∃ x, S.mem.readAt n2 256 = x := ⟨_, rfl⟩
   rw [hx1, hA, hx2] at hP
   rw [hx1, hx2] at hk
-  have hr₀ : S₀.mem.QuadFit r := hS ▸ hr
+  have hr₀ : S₀.mem.QuadRoom r := hS ▸ hr
   have hA₀ : S₀.mem.readQuad a = A := hS ▸ hA
   clear hA
   block_init
@@ -997,22 +1020,22 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   step_pure
   step_call using fd_curve25519_scalar_wnaf.call_eq
   iterate 3 step_pure
-  have hai_pt := MemoryState.QuadFit.of_fits (hai_fits.mono (by decide)) hai_off
-  have ha2_pt := MemoryState.QuadFit.of_fits ha2_fits ha2_off
-  have htp_pt := MemoryState.QuadFit.of_fits htp_fits htp_off
-  clear ha2_fits htp_fits
+  have hai_pt := MemoryState.QuadRoom.of_room (hroom_ai.mono (by decide)) hai_off
+  have ha2_pt := MemoryState.QuadRoom.of_room hroom_a2 ha2_off
+  have htp_pt := MemoryState.QuadRoom.of_room hroom_tp htp_off
+  clear hroom_a2 hroom_tp hai_bounds ha2_bounds htp_bounds
   -- fd_ed25519_point_set( &ai[0], a ); fd_ed25519_point_dbln( a2, a, 1 );
   -- fd_curve25519_into_precomputed( &ai[0] );
   step_call using fd_ed25519_point_set.call_eq
   step_call using fd_ed25519_point_dbln.call_eq consuming hA
   step_call using fd_curve25519_into_precomputed.call_eq consuming hread_ai
   have hsl1 : SlidesAt S.mem n1s (fd_curve25519_scalar_wnaf.wnaf x1 4) :=
-    SlidesAt.of_readAt hn1s_fits
+    SlidesAt.of_readAt hfits_n1s
       (by
         rw [hn1s_off]; decide)
       hread_n1s
   have hsl2 : SlidesAt S.mem n2s (fd_curve25519_scalar_wnaf.wnaf x2 8) :=
-    SlidesAt.of_readAt hn2s_fits
+    SlidesAt.of_readAt hfits_n2s
       (by
         rw [hn2s_off]; decide)
       hread_n2s
@@ -1032,16 +1055,16 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
       (fd_curve25519_scalar_wnaf.wnaf x2 8)
       (aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A))
       fd_ed25519_base_point_wnaf_table.point (fd_ed25519_point_dbln.spec A 1) 1 :=
-    ⟨hwf, hr, htp_pt, ha2_pt, hai_fits, hread_a2, hsl1, hsl2, fun k hk => by
+    ⟨hwf, hr, htp_pt, ‹_›, hroom_ai, hread_a2, hsl1, hsl2, fun k hk => by
       obtain rfl : k = 0 := by omega
-      simpa [Pointer.add_zero_quad, aiTable] using And.intro hai_pt hread_ai, htblB⟩
+      simpa [Pointer.add_zero_quad, aiTable] using And.intro ‹S.mem.QuadFit ai› hread_ai, htblB⟩
   clear hread_a2 hread_ai hsl1 hsl2 htblB
   -- for( int i=1; i<WNAF_TBL_SZ; i++ ) { … }
   refine
     table_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ _ _ _ S₀.alloc.nextFreeBlock hTL (by slot_bound)
       (by slot_bound) _ _ 7 1 S E hArgs (by env_reads) (by env_reads) (by decide) (by decide)
       (by decide) hF fun E' S' h₁ h₂ halloc hLF herase => ?_
-  clear hF hwf hr htp_pt ha2_pt hai_pt hai_fits hn1 hn2 ha htbl_fits hn1s_fits hn2s_fits
+  clear hF hwf hr htp_pt ha2_pt hai_pt hroom_ai hn1 hn2 ha htbl_fits
   obtain ⟨hwf, hr, htp_pt, hsl1, hsl2, htA, htB⟩ := hLF
   dsimp only [EntryRegs] at h₂
   -- fd_ed25519_point_set_zero( r );
@@ -1061,21 +1084,34 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   have hw2 := fun k hk => (fd_curve25519_scalar_wnaf.wnaf8_digits x2 k hk).2
   -- for( i=255; i>=0; i-- ) { if( n1slide[i] || n2slide[i] ) break; }
   refine
-    skip_loop r n1 a n2 tbl n1s n2s ai tp _ _ hw1 hw2 hL.n1o hL.n2o S hsl1 hsl2 _ _ 255 (by decide)
-      E hArgs (by env_reads) (by env_reads) ?_ ?_
+    skip_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ hw1 hw2 hL.n1o hL.n2o S hsl1 hsl2 _ _ 255
+      (by decide) E hArgs (by env_reads) (by env_reads) ?_ ?_
   · -- the main loop from the first non-zero digit
     intro j hj E₂ h₁ h₂ h₃
     refine
-      main_loop r n1 a n2 tbl n1s n2s ai tp _ _ _ _ hL hw1 hw2 _ _ j.val j.isLt _ S E₂ h₁ h₂ h₃
-        ⟨hwf, hr, htp_pt, hsl1, hsl2, htA, htB⟩ hrz fun E₃ S₃ T' h₁' hS₃ => ?_
+      main_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ _ _ hL hw1 hw2 _ _ j.val j.isLt _ S E₂ h₁ h₂ h₃
+        ⟨hwf, ‹_›, htp_pt, hsl1, hsl2, htA, htB⟩ hrz fun E₃ S₃ T' h₁' hR₃ hS₃ => ?_
+    dsimp only [LoopRegs] at hR₃
+    -- the lifetimes' ends: of the objects only `r` and the state's `WF` are left
+    clear htp_pt hsl1 hsl2 htA htB hrz hTL hL
     block_init
     iterate 5 step_pure
     finish_block
     rw [← hk, ← hP, blocks_of_some hj, spec_of_some hj]
-    clear hwf hr htp_pt hsl1 hsl2 htA htB hrz hTL hL
-    subst hS₃
+    clear hwf hr
+    subst hS
     dsimp only
-    rw [MemoryState.eraseFrom_storeQuad,
+    rw [MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ n1s.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ n2s.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ ai.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ a2.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ tp.id.id by slot_bound),
+      MemoryState.eraseFrom_storeQuad,
       MemoryState.eraseFrom_storeQuad_of_le (show S₀.alloc.nextFreeBlock ≤ tp.id.id by slot_bound)]
     subst hS
     dsimp only
@@ -1086,16 +1122,28 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     erase_frame
     simp only [GlobalState.alloca, Nat.add_assoc, Nat.reduceAdd, Nat.reduceMul]
   · -- no non-zero digit: `r` is zero
-    intro hj E₂ h₁
+    intro hj E₂ h₁ hR₂
+    dsimp only [LoopRegs] at hR₂
+    clear htp_pt hsl1 hsl2 htA htB hrz hTL hL
     block_init
     iterate 5 step_pure
     finish_block
     rw [← hk, ← hP, blocks_of_none hj, spec_of_none hj]
     subst hS
     dsimp only
-    rw [MemoryState.eraseFrom_storeQuad, herase, show S'.alloc = ⟨S'.alloc.nextFreeBlock⟩ from rfl,
+    rw [MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ n1s.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ n2s.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ ai.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ a2.id.id by slot_bound),
+      MemoryState.eraseFrom_lifetimeEnd_of_le
+        (show S₀.alloc.nextFreeBlock ≤ tp.id.id by slot_bound),
+      MemoryState.eraseFrom_storeQuad, herase, show S'.alloc = ⟨S'.alloc.nextFreeBlock⟩ from rfl,
       halloc]
-    clear hwf hr htp_pt hsl1 hsl2 htA htB hrz herase halloc hTL hL h₂ hArgs h₁
+    clear hwf hr herase halloc h₂ hArgs h₁
     subst hS
     erase_frame
     simp only [GlobalState.alloca]

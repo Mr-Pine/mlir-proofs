@@ -40,7 +40,7 @@ public theorem fd_f25519_eq.call_eq (a b : Pointer) (s : GlobalState) (hwf : s.W
   step_call using fd_f25519_sub.call_eq consuming ha hb
   -- return fd_f25519_is_zero( r );
   step_call using fd_f25519_is_zero.call_eq consuming hread_r
-  clear hr_fits hread_r_readAt
+  clear hfits_r hroom_r hr_bounds hread_r_readAt
   step_pure
   finish_block
   subst hS

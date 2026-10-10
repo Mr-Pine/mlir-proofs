@@ -47,10 +47,12 @@ def fd_r43x6_quad_sqr_fast.spec (x03 x14 x25 : Wwl) : Wwl × Wwl × Wwl :=
   let q66 := wwl_shl (wwl_madd52hi (wwl_madd52hi _zz two_x03 x52) two_x14 x4z) 9
   let za03 := wwl_add (wwl_pack_halves p0a 0 p37 0) (wwl_pack_halves _zz 0 q39 0)
   let za14 := wwl_add (wwl_pack_halves p19 0 p46 0) (wwl_pack_halves q1b 0 q48 0)
-  let za25 := wwl_add (wwl_add (wwl_pack_halves p28 0 p55 0) (wwl_pack_halves q2a 0 q57 0))
-    (wwl_pack_h0_h1 _zz p55)
-  let zb03 := wwl_add (wwl_add (wwl_pack_halves p46 1 p19 1) (wwl_pack_halves q66 1 q39 1))
-    (wwl_pack_h0_h1 q66 _zz)
+  let za25 :=
+    wwl_add (wwl_add (wwl_pack_halves p28 0 p55 0) (wwl_pack_halves q2a 0 q57 0))
+      (wwl_pack_h0_h1 _zz p55)
+  let zb03 :=
+    wwl_add (wwl_add (wwl_pack_halves p46 1 p19 1) (wwl_pack_halves q66 1 q39 1))
+      (wwl_pack_h0_h1 q66 _zz)
   let zb14 := wwl_add (wwl_pack_halves p37 1 p0a 1) (wwl_pack_halves q57 1 q2a 1)
   let zb25 := wwl_add (wwl_pack_halves p28 1 _zz 1) (wwl_pack_halves q48 1 q1b 1)
   let z03 := wwl_add (wwl_add za03 (wwl_shl zb03 7)) (wwl_add (wwl_shl zb03 4) (wwl_shl zb03 3))
@@ -66,26 +68,32 @@ section Proof
 
 /-- A step's lanes, as the `Wwl` operation they are. -/
 local macro "lanes " h:ident : tactic =>
-  `(tactic| (rw [$h:ident]; ext i hi : 1; rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;>
-    simp [wwl_pack_halves, wwl_pack_h0_h1, wwl_madd52lo, wwl_madd52hi, madd52lo, madd52hi,
-      wwl_add, wwl_shl, mul24_eq_shl] <;> first | omega | ac_rfl))
+  `(tactic|
+    (rw [$h:ident]; ext i hi : 1;
+      rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;>
+        simp [wwl_pack_halves, wwl_pack_h0_h1, wwl_madd52lo, wwl_madd52hi, madd52lo, madd52hi,
+          wwl_add, wwl_shl, mul24_eq_shl] <;>
+        first
+        | omega
+        | ac_rfl))
 
 -- the 60 steps' lane identities (`lanes`) all run inside this one declaration
 set_option maxHeartbeats 1000000 in
 /-- `fd_r43x6_quad_sqr_fast` stores `spec`'s vectors at `_z03`, `_z14`, `_z25`, in that order. -/
 public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x14 x25 : Wwl)
-    (s : GlobalState) (hwf : s.WF) (h03 : Fits s.mem _z03 512) (h14 : Fits s.mem _z14 512)
-    (h25 : Fits s.mem _z25 512) :
+    (s : GlobalState) (hwf : s.WF) (h03 : Room s.mem _z03 512) (h14 : Room s.mem _z14 512)
+    (h25 : Room s.mem _z25 512) :
     fd_r43x6_quad_sqr_fast.call
         (fd_r43x6_quad_sqr_fast.args (.value _z03) (.value _z14) (.value _z25) (Ty.wrap x03)
-          (Ty.wrap x14) (Ty.wrap x25)) s =
+          (Ty.wrap x14) (Ty.wrap x25))
+        s =
       .value
         (.nil,
           { s with
             mem :=
               ((s.mem.storeVec _z03 (fd_r43x6_quad_sqr_fast.spec x03 x14 x25).1).storeVec _z14
-                    (fd_r43x6_quad_sqr_fast.spec x03 x14 x25).2.1).storeVec _z25
-                (fd_r43x6_quad_sqr_fast.spec x03 x14 x25).2.2 }) := by
+                    (fd_r43x6_quad_sqr_fast.spec x03 x14 x25).2.1).storeVec
+                _z25 (fd_r43x6_quad_sqr_fast.spec x03 x14 x25).2.2 }) := by
   func_init
   block_init
   iterate 33 step_pure
@@ -223,17 +231,21 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
   have e_l90 : l90 = wwl_pack_halves p28 1 wwl_zero 1 := by lanes hl90
   have e_l91 : l91 = wwl_pack_halves q48 1 q1b 1 := by lanes hl91
   have e_zb25 : zb25 = wwl_add l90 l91 := by lanes hzb25
-  have e_z03 : z03 =
-      wwl_add (wwl_add za03 (wwl_shl zb03 7)) (wwl_add (wwl_shl zb03 4) (wwl_shl zb03 3)) := by
+  have e_z03 :
+    z03 = wwl_add (wwl_add za03 (wwl_shl zb03 7)) (wwl_add (wwl_shl zb03 4) (wwl_shl zb03 3)) := by
     lanes hz03
-  have e_z14 : z14 =
-      wwl_add (wwl_add za14 (wwl_shl zb14 7)) (wwl_add (wwl_shl zb14 4) (wwl_shl zb14 3)) := by
+  have e_z14 :
+    z14 = wwl_add (wwl_add za14 (wwl_shl zb14 7)) (wwl_add (wwl_shl zb14 4) (wwl_shl zb14 3)) := by
     lanes hz14
-  have e_z25 : z25 =
-      wwl_add (wwl_add (wwl_add (wwl_add l81 l79) (wwl_shl zb25 7))
-        (wwl_add (wwl_shl zb25 4) (wwl_shl zb25 3))) l80 := by
+  have e_z25 :
+    z25 =
+      wwl_add
+        (wwl_add (wwl_add (wwl_add l81 l79) (wwl_shl zb25 7))
+          (wwl_add (wwl_shl zb25 4) (wwl_shl zb25 3)))
+        l80 := by
     lanes hz25
-  replace e_z25 : z25 =
+  replace e_z25 :
+    z25 =
       wwl_add (wwl_add (wwl_add (wwl_add l79 l80) l81) (wwl_shl zb25 7))
         (wwl_add (wwl_shl zb25 4) (wwl_shl zb25 3)) := by
     rw [e_z25]; ac_rfl
@@ -243,7 +255,6 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
     hl85 hzb03 hl87 hl88 hzb14 hl90 hl91 hzb25 hz03 hz14 hz25
   subst_vars
   rfl
-
 
 end Proof
 

@@ -6,6 +6,7 @@ public import MLIR.Run.Memory
 public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.FoldUnsigned
 public import Firedancer.Avx512.Common.Wwl
+public import Firedancer.Common.Limbs
 import Std.Tactic.BVDecide
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
@@ -70,6 +71,13 @@ def quadPackRun (x y zlo zhi t a b c d e f g h q03 q14 q25 : Dst Γ V)
       q25 (.val g.i g.h) (.val f.i f.h),
     .store (.arg p25 h25) (.val q25.i q25.h)]
 
+/-- A store's bits stay known past the next two stores, as `quadPackRun` leaves its first vector. -/
+@[mlir_fresh]
+theorem Fits.storeAt_storeAt_storeAt_self {m : MemoryState} {p q r : Pointer} {x : BitVec w}
+    {y : BitVec v} {z : BitVec u} (h : Room m p w) :
+    Fits (((m.storeAt p x).storeAt q y).storeAt r z) p w :=
+  (Fits.storeAt_self h).storeAt.storeAt
+
 /-- Where the body at `pos` is `quadPackRun`, `x y t` hold `X Y T`, `zlo zhi` hold `oneLo oneHi` and
 `p03 p14 p25` point at `P03 P14 P25`, each with room for a vector: running on from `pos` then `k`
 gives `K` if it does from `pos + 14` with the QUAD `(X, Y, one, T)` stored there, whatever the
@@ -85,7 +93,7 @@ theorem runBodyFrom_quadPackRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
     (hR :
       E ⊨ [x := X, y := Y, zlo := oneLo, zhi := oneHi, t := T, .arg p03 h03 := P03, .arg p14 h14 :=
         P14, .arg p25 h25 := P25])
-    (hf03 : Fits S.mem P03 512) (hf14 : Fits S.mem P14 512) (hf25 : Fits S.mem P25 512)
+    (hf03 : Room S.mem P03 512) (hf14 : Room S.mem P14 512) (hf25 : Room S.mem P25 512)
     (hd : [x.i, y.i, zlo.i, zhi.i, t.i, a.i, b.i, c.i, d.i, e.i, f.i, g.i, h.i, q03.i, q14.i].Nodup)
     (hK :
       ∀ va vb vc vd ve vf vg vh vq03 vq14 vq25 : ⟦V⟧,
@@ -197,8 +205,7 @@ theorem low_add_carry (i : Fin 8) (x y : BitVec 64) :
                   1099511627775#64][i.1]'(by simp))).uaddOverflow
           (x >>> 43) =
         false := by
-  fin_cases i <;>
-    (simp only [List.getElem_cons_zero, List.getElem_cons_succ]; bv_decide)
+  fin_cases i <;> (simp only [List.getElem_cons_zero, List.getElem_cons_succ]; bv_decide)
 
 /-- `FD_R43X6_QUAD_FOLD_UNSIGNED`'s limbs `0 3`: the carries of limbs `5` (times `19`) and `2`,
 plus the low 43 bits. -/
@@ -265,8 +272,8 @@ theorem runBodyFrom_quadFoldRun {blk : BasicBlock Γ tRets bp} {E₀ : ⟪Γ⟫}
           rest)
     (hR :
       E₀ ⊨ [s43 := Vector.replicate 8 43, s := quadShifts, m43 := Vector.replicate 8 8796093022207,
-        m := quadFoldMask, k := quad19, .arg p03 h03 := P03, .arg p14 h14 := P14,
-        .arg p25 h25 := P25])
+        m := quadFoldMask, k := quad19, .arg p03 h03 := P03, .arg p14 h14 := P14, .arg p25 h25 :=
+        P25])
     (hf03 : Fits S₀.mem P03 512) (hf14 : Fits S₀.mem P14 512) (hf25 : Fits S₀.mem P25 512)
     (hd0314 : P03.id ≠ P14.id) (hd0325 : P03.id ≠ P25.id) (hd1425 : P14.id ≠ P25.id)
     (hx03 : S₀.mem.readAt P03 512 = BitVec.packLanes X03)

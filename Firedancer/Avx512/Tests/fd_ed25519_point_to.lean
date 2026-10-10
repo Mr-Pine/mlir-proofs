@@ -17,7 +17,8 @@ private def aBytes : BitVec 1536 :=
 private def state : GlobalState :=
   ⟨⟨6⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨64, 7⟩), (⟨2⟩, ⟨64, 7⟩), (⟨3⟩, ⟨64, 7⟩), (⟨4⟩, ⟨64, 7⟩), (⟨5⟩, ⟨192, aBytes⟩)]⟩⟩
+        [(⟨1⟩, .ofBytes 64 7), (⟨2⟩, .ofBytes 64 7), (⟨3⟩, .ofBytes 64 7), (⟨4⟩, .ofBytes 64 7),
+          (⟨5⟩, .ofBytes 192 aBytes)]⟩⟩
 
 -- `x, y, z, t` hold `a`'s coordinates
 #guard
@@ -29,7 +30,8 @@ private def state : GlobalState :=
   | .value (some .nil, s') =>
     let Q := state.mem.readQuad (ptr 5)
     s'.mem.readVec (ptr 1) == Q.X && s'.mem.readVec (ptr 2) == Q.Y &&
-      s'.mem.readVec (ptr 3) == Q.Z && s'.mem.readVec (ptr 4) == Q.T
+      s'.mem.readVec (ptr 3) == Q.Z &&
+      s'.mem.readVec (ptr 4) == Q.T
   | _ => false
 
 end MLIR.Firedancer.Avx512

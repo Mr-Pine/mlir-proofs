@@ -13,15 +13,17 @@ section Proof
 /-- `fd_ed25519_point_to` stores the coordinates of the point at `a` at `x, y, z, t`, in that order.
 The loads all come before the stores, so the outputs may alias `a` and each other. -/
 public theorem fd_ed25519_point_to.call_eq (x y z t a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (ha : s.mem.QuadFit a) (hx : Fits s.mem x 512) (hy : Fits s.mem y 512)
-    (hz : Fits s.mem z 512) (ht : Fits s.mem t 512) :
+    (ha : s.mem.QuadFit a) (hx : Room s.mem x 512) (hy : Room s.mem y 512) (hz : Room s.mem z 512)
+    (ht : Room s.mem t 512) :
     fd_ed25519_point_to.call
         (fd_ed25519_point_to.args (.value x) (.value y) (.value z) (.value t) (.value a)) s =
-      .value (.nil,
-        { s with
-          mem :=
-            (((s.mem.storeVec x (s.mem.readQuad a).X).storeVec y (s.mem.readQuad a).Y).storeVec z
-                (s.mem.readQuad a).Z).storeVec t (s.mem.readQuad a).T }) := by
+      .value
+        (.nil,
+          { s with
+            mem :=
+              (((s.mem.storeVec x (s.mem.readQuad a).X).storeVec y (s.mem.readQuad a).Y).storeVec z
+                    (s.mem.readQuad a).Z).storeVec
+                t (s.mem.readQuad a).T }) := by
   func_init
   block_init
   iterate 27 step_pure

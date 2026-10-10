@@ -15,8 +15,11 @@ private def value (v : Wwl) : Nat :=
 
 /-- `b ^ e` mod `p`, by squaring and multiplying over `e`'s 256 bits. -/
 private def powMod (b e : Nat) : Nat :=
-  (List.range 256).reverse.foldl (fun acc i => let a := acc * acc % p
-    if e.testBit i then a * b % p else a) 1
+  (List.range 256).reverse.foldl
+    (fun acc i =>
+      let a := acc * acc % p
+      if e.testBit i then a * b % p else a)
+    1
 
 /-- `N`'s 43-bit limbs. -/
 private def limbs (N : Nat) : Wwl :=
@@ -32,7 +35,7 @@ private def _zb : Pointer :=
 
 /-- Two zeroed 64-byte blocks. -/
 private def state : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, 0⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 0)]⟩⟩
 
 /-- `*_za` and `*_zb` hold `za^(2^252 - 3)` and `zb^(2^252 - 3)` mod `p`; the temporaries are
 gone. -/
@@ -43,7 +46,8 @@ private def check (za zb : Nat) : Bool :=
       state with
   | .value (.nil, s') =>
     value (s'.mem.readVec _za) == powMod za (2 ^ 252 - 3) &&
-      value (s'.mem.readVec _zb) == powMod zb (2 ^ 252 - 3) && s'.mem.mem.size == 2
+      value (s'.mem.readVec _zb) == powMod zb (2 ^ 252 - 3) &&
+      s'.mem.mem.size == 2
   | _ => false
 
 #guard check 2 3

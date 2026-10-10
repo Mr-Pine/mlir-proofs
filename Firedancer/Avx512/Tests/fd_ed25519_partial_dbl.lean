@@ -19,7 +19,7 @@ private def aBytes : BitVec 1536 :=
 
 /-- `a` holding `aBytes`, `r` zero. -/
 private def state : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨192, aBytes⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 192 aBytes)]⟩⟩
 
 -- `r` holds `spec` of the point at `a`, and `r` is returned
 #guard

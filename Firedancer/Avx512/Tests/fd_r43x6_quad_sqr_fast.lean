@@ -17,7 +17,7 @@ private def z25 : Pointer :=
 
 /-- Three zeroed 64-byte blocks. -/
 private def state : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, 0⟩), (⟨2⟩, ⟨64, 0⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 0), (⟨2⟩, .ofBytes 64 0)]⟩⟩
 
 /-- Four elements in the QUAD layout: limbs `k` and `k + 3` of each in `qk`. -/
 private def quad (x y z t : Wwl) (k : Nat) : Wwl :=
@@ -50,12 +50,14 @@ private def check (xs : List Wwl) : Bool :=
   | _ => false
 
 #guard
-  check [#v[1, 2, 3, 4, 5, 6, 0, 0], #v[7, 8, 9, 10, 11, 12, 0, 0], #v[0, 0, 0, 0, 0, 1, 0, 0],
+  check
+    [#v[1, 2, 3, 4, 5, 6, 0, 0], #v[7, 8, 9, 10, 11, 12, 0, 0], #v[0, 0, 0, 0, 0, 1, 0, 0],
       #v[2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 2 ^ 47 - 1, 0, 0]]
 
 #guard
-  check [#v[0x123456789AB, 0x7FEDCBA9876, 0x1F2E3D4C5B6, 0x0A1B2C3D4E5, 0x66554433221,
-      0x77777777777, 0, 0], #v[1, 0, 0, 0, 0, 0, 0, 0], #v[0, 0, 0, 0, 0, 0, 0, 0],
-    #v[13, 14, 15, 16, 17, 18, 0, 0]]
+  check
+    [#v[0x123456789AB, 0x7FEDCBA9876, 0x1F2E3D4C5B6, 0x0A1B2C3D4E5, 0x66554433221, 0x77777777777, 0,
+        0],
+      #v[1, 0, 0, 0, 0, 0, 0, 0], #v[0, 0, 0, 0, 0, 0, 0, 0], #v[13, 14, 15, 16, 17, 18, 0, 0]]
 
 end MLIR.Firedancer.Avx512

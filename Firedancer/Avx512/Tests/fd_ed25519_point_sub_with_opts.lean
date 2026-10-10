@@ -22,12 +22,15 @@ private def bytes (seed : Nat) : BitVec 1536 :=
 
 /-- `a` and `b` holding two patterns, `r` zero. -/
 private def state : GlobalState :=
-  ⟨⟨4⟩, ⟨Std.ExtHashMap.ofList
-    [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨192, bytes 4000000000000⟩), (⟨3⟩, ⟨192, bytes 1234567890123⟩)]⟩⟩
+  ⟨⟨4⟩,
+    ⟨Std.ExtHashMap.ofList
+        [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 192 (bytes 4000000000000)),
+          (⟨3⟩, .ofBytes 192 (bytes 1234567890123))]⟩⟩
 
 /-- `r` holds `spec` of the points at `a` and `b`, and `r` is returned. -/
 private def check (pre : BitVec 32) : Bool :=
-  match fd_ed25519_point_sub_with_opts.eval 5
+  match
+    fd_ed25519_point_sub_with_opts.eval 5
       (fd_ed25519_point_sub_with_opts.args (.value r) (.value a) (.value b) (.value pre)) state with
   | .value (some (.cons (.value p) .nil), s') =>
     let P := s'.mem.readQuad r

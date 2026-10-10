@@ -60,7 +60,7 @@ public theorem fd_ed25519_verify_equation.call_eq (k A S R : Pointer) (s : Globa
   -- fd_ed25519_point_neg( A, A );
   step_call using (fd_ed25519_point_neg.call_eq (hsep := .inl rfl))
   -- fd_ed25519_double_scalar_mul_base( Rcmp, k, A, S );
-  have hRc_pt := MemoryState.QuadFit.of_fits hRc_fits hRc_off
+  have hRc_pt := MemoryState.QuadRoom.of_room hroom_Rc hRc_off
   step_call using fd_ed25519_double_scalar_mul_base.call_eq
   -- return fd_ed25519_point_eq_z1( Rcmp, R );
   step_call using fd_ed25519_point_eq_z1.call_eq

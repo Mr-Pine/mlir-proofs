@@ -52,17 +52,22 @@ abbrev fill (m : MemoryState) (z : Vector (BitVec 64) 8) : MemoryState :=
   let z := BitVec.packLanes z
   (((((m.storeAt a03 z).storeAt b03 z).storeAt a14 z).storeAt b14 z).storeAt a25 z).storeAt b25 z
 
-/-- `^bb5`: `*_Pb25 = %2241`, then return `%2242`. -/
+/-- `^bb5`: `*_Pb25 = %2241`, the copies `pa pb` freed, then return `%2242`. -/
 theorem bb5_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (v : Vector (BitVec 64) 8)
-    (r : BitVec 32) (hv : E.read (%2241) = Ty.wrap v) (hr : E.read (%2242) = .value r)
-    (hb25 : Fits S.mem b25 512) (K : PoisonOr (Vals [.bv 32] × GlobalState))
+    (r : BitVec 32) (pa pb : Pointer) (hv : E.read (%2241) = Ty.wrap v)
+    (hr : E.read (%2242) = .value r) (hpa : E.read (%1977) = .value pa)
+    (hpb : E.read (%1978) = .value pb) (hb25 : Room S.mem b25 512)
+    (K : PoisonOr (Vals [.bv 32] × GlobalState))
     (hK :
-      .value (.cons (.value r) .nil, { S with mem := S.mem.storeAt b25 (BitVec.packLanes v) }) =
+      .value
+          (.cons (.value r) .nil,
+            { S with
+              mem := ((S.mem.storeAt b25 (BitVec.packLanes v)).lifetimeEnd pb).lifetimeEnd pa }) =
         K) :
     func.runFrom E ^bb5 S = K := by
   block_init
-  step_store
+  step_store consuming hb25 hfits_b25
   step_pure
   step_pure
   finish_block
@@ -73,11 +78,16 @@ theorem bb5_run (E : ⟪Γ⟫) (S : GlobalState)
 (`%1918`). -/
 theorem bb3_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (z : Vector (BitVec 64) 8)
-    (r : BitVec 32) (hz : E.read (%1919) = Ty.wrap z) (hr : E.read (%1918) = .value r)
-    (ha03 : Fits S.mem a03 512) (ha14 : Fits S.mem a14 512) (ha25 : Fits S.mem a25 512)
-    (hb03 : Fits S.mem b03 512) (hb14 : Fits S.mem b14 512) (hb25 : Fits S.mem b25 512) :
+    (r : BitVec 32) (pa pb : Pointer) (hz : E.read (%1919) = Ty.wrap z)
+    (hr : E.read (%1918) = .value r) (hpa : E.read (%1977) = .value pa)
+    (hpb : E.read (%1978) = .value pb) (ha03 : Room S.mem a03 512) (ha14 : Room S.mem a14 512)
+    (ha25 : Room S.mem a25 512) (hb03 : Room S.mem b03 512) (hb14 : Room S.mem b14 512)
+    (hb25 : Room S.mem b25 512) :
     func.runFrom E ^bb3 S =
-      .value (.cons (.value r) .nil, { S with mem := fill a03 a14 a25 b03 b14 b25 S.mem z }) := by
+      .value
+        (.cons (.value r) .nil,
+          { S with
+            mem := ((fill a03 a14 a25 b03 b14 b25 S.mem z).lifetimeEnd pb).lifetimeEnd pa }) := by
   block_init
   iterate 5 step_store
   finish_block
@@ -87,12 +97,17 @@ theorem bb3_run (E : ⟪Γ⟫) (S : GlobalState)
 (`%1917`). -/
 theorem bb4_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (z : Vector (BitVec 64) 8)
-    (r : BitVec 32) (hz : E.read (%1919) = Ty.wrap z) (hr : E.read (%1917) = .value r)
-    (ha03 : Fits S.mem a03 512) (ha14 : Fits S.mem a14 512) (ha25 : Fits S.mem a25 512)
-    (hb03 : Fits S.mem b03 512) (hb14 : Fits S.mem b14 512) (hb25 : Fits S.mem b25 512)
-    (K : PoisonOr (Vals [.bv 32] × GlobalState))
+    (r : BitVec 32) (pa pb : Pointer) (hz : E.read (%1919) = Ty.wrap z)
+    (hr : E.read (%1917) = .value r) (hpa : E.read (%1977) = .value pa)
+    (hpb : E.read (%1978) = .value pb) (ha03 : Room S.mem a03 512) (ha14 : Room S.mem a14 512)
+    (ha25 : Room S.mem a25 512) (hb03 : Room S.mem b03 512) (hb14 : Room S.mem b14 512)
+    (hb25 : Room S.mem b25 512) (K : PoisonOr (Vals [.bv 32] × GlobalState))
     (hK :
-      .value (.cons (.value r) .nil, { S with mem := fill a03 a14 a25 b03 b14 b25 S.mem z }) = K) :
+      .value
+          (.cons (.value r) .nil,
+            { S with
+              mem := ((fill a03 a14 a25 b03 b14 b25 S.mem z).lifetimeEnd pb).lifetimeEnd pa }) =
+        K) :
     func.runFrom E ^bb4 S = K := by
   subst hK
   block_init
@@ -104,12 +119,13 @@ theorem bb4_run (E : ⟪Γ⟫) (S : GlobalState)
 nonzero: on to `^bb2` (`hK`'s first case); else `^bb4`'s failure. -/
 theorem bb1_run (E : ⟪Γ⟫) (S : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (x y z : Vector (BitVec 64) 8)
-    (c r : BitVec 32) (hx : E.read (%2116) = Ty.wrap x) (hy : E.read (%2022) = Ty.wrap y)
-    (hc : E.read (%2123) = .value c) (h0 : E.read (%1944) = .value 0)
-    (hz : E.read (%1919) = Ty.wrap z) (hr : E.read (%1917) = .value r) (ha03 : Fits S.mem a03 512)
-    (ha14 : Fits S.mem a14 512) (ha25 : Fits S.mem a25 512) (hb03 : Fits S.mem b03 512)
-    (hb14 : Fits S.mem b14 512) (hb25 : Fits S.mem b25 512) (hwf : S.WF)
-    (K : PoisonOr (Vals [.bv 32] × GlobalState))
+    (c r : BitVec 32) (pa pb : Pointer) (hx : E.read (%2116) = Ty.wrap x)
+    (hy : E.read (%2022) = Ty.wrap y) (hc : E.read (%2123) = .value c)
+    (h0 : E.read (%1944) = .value 0) (hz : E.read (%1919) = Ty.wrap z)
+    (hr : E.read (%1917) = .value r) (hpa : E.read (%1977) = .value pa)
+    (hpb : E.read (%1978) = .value pb) (ha03 : Room S.mem a03 512) (ha14 : Room S.mem a14 512)
+    (ha25 : Room S.mem a25 512) (hb03 : Room S.mem b03 512) (hb14 : Room S.mem b14 512)
+    (hb25 : Room S.mem b25 512) (hwf : S.WF) (K : PoisonOr (Vals [.bv 32] × GlobalState))
     (hK :
       (if fd_r43x6_is_nonzero.spec (vadd x y) &&& c = 0#32 then
           func.runFrom
@@ -118,7 +134,10 @@ theorem bb1_run (E : ⟪Γ⟫) (S : GlobalState)
               BitVec.ofBool (fd_r43x6_is_nonzero.spec (vadd x y) &&& c == 0#32)]
             ^bb2 S
         else
-          .value (.cons (.value r) .nil, { S with mem := fill a03 a14 a25 b03 b14 b25 S.mem z })) =
+          .value
+            (.cons (.value r) .nil,
+              { S with
+                mem := ((fill a03 a14 a25 b03 b14 b25 S.mem z).lifetimeEnd pb).lifetimeEnd pa })) =
         K) :
     func.runFrom E ^bb1 S = K := by
   have hnz := fd_r43x6_is_nonzero.call_eq
@@ -141,26 +160,27 @@ theorem bb1_run (E : ⟪Γ⟫) (S : GlobalState)
 
 /-! ### `^bb0`'s copies of the encodings -/
 
-/-- The four slots `^bb0` allocates. -/
+/-- The four slots `^bb0` allocates, dead until their lifetimes start. -/
 abbrev slots4 (S : GlobalState) : GlobalState :=
-  (((S.alloca 32).alloca 32).alloca 64).alloca 64
+  (((S.alloca 32 true).alloca 32 true).alloca 64 true).alloca 64 true
 
-theorem fits_slot0 {S : GlobalState} (hwf : S.WF) : Fits (slots4 S).mem (S.slot 0) 256 := by
-  have h : Fits (S.alloca 32).mem S.allocaPtr 256 := Fits.allocaPtr (by omega)
-  exact ((h.alloca (n := 32) hwf.alloca).alloca (n := 64) hwf.alloca.alloca).alloca (n := 64)
-    hwf.alloca.alloca.alloca
+theorem inBounds_slot0 {S : GlobalState} (hwf : S.WF) : InBounds (slots4 S).mem (S.slot 0) 256 := by
+  have h : InBounds (S.alloca 32 true).mem S.allocaPtr 256 := InBounds.allocaPtr (by omega)
+  exact
+    ((h.alloca (n := 32) hwf.alloca).alloca (n := 64) hwf.alloca.alloca).alloca (n := 64)
+      hwf.alloca.alloca.alloca
 
-theorem fits_slot1 {S : GlobalState} (hwf : S.WF) : Fits (slots4 S).mem (S.slot 1) 256 := by
-  have h : Fits ((S.alloca 32).alloca 32).mem (S.alloca 32).allocaPtr 256 :=
-    Fits.allocaPtr (by omega)
+theorem inBounds_slot1 {S : GlobalState} (hwf : S.WF) : InBounds (slots4 S).mem (S.slot 1) 256 := by
+  have h : InBounds ((S.alloca 32 true).alloca 32 true).mem (S.alloca 32 true).allocaPtr 256 :=
+    InBounds.allocaPtr (by omega)
   rw [GlobalState.allocaPtr_eq_slot, GlobalState.alloca_slot] at h
   exact (h.alloca (n := 64) hwf.alloca.alloca).alloca (n := 64) hwf.alloca.alloca.alloca
 
 /-- The copy at `pa`, its top word replaced, read back as four lanes. -/
 theorem readWv_copy_a {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id)
-    (ha : Fits m pa 256) (ho : pa.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
-    ((((m.storeAt pa xa).storeAt pb xb).storeAt (pa.add 24#64) ya).storeAt (pb.add 24#64)
-          yb).readWv pa =
+    (ha : InBounds m pa 256) (ho : pa.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
+    ((((m.storeAt pa xa).storeAt pb xb).storeAt (pa.add 24#64) ya).storeAt (pb.add 24#64) yb).readWv
+        pa =
       Vector.ofFn fun i => Ty.extractVecElem 4 64 i (Memory.spliceBits xa 192 ya) := by
   have hd : (Range.of (pb.add 24#64) 64).Disjoint (Range.of pa 256) :=
     Or.inl (by simpa [Range.of, Pointer.add] using hab.symm)
@@ -174,14 +194,13 @@ theorem readWv_copy_a {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id
 
 /-- `readWv_copy_a` for the copy at `pb`. -/
 theorem readWv_copy_b {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id)
-    (hb : Fits m pb 256) (ho : pb.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
-    ((((m.storeAt pa xa).storeAt pb xb).storeAt (pa.add 24#64) ya).storeAt (pb.add 24#64)
-          yb).readWv pb =
+    (hb : InBounds m pb 256) (ho : pb.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
+    ((((m.storeAt pa xa).storeAt pb xb).storeAt (pa.add 24#64) ya).storeAt (pb.add 24#64) yb).readWv
+        pb =
       Vector.ofFn fun i => Ty.extractVecElem 4 64 i (Memory.spliceBits xb 192 yb) := by
   have hd : (Range.of (pa.add 24#64) 64).Disjoint (Range.of pb 256) :=
     Or.inl (by simpa [Range.of, Pointer.add] using hab)
-  have hd' : (Range.of pa 256).Disjoint (Range.of pb 256) :=
-    Or.inl (by simpa [Range.of] using hab)
+  have hd' : (Range.of pa 256).Disjoint (Range.of pb 256) := Or.inl (by simpa [Range.of] using hab)
   rw [MemoryState.readWv,
     MemoryState.readAt_add_storeAt (hb.storeAt.storeAt.storeAt) (by simp [ho, BitVec.uaddOverflow])
       (by decide),
@@ -287,23 +306,34 @@ noncomputable instance (A : Dec) : Decidable A.ok :=
   Classical.propDecidable _
 
 /-- The state `^bb0` leaves: the slots `_sa _sb _t0a _t0b`, the encodings copied in with their
-sign bits cleared, the powers stored, and `fd_r43x6_pow22523_2`'s frames counted. -/
+sign bits cleared, the powers stored in `_t0a _t0b` and freed, and `fd_r43x6_pow22523_2`'s frames
+counted. -/
 def frame (S₀ : GlobalState) (sa sb : Pointer) (A B : Dec) : GlobalState :=
-  let S₁ := (((S₀.alloca 32).alloca 32).alloca 64).alloca 64
+  let S₁ := slots4 S₀
   let pa := S₀.allocaPtr
-  let pb := (S₀.alloca 32).allocaPtr
+  let pb := (S₀.alloca 32 true).allocaPtr
+  let t0a := ((S₀.alloca 32 true).alloca 32 true).allocaPtr
+  let t0b := (((S₀.alloca 32 true).alloca 32 true).alloca 64 true).allocaPtr
   { alloc := ⟨S₁.alloc.nextFreeBlock + 20⟩,
     mem :=
-      (((((S₁.mem.storeAt pa (S₀.mem.readAt sa 256)).storeAt pb (S₀.mem.readAt sb 256)).storeAt
-                    (pa.add 24) A.y3).storeAt
-                (pb.add 24) B.y3).storeAt
-            ((S₀.alloca 32).alloca 32).allocaPtr (BitVec.packLanes A.t0)).storeAt
-        (((S₀.alloca 32).alloca 32).alloca 64).allocaPtr (BitVec.packLanes B.t0) }
+      (((((((((((S₁.mem.lifetimeStart pa).lifetimeStart pb).storeAt pa
+                                            (S₀.mem.readAt sa 256)).storeAt
+                                        pb (S₀.mem.readAt sb 256)).storeAt
+                                    (pa.add 24) A.y3).storeAt
+                                (pb.add 24) B.y3).lifetimeStart
+                            t0a).lifetimeStart
+                        t0b).storeAt
+                    t0a (BitVec.packLanes A.t0)).storeAt
+                t0b (BitVec.packLanes B.t0)).lifetimeEnd
+            t0b).lifetimeEnd
+        t0a }
 
 variable (a03 a14 a25 b03 b14 b25) in
 /-- `fd_r43x6_ge_decode2`'s result from the state `S` and both encodings' checks: `-1` or `-2` with
-the out-vectors zeroed, else `0` with both points stored as folded QUADs. -/
-noncomputable def result (S : GlobalState) (A B : Dec) : PoisonOr (Vals [.bv 32] × GlobalState) :=
+the out-vectors zeroed, else `0` with both points stored as folded QUADs; then `e` (the copies'
+lifetimes' ends). -/
+noncomputable def result (e : MemoryState → MemoryState) (S : GlobalState) (A B : Dec) :
+    PoisonOr (Vals [.bv 32] × GlobalState) :=
   if A.ok then
     if B.ok then
       let PA :=
@@ -314,47 +344,51 @@ noncomputable def result (S : GlobalState) (A B : Dec) : PoisonOr (Vals [.bv 32]
         (.cons (.value 0) .nil,
           { S with
             mem :=
-              foldAt (foldAt (packAt (packAt S.mem a03 a14 a25 PA) b03 b14 b25 PB) a03 a14 a25 PA)
-                b03 b14 b25 PB })
+              e
+                (foldAt
+                  (foldAt (packAt (packAt S.mem a03 a14 a25 PA) b03 b14 b25 PB) a03 a14 a25 PA) b03
+                  b14 b25 PB) })
     else
       .value
         (.cons (.value (-2)) .nil,
-          { S with mem := fill a03 a14 a25 b03 b14 b25 S.mem (Vector.replicate 8 0) })
+          { S with mem := e (fill a03 a14 a25 b03 b14 b25 S.mem (Vector.replicate 8 0)) })
   else
     .value
       (.cons (.value (-1)) .nil,
-        { S with mem := fill a03 a14 a25 b03 b14 b25 S.mem (Vector.replicate 8 0) })
+        { S with mem := e (fill a03 a14 a25 b03 b14 b25 S.mem (Vector.replicate 8 0)) })
 
-/-- `^bb2`'s entry env: `^bb0`'s constants it reads, the points' coordinates `xa ya`, `xb yb`, their
-signs `x0a x0b` and whether `t1nza t1nzb` are nonzero. -/
-abbrev entry (E : ⟪Γ⟫) (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8)
+/-- `^bb2`'s entry env: `^bb0`'s constants it reads, the copies `pa pb`, the points' coordinates
+`xa ya`, `xb yb`, their signs `x0a x0b` and whether `t1nza t1nzb` are nonzero. -/
+abbrev entry (E : ⟪Γ⟫) (pa pb : Pointer) (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8)
     (x0a x0b t1nza t1nzb : BitVec 32) : ⟪Γ⟫ :=
   E[%1909 := quadFoldMask, %1910 := Vector.replicate 8 8796093022207, %1912 := quadShifts, %1913 :=
     Vector.replicate 8 43, %1915 := sqrtM1, %1916 := 255#8, %1920 := negP, %1921 := one, %1923 :=
     negBias, %1924 := negSel, %1925 := neg18, %1936 := foldMask, %1937 := foldShifts, %1939 :=
-    foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi, %1976 := quad19, %1986 :=
-    x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 := xb, %2122 := t1nza, %2123 :=
-    t1nzb]
+    foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi, %1976 := quad19, %1977 :=
+    pa, %1978 := pb, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 := xb,
+    %2122 := t1nza, %2123 := t1nzb]
 
 /-- `^bb2`: both encodings decode; finish both points and store them as QUADs. -/
 theorem bb2_run (E : ⟪Γ⟫) (S₀ : GlobalState)
-    (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get)
+    (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (pa pb : Pointer)
     (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8) (x0a x0b t1nza t1nzb : BitVec 32)
     (ht1nza01 : t1nza = 0 ∨ t1nza = 1) (ht1nzb01 : t1nzb = 0 ∨ t1nzb = 1)
-    (ha03 : Fits S₀.mem a03 512) (ha14 : Fits S₀.mem a14 512) (ha25 : Fits S₀.mem a25 512)
-    (hb03 : Fits S₀.mem b03 512) (hb14 : Fits S₀.mem b14 512) (hb25 : Fits S₀.mem b25 512)
+    (ha03 : Room S₀.mem a03 512) (ha14 : Room S₀.mem a14 512) (ha25 : Room S₀.mem a25 512)
+    (hb03 : Room S₀.mem b03 512) (hb14 : Room S₀.mem b14 512) (hb25 : Room S₀.mem b25 512)
     (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup) (hwf : S₀.WF) :
-    func.runFrom (entry E sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb) ^bb2 S₀ =
+    func.runFrom (entry E pa pb sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb) ^bb2 S₀ =
       let A := decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one xa ya t1nza x0a
       let B := decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one xb yb t1nzb x0b
       .value
         (.cons (.value 0) .nil,
           { S₀ with
             mem :=
-              foldAt (foldAt (packAt (packAt S₀.mem a03 a14 a25 A) b03 b14 b25 B) a03 a14 a25 A) b03
-                b14 b25 B }) := by
-  have hmul : MulFast.Spec fd_r43x6_mul_fast.call fd_r43x6_mul_fast.spec :=
-    fun x y s hwf => fd_r43x6_mul_fast.call_eq x y s hwf
+              ((foldAt (foldAt (packAt (packAt S₀.mem a03 a14 a25 A) b03 b14 b25 B) a03 a14 a25 A)
+                        b03 b14 b25 B).lifetimeEnd
+                    pb).lifetimeEnd
+                pa }) := by
+  have hmul : MulFast.Spec fd_r43x6_mul_fast.call fd_r43x6_mul_fast.spec := fun x y s hwf =>
+    fd_r43x6_mul_fast.call_eq x y s hwf
   have hdiag := fd_r43x6_diagnose.call_eq
   block_init
   -- `t3a = fd_r43x6_if( t1nza, sqrt_m1, one )`, `t3b` likewise
@@ -386,34 +420,34 @@ theorem bb2_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   rfl
 
 /-- An env with `entry`'s values is its `entry`. -/
-theorem entry_eq (E : ⟪Γ⟫) (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8)
+theorem entry_eq (E : ⟪Γ⟫) (pa pb : Pointer) (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8)
     (x0a x0b t1nza t1nzb : BitVec 32)
     (hR :
       E ⊨ [%1909 := quadFoldMask, %1910 := Vector.replicate 8 8796093022207, %1912 := quadShifts,
         %1913 := Vector.replicate 8 43, %1915 := sqrtM1, %1916 := 255#8, %1920 := negP, %1921 :=
         one, %1923 := negBias, %1924 := negSel, %1925 := neg18, %1936 := foldMask, %1937 :=
         foldShifts, %1939 := foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi,
-        %1976 := quad19, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 :=
-        xb, %2122 := t1nza, %2123 := t1nzb]) :
-    entry E sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb = E := by
+        %1976 := quad19, %1977 := pa, %1978 := pb, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 :=
+        yb, %2091 := xa, %2096 := xb, %2122 := t1nza, %2123 := t1nzb]) :
+    entry E pa pb sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb = E := by
   simp only [entry]
   repeat rw [Env.write_of_read]
   all_goals simp [mlir_env, hR]
 
 /-- `bb2_run` for an env holding `entry`'s values. -/
 theorem bb2_run' (E : ⟪Γ⟫) (S₀ : GlobalState)
-    (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get)
+    (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (pa pb : Pointer)
     (sqrtM1 xa ya xb yb : Vector (BitVec 64) 8) (x0a x0b t1nza t1nzb : BitVec 32)
     (hR :
       E ⊨ [%1909 := quadFoldMask, %1910 := Vector.replicate 8 8796093022207, %1912 := quadShifts,
         %1913 := Vector.replicate 8 43, %1915 := sqrtM1, %1916 := 255#8, %1920 := negP, %1921 :=
         one, %1923 := negBias, %1924 := negSel, %1925 := neg18, %1936 := foldMask, %1937 :=
         foldShifts, %1939 := foldK, %1944 := 0#32, %1952 := zeroLo, %1960 := oneLo, %1968 := oneHi,
-        %1976 := quad19, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 := yb, %2091 := xa, %2096 :=
-        xb, %2122 := t1nza, %2123 := t1nzb])
+        %1976 := quad19, %1977 := pa, %1978 := pb, %1986 := x0a, %1988 := x0b, %1992 := ya, %1994 :=
+        yb, %2091 := xa, %2096 := xb, %2122 := t1nza, %2123 := t1nzb])
     (ht1nza01 : t1nza = 0 ∨ t1nza = 1) (ht1nzb01 : t1nzb = 0 ∨ t1nzb = 1)
-    (ha03 : Fits S₀.mem a03 512) (ha14 : Fits S₀.mem a14 512) (ha25 : Fits S₀.mem a25 512)
-    (hb03 : Fits S₀.mem b03 512) (hb14 : Fits S₀.mem b14 512) (hb25 : Fits S₀.mem b25 512)
+    (ha03 : Room S₀.mem a03 512) (ha14 : Room S₀.mem a14 512) (ha25 : Room S₀.mem a25 512)
+    (hb03 : Room S₀.mem b03 512) (hb14 : Room S₀.mem b14 512) (hb25 : Room S₀.mem b25 512)
     (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup) (hwf : S₀.WF) :
     func.runFrom E ^bb2 S₀ =
       let A := decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one xa ya t1nza x0a
@@ -422,12 +456,14 @@ theorem bb2_run' (E : ⟪Γ⟫) (S₀ : GlobalState)
         (.cons (.value 0) .nil,
           { S₀ with
             mem :=
-              foldAt (foldAt (packAt (packAt S₀.mem a03 a14 a25 A) b03 b14 b25 B) a03 a14 a25 A) b03
-                b14 b25 B }) := by
+              ((foldAt (foldAt (packAt (packAt S₀.mem a03 a14 a25 A) b03 b14 b25 B) a03 a14 a25 A)
+                        b03 b14 b25 B).lifetimeEnd
+                    pb).lifetimeEnd
+                pa }) := by
   have h :=
-    bb2_run E S₀ hArgs sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb ht1nza01 ht1nzb01 ha03 ha14 ha25
+    bb2_run E S₀ hArgs pa pb sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb ht1nza01 ht1nzb01 ha03 ha14 ha25
       hb03 hb14 hb25 hids hwf
-  rwa [entry_eq E sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb hR] at h
+  rwa [entry_eq E pa pb sqrtM1 xa ya xb yb x0a x0b t1nza t1nzb hR] at h
 
 -- the entry block: two unpacks and the square-root chain, about 300 instructions
 set_option maxHeartbeats 1000000 in
@@ -435,27 +471,35 @@ set_option maxHeartbeats 1000000 in
 the root of `-1`, and checked; on to `^bb1`, else `^bb3`. -/
 theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
     (hArgs : E.args = (argsOf a03 a14 a25 sa b03 b14 b25 sb).get) (hwf : S₀.WF)
-    (hsa : Fits S₀.mem sa 256) (hsb : Fits S₀.mem sb 256) (ha03 : Fits S₀.mem a03 512)
-    (ha14 : Fits S₀.mem a14 512) (ha25 : Fits S₀.mem a25 512) (hb03 : Fits S₀.mem b03 512)
-    (hb14 : Fits S₀.mem b14 512) (hb25 : Fits S₀.mem b25 512)
+    (hsa : Fits S₀.mem sa 256) (hsb : Fits S₀.mem sb 256) (ha03 : Room S₀.mem a03 512)
+    (ha14 : Room S₀.mem a14 512) (ha25 : Room S₀.mem a25 512) (hb03 : Room S₀.mem b03 512)
+    (hb14 : Room S₀.mem b14 512) (hb25 : Room S₀.mem b25 512)
     (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup) :
     func.runFrom E ^bb0 S₀ =
       let A := dec (S₀.mem.readAt sa 256)
       let B := dec (S₀.mem.readAt sb 256)
-      result a03 a14 a25 b03 b14 b25 (frame S₀ sa sb A B) A B := by
+      result a03 a14 a25 b03 b14 b25
+        (fun m => (m.lifetimeEnd (S₀.alloca 32 true).allocaPtr).lifetimeEnd S₀.allocaPtr)
+        (frame S₀ sa sb A B) A B := by
   have hld := wv_ld.call_eq
   have hunpack := fd_r43x6_unpack.call_eq
-  have hsqr : SqrFast.Spec fd_r43x6_sqr_fast.call fd_r43x6_sqr_fast.spec :=
-    fun x s hwf => fd_r43x6_sqr_fast.call_eq x s hwf
-  have hmul : MulFast.Spec fd_r43x6_mul_fast.call fd_r43x6_mul_fast.spec :=
-    fun x y s hwf => fd_r43x6_mul_fast.call_eq x y s hwf
+  have hsqr : SqrFast.Spec fd_r43x6_sqr_fast.call fd_r43x6_sqr_fast.spec := fun x s hwf =>
+    fd_r43x6_sqr_fast.call_eq x s hwf
+  have hmul : MulFast.Spec fd_r43x6_mul_fast.call fd_r43x6_mul_fast.spec := fun x y s hwf =>
+    fd_r43x6_mul_fast.call_eq x y s hwf
   have hpow := fd_r43x6_pow22523_2.call_eq
   have hnz := fd_r43x6_is_nonzero.call_eq
   -- the copies' reads, about the entry state
-  have hwva := readWv_copy_a (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide))
-    (fits_slot0 hwf) rfl (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)
-  have hwvb := readWv_copy_b (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide))
-    (fits_slot1 hwf) rfl (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)
+  have hwva :=
+    readWv_copy_a (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide)) (m :=
+      ((slots4 S₀).mem.lifetimeStart (S₀.slot 0)).lifetimeStart (S₀.slot 1))
+      (inBounds_slot0 hwf).lifetimeStart.lifetimeStart rfl (S₀.mem.readAt sa 256)
+      (S₀.mem.readAt sb 256)
+  have hwvb :=
+    readWv_copy_b (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide)) (m :=
+      ((slots4 S₀).mem.lifetimeStart (S₀.slot 0)).lifetimeStart (S₀.slot 1))
+      (inBounds_slot1 hwf).lifetimeStart.lifetimeStart rfl (S₀.mem.readAt sa 256)
+      (S₀.mem.readAt sb 256)
   block_init
   -- `one`, `d`, `sqrt_m1`, the fold's and `fd_r43x6_neg`'s constants
   iterate 36 step_pure
@@ -587,14 +631,13 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
 /-- `fd_r43x6_ge_decode2` on the encodings at `sa sb`, into the out-vectors `a03 … b25`: `result`
 over the caller's memory, with `24` blocks counted for the frames it used. -/
 theorem call_eq_result (s : GlobalState) (hwf : s.WF) (hsa : Fits s.mem sa 256)
-    (hsb : Fits s.mem sb 256)
-    (ha03 : Fits s.mem a03 512) (ha14 : Fits s.mem a14 512) (ha25 : Fits s.mem a25 512)
-    (hb03 : Fits s.mem b03 512) (hb14 : Fits s.mem b14 512) (hb25 : Fits s.mem b25 512)
-    (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup) :
+    (hsb : Fits s.mem sb 256) (ha03 : Room s.mem a03 512) (ha14 : Room s.mem a14 512)
+    (ha25 : Room s.mem a25 512) (hb03 : Room s.mem b03 512) (hb14 : Room s.mem b14 512)
+    (hb25 : Room s.mem b25 512) (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup) :
     fd_r43x6_ge_decode2.call (argsOf a03 a14 a25 sa b03 b14 b25 sb) s =
       let A := dec (s.mem.readAt sa 256)
       let B := dec (s.mem.readAt sb 256)
-      result a03 a14 a25 b03 b14 b25 ⟨⟨s.alloc.nextFreeBlock + 24⟩, s.mem⟩ A B := by
+      result a03 a14 a25 b03 b14 b25 id ⟨⟨s.alloc.nextFreeBlock + 24⟩, s.mem⟩ A B := by
   func_init
   subst_vars
   rw [bb0_run _ _ hEargs hwf₀ hsa hsb ha03 ha14 ha25 hb03 hb14 hb25 hids]
@@ -602,7 +645,7 @@ theorem call_eq_result (s : GlobalState) (hwf : s.WF) (hsa : Fits s.mem sa 256)
   generalize dec (S.mem.readAt sa 256) = A, dec (S.mem.readAt sb 256) = B
   by_cases ha : A.ok <;> by_cases hb : B.ok <;>
     simp only [ha, hb, ↓reduceIte, PoisonOr.value_bind, frame, GlobalState.alloca_alloc, fill,
-      foldAt, packAt, Nat.add_assoc] <;>
+      foldAt, packAt, Nat.add_assoc, id_eq] <;>
     erase_frame
 
 /-! ### The result as out-vectors -/
@@ -622,10 +665,11 @@ def quadOf (P : Wwl × Wwl × Wwl × Wwl) : Quad :=
 noncomputable def spec (A B : Dec) : BitVec 32 × Quad × Quad :=
   if A.ok then
     if B.ok then
-      (0, quadOf (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one A.x A.y A.t1nz
-          A.x0),
-        quadOf (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one B.x B.y B.t1nz
-          B.x0))
+      (0,
+        quadOf
+          (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one A.x A.y A.t1nz A.x0),
+        quadOf
+          (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec sqrtM1 one B.x B.y B.t1nz B.x0))
     else (-2, zeroQuad, zeroQuad)
   else (-1, zeroQuad, zeroQuad)
 
@@ -646,7 +690,8 @@ theorem readAt_storeAt_ne {m : MemoryState} {p q : Pointer} {x : BitVec v} (h : 
 
 /-- Six distinct block ids, each against the ones after it. -/
 theorem ids_ne {i0 i1 i2 i3 i4 i5 : BlockId} (h : [i0, i1, i2, i3, i4, i5].Nodup) :
-    (i0 ≠ i1 ∧ i0 ≠ i2 ∧ i0 ≠ i3 ∧ i0 ≠ i4 ∧ i0 ≠ i5) ∧ (i1 ≠ i2 ∧ i1 ≠ i3 ∧ i1 ≠ i4 ∧ i1 ≠ i5) ∧
+    (i0 ≠ i1 ∧ i0 ≠ i2 ∧ i0 ≠ i3 ∧ i0 ≠ i4 ∧ i0 ≠ i5) ∧
+      (i1 ≠ i2 ∧ i1 ≠ i3 ∧ i1 ≠ i4 ∧ i1 ≠ i5) ∧
       (i2 ≠ i3 ∧ i2 ≠ i4 ∧ i2 ≠ i5) ∧ (i3 ≠ i4 ∧ i3 ≠ i5) ∧ i4 ≠ i5 := by
   simp only [List.nodup_cons, List.mem_cons, List.mem_nil_iff, or_false, not_or] at h
   grind
@@ -657,9 +702,10 @@ section ReadOut
 
 variable {m : MemoryState} {P Q : Quad}
   (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup)
+
 include hids
 
-theorem readAt_storeOut_a03 (hf : Fits m a03 512) :
+theorem readAt_storeOut_a03 (hf : InBounds m a03 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a03 512 = BitVec.packLanes P.P03 := by
   obtain ⟨⟨h01, h02, h03, h04, h05⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h05),
@@ -667,34 +713,34 @@ theorem readAt_storeOut_a03 (hf : Fits m a03 512) :
     readAt_storeAt_ne (Ne.symm h02), readAt_storeAt_ne (Ne.symm h01),
     MemoryState.readAt_storeAt_self hf]
 
-theorem readAt_storeOut_a14 (hf : Fits m a14 512) :
+theorem readAt_storeOut_a14 (hf : InBounds m a14 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a14 512 = BitVec.packLanes P.P14 := by
   obtain ⟨-, ⟨h12, h13, h14, h15⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h15),
     readAt_storeAt_ne (Ne.symm h14), readAt_storeAt_ne (Ne.symm h13),
     readAt_storeAt_ne (Ne.symm h12), MemoryState.readAt_storeAt_self hf.storeAt]
 
-theorem readAt_storeOut_a25 (hf : Fits m a25 512) :
+theorem readAt_storeOut_a25 (hf : InBounds m a25 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a25 512 = BitVec.packLanes P.P25 := by
   obtain ⟨-, -, ⟨h23, h24, h25⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h25),
     readAt_storeAt_ne (Ne.symm h24), readAt_storeAt_ne (Ne.symm h23),
     MemoryState.readAt_storeAt_self hf.storeAt.storeAt]
 
-theorem readAt_storeOut_b03 (hf : Fits m b03 512) :
+theorem readAt_storeOut_b03 (hf : InBounds m b03 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b03 512 = BitVec.packLanes Q.P03 := by
   obtain ⟨-, -, -, ⟨h34, h35⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h35),
     readAt_storeAt_ne (Ne.symm h34), MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt]
 
-theorem readAt_storeOut_b14 (hf : Fits m b14 512) :
+theorem readAt_storeOut_b14 (hf : InBounds m b14 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b14 512 = BitVec.packLanes Q.P14 := by
   obtain ⟨-, -, -, -, h45⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h45),
     MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt.storeAt]
 
 omit hids in
-theorem readAt_storeOut_b25 (hf : Fits m b25 512) :
+theorem readAt_storeOut_b25 (hf : InBounds m b25 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b25 512 = BitVec.packLanes Q.P25 := by
   simp only [storeOut, MemoryState.storeVec,
     MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt.storeAt.storeAt]
@@ -703,39 +749,44 @@ end ReadOut
 
 /-- Twelve stores to six distinct blocks, the second six overwriting the first: the second six. -/
 theorem storeAt_twice {m : MemoryState} {x1 x2 x3 x4 x5 x6 y1 y2 y3 y4 y5 y6 : BitVec 512}
-    (h01 : a03.id ≠ a14.id) (h02 : a03.id ≠ a25.id) (h03 : a03.id ≠ b03.id)
-    (h04 : a03.id ≠ b14.id) (h05 : a03.id ≠ b25.id) (h12 : a14.id ≠ a25.id)
-    (h13 : a14.id ≠ b03.id) (h14 : a14.id ≠ b14.id) (h15 : a14.id ≠ b25.id)
-    (h23 : a25.id ≠ b03.id) (h24 : a25.id ≠ b14.id) (h25 : a25.id ≠ b25.id)
+    (h01 : a03.id ≠ a14.id) (h02 : a03.id ≠ a25.id) (h03 : a03.id ≠ b03.id) (h04 : a03.id ≠ b14.id)
+    (h05 : a03.id ≠ b25.id) (h12 : a14.id ≠ a25.id) (h13 : a14.id ≠ b03.id) (h14 : a14.id ≠ b14.id)
+    (h15 : a14.id ≠ b25.id) (h23 : a25.id ≠ b03.id) (h24 : a25.id ≠ b14.id) (h25 : a25.id ≠ b25.id)
     (h34 : b03.id ≠ b14.id) (h35 : b03.id ≠ b25.id) (h45 : b14.id ≠ b25.id) :
     (((((((((((m.storeAt a03 x1).storeAt a14 x2).storeAt a25 x3).storeAt b03 x4).storeAt b14
-                            x5).storeAt b25 x6).storeAt a03 y1).storeAt a14 y2).storeAt a25
-                y3).storeAt b03 y4).storeAt b14 y5).storeAt b25 y6 =
-      (((((m.storeAt a03 y1).storeAt a14 y2).storeAt a25 y3).storeAt b03 y4).storeAt b14
-          y5).storeAt b25 y6 := by
+                                    x5).storeAt
+                                b25 x6).storeAt
+                            a03 y1).storeAt
+                        a14 y2).storeAt
+                    a25 y3).storeAt
+                b03 y4).storeAt
+            b14 y5).storeAt
+        b25 y6 =
+      (((((m.storeAt a03 y1).storeAt a14 y2).storeAt a25 y3).storeAt b03 y4).storeAt b14 y5).storeAt
+        b25 y6 := by
   rw [storeAt_swap_id (Ne.symm h05), storeAt_swap_id (Ne.symm h04), storeAt_swap_id (Ne.symm h03),
     storeAt_swap_id (Ne.symm h02), storeAt_swap_id (Ne.symm h01), MemoryState.storeAt_storeAt_same,
     storeAt_swap_id (Ne.symm h15), storeAt_swap_id (Ne.symm h14), storeAt_swap_id (Ne.symm h13),
-    storeAt_swap_id (Ne.symm h12), MemoryState.storeAt_storeAt_same,
-    storeAt_swap_id (Ne.symm h25), storeAt_swap_id (Ne.symm h24), storeAt_swap_id (Ne.symm h23),
-    MemoryState.storeAt_storeAt_same, storeAt_swap_id (Ne.symm h35), storeAt_swap_id (Ne.symm h34),
-    MemoryState.storeAt_storeAt_same, storeAt_swap_id (Ne.symm h45),
-    MemoryState.storeAt_storeAt_same, MemoryState.storeAt_storeAt_same]
+    storeAt_swap_id (Ne.symm h12), MemoryState.storeAt_storeAt_same, storeAt_swap_id (Ne.symm h25),
+    storeAt_swap_id (Ne.symm h24), storeAt_swap_id (Ne.symm h23), MemoryState.storeAt_storeAt_same,
+    storeAt_swap_id (Ne.symm h35), storeAt_swap_id (Ne.symm h34), MemoryState.storeAt_storeAt_same,
+    storeAt_swap_id (Ne.symm h45), MemoryState.storeAt_storeAt_same,
+    MemoryState.storeAt_storeAt_same]
 
 /-- `fill`'s stores in `storeOut`'s order. -/
-theorem fill_eq {m : MemoryState} {z : BitVec 512} (h13 : a14.id ≠ b03.id)
-    (h23 : a25.id ≠ b03.id) (h24 : a25.id ≠ b14.id) :
+theorem fill_eq {m : MemoryState} {z : BitVec 512} (h13 : a14.id ≠ b03.id) (h23 : a25.id ≠ b03.id)
+    (h24 : a25.id ≠ b14.id) :
     (((((m.storeAt a03 z).storeAt b03 z).storeAt a14 z).storeAt b14 z).storeAt a25 z).storeAt b25
         z =
-      (((((m.storeAt a03 z).storeAt a14 z).storeAt a25 z).storeAt b03 z).storeAt b14 z).storeAt
-        b25 z := by
+      (((((m.storeAt a03 z).storeAt a14 z).storeAt a25 z).storeAt b03 z).storeAt b14 z).storeAt b25
+        z := by
   rw [storeAt_swap_id (Ne.symm h13), storeAt_swap_id (Ne.symm h24), storeAt_swap_id (Ne.symm h23)]
 
 /-- `fd_r43x6_ge_decode2` on the encodings at `sa sb` stores `spec`'s points at `a03 a14 a25` and
 `b03 b14 b25` (six distinct blocks) and returns its value; its frames count `24` blocks. -/
 theorem call_eq (s : GlobalState) (hwf : s.WF) (hsa : Fits s.mem sa 256) (hsb : Fits s.mem sb 256)
-    (ha03 : Fits s.mem a03 512) (ha14 : Fits s.mem a14 512) (ha25 : Fits s.mem a25 512)
-    (hb03 : Fits s.mem b03 512) (hb14 : Fits s.mem b14 512) (hb25 : Fits s.mem b25 512)
+    (ha03 : Room s.mem a03 512) (ha14 : Room s.mem a14 512) (ha25 : Room s.mem a25 512)
+    (hb03 : Room s.mem b03 512) (hb14 : Room s.mem b14 512) (hb25 : Room s.mem b25 512)
     (hids : [a03.id, a14.id, a25.id, b03.id, b14.id, b25.id].Nodup) :
     fd_r43x6_ge_decode2.call (argsOf a03 a14 a25 sa b03 b14 b25 sb) s =
       let R := spec (dec (s.mem.readAt sa 256)) (dec (s.mem.readAt sb 256))
@@ -748,7 +799,7 @@ theorem call_eq (s : GlobalState) (hwf : s.WF) (hsa : Fits s.mem sa 256) (hsb : 
   obtain ⟨⟨h01, h02, h03, h04, h05⟩, ⟨h12, h13, h14, h15⟩, ⟨h23, h24, h25⟩, ⟨h34, h35⟩, h45, -⟩ :=
     hids
   generalize dec (s.mem.readAt sa 256) = A, dec (s.mem.readAt sb 256) = B
-  by_cases ha : A.ok <;> by_cases hb : B.ok <;> simp only [result, spec, ha, hb, ↓reduceIte]
+  by_cases ha : A.ok <;> by_cases hb : B.ok <;> simp only [result, spec, ha, hb, ↓reduceIte, id_eq]
   · simp only [storeOut, MemoryState.storeVec, foldAt, packAt, quadOf]
     rw [storeAt_twice h01 h02 h03 h04 h05 h12 h13 h14 h15 h23 h24 h25 h34 h35 h45]
   all_goals

@@ -70,8 +70,8 @@ abbrev Pow22523_2.Spec (pow : Pow22523_2) (powS : Vector (BitVec 64) 8 → Vecto
     Prop :=
   ∀ p x q y s,
     s.WF →
-      Fits s.mem p 512 →
-      Fits s.mem q 512 →
+      Room s.mem p 512 →
+      Room s.mem q 512 →
       pow (.cons (.value p) (.cons (Ty.wrap x) (.cons (.value q) (.cons (Ty.wrap y) .nil)))) s =
         .value
           (.nil,

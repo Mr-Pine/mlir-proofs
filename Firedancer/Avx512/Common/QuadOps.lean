@@ -58,8 +58,8 @@ def permSelMask (i0 i1 i2 i3 s0 s1 s2 s3 : Nat) : Vector (Option (Fin (2 * 8))) 
 
 /-- Lanes `j`, `j + 4` of `y` where `ij ≠ 0`, of `x` where `ij = 0`. -/
 def wwl_lane_sel (i0 i1 i2 i3 : Nat) (x y : Wwl) : Wwl :=
-  #v[selV i0 x[0] y[0], selV i1 x[1] y[1], selV i2 x[2] y[2], selV i3 x[3] y[3],
-    selV i0 x[4] y[4], selV i1 x[5] y[5], selV i2 x[6] y[6], selV i3 x[7] y[7]]
+  #v[selV i0 x[0] y[0], selV i1 x[1] y[1], selV i2 x[2] y[2], selV i3 x[3] y[3], selV i0 x[4] y[4],
+    selV i1 x[5] y[5], selV i2 x[6] y[6], selV i3 x[7] y[7]]
 
 /-- Lanes `j`, `j + 4` of `v` where `ij ≠ 0`, poison where `ij = 0`: the `p` limbs
 `FD_R43X6_QUAD_LANE_SUB_FAST` adds, as the code materializes them. -/
@@ -91,31 +91,32 @@ open Firedancer.Avx512 Memory
 set_option hygiene false in
 /-- One lane of a lane select: both cases of its flag `i`. -/
 local macro "sel_lane " i:ident : tactic =>
-  `(tactic| (rcases $i:ident with _ | _ <;>
-      simp only [Operation.shufflevector, Nat.reduceMul, selMask, selLane, Fin.ofNat_eq_cast,
-        Fin.natCast_zero, Fin.isValue, Nat.reduceAdd, Fin.natCast_eq_last, Fin.reduceLast,
-        List.size_toArray, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl, and_self,
-        Fin.getElem_fin, Vector.getElem_mk, List.getElem_toArray, Ty.wrap_vec, Vector.getElem_map,
-        selPoison, selV, Vector.getElem_zipWith, Operation.add, Operation.sub, true_and,
-        Bool.false_eq_true, false_and, ↓reduceIte, PoisonOr.pure_def, PoisonOr.poison_bind,
-        PoisonOr.value_bind, Vector.getElem_ofFn, List.getElem_cons_zero, Fin.val_ofNat_lit,
-        Nat.zero_mod, Nat.zero_lt_succ, ↓reduceDIte, wwl_lane_sel, wwl_add, wwl_sub,
-        List.getElem_cons_succ, Vector.map_mk, List.map_toArray, List.map_cons, List.map_nil,
-        pullWrap, wrapGetElem, PoisonOr.value_inj,
-        Fin.val_natCast, Nat.reduceMod, lt_self_iff_false, Nat.sub_self, Nat.reduceLT,
-        Nat.reduceSub, dite_false, one_sub_add_one, *]))
+  `(tactic|
+    (rcases $i:ident with _ | _ <;>
+        simp only [Operation.shufflevector, Nat.reduceMul, selMask, selLane, Fin.ofNat_eq_cast,
+          Fin.natCast_zero, Fin.isValue, Nat.reduceAdd, Fin.natCast_eq_last, Fin.reduceLast,
+          List.size_toArray, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl, and_self,
+          Fin.getElem_fin, Vector.getElem_mk, List.getElem_toArray, Ty.wrap_vec, Vector.getElem_map,
+          selPoison, selV, Vector.getElem_zipWith, Operation.add, Operation.sub, true_and,
+          Bool.false_eq_true, false_and, ↓reduceIte, PoisonOr.pure_def, PoisonOr.poison_bind,
+          PoisonOr.value_bind, Vector.getElem_ofFn, List.getElem_cons_zero, Fin.val_ofNat_lit,
+          Nat.zero_mod, Nat.zero_lt_succ, ↓reduceDIte, wwl_lane_sel, wwl_add, wwl_sub,
+          List.getElem_cons_succ, Vector.map_mk, List.map_toArray, List.map_cons, List.map_nil,
+          pullWrap, wrapGetElem, PoisonOr.value_inj, Fin.val_natCast, Nat.reduceMod,
+          lt_self_iff_false, Nat.sub_self, Nat.reduceLT, Nat.reduceSub, dite_false, one_sub_add_one,
+          *]))
 
 set_option hygiene false in
 /-- One lane of a partial permute: both cases of its flag `s`. -/
 local macro "perm_lane " s:ident : tactic =>
-  `(tactic| (rcases $s:ident with _ | _ <;>
-      simp [Operation.shufflevector, permPoisonMask, permSelMask, selPoison, selV, wwl_perm4,
-        wwl_lane_sel, Ty.wrap_vec, Nat.mod_eq_of_lt, *]))
+  `(tactic|
+    (rcases $s:ident with _ | _ <;>
+        simp [Operation.shufflevector, permPoisonMask, permSelMask, selPoison, selV, wwl_perm4,
+          wwl_lane_sel, Ty.wrap_vec, Nat.mod_eq_of_lt, *]))
 
 /-! ### Lanes -/
 
-theorem one_sub_add_one (n : Nat) : 1 - (n + 1) = 0 := by
-  omega
+theorem one_sub_add_one (n : Nat) : 1 - (n + 1) = 0 := by omega
 
 theorem selV_one_sub (i : Nat) (a b : α) : selV (1 - i) b a = selV i a b := by
   rcases i with _ | n
@@ -160,7 +161,7 @@ theorem shufflevector_selMask {i0 i1 i2 i3 : Nat} {m : Vector (Option (Fin (2 * 
       Ty.wrap (t := .vec 8 64) (wwl_lane_sel i0 i1 i2 i3 x y) := by
   subst hm
   ext k hk
-  obtain _|_|_|_|_|_|_|_|k := k
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   · sel_lane i0
   · sel_lane i1
   · sel_lane i2
@@ -214,7 +215,7 @@ theorem zipWith_add_selPoison (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (d v : ⟦
       selPoison i0 i1 i2 i3 (wwl_add d v) := by
   rcases f with ⟨_ | _, _ | _⟩ <;> simp only [Bool.true_eq_false] at hu
   · ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -234,7 +235,7 @@ theorem zipWith_add_selPoison (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (d v : ⟦
     have h7 : d[7].saddOverflow v[7] = false := hs rfl 7
     clear hs
     ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
       simp_all
     · sel_lane i1
@@ -253,7 +254,7 @@ theorem shufflevector_selPoison {i0 i1 i2 i3 : Nat} {m : Vector (Option (Fin (2 
       Ty.wrap (t := .vec 8 64) (wwl_lane_sel i0 i1 i2 i3 t v) := by
   subst hm
   ext k hk
-  obtain _|_|_|_|_|_|_|_|k := k
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   · sel_lane i0
   · sel_lane i1
   · sel_lane i2
@@ -271,7 +272,7 @@ theorem shufflevector_selPoison_swap {i0 i1 i2 i3 : Nat} {m : Vector (Option (Fi
       Ty.wrap (t := .vec 8 64) (wwl_lane_sel i0 i1 i2 i3 t v) := by
   subst hm
   ext k hk
-  obtain _|_|_|_|_|_|_|_|k := k
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   · sel_lane i0
   · sel_lane i1
   · sel_lane i2
@@ -290,7 +291,7 @@ theorem zipWith_selPoison_sub (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (a x : Wwl
       selPoison i0 i1 i2 i3 (wwl_sub a x) := by
   rcases f with ⟨_ | _, _ | _⟩ <;> simp only [Bool.true_eq_false] at hu
   · ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -310,7 +311,7 @@ theorem zipWith_selPoison_sub (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (a x : Wwl
     have h7 : a[7].ssubOverflow x[7] = false := hs rfl 7
     clear hs
     ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -329,7 +330,7 @@ theorem zipWith_selPoison_add (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (a x : Wwl
       selPoison i0 i1 i2 i3 (wwl_add a x) := by
   rcases f with ⟨_ | _, _ | _⟩ <;> simp only [Bool.true_eq_false] at hu
   · ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -349,7 +350,7 @@ theorem zipWith_selPoison_add (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (a x : Wwl
     have h7 : a[7].saddOverflow x[7] = false := hs rfl 7
     clear hs
     ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -363,12 +364,11 @@ theorem zipWith_selPoison_add (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (a x : Wwl
 /-- `a + x` on the lanes both `selPoison`s keep, under the flags `f`. -/
 theorem zipWith_selPoison_add_selPoison (i0 i1 i2 i3 : Nat) {f : OverflowFlags} (a x : Wwl)
     (hs : f.nsw = true → ∀ k : Fin 8, a[k].saddOverflow x[k] = false) (hu : f.nuw = false) :
-    Vector.zipWith (Operation.add f (w := 64)) (selPoison i0 i1 i2 i3 a)
-        (selPoison i0 i1 i2 i3 x) =
+    Vector.zipWith (Operation.add f (w := 64)) (selPoison i0 i1 i2 i3 a) (selPoison i0 i1 i2 i3 x) =
       selPoison i0 i1 i2 i3 (wwl_add a x) := by
   rcases f with ⟨_ | _, _ | _⟩ <;> simp only [Bool.true_eq_false] at hu
   · ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -388,7 +388,7 @@ theorem zipWith_selPoison_add_selPoison (i0 i1 i2 i3 : Nat) {f : OverflowFlags} 
     have h7 : a[7].saddOverflow x[7] = false := hs rfl 7
     clear hs
     ext k hk
-    obtain _|_|_|_|_|_|_|_|k := k
+    obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
     · sel_lane i0
     · sel_lane i1
     · sel_lane i2
@@ -439,7 +439,7 @@ theorem shufflevector_permSelMask {i0 i1 i2 i3 s0 s1 s2 s3 : Nat}
   have : ¬i0 + 8 < 8 ∧ ¬i1 + 8 < 8 ∧ ¬i2 + 8 < 8 ∧ ¬i3 + 8 < 8 := by omega
   have : ¬i0 + 12 < 8 ∧ ¬i1 + 12 < 8 ∧ ¬i2 + 12 < 8 ∧ ¬i3 + 12 < 8 := by omega
   ext k hk
-  obtain _|_|_|_|_|_|_|_|k := k
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   · perm_lane s0
   · perm_lane s1
   · perm_lane s2
@@ -460,7 +460,7 @@ theorem shufflevector_selMask_selPoison {i0 i1 i2 i3 t0 t1 t2 t3 : Nat}
   subst hm
   obtain ⟨rfl, rfl, rfl, rfl⟩ := ht
   ext k hk
-  obtain _|_|_|_|_|_|_|_|k := k
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   · sel_lane i0
   · sel_lane i1
   · sel_lane i2
@@ -477,11 +477,12 @@ theorem lane_sel_add_sub (t x p : Wwl) :
         (wwl_add (wwl_sub (wwl_lane_sel 1 0 0 1 t (wwl_add t x)) x) p) =
       wwl_lane_sel 0 1 1 0 (wwl_add t x) (wwl_add (wwl_sub t x) p) := by
   ext i hi : 1
-  obtain _|_|_|_|_|_|_|_|i := i
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
-    | simp only [wwl_lane_sel, selV, wwl_add, wwl_sub, Vector.getElem_ofFn, Vector.getElem_mk,
+    |
+      simp only [wwl_lane_sel, selV, wwl_add, wwl_sub, Vector.getElem_ofFn, Vector.getElem_mk,
         List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero, Fin.getElem_fin]
 
 /-- A `0 1 1 0` select reads `wwl_lane_sel 1 0 0 1 t d` only where it is `d`, the sum only where
@@ -490,22 +491,27 @@ theorem lane_sel_sub_add (t d x : Wwl) :
     wwl_lane_sel 0 1 1 0 (wwl_lane_sel 1 0 0 1 t d) (wwl_add (wwl_lane_sel 1 0 0 1 t d) x) =
       wwl_lane_sel 0 1 1 0 d (wwl_add t x) := by
   ext k hk
-  obtain _|_|_|_|_|_|_|_|k := k
-  all_goals first | omega | simp [wwl_lane_sel, selV, wwl_add]
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
+  all_goals
+    first
+    | omega
+    | simp [wwl_lane_sel, selV, wwl_add]
 
 /-- Setting all eight lanes forgets the base vector. -/
 theorem Vector.set_eight {α : Type} (w : Vector α 8) (x0 x1 x2 x3 x4 x5 x6 x7 : α) :
     (((((((w.set 0 x0).set 1 x1).set 2 x2).set 3 x3).set 4 x4).set 5 x5).set 6 x6).set 7 x7 =
       #v[x0, x1, x2, x3, x4, x5, x6, x7] := by
   ext i hi
-  obtain _|_|_|_|_|_|_|_|i := i
-  all_goals first | omega | simp
+  obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
+  all_goals
+    first
+    | omega
+    | simp
 
 /-! ### The macros' `Quad` operations, lane by lane -/
 
 theorem ite_selV (i : Nat) (a b : α) :
-    (if selV i false true = true then b else a) = selV i a b := by
-  rcases i with _ | _ <;> rfl
+    (if selV i false true = true then b else a) = selV i a b := by rcases i with _ | _ <;> rfl
 
 theorem quadMask_getLsbD {i0 i1 i2 i3 : Nat} (h : i0 ≤ 1 ∧ i1 ≤ 1 ∧ i2 ≤ 1 ∧ i3 ≤ 1) :
     (quadMask i0 i1 i2 i3).getLsbD 0 = selV i0 false true ∧
@@ -528,11 +534,12 @@ theorem Quad.permute_eq_perm4 {i0 i1 i2 i3 : Nat} (h : i0 < 4 ∧ i1 < 4 ∧ i2 
     (P : Quad) : P.permute i0 i1 i2 i3 = P.perm4 i0 i1 i2 i3 := by
   obtain ⟨h0, h1, h2, h3⟩ := h
   simp only [Quad.permute, Quad.perm4, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext k hk : 1 <;> obtain _|_|_|_|_|_|_|_|k := k
+  refine ⟨?_, ?_, ?_⟩ <;> ext k hk : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   all_goals
     first
     | omega
-    | simp [wwl_permute, wwl, wwl_perm4, Nat.mod_eq_of_lt (show i0 < 2 ^ 64 by omega),
+    |
+      simp [wwl_permute, wwl, wwl_perm4, Nat.mod_eq_of_lt (show i0 < 2 ^ 64 by omega),
         Nat.mod_eq_of_lt (show i1 < 2 ^ 64 by omega), Nat.mod_eq_of_lt (show i2 < 2 ^ 64 by omega),
         Nat.mod_eq_of_lt (show i3 < 2 ^ 64 by omega), Nat.add_comm 4]
 
@@ -545,11 +552,12 @@ theorem Quad.laneAddFast_sel {i0 i1 i2 i3 : Nat} (h : i0 ≤ 1 ∧ i1 ≤ 1 ∧ 
         wwl_lane_sel i0 i1 i2 i3 T.P25 (wwl_add T.P25 X.P25)⟩ := by
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7⟩ := quadMask_getLsbD h
   simp only [Quad.laneAddFast, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext k hk : 1 <;> obtain _|_|_|_|_|_|_|_|k := k
+  refine ⟨?_, ?_, ?_⟩ <;> ext k hk : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   all_goals
     first
     | omega
-    | simp only [wwv_add_if, wwl_lane_sel, wwl_add, Vector.getElem_ofFn, Vector.getElem_mk,
+    |
+      simp only [wwv_add_if, wwl_lane_sel, wwl_add, Vector.getElem_ofFn, Vector.getElem_mk,
         List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero, Nat.reduceAdd,
         Fin.getElem_fin, b0, b1, b2, b3, b4, b5, b6, b7, ite_selV]
 
@@ -563,13 +571,14 @@ theorem Quad.laneSubFast_sel {i0 i1 i2 i3 : Nat} (h : i0 ≤ 1 ∧ i1 ≤ 1 ∧ 
         wwl_lane_sel i0 i1 i2 i3 T.P25 (wwl_add (wwl_sub T.P25 X.P25) quadP.P25)⟩ := by
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7⟩ := quadMask_getLsbD h
   simp only [Quad.laneSubFast, Quad.laneAddFast, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext k hk : 1 <;> obtain _|_|_|_|_|_|_|_|k := k
+  refine ⟨?_, ?_, ?_⟩ <;> ext k hk : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | k := k
   all_goals
     first
     | omega
-    | simp only [wwv_add_if, wwl_lane_sel, wwl_add, wwl_sub, Vector.getElem_ofFn,
-        Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero,
-        Nat.reduceAdd, Fin.getElem_fin, b0, b1, b2, b3, b4, b5, b6, b7, ite_selV, add_sub_comm']
+    |
+      simp only [wwv_add_if, wwl_lane_sel, wwl_add, wwl_sub, Vector.getElem_ofFn, Vector.getElem_mk,
+        List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero, Nat.reduceAdd,
+        Fin.getElem_fin, b0, b1, b2, b3, b4, b5, b6, b7, ite_selV, add_sub_comm']
 
 /-- `FD_R43X6_QUAD_LANE_ADD_FAST( T, T, 1,0,0,1, T, X )` then
 `FD_R43X6_QUAD_LANE_SUB_FAST( T, T, 0,1,1,0, T, X )`: `T + X` in lanes 0, 3, `T - X + p` in
@@ -611,6 +620,7 @@ theorem sub_add_lt_ok {x y c : Wwl} (hx : ∀ i : Fin 8, x[i] < 17592186044416#6
 section Patterns
 
 attribute [-mlir_operation] zipWith_eq_ofFn
+
 attribute [local mlir_operation] zipWith_shl_wrap
 
 /-- `FD_R43X6_QUAD_PERMUTE( r, imm0,imm1,imm2,imm3, x )`: a shuffle by `m` of each of `x03 x14 x25`
@@ -829,7 +839,8 @@ theorem runBodyFrom_laneSubRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets bp
 selected by `m` into `r03 r14 r25`. -/
 def laneAddSubRun (m : Vector (Option (Fin (2 * 8))) 8)
     (t03 t14 t25 x03 x14 x25 k03 k14 k25 a03 a14 a25 d03 e03 r03 d14 e14 r14 d25 e25 r25 :
-      Dst Γ (.vec 8 64)) : List (Instr Γ) :=
+      Dst Γ (.vec 8 64)) :
+    List (Instr Γ) :=
   [.binop (.vector (.add {})) a03 (.val t03.i t03.h) (.val x03.i x03.h),
     .binop (.vector (.add {})) a14 (.val t14.i t14.h) (.val x14.i x14.h),
     .binop (.vector (.add {})) a25 (.val t25.i t25.h) (.val x25.i x25.h),
@@ -905,18 +916,16 @@ def permuteLoadRun (m : Vector (Option (Fin (2 * 8))) 8) (p : Reg Γ .ptr)
     (x03 r03 x14 r14 x25 r25 pz : Dst Γ (.vec 8 64)) (g1 g2 : Dst Γ .ptr) : List (Instr Γ) :=
   [.load x03 p, .binop (.shufflevector m) r03 (.val x03.i x03.h) (.val pz.i pz.h),
     .unop (.gepConst 64) g1 p, .load x14 (.val g1.i g1.h),
-    .binop (.shufflevector m) r14 (.val x14.i x14.h) (.val pz.i pz.h),
-    .unop (.gepConst 128) g2 p, .load x25 (.val g2.i g2.h),
-    .binop (.shufflevector m) r25 (.val x25.i x25.h) (.val pz.i pz.h)]
+    .binop (.shufflevector m) r14 (.val x14.i x14.h) (.val pz.i pz.h), .unop (.gepConst 128) g2 p,
+    .load x25 (.val g2.i g2.h), .binop (.shufflevector m) r25 (.val x25.i x25.h) (.val pz.i pz.h)]
 
 /-- Where the body at `pos` is `permuteLoadRun` by `permMask imm` and `p` holds the point `P`:
 running on from `pos` then `g` gives `K` if it does from `pos + 8` with `P`'s vectors (as
 `l03 l14 l25`) in `x03 x14 x25` and their `permute imm` (as `p03 p14 p25`) in `r03 r14 r25`. -/
 theorem runBodyFrom_permuteLoadRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
     {pos : Nat} {m : Vector (Option (Fin (2 * 8))) 8} {p : Reg Γ .ptr}
-    {x03 r03 x14 r14 x25 r25 pz : Dst Γ (.vec 8 64)} {g1 g2 : Dst Γ .ptr}
-    {rest : List (Instr Γ)} {P : Pointer} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    {x03 r03 x14 r14 x25 r25 pz : Dst Γ (.vec 8 64)} {g1 g2 : Dst Γ .ptr} {rest : List (Instr Γ)}
+    {P : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody : blk.body.drop pos = permuteLoadRun m p x03 r03 x14 r14 x25 r25 pz g1 g2 ++ rest)
     (hp : E.read p = .value P) (hP : S.mem.QuadFit P) (hm : m = permMask i0 i1 i2 i3)
     (hi : i0 < 4 ∧ i1 < 4 ∧ i2 < 4 ∧ i3 < 4) (hpg : p ≠ .val g1.i g1.h)
@@ -925,9 +934,12 @@ theorem runBodyFrom_permuteLoadRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRet
       ∀ (l03 l14 l25 p03 p14 p25 : Wwl) (_hx : S.mem.readQuad P = ⟨l03, l14, l25⟩)
         (_hp : Quad.permute i0 i1 i2 i3 ⟨l03, l14, l25⟩ = ⟨p03, p14, p25⟩),
         (blk.runBodyFrom
-              E[x03 := Ty.wrap l03, r03 := Ty.wrap p03, g1 := .value (P.add 64#64),
-                x14 := Ty.wrap l14, r14 := Ty.wrap p14, g2 := .value (P.add 128#64),
-                x25 := Ty.wrap l25, r25 := Ty.wrap p25] (pos + 8) S >>= g) = K) :
+              E[x03 := Ty.wrap l03, r03 := Ty.wrap p03, g1 := .value (P.add 64#64), x14 :=
+                Ty.wrap l14, r14 := Ty.wrap p14, g2 := .value (P.add 128#64), x25 := Ty.wrap l25,
+                r25 := Ty.wrap p25]
+              (pos + 8) S >>=
+            g) =
+          K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   step_load with ql03
   step_pure [shufflevector_permMask hm hi] with q03
@@ -941,15 +953,19 @@ theorem runBodyFrom_permuteLoadRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRet
     rw [Quad.permute_eq_perm4 hi, hq03, hq14, hq25]
     rfl
   rw [hE, hS]
-  exact hK _ _ _ _ _ _ (by rw [hql03, hql14, hql25]; rfl) e
+  exact
+    hK _ _ _ _ _ _
+      (by
+        rw [hql03, hql14, hql25]; rfl)
+      e
 
 /-- `runBodyFrom_permuteLoadRun` by `permPoisonMask imm s`: `r03 r14 r25` get the lanes of the
 permuted vectors where `sj ≠ 0`, poison elsewhere. -/
 theorem runBodyFrom_permuteLoadRun_poison (i0 i1 i2 i3 s0 s1 s2 s3 : Nat)
     {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat} {m : Vector (Option (Fin (2 * 8))) 8}
     {p : Reg Γ .ptr} {x03 r03 x14 r14 x25 r25 pz : Dst Γ (.vec 8 64)} {g1 g2 : Dst Γ .ptr}
-    {rest : List (Instr Γ)} {P : Pointer} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    {rest : List (Instr Γ)} {P : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
+    {K : PoisonOr β}
     (hbody : blk.body.drop pos = permuteLoadRun m p x03 r03 x14 r14 x25 r25 pz g1 g2 ++ rest)
     (hp : E.read p = .value P) (hP : S.mem.QuadFit P)
     (hm : m = permPoisonMask i0 i1 i2 i3 s0 s1 s2 s3) (hi : i0 < 4 ∧ i1 < 4 ∧ i2 < 4 ∧ i3 < 4)
@@ -957,12 +973,13 @@ theorem runBodyFrom_permuteLoadRun_poison (i0 i1 i2 i3 s0 s1 s2 s3 : Nat)
     (hK :
       ∀ (l03 l14 l25 : Wwl) (_hx : S.mem.readQuad P = ⟨l03, l14, l25⟩),
         (blk.runBodyFrom
-              E[x03 := Ty.wrap l03, r03 := selPoison s0 s1 s2 s3 (wwl_perm4 i0 i1 i2 i3 l03),
-                g1 := .value (P.add 64#64), x14 := Ty.wrap l14,
-                r14 := selPoison s0 s1 s2 s3 (wwl_perm4 i0 i1 i2 i3 l14),
-                g2 := .value (P.add 128#64), x25 := Ty.wrap l25,
-                r25 := selPoison s0 s1 s2 s3 (wwl_perm4 i0 i1 i2 i3 l25)]
-              (pos + 8) S >>= g) = K) :
+              E[x03 := Ty.wrap l03, r03 := selPoison s0 s1 s2 s3 (wwl_perm4 i0 i1 i2 i3 l03), g1 :=
+                .value (P.add 64#64), x14 := Ty.wrap l14, r14 :=
+                selPoison s0 s1 s2 s3 (wwl_perm4 i0 i1 i2 i3 l14), g2 := .value (P.add 128#64),
+                x25 := Ty.wrap l25, r25 := selPoison s0 s1 s2 s3 (wwl_perm4 i0 i1 i2 i3 l25)]
+              (pos + 8) S >>=
+            g) =
+          K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   step_load with ql03
   step_pure [shufflevector_permPoisonMask hm hi]
@@ -973,7 +990,10 @@ theorem runBodyFrom_permuteLoadRun_poison (i0 i1 i2 i3 s0 s1 s2 s3 : Nat)
   step_load with ql25
   step_pure [shufflevector_permPoisonMask hm hi]
   rw [hE, hS]
-  exact hK _ _ _ (by rw [hql03, hql14, hql25]; rfl)
+  exact
+    hK _ _ _
+      (by
+        rw [hql03, hql14, hql25]; rfl)
 
 /-- `FD_R43X6_QUAD_LANE_SUB_FAST( r, t, imm, t, x )` on a `t` permuted from `x`, the permute fused
 in: `t - x` into `d03 d14 d25`, plus `p`'s limbs in `k03 k14 k25` into `e03 e14 e25`, selected
@@ -1052,10 +1072,10 @@ theorem runBodyFrom_laneSubPermRun (i0 i1 i2 i3 s0 s1 s2 s3 : Nat) {blk : BasicB
 `k03 k14 k25` into `e03 e14 e25` (flags `fa`); the permuted lanes `LANE_ADD` uses into
 `w03 w14 w25` (mask `m2`), plus `x` into `a03 a14 a25` (flags `f03 f14 f25`); the two selected
 into `r03 r14 r25` (mask `m3`). -/
-def permSubAddRun (m1 m2 m3 : Vector (Option (Fin (2 * 8))) 8)
-    (fs fa f03 f14 f25 : OverflowFlags)
-    (x03 x14 x25 pz k03 k14 k25 p03 p14 p25 d03 e03 w03 d14 e14 w14 d25 e25 w25 a03 r03 a14 r14
-      a25 r25 : Dst Γ (.vec 8 64)) : List (Instr Γ) :=
+def permSubAddRun (m1 m2 m3 : Vector (Option (Fin (2 * 8))) 8) (fs fa f03 f14 f25 : OverflowFlags)
+    (x03 x14 x25 pz k03 k14 k25 p03 p14 p25 d03 e03 w03 d14 e14 w14 d25 e25 w25 a03 r03 a14 r14 a25
+      r25 : Dst Γ (.vec 8 64)) :
+    List (Instr Γ) :=
   [.binop (.shufflevector m1) p03 (.val x03.i x03.h) (.val pz.i pz.h),
     .binop (.shufflevector m1) p14 (.val x14.i x14.h) (.val pz.i pz.h),
     .binop (.shufflevector m1) p25 (.val x25.i x25.h) (.val pz.i pz.h),
@@ -1166,23 +1186,25 @@ theorem runBodyFrom_permSubAddRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
 /-- The point at `p` loaded into `x03 x14 x25`, through `g1 g2` (`p + 64` and `p + 128`). -/
 def quadLoadRun (p : Reg Γ .ptr) (x03 x14 x25 : Dst Γ (.vec 8 64)) (g1 g2 : Dst Γ .ptr) :
     List (Instr Γ) :=
-  [.load x03 p, .unop (.gepConst 64) g1 p, .load x14 (.val g1.i g1.h),
-    .unop (.gepConst 128) g2 p, .load x25 (.val g2.i g2.h)]
+  [.load x03 p, .unop (.gepConst 64) g1 p, .load x14 (.val g1.i g1.h), .unop (.gepConst 128) g2 p,
+    .load x25 (.val g2.i g2.h)]
 
 /-- Where the body at `pos` is `quadLoadRun` and `p` holds the point `P`: running on from `pos`
 then `g` gives `K` if it does from `pos + 5` with `P`'s vectors (as `l03 l14 l25`) in
 `x03 x14 x25`. -/
-theorem runBodyFrom_quadLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {p : Reg Γ .ptr} {x03 x14 x25 : Dst Γ (.vec 8 64)} {g1 g2 : Dst Γ .ptr}
-    {rest : List (Instr Γ)} {P : Pointer} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody : blk.body.drop pos = quadLoadRun p x03 x14 x25 g1 g2 ++ rest)
-    (hp : E.read p = .value P) (hP : S.mem.QuadFit P) (hpg : p ≠ .val g1.i g1.h)
+theorem runBodyFrom_quadLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat} {p : Reg Γ .ptr}
+    {x03 x14 x25 : Dst Γ (.vec 8 64)} {g1 g2 : Dst Γ .ptr} {rest : List (Instr Γ)} {P : Pointer}
+    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    (hbody : blk.body.drop pos = quadLoadRun p x03 x14 x25 g1 g2 ++ rest) (hp : E.read p = .value P)
+    (hP : S.mem.QuadFit P) (hpg : p ≠ .val g1.i g1.h)
     (hK :
       ∀ (l03 l14 l25 : Wwl) (_hx : S.mem.readQuad P = ⟨l03, l14, l25⟩),
         (blk.runBodyFrom
-              E[x03 := Ty.wrap l03, g1 := .value (P.add 64#64), x14 := Ty.wrap l14,
-                g2 := .value (P.add 128#64), x25 := Ty.wrap l25] (pos + 5) S >>= g) = K) :
+              E[x03 := Ty.wrap l03, g1 := .value (P.add 64#64), x14 := Ty.wrap l14, g2 :=
+                .value (P.add 128#64), x25 := Ty.wrap l25]
+              (pos + 5) S >>=
+            g) =
+          K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   step_load with ql03
   step_pure
@@ -1190,7 +1212,10 @@ theorem runBodyFrom_quadLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
   step_pure
   step_load with ql25
   rw [hE, hS]
-  exact hK ql03 ql14 ql25 (by rw [hql03, hql14, hql25]; rfl)
+  exact
+    hK ql03 ql14 ql25
+      (by
+        rw [hql03, hql14, hql25]; rfl)
 
 /-- `FD_R43X6_QUAD_MUL_FAST( q, x, y )` as compiled: `fd_r43x6_quad_mul_fast` into the slots
 `z0 z1 z2`, then loaded into `q03 q14 q25`. -/
@@ -1199,10 +1224,14 @@ def mulRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 y03 y14 y25 q03 q14 q25 : Dst �
   [.lifetimeStart (.val z0.i z0.h) 64, .lifetimeStart (.val z1.i z1.h) 64,
     .lifetimeStart (.val z2.i z2.h) 64,
     .call fd_r43x6_quad_mul_fast.call
-      (.cons (.val z0.i z0.h) (.cons (.val z1.i z1.h) (.cons (.val z2.i z2.h)
-        (.cons (.val x03.i x03.h) (.cons (.val x14.i x14.h) (.cons (.val x25.i x25.h)
-          (.cons (.val y03.i y03.h) (.cons (.val y14.i y14.h) (.cons (.val y25.i y25.h)
-            .nil)))))))))
+      (.cons (.val z0.i z0.h)
+        (.cons (.val z1.i z1.h)
+          (.cons (.val z2.i z2.h)
+            (.cons (.val x03.i x03.h)
+              (.cons (.val x14.i x14.h)
+                (.cons (.val x25.i x25.h)
+                  (.cons (.val y03.i y03.h)
+                    (.cons (.val y14.i y14.h) (.cons (.val y25.i y25.h) .nil)))))))))
       .nil,
     .load q03 (.val z0.i z0.h), .load q14 (.val z1.i z1.h), .load q25 (.val z2.i z2.h),
     .lifetimeEnd (.val z2.i z2.h) 64, .lifetimeEnd (.val z1.i z1.h) 64,
@@ -1213,20 +1242,28 @@ def mulRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 y03 y14 y25 q03 q14 q25 : Dst �
 with `quadMul X Y` (as `m03 m14 m25`) in `q03 q14 q25` and left in the slots. -/
 theorem runBodyFrom_mulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {z0 z1 z2 : Dst Γ .ptr} {x03 x14 x25 y03 y14 y25 q03 q14 q25 : Dst Γ (.vec 8 64)}
-    {rest : List (Instr Γ)} {X03 X14 X25 Y03 Y14 Y25 : Wwl} {Z0 Z1 Z2 : Pointer}
-    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody :
-      blk.body.drop pos = mulRun z0 z1 z2 x03 x14 x25 y03 y14 y25 q03 q14 q25 ++ rest)
+    {rest : List (Instr Γ)} {X03 X14 X25 Y03 Y14 Y25 : Wwl} {Z0 Z1 Z2 : Pointer} {S : GlobalState}
+    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
+    (hbody : blk.body.drop pos = mulRun z0 z1 z2 x03 x14 x25 y03 y14 y25 q03 q14 q25 ++ rest)
     (hR :
-      E ⊨ [x03 := X03, x14 := X14, x25 := X25, y03 := Y03, y14 := Y14, y25 := Y25, z0 := Z0,
-        z1 := Z1, z2 := Z2])
-    (hwf : S.WF) (hZ : Fits S.mem Z0 512 ∧ Fits S.mem Z1 512 ∧ Fits S.mem Z2 512)
+      E ⊨ [x03 := X03, x14 := X14, x25 := X25, y03 := Y03, y14 := Y14, y25 := Y25, z0 := Z0, z1 :=
+        Z1, z2 := Z2])
+    (hwf : S.WF) (hZ : InBounds S.mem Z0 512 ∧ InBounds S.mem Z1 512 ∧ InBounds S.mem Z2 512)
     (hne : Z0.id ≠ Z1.id ∧ Z0.id ≠ Z2.id ∧ Z1.id ≠ Z2.id)
     (hK :
       ∀ (m03 m14 m25 : Wwl) (_hm : quadMul ⟨X03, X14, X25⟩ ⟨Y03, Y14, Y25⟩ = ⟨m03, m14, m25⟩),
         (blk.runBodyFrom E[q03 := Ty.wrap m03, q14 := Ty.wrap m14, q25 := Ty.wrap m25] (pos + 10)
               { alloc := S.alloc,
-                mem := ((S.mem.storeVec Z0 m03).storeVec Z1 m14).storeVec Z2 m25 } >>= g) = K) :
+                mem :=
+                  ((((((((S.mem.lifetimeStart Z0).lifetimeStart Z1).lifetimeStart Z2).storeVec Z0
+                                        m03).storeVec
+                                    Z1 m14).storeVec
+                                Z2 m25).lifetimeEnd
+                            Z2).lifetimeEnd
+                        Z1).lifetimeEnd
+                    Z0 } >>=
+            g) =
+          K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2⟩ := hZ
   obtain ⟨h01, h02, h12⟩ := hne
@@ -1244,13 +1281,14 @@ theorem runBodyFrom_mulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : 
 
 /-- `FD_R43X6_QUAD_SQR_FAST( q, x )` as compiled: `fd_r43x6_quad_sqr_fast` into the slots
 `z0 z1 z2`, then loaded into `q03 q14 q25`. -/
-def sqrRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64)) :
-    List (Instr Γ) :=
+def sqrRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64)) : List (Instr Γ) :=
   [.lifetimeStart (.val z0.i z0.h) 64, .lifetimeStart (.val z1.i z1.h) 64,
     .lifetimeStart (.val z2.i z2.h) 64,
     .call fd_r43x6_quad_sqr_fast.call
-      (.cons (.val z0.i z0.h) (.cons (.val z1.i z1.h) (.cons (.val z2.i z2.h)
-        (.cons (.val x03.i x03.h) (.cons (.val x14.i x14.h) (.cons (.val x25.i x25.h) .nil))))))
+      (.cons (.val z0.i z0.h)
+        (.cons (.val z1.i z1.h)
+          (.cons (.val z2.i z2.h)
+            (.cons (.val x03.i x03.h) (.cons (.val x14.i x14.h) (.cons (.val x25.i x25.h) .nil))))))
       .nil,
     .load q03 (.val z0.i z0.h), .load q14 (.val z1.i z1.h), .load q25 (.val z2.i z2.h),
     .lifetimeEnd (.val z2.i z2.h) 64, .lifetimeEnd (.val z1.i z1.h) 64,
@@ -1260,18 +1298,26 @@ def sqrRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64
 slots: running on from `pos` then `g` gives `K` if it does from `pos + 10` with `quadSqr X` (as
 `m03 m14 m25`) in `q03 q14 q25` and left in the slots. -/
 theorem runBodyFrom_sqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {z0 z1 z2 : Dst Γ .ptr} {x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64)}
-    {rest : List (Instr Γ)} {X03 X14 X25 : Wwl} {Z0 Z1 Z2 : Pointer}
-    {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody : blk.body.drop pos = sqrRun z0 z1 z2 x03 x14 x25 q03 q14 q25 ++ rest)
-    (hR : E ⊨ [x03 := X03, x14 := X14, x25 := X25, z0 := Z0, z1 := Z1, z2 := Z2])
-    (hwf : S.WF) (hZ : Fits S.mem Z0 512 ∧ Fits S.mem Z1 512 ∧ Fits S.mem Z2 512)
+    {z0 z1 z2 : Dst Γ .ptr} {x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64)} {rest : List (Instr Γ)}
+    {X03 X14 X25 : Wwl} {Z0 Z1 Z2 : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
+    {K : PoisonOr β} (hbody : blk.body.drop pos = sqrRun z0 z1 z2 x03 x14 x25 q03 q14 q25 ++ rest)
+    (hR : E ⊨ [x03 := X03, x14 := X14, x25 := X25, z0 := Z0, z1 := Z1, z2 := Z2]) (hwf : S.WF)
+    (hZ : InBounds S.mem Z0 512 ∧ InBounds S.mem Z1 512 ∧ InBounds S.mem Z2 512)
     (hne : Z0.id ≠ Z1.id ∧ Z0.id ≠ Z2.id ∧ Z1.id ≠ Z2.id)
     (hK :
       ∀ (m03 m14 m25 : Wwl) (_hm : quadSqr ⟨X03, X14, X25⟩ = ⟨m03, m14, m25⟩),
         (blk.runBodyFrom E[q03 := Ty.wrap m03, q14 := Ty.wrap m14, q25 := Ty.wrap m25] (pos + 10)
               { alloc := S.alloc,
-                mem := ((S.mem.storeVec Z0 m03).storeVec Z1 m14).storeVec Z2 m25 } >>= g) = K) :
+                mem :=
+                  ((((((((S.mem.lifetimeStart Z0).lifetimeStart Z1).lifetimeStart Z2).storeVec Z0
+                                        m03).storeVec
+                                    Z1 m14).storeVec
+                                Z2 m25).lifetimeEnd
+                            Z2).lifetimeEnd
+                        Z1).lifetimeEnd
+                    Z0 } >>=
+            g) =
+          K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2⟩ := hZ
   obtain ⟨h01, h02, h12⟩ := hne
@@ -1292,8 +1338,7 @@ through `v0 … v7`, into the shared undefined vector `u`. -/
 def insertRun (u : Reg Γ (.vec 8 64)) (v0 v1 v2 v3 v4 v5 v6 v7 : Dst Γ (.vec 8 64))
     (x0 x1 x2 x3 x4 x5 x6 x7 : Reg Γ (.bv 64)) (k0 k1 k2 k3 k4 k5 k6 k7 : Reg Γ (.bv 32)) :
     List (Instr Γ) :=
-  [.ternop .insertelement v0 u x0 k0,
-    .ternop .insertelement v1 (.val v0.i v0.h) x1 k1,
+  [.ternop .insertelement v0 u x0 k0, .ternop .insertelement v1 (.val v0.i v0.h) x1 k1,
     .ternop .insertelement v2 (.val v1.i v1.h) x2 k2,
     .ternop .insertelement v3 (.val v2.i v2.h) x3 k3,
     .ternop .insertelement v4 (.val v3.i v3.h) x4 k4,
@@ -1350,8 +1395,8 @@ def dblMidRun (z0 z1 z2 z3 z4 z5 : Dst Γ .ptr)
     laneAddSubRun (selMask 0 1 1 0) pa03 pa14 pa25 pb03 pb14 pb25 k32 k41 k50 ua03 ua14 ua25 va03
       vb03 v03 va14 vb14 v14 va25 vb25 v25 ++
     laneAddRun (selMask 0 0 1 0) {} {} {} v03 v14 v25 c03 c14 c25 wa03 w03 wa14 w14 wa25 w25 ++
-    laneSubRun (selMask 0 1 1 1) {} {} w03 w14 w25 c03 c14 c25 k59 k68 k77 ya03 yb03 y03 ya14
-      yb14 y14 ya25 yb25 y25 ++
+    laneSubRun (selMask 0 1 1 1) {} {} w03 w14 w25 c03 c14 c25 k59 k68 k77 ya03 yb03 y03 ya14 yb14
+      y14 ya25 yb25 y25 ++
     foldSignedRun y03 y14 y25 nb03 nb sh43 sh4340 k19 mk43 b03 b mk4340 fd03 fd14 fd25 fh03 fh14
       fh25 fp fl03 fc fe03 f03 fl14 fe14 f14 fl25 fe25 f25 ++
     permuteRun (permMask 0 1 1 0) f03 f14 f25 pz ma03 ma14 ma25 ++
@@ -1399,8 +1444,8 @@ theorem runBodyFrom_dblMidRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
     (hk19 : E.read (.val k19.i k19.h) = k19Lanes)
     (hwf : S.WF)
     (hZ :
-      Fits S.mem Z0 512 ∧ Fits S.mem Z1 512 ∧ Fits S.mem Z2 512 ∧ Fits S.mem Z3 512 ∧
-        Fits S.mem Z4 512 ∧ Fits S.mem Z5 512)
+      InBounds S.mem Z0 512 ∧ InBounds S.mem Z1 512 ∧ InBounds S.mem Z2 512 ∧
+        InBounds S.mem Z3 512 ∧ InBounds S.mem Z4 512 ∧ InBounds S.mem Z5 512)
     (hne :
       Z0.id ≠ Z1.id ∧ Z0.id ≠ Z2.id ∧ Z1.id ≠ Z2.id ∧ Z3.id ≠ Z4.id ∧ Z3.id ≠ Z5.id ∧
         Z4.id ≠ Z5.id)
@@ -1455,8 +1500,13 @@ theorem runBodyFrom_dblMidRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
               (pos + 79)
               { alloc := S.alloc,
                 mem :=
-                  (((((S.mem.storeVec Z0 s03).storeVec Z1 s14).storeVec Z2 s25).storeVec Z3
-                          d03).storeVec Z4 d14).storeVec Z5 d25 } >>=
+                  (((((((((((((((((S.mem.lifetimeStart Z0).lifetimeStart Z1).lifetimeStart
+                                                          Z2).storeVec Z0 s03).storeVec Z1
+                                                    s14).storeVec Z2 s25).lifetimeEnd
+                                              Z2).lifetimeEnd Z1).lifetimeEnd Z0).lifetimeStart
+                                      Z3).lifetimeStart Z4).lifetimeStart Z5).storeVec Z3
+                              d03).storeVec Z4 d14).storeVec Z5 d25).lifetimeEnd Z5).lifetimeEnd
+                      Z4).lifetimeEnd Z3 } >>=
             g) =
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by

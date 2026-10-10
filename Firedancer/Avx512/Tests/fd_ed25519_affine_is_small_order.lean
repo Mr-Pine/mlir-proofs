@@ -15,11 +15,12 @@ private def bytes (f : Nat → Nat) : BitVec 1536 :=
 
 /-- `a` holding `b`. -/
 private def state (b : BitVec 1536) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, b⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 b)]⟩⟩
 
 /-- Whether `fd_ed25519_affine_is_small_order(a)` returns `spec`, and that is `r`. -/
 private def check (b : BitVec 1536) (r : BitVec 32) : Bool :=
-  match fd_ed25519_affine_is_small_order.eval 1 (fd_ed25519_affine_is_small_order.args (.value a))
+  match
+    fd_ed25519_affine_is_small_order.eval 1 (fd_ed25519_affine_is_small_order.args (.value a))
       (state b) with
   | .value (some (.cons ret .nil), _) =>
     let v := fd_ed25519_affine_is_small_order.spec ((state b).mem.readQuad a)
@@ -28,6 +29,7 @@ private def check (b : BitVec 1536) (r : BitVec 32) : Bool :=
 
 -- a point with nonzero `X`, `Y` off the order-8 ones; and one with `X = 0`
 #guard check (bytes fun i => 1000 + 37 * i) 0
+
 #guard check (bytes fun i => if i % 4 = 0 then 0 else 1000 + 37 * i) 1
 
 end MLIR.Firedancer.Avx512

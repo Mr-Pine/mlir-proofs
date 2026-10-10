@@ -31,22 +31,24 @@ def swapXY (n : Wwl) : Wwl :=
 
 /-- `LANE_SUB_FAST( r, a, 0,0,0,1, _p, a )` then `PERMUTE( r, 1,0,2,3, r )` as compiled. -/
 def negPrecomputedC (A : Quad) : Quad :=
-  ⟨swapXY #v[A.P03[0], A.P03[1], A.P03[2], 17592186044378#64 - A.P03[3], A.P03[4], A.P03[5],
-      A.P03[6], 17592186044414#64 - A.P03[7]],
-    swapXY #v[A.P14[0], A.P14[1], A.P14[2], 17592186044414#64 - A.P14[3], A.P14[4], A.P14[5],
-      A.P14[6], 17592186044414#64 - A.P14[7]],
-    swapXY #v[A.P25[0], A.P25[1], A.P25[2], 17592186044414#64 - A.P25[3], A.P25[4], A.P25[5],
-      A.P25[6], 2199023255550#64 - A.P25[7]]⟩
+  ⟨swapXY
+      #v[A.P03[0], A.P03[1], A.P03[2], 17592186044378#64 - A.P03[3], A.P03[4], A.P03[5], A.P03[6],
+        17592186044414#64 - A.P03[7]],
+    swapXY
+      #v[A.P14[0], A.P14[1], A.P14[2], 17592186044414#64 - A.P14[3], A.P14[4], A.P14[5], A.P14[6],
+        17592186044414#64 - A.P14[7]],
+    swapXY
+      #v[A.P25[0], A.P25[1], A.P25[2], 17592186044414#64 - A.P25[3], A.P25[4], A.P25[5], A.P25[6],
+        2199023255550#64 - A.P25[7]]⟩
 
-theorem p_add_p_sub' (c x : BitVec 64) : c + (c - x) = (c + c) - x := by
-  bv_decide
+theorem p_add_p_sub' (c x : BitVec 64) : c + (c - x) = (c + c) - x := by bv_decide
 
 theorem fd_ed25519_point_neg_precomputed.spec_eq (A : Quad) :
     fd_ed25519_point_neg_precomputed.spec A = negPrecomputedC A := by
   rcases A with ⟨a, b, c⟩
   simp only [fd_ed25519_point_neg_precomputed.spec, Quad.permute, Quad.laneSubFast,
     Quad.laneAddFast, negPrecomputedC, swapXY, quadP, Quad.mk.injEq]
-  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _|_|_|_|_|_|_|_|i := i
+  refine ⟨?_, ?_, ?_⟩ <;> ext i hi : 1 <;> obtain _ | _ | _ | _ | _ | _ | _ | _ | i := i
   all_goals
     first
     | omega
@@ -58,13 +60,14 @@ theorem fd_ed25519_point_neg_precomputed.spec_eq (A : Quad) :
 /-- `fd_ed25519_point_neg_precomputed` stores `spec` of the point at `a` at `r`, in another block,
 and returns `r`. -/
 public theorem fd_ed25519_point_neg_precomputed.call_eq (r a : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.QuadFit r) (ha : s.mem.QuadFit a) (hsep : r.id ≠ a.id) :
+    (hwf : s.WF) (hr : s.mem.QuadRoom r) (ha : s.mem.QuadFit a) (hsep : r.id ≠ a.id) :
     fd_ed25519_point_neg_precomputed.call
         (fd_ed25519_point_neg_precomputed.args (.value r) (.value a)) s =
-      .value (.cons (.value r) .nil,
-        { s with
-          mem :=
-            s.mem.storeQuad r (fd_ed25519_point_neg_precomputed.spec (s.mem.readQuad a)) }) := by
+      .value
+        (.cons (.value r) .nil,
+          { s with
+            mem :=
+              s.mem.storeQuad r (fd_ed25519_point_neg_precomputed.spec (s.mem.readQuad a)) }) := by
   func_init
   block_init
   iterate 13 step_pure

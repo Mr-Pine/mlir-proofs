@@ -24,8 +24,8 @@ private def ptr (k : Nat) : Pointer :=
 private def state (e1 e2 : Nat) : GlobalState :=
   ⟨⟨5⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨192, 0⟩), (⟨2⟩, ⟨32, BitVec.ofNat 256 e1⟩), (⟨3⟩, ⟨192, 0⟩),
-          (⟨4⟩, ⟨32, BitVec.ofNat 256 e2⟩)]⟩⟩
+        [(⟨1⟩, .ofBytes 192 0), (⟨2⟩, .ofBytes 32 (BitVec.ofNat 256 e1)), (⟨3⟩, .ofBytes 192 0),
+          (⟨4⟩, .ofBytes 32 (BitVec.ofNat 256 e2))]⟩⟩
 
 /-- The return value and the points' six vectors' lanes, or `none` for UB / out of fuel. -/
 private def run (e1 e2 : Nat) : Option (BitVec 32 × List (List Nat)) :=

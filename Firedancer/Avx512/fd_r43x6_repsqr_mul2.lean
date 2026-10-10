@@ -32,8 +32,8 @@ section Proof
 /-- `^bb1`'s env: the constants, the loop's `xa xb` and its counter `k`. -/
 abbrev fd_r43x6_repsqr_mul2.hdr (E : ⟪fd_r43x6_repsqr_mul2.Γ⟫) (k : Nat)
     (xa xb : Vector (BitVec 64) 8) : ⟪fd_r43x6_repsqr_mul2.Γ⟫ :=
-  E[%443 := 0#64, %444 := foldMask, %445 := foldShifts, %446 := (Ty.vec 8 64).poisoned, %447 := foldK,
-    %448 := 18446744073709551615#64, %450 := xa, %451 := xb, %452 := BitVec.ofNat 64 k]
+  E[%443 := 0#64, %444 := foldMask, %445 := foldShifts, %446 := (Ty.vec 8 64).poisoned, %447 :=
+    foldK, %448 := 18446744073709551615#64, %450 := xa, %451 := xb, %452 := BitVec.ofNat 64 k]
 
 /-- `^bb2`'s env on leaving the loop: the constants, and the squarings `xa xb` in `%466 %465`. -/
 abbrev fd_r43x6_repsqr_mul2.exit (E : ⟪fd_r43x6_repsqr_mul2.Γ⟫) (xa xb : Vector (BitVec 64) 8) :
@@ -101,8 +101,8 @@ theorem fd_r43x6_repsqr_mul2.loop (S : GlobalState) (hwf : S.WF)
 
 /-- `repsqr_mul2` stores `spec xa ya n` at `_za`, then `spec xb yb n` at `_zb`. -/
 public theorem fd_r43x6_repsqr_mul2.call_eq (za zb : Pointer) (xa ya xb yb : Wwl) (n : BitVec 64)
-    (s : GlobalState) (hn : n.toNat < 2 ^ 63) (hwf : s.WF) (hza : Fits s.mem za 512)
-    (hzb : Fits s.mem zb 512) :
+    (s : GlobalState) (hn : n.toNat < 2 ^ 63) (hwf : s.WF) (hza : Room s.mem za 512)
+    (hzb : Room s.mem zb 512) :
     fd_r43x6_repsqr_mul2.call
         (fd_r43x6_repsqr_mul2.args (.value za) (Ty.wrap xa) (Ty.wrap ya) (.value zb) (Ty.wrap xb)
           (Ty.wrap yb) (.value n))
@@ -134,8 +134,7 @@ public theorem fd_r43x6_repsqr_mul2.call_eq (za zb : Pointer) (xa ya xb yb : Wwl
     step_store
     finish_block
     subst_vars
-    simp [fd_r43x6_repsqr_mul2.spec, fd_r43x6_repsqr_mul2.sqrN, fd_r43x6_mul,
-      MemoryState.storeVec]
+    simp [fd_r43x6_repsqr_mul2.spec, fd_r43x6_repsqr_mul2.sqrN, fd_r43x6_mul, MemoryState.storeVec]
   case isFalse =>
     -- `^bb1`: the squaring loop, `n` times
     step_loop using fd_r43x6_repsqr_mul2.loop _ _ _ n.toNat xa xb

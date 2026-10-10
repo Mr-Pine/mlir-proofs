@@ -21,11 +21,12 @@ end
 section Proof
 
 public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.QuadFit r) (ha : s.mem.QuadFit a) :
+    (hr : s.mem.QuadRoom r) (ha : s.mem.QuadFit a) :
     fd_ed25519_partial_dbl.call (fd_ed25519_partial_dbl.args (.value r) (.value a)) s =
-      .value (.cons (.value r) .nil,
-        { alloc := ⟨s.alloc.nextFreeBlock + 6⟩,
-          mem := s.mem.storeQuad r (fd_ed25519_partial_dbl.spec (s.mem.readQuad a)) }) := by
+      .value
+        (.cons (.value r) .nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 6⟩,
+            mem := s.mem.storeQuad r (fd_ed25519_partial_dbl.spec (s.mem.readQuad a)) }) := by
   func_init
   have hra : S.mem.readQuad a = S₀.mem.readQuad a := by rw [hS]
   block_init

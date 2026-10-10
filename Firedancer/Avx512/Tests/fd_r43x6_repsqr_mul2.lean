@@ -30,7 +30,7 @@ private def zb : Pointer :=
 
 /-- Two zeroed 64-byte blocks. -/
 private def state : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨64, 0⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes 64 0)]⟩⟩
 
 /-- `*_za` and `*_zb` hold `spec` of each side, `xa^(2^n) ya` and `xb^(2^n) yb` mod `p`. -/
 private def check (xa ya xb yb n : Nat) : Bool :=
@@ -44,7 +44,8 @@ private def check (xa ya xb yb n : Nat) : Bool :=
     let ra := s'.mem.readVec za
     let rb := s'.mem.readVec zb
     ra == fd_r43x6_repsqr_mul2.spec xa ya n && rb == fd_r43x6_repsqr_mul2.spec xb yb n &&
-      value ra == value xa ^ (2 ^ n) * value ya % p && value rb == value xb ^ (2 ^ n) * value yb % p
+      value ra == value xa ^ (2 ^ n) * value ya % p &&
+      value rb == value xb ^ (2 ^ n) * value yb % p
   | _ => false
 
 -- `n = 0` skips the loop; `n = 1, 3` run it

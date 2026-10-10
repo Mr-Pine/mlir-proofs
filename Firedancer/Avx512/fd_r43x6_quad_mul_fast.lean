@@ -35,14 +35,18 @@ def fd_r43x6_quad_mul_fast.spec (x03 x14 x25 y03 y14 y25 : Wwl) : Wwl × Wwl × 
   let p7_qa := wwl_madd52lo _zz x55 y25
   let p1_q4 := wwl_add p1_q4 (wwl_shl (wwl_madd52hi _zz x00 y03) 9)
   let p2_q5 := wwl_add p2_q5 (wwl_shl (wwl_madd52hi (wwl_madd52hi _zz x11 y03) x00 y14) 9)
-  let p3_q6 := wwl_add p3_q6
-    (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x22 y03) x11 y14) x00 y25) 9)
-  let p4_q7 := wwl_add p4_q7
-    (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x33 y03) x22 y14) x11 y25) 9)
-  let p5_q8 := wwl_add p5_q8
-    (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x44 y03) x33 y14) x22 y25) 9)
-  let p6_q9 := wwl_add p6_q9
-    (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x55 y03) x44 y14) x33 y25) 9)
+  let p3_q6 :=
+    wwl_add p3_q6
+      (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x22 y03) x11 y14) x00 y25) 9)
+  let p4_q7 :=
+    wwl_add p4_q7
+      (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x33 y03) x22 y14) x11 y25) 9)
+  let p5_q8 :=
+    wwl_add p5_q8
+      (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x44 y03) x33 y14) x22 y25) 9)
+  let p6_q9 :=
+    wwl_add p6_q9
+      (wwl_shl (wwl_madd52hi (wwl_madd52hi (wwl_madd52hi _zz x55 y03) x44 y14) x33 y25) 9)
   let p7_qa := wwl_add p7_qa (wwl_shl (wwl_madd52hi (wwl_madd52hi _zz x55 y14) x44 y25) 9)
   let p8_qb := wwl_shl (wwl_madd52hi _zz x55 y25) 9
   let q6_p3 := wwl_pack_halves p3_q6 1 p3_q6 0
@@ -67,27 +71,33 @@ section Proof
 
 /-- A step's lanes, as the `Wwl` operation they are. -/
 local macro "lanes " h:ident : tactic =>
-  `(tactic| (rw [$h:ident]; ext i hi : 1; rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;>
-    simp [wwl_pack_halves, wwl_madd52lo, wwl_madd52hi, madd52lo, madd52hi, wwl_add, wwl_shl,
-      wwv_add_if, add_mul152] <;> first | omega | ac_rfl))
+  `(tactic|
+    (rw [$h:ident]; ext i hi : 1;
+      rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;>
+        simp [wwl_pack_halves, wwl_madd52lo, wwl_madd52hi, madd52lo, madd52hi, wwl_add, wwl_shl,
+          wwv_add_if, add_mul152] <;>
+        first
+        | omega
+        | ac_rfl))
 
 -- the 60 steps' lane identities (`lanes`) all run inside this one declaration
 set_option maxHeartbeats 1000000 in
 /-- `fd_r43x6_quad_mul_fast` stores `spec`'s vectors at `_z03`, `_z14`, `_z25`, in that order. -/
 public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
-    (x03 x14 x25 y03 y14 y25 : Wwl) (s : GlobalState) (hwf : s.WF)
-    (h03 : Fits s.mem _z03 512) (h14 : Fits s.mem _z14 512) (h25 : Fits s.mem _z25 512) :
+    (x03 x14 x25 y03 y14 y25 : Wwl) (s : GlobalState) (hwf : s.WF) (h03 : Room s.mem _z03 512)
+    (h14 : Room s.mem _z14 512) (h25 : Room s.mem _z25 512) :
     fd_r43x6_quad_mul_fast.call
         (fd_r43x6_quad_mul_fast.args (.value _z03) (.value _z14) (.value _z25) (Ty.wrap x03)
-          (Ty.wrap x14) (Ty.wrap x25) (Ty.wrap y03) (Ty.wrap y14) (Ty.wrap y25)) s =
+          (Ty.wrap x14) (Ty.wrap x25) (Ty.wrap y03) (Ty.wrap y14) (Ty.wrap y25))
+        s =
       .value
         (.nil,
           { s with
             mem :=
               ((s.mem.storeVec _z03
-                        (fd_r43x6_quad_mul_fast.spec x03 x14 x25 y03 y14 y25).1).storeVec _z14
-                    (fd_r43x6_quad_mul_fast.spec x03 x14 x25 y03 y14 y25).2.1).storeVec _z25
-                (fd_r43x6_quad_mul_fast.spec x03 x14 x25 y03 y14 y25).2.2 }) := by
+                        (fd_r43x6_quad_mul_fast.spec x03 x14 x25 y03 y14 y25).1).storeVec
+                    _z14 (fd_r43x6_quad_mul_fast.spec x03 x14 x25 y03 y14 y25).2.1).storeVec
+                _z25 (fd_r43x6_quad_mul_fast.spec x03 x14 x25 y03 y14 y25).2.2 }) := by
   func_init
   block_init
   iterate 5 step_pure
@@ -241,20 +251,20 @@ public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
   have e_zb03 : zb03 = wwv_add_if 0x0F p6_q9' q6_p3 p6_q9' := by lanes hzb03
   have e_zb14 : zb14 = wwv_add_if 0x0F p7_qa' q7_p4 p7_qa' := by lanes hzb14
   have e_zb25 : zb25 = wwv_add_if 0x0F p8_qb q8_p5 p8_qb := by lanes hzb25
-  have e_z03 : z03 =
-      wwl_add (wwl_add za03 (wwl_shl zb03 7)) (wwl_add (wwl_shl zb03 4) (wwl_shl zb03 3)) := by
+  have e_z03 :
+    z03 = wwl_add (wwl_add za03 (wwl_shl zb03 7)) (wwl_add (wwl_shl zb03 4) (wwl_shl zb03 3)) := by
     lanes hz03
-  have e_z14 : z14 =
-      wwl_add (wwl_add za14 (wwl_shl zb14 7)) (wwl_add (wwl_shl zb14 4) (wwl_shl zb14 3)) := by
+  have e_z14 :
+    z14 = wwl_add (wwl_add za14 (wwl_shl zb14 7)) (wwl_add (wwl_shl zb14 4) (wwl_shl zb14 3)) := by
     lanes hz14
-  have e_z25 : z25 =
-      wwl_add (wwl_add za25 (wwl_shl zb25 7)) (wwl_add (wwl_shl zb25 4) (wwl_shl zb25 3)) := by
+  have e_z25 :
+    z25 = wwl_add (wwl_add za25 (wwl_shl zb25 7)) (wwl_add (wwl_shl zb25 4) (wwl_shl zb25 3)) := by
     lanes hz25
   clear hArgs hE hx00 hx11 hx22 hx33 hx44 hx55 hp0_q3 ha12 hp1_q4 ha14 ha15 hp2_q5 ha17 ha18 hp3_q6
-    ha20 ha21 hp4_q7 ha23 ha24 hp5_q8 ha26 hp6_q9 hh29 hs30 hp1_q4' hh32 hh33 hs34 hp2_q5'
-    hh36 hh37 hh38 hs39 hp3_q6' hh41 hh42 hh43 hs44 hp4_q7' hh46 hh47 hh48 hs49 hp5_q8' hh51 hh52
-    hh53 hs54 hp6_q9' hh56 hh57 hs58 hp7_qa' hh60 hp8_qb hq6_p3 hq7_p4 hq8_p5 hza03 hza14 hza25
-    hzb03 hzb14 hzb25 hz03 hz14 hz25
+    ha20 ha21 hp4_q7 ha23 ha24 hp5_q8 ha26 hp6_q9 hh29 hs30 hp1_q4' hh32 hh33 hs34 hp2_q5' hh36 hh37
+    hh38 hs39 hp3_q6' hh41 hh42 hh43 hs44 hp4_q7' hh46 hh47 hh48 hs49 hp5_q8' hh51 hh52 hh53 hs54
+    hp6_q9' hh56 hh57 hs58 hp7_qa' hh60 hp8_qb hq6_p3 hq7_p4 hq8_p5 hza03 hza14 hza25 hzb03 hzb14
+    hzb25 hz03 hz14 hz25
   subst_vars
   rfl
 

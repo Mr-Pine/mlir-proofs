@@ -19,11 +19,12 @@ private def bytes (seed : Nat) : BitVec 1536 :=
 
 /-- `a` and `b` holding the patterns from `sa` and `sb`. -/
 private def state (sa sb : Nat) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨192, bytes sa⟩), (⟨2⟩, ⟨192, bytes sb⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 (bytes sa)), (⟨2⟩, .ofBytes 192 (bytes sb))]⟩⟩
 
 /-- The return value, or `none` for UB / out of fuel. -/
 private def run (sa sb : Nat) : Option (BitVec 32) :=
-  match fd_ed25519_point_eq_z1.eval 5 (fd_ed25519_point_eq_z1.args (.value a) (.value b))
+  match
+    fd_ed25519_point_eq_z1.eval 5 (fd_ed25519_point_eq_z1.args (.value a) (.value b))
       (state sa sb) with
   | .value (some (.cons (.value r) .nil), _) => some r
   | _ => none

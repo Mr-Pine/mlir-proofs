@@ -27,7 +27,8 @@ def iter : Nat → Quad → Quad
   | 0, P => P
   | j + 1, P => iter j (geDbl quadMul quadSqr P)
 
-theorem repeat_eq_iter (j : Nat) (P : Quad) : Nat.repeat (geDbl quadMul quadSqr) j P = iter j P := by
+theorem repeat_eq_iter (j : Nat) (P : Quad) :
+    Nat.repeat (geDbl quadMul quadSqr) j P = iter j P := by
   induction j generalizing P with
   | zero => rfl
   | succ j ih =>
@@ -40,42 +41,50 @@ theorem repeat_eq_iter (j : Nat) (P : Quad) : Nat.repeat (geDbl quadMul quadSqr)
 /-- The registers of the entry block that the loop and its exit read: the constants, the six
 temporaries, and the pointers to `r`'s second and third vectors. -/
 abbrev LoopEnv (E : ⟪Γ⟫) (r z0 z1 z2 z3 z4 z5 : Pointer) : Prop :=
-  E ⊨ [%3051 := .value 1#8,
-    %3052 := Ty.wrap #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64,
-      1099511627775#64, 1099511627775#64, 1099511627775#64, 1099511627775#64],
-    %3053 := Ty.wrap (Vector.replicate 8 1048576#64),
-    %3054 := Ty.wrap #v[159383552#64, 159383552#64, 159383552#64, 159383552#64, 1048576#64,
-      1048576#64, 1048576#64, 1048576#64],
-    %3055 := Ty.wrap (Vector.replicate 8 8796093022207#64),
-    %3057 := Ty.wrap #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64],
-    %3058 := Ty.wrap (Vector.replicate 8 43#64),
-    %3059 := Ty.wrap (Vector.replicate 8 18446744073708503040#64),
-    %3060 := Ty.wrap #v[18446744073550168064#64, 18446744073550168064#64, 18446744073550168064#64,
-      18446744073550168064#64, 18446744073708503040#64, 18446744073708503040#64,
-      18446744073708503040#64, 18446744073708503040#64],
-    %3069 := Vector.replicate 8 PoisonOr.poison,
-    %3070 := Ty.wrap #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64],
-    %3083 := #v[.poison, .value 8796093022189#64, .value 8796093022189#64, .poison, .poison,
+  E ⊨ [%3051 := .value 1#8, %3052 :=
+    Ty.wrap
+      #v[8796093022207#64, 8796093022207#64, 8796093022207#64, 8796093022207#64, 1099511627775#64,
+        1099511627775#64, 1099511627775#64, 1099511627775#64],
+    %3053 := Ty.wrap (Vector.replicate 8 1048576#64), %3054 :=
+    Ty.wrap
+      #v[159383552#64, 159383552#64, 159383552#64, 159383552#64, 1048576#64, 1048576#64, 1048576#64,
+        1048576#64],
+    %3055 := Ty.wrap (Vector.replicate 8 8796093022207#64), %3057 :=
+    Ty.wrap #v[43#64, 43#64, 43#64, 43#64, 40#64, 40#64, 40#64, 40#64], %3058 :=
+    Ty.wrap (Vector.replicate 8 43#64), %3059 :=
+    Ty.wrap (Vector.replicate 8 18446744073708503040#64), %3060 :=
+    Ty.wrap
+      #v[18446744073550168064#64, 18446744073550168064#64, 18446744073550168064#64,
+        18446744073550168064#64, 18446744073708503040#64, 18446744073708503040#64,
+        18446744073708503040#64, 18446744073708503040#64],
+    %3069 := Vector.replicate 8 PoisonOr.poison, %3070 :=
+    Ty.wrap #v[0#64, 0#64, 1#64, 0#64, 0#64, 0#64, 1#64, 0#64], %3083 :=
+    #v[.poison, .value 8796093022189#64, .value 8796093022189#64, .poison, .poison,
       .value 8796093022207#64, .value 8796093022207#64, .poison],
-    %3091 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
+    %3091 :=
+    #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
       .value 8796093022207#64, .value 8796093022207#64, .poison],
-    %3099 := #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
+    %3099 :=
+    #v[.poison, .value 8796093022207#64, .value 8796093022207#64, .poison, .poison,
       .value 1099511627775#64, .value 1099511627775#64, .poison],
-    %3107 := #v[.value 8796093022189#64, .poison, .poison, .poison, .value 8796093022207#64,
-      .poison, .poison, .poison],
-    %3115 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 8796093022207#64,
-      .poison, .poison, .poison],
-    %3123 := #v[.value 8796093022207#64, .poison, .poison, .poison, .value 1099511627775#64,
-      .poison, .poison, .poison],
-    %3131 := #v[.poison, .poison, .poison, .poison, .value 19#64, .value 19#64, .value 19#64,
-      .value 19#64],
-    %3138 := z0, %3139 := z1, %3140 := z2, %3141 := z3, %3142 := z4, %3143 := z5,
-    %3232 := r.add 64#64, %3235 := r.add 128#64]
+    %3107 :=
+    #v[.value 8796093022189#64, .poison, .poison, .poison, .value 8796093022207#64, .poison,
+      .poison, .poison],
+    %3115 :=
+    #v[.value 8796093022207#64, .poison, .poison, .poison, .value 8796093022207#64, .poison,
+      .poison, .poison],
+    %3123 :=
+    #v[.value 8796093022207#64, .poison, .poison, .poison, .value 1099511627775#64, .poison,
+      .poison, .poison],
+    %3131 :=
+    #v[.poison, .poison, .poison, .poison, .value 19#64, .value 19#64, .value 19#64, .value 19#64],
+    %3138 := z0, %3139 := z1, %3140 := z2, %3141 := z3, %3142 := z4, %3143 := z5, %3232 :=
+    r.add 64#64, %3235 := r.add 128#64]
 
 /-- The lanes of a folded point are below `2^44`. -/
 abbrev Folded (P : Quad) : Prop :=
-  (∀ i : Fin 8, P.P03[i] < 17592186044416#64) ∧ (∀ i : Fin 8, P.P14[i] < 17592186044416#64) ∧
-    ∀ i : Fin 8, P.P25[i] < 17592186044416#64
+  (∀ i : Fin 8, P.P03[i] < 17592186044416#64) ∧
+    (∀ i : Fin 8, P.P14[i] < 17592186044416#64) ∧ ∀ i : Fin 8, P.P25[i] < 17592186044416#64
 
 theorem add_lt_ok {x y : Wwl} (hx : ∀ i : Fin 8, x[i] < 17592186044416#64)
     (hy : ∀ i : Fin 8, y[i] < 17592186044416#64) : ∀ i : Fin 8, x[i].saddOverflow y[i] = false :=
@@ -87,39 +96,48 @@ theorem storeVec_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id.id) :
 
 /-- The loop's header `^bb3` holding `P` and the counter `k`. -/
 abbrev hdr (E : ⟪Γ⟫) (P : Quad) (k : Nat) : ⟪Γ⟫ :=
-  E[%3237 := Ty.wrap P.P25, %3238 := Ty.wrap P.P14, %3239 := Ty.wrap P.P03,
-    %3240 := .value (BitVec.ofNat 8 k)]
+  E[%3237 := Ty.wrap P.P25, %3238 := Ty.wrap P.P14, %3239 := Ty.wrap P.P03, %3240 :=
+    .value (BitVec.ofNat 8 k)]
 
 /-- One trip through `^bb3` on `P` at counter `k`: `geDbl P` into the registers, the temporaries
 written; then back to the header if `k + 1 < n`, else to the exit. -/
 theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k : Nat) (P : Quad)
     (S : GlobalState) (E : ⟪Γ⟫) (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hArgs : E.args = (args (.value r) (.value a) (.value n)).get)
-    (hR : LoopEnv E r z0 z1 z2 z3 z4 z5) (hP : Folded P) (hwf : S.WF) (hr : S.mem.QuadFit r)
-    (h0 : Fits S.mem z0 512) (h1 : Fits S.mem z1 512) (h2 : Fits S.mem z2 512)
-    (h3 : Fits S.mem z3 512) (h4 : Fits S.mem z4 512) (h5 : Fits S.mem z5 512)
+    (hR : LoopEnv E r z0 z1 z2 z3 z4 z5) (hP : Folded P) (hwf : S.WF) (hr : S.mem.QuadRoom r)
+    (h0 : InBounds S.mem z0 512) (h1 : InBounds S.mem z1 512) (h2 : InBounds S.mem z2 512)
+    (h3 : InBounds S.mem z3 512) (h4 : InBounds S.mem z4 512) (h5 : InBounds S.mem z5 512)
     (hb0 : b ≤ z0.id.id) (hb1 : b ≤ z1.id.id) (hb2 : b ≤ z2.id.id) (hb3 : b ≤ z3.id.id)
-    (hb4 : b ≤ z4.id.id) (hb5 : b ≤ z5.id.id)
-    (h01 : z0.id ≠ z1.id) (h02 : z0.id ≠ z2.id) (h12 : z1.id ≠ z2.id) (h34 : z3.id ≠ z4.id)
-    (h35 : z3.id ≠ z5.id) (h45 : z4.id ≠ z5.id)
+    (hb4 : b ≤ z4.id.id) (hb5 : b ≤ z5.id.id) (h01 : z0.id ≠ z1.id) (h02 : z0.id ≠ z2.id)
+    (h12 : z1.id ≠ z2.id) (h34 : z3.id ≠ z4.id) (h35 : z3.id ≠ z5.id) (h45 : z4.id ≠ z5.id)
+    (hr0 : r.id ≠ z0.id) (hr1 : r.id ≠ z1.id) (hr2 : r.id ≠ z2.id) (hr3 : r.id ≠ z3.id)
+    (hr4 : r.id ≠ z4.id) (hr5 : r.id ≠ z5.id)
     (hback :
-      ∀ (E' : ⟪Γ⟫) (S' : GlobalState), E'.args = (args (.value r) (.value a) (.value n)).get →
-        LoopEnv E' r z0 z1 z2 z3 z4 z5 →
-        S'.WF → S'.mem.QuadFit r → Fits S'.mem z0 512 → Fits S'.mem z1 512 →
-        Fits S'.mem z2 512 → Fits S'.mem z3 512 → Fits S'.mem z4 512 → Fits S'.mem z5 512 →
-        S'.alloc = S.alloc → S'.mem.eraseFrom b = S.mem.eraseFrom b →
-        Folded (geDbl quadMul quadSqr P) →
-        ((BitVec.ofNat 8 k + 1#8).setWidth 32).ult n = true →
-        (fd_ed25519_point_dbln.runFrom
-          (hdr E' (geDbl quadMul quadSqr P) (k + 1)) 3 S' >>= g) = K)
+      ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
+        E'.args = (args (.value r) (.value a) (.value n)).get →
+          LoopEnv E' r z0 z1 z2 z3 z4 z5 →
+          S'.WF →
+          S'.mem.QuadRoom r →
+          InBounds S'.mem z0 512 →
+          InBounds S'.mem z1 512 →
+          InBounds S'.mem z2 512 →
+          InBounds S'.mem z3 512 →
+          InBounds S'.mem z4 512 →
+          InBounds S'.mem z5 512 →
+          S'.alloc = S.alloc →
+          S'.mem.eraseFrom b = S.mem.eraseFrom b →
+          Folded (geDbl quadMul quadSqr P) →
+          ((BitVec.ofNat 8 k + 1#8).setWidth 32).ult n = true →
+          (fd_ed25519_point_dbln.runFrom (hdr E' (geDbl quadMul quadSqr P) (k + 1)) 3 S' >>= g) = K)
     (hexit :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value a) (.value n)).get →
-          (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64,
-            %3321 := Ty.wrap (geDbl quadMul quadSqr P).P03,
-            %3323 := Ty.wrap (geDbl quadMul quadSqr P).P14,
+          (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64, %3321 :=
+            Ty.wrap (geDbl quadMul quadSqr P).P03, %3323 := Ty.wrap (geDbl quadMul quadSqr P).P14,
             %3325 := Ty.wrap (geDbl quadMul quadSqr P).P25]) →
-          S'.WF → S'.mem.QuadFit r → S'.alloc = S.alloc →
+          S'.WF →
+          S'.mem.QuadRoom r →
+          S'.alloc = S.alloc →
           S'.mem.eraseFrom b = S.mem.eraseFrom b →
           ¬((BitVec.ofNat 8 k + 1#8).setWidth 32).ult n = true →
           (fd_ed25519_point_dbln.runFrom E' 1 S' >>= g) = K) :
@@ -134,8 +152,8 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
   have hk14 := add_lt_ok (wwl_perm4_lt_of_eq hP14 (congrArg Quad.P14 d1')) hP14
   have hk25 := add_lt_ok (wwl_perm4_lt_of_eq hP25 (congrArg Quad.P25 d1')) hP25
   -- FD_R43X6_QUAD_LANE_ADD_FAST( _ta, _ta, 1,0,0,0, _ta, r->P ): the code's `nsw` holds
-  step_pattern using runBodyFrom_laneAddRun' 1 0 0 0 (ho03 := fun _ => hk03)
-    (ho14 := fun _ => hk14) (ho25 := fun _ => hk25)
+  step_pattern using runBodyFrom_laneAddRun' 1 0 0 0 (ho03 := fun _ => hk03) (ho14 := fun _ => hk14)
+    (ho25 := fun _ => hk25)
   have d2 := _hl
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta ) up to FD_R43X6_QUAD_MUL_FAST( _ta, _ta, _tb )
   step_pattern using runBodyFrom_dblMidRun
@@ -156,14 +174,29 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
     · exact (BitVec.ofNat_add _ _).symm
     · dsimp only [LoopEnv]
       env_reads
-    · simp only [MemoryState.eraseFrom_storeVec, storeVec_eraseFrom_of_le hb0,
-        storeVec_eraseFrom_of_le hb1, storeVec_eraseFrom_of_le hb2,
-        storeVec_eraseFrom_of_le hb3, storeVec_eraseFrom_of_le hb4,
-        storeVec_eraseFrom_of_le hb5]
+    · simp only [MemoryState.eraseFrom_storeVec, MemoryState.eraseFrom_lifetimeStart,
+        MemoryState.eraseFrom_lifetimeEnd, MemoryState.lifetimeStart_eraseFrom_of_le hb0,
+        MemoryState.lifetimeStart_eraseFrom_of_le hb1,
+        MemoryState.lifetimeStart_eraseFrom_of_le hb2,
+        MemoryState.lifetimeStart_eraseFrom_of_le hb3,
+        MemoryState.lifetimeStart_eraseFrom_of_le hb4,
+        MemoryState.lifetimeStart_eraseFrom_of_le hb5, MemoryState.lifetimeEnd_eraseFrom_of_le hb0,
+        MemoryState.lifetimeEnd_eraseFrom_of_le hb1, MemoryState.lifetimeEnd_eraseFrom_of_le hb2,
+        MemoryState.lifetimeEnd_eraseFrom_of_le hb3, MemoryState.lifetimeEnd_eraseFrom_of_le hb4,
+        MemoryState.lifetimeEnd_eraseFrom_of_le hb5, storeVec_eraseFrom_of_le hb0,
+        storeVec_eraseFrom_of_le hb1, storeVec_eraseFrom_of_le hb2, storeVec_eraseFrom_of_le hb3,
+        storeVec_eraseFrom_of_le hb4, storeVec_eraseFrom_of_le hb5]
     · exact Quad.foldUnsignedC_lt _hu
   · rw [hQ] at hexit
     step_loop using hexit
-    simp only [MemoryState.eraseFrom_storeVec, storeVec_eraseFrom_of_le hb0,
+    simp only [MemoryState.eraseFrom_storeVec, MemoryState.eraseFrom_lifetimeStart,
+      MemoryState.eraseFrom_lifetimeEnd, MemoryState.lifetimeStart_eraseFrom_of_le hb0,
+      MemoryState.lifetimeStart_eraseFrom_of_le hb1, MemoryState.lifetimeStart_eraseFrom_of_le hb2,
+      MemoryState.lifetimeStart_eraseFrom_of_le hb3, MemoryState.lifetimeStart_eraseFrom_of_le hb4,
+      MemoryState.lifetimeStart_eraseFrom_of_le hb5, MemoryState.lifetimeEnd_eraseFrom_of_le hb0,
+      MemoryState.lifetimeEnd_eraseFrom_of_le hb1, MemoryState.lifetimeEnd_eraseFrom_of_le hb2,
+      MemoryState.lifetimeEnd_eraseFrom_of_le hb3, MemoryState.lifetimeEnd_eraseFrom_of_le hb4,
+      MemoryState.lifetimeEnd_eraseFrom_of_le hb5, storeVec_eraseFrom_of_le hb0,
       storeVec_eraseFrom_of_le hb1, storeVec_eraseFrom_of_le hb2, storeVec_eraseFrom_of_le hb3,
       storeVec_eraseFrom_of_le hb4, storeVec_eraseFrom_of_le hb5]
 
@@ -174,30 +207,54 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
     ∀ m k (P : Quad) (S : GlobalState) (E : ⟪Γ⟫),
       E.args = (args (.value r) (.value a) (.value n)).get →
         LoopEnv E r z0 z1 z2 z3 z4 z5 →
-        k + m + 1 = n.toNat → n.toNat ≤ 255 →
-        Folded P → S.WF → S.mem.QuadFit r →
-        Fits S.mem z0 512 → Fits S.mem z1 512 → Fits S.mem z2 512 →
-        Fits S.mem z3 512 → Fits S.mem z4 512 → Fits S.mem z5 512 →
-        b ≤ z0.id.id → b ≤ z1.id.id → b ≤ z2.id.id → b ≤ z3.id.id → b ≤ z4.id.id →
+        k + m + 1 = n.toNat →
+        n.toNat ≤ 255 →
+        Folded P →
+        S.WF →
+        S.mem.QuadRoom r →
+        InBounds S.mem z0 512 →
+        InBounds S.mem z1 512 →
+        InBounds S.mem z2 512 →
+        InBounds S.mem z3 512 →
+        InBounds S.mem z4 512 →
+        InBounds S.mem z5 512 →
+        b ≤ z0.id.id →
+        b ≤ z1.id.id →
+        b ≤ z2.id.id →
+        b ≤ z3.id.id →
+        b ≤ z4.id.id →
         b ≤ z5.id.id →
-        z0.id ≠ z1.id → z0.id ≠ z2.id → z1.id ≠ z2.id → z3.id ≠ z4.id → z3.id ≠ z5.id →
+        z0.id ≠ z1.id →
+        z0.id ≠ z2.id →
+        z1.id ≠ z2.id →
+        z3.id ≠ z4.id →
+        z3.id ≠ z5.id →
         z4.id ≠ z5.id →
+        r.id ≠ z0.id →
+        r.id ≠ z1.id →
+        r.id ≠ z2.id →
+        r.id ≠ z3.id →
+        r.id ≠ z4.id →
+        r.id ≠ z5.id →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value a) (.value n)).get →
-            (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64,
-              %3321 := Ty.wrap (iter (m + 1) P).P03, %3323 := Ty.wrap (iter (m + 1) P).P14,
-              %3325 := Ty.wrap (iter (m + 1) P).P25]) →
-            S'.WF → S'.mem.QuadFit r → S'.alloc = S.alloc →
+            (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64, %3321 :=
+              Ty.wrap (iter (m + 1) P).P03, %3323 := Ty.wrap (iter (m + 1) P).P14, %3325 :=
+              Ty.wrap (iter (m + 1) P).P25]) →
+            S'.WF →
+            S'.mem.QuadRoom r →
+            S'.alloc = S.alloc →
             S'.mem.eraseFrom b = S.mem.eraseFrom b →
             (fd_ed25519_point_dbln.runFrom E' 1 S' >>= g) = K) →
         (fd_ed25519_point_dbln.runFrom (hdr E P k) 3 S >>= g) = K := by
   intro m
   induction m with
   | zero =>
-    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12
-      h34 h35 h45 hK
-    refine trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1
-      hb2 hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 ?_ ?_
+    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34
+      h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 hK
+    refine
+      trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2
+        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 ?_ ?_
     · -- around again: impossible, the counter has reached `n`
       intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hbr
       have : (BitVec.setWidth 32 (BitVec.ofNat 8 k + 1#8)).toNat = k + 1 := by
@@ -207,16 +264,19 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
       omega
     · intro E' S' h1 h2 h3 h4 h5 h6 _
       exact hK E' S' h1 h2 h3 h4 h5 h6
-  | succ m ih =>
-    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12
-      h34 h35 h45 hK
-    refine trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1
-      hb2 hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 ?_ ?_
+  | succ m
+    ih =>
+    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34
+      h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 hK
+    refine
+      trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2
+        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 ?_ ?_
     · -- around again, one trip fewer
       intro E' S' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 ha hm hF _
-      exact ih (k + 1) _ S' E' g1 g2 (by omega) hn hF g3 g4 g5 g6 g7 g8 g9 g10 hb0 hb1 hb2 hb3 hb4
-        hb5 h01 h02 h12 h34 h35 h45
-        (fun E'' S'' f1 f2 f3 f4 f5 f6 => hK E'' S'' f1 f2 f3 f4 (f5.trans ha) (f6.trans hm))
+      exact
+        ih (k + 1) _ S' E' g1 g2 (by omega) hn hF g3 g4 g5 g6 g7 g8 g9 g10 hb0 hb1 hb2 hb3 hb4 hb5
+          h01 h02 h12 h34 h35 h45 hr0 hr1 hr2 hr3 hr4 hr5
+          (fun E'' S'' f1 f2 f3 f4 f5 f6 => hK E'' S'' f1 f2 f3 f4 (f5.trans ha) (f6.trans hm))
     · -- leaving: impossible, the counter is below `n`
       intro _ _ _ _ _ _ _ _ hbr
       have : (BitVec.setWidth 32 (BitVec.ofNat 8 k + 1#8)).toNat = k + 1 := by
@@ -232,11 +292,13 @@ set_option maxHeartbeats 400000 in
 /-- `fd_ed25519_point_dbln` stores `spec` of the point at `a` (its `2ⁿ` multiple) at `r` and returns
 `r`, for `n ≤ 255`; `r` may be `a`. Its twelve temporaries use up twelve block ids. -/
 public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.QuadFit r) (ha : s.mem.QuadFit a) (hn : n.toNat ≤ 255) :
+    (hwf : s.WF) (hr : s.mem.QuadRoom r) (ha : s.mem.QuadFit a) (hn : n.toNat ≤ 255) :
     fd_ed25519_point_dbln.call (fd_ed25519_point_dbln.args (.value r) (.value a) (.value n)) s =
-      .value (.cons (.value r) .nil,
-        { alloc := ⟨s.alloc.nextFreeBlock + 12⟩,
-          mem := s.mem.storeQuad r (fd_ed25519_point_dbln.spec (s.mem.readQuad a) n.toNat) }) := by
+      .value
+        (.cons (.value r) .nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 12⟩,
+            mem :=
+              s.mem.storeQuad r (fd_ed25519_point_dbln.spec (s.mem.readQuad a) n.toNat) }) := by
   func_init
   have hra : S.mem.readQuad a = S₀.mem.readQuad a := by rw [hS]
   block_init
@@ -264,8 +326,9 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     have hn2 : 2 ≤ n.toNat := by
       simp [BitVec.slt, BitVec.toInt_eq_toNat_of_lt (show 2 * n.toNat < 2 ^ 32 by omega)] at hbr
       omega
-    step_loop using fd_ed25519_point_dbln.loop r a n v87 v88 v89 v90 v91 v92
-      S₀.alloc.nextFreeBlock _ _ (n.toNat - 2) 1 ⟨u03, u14, u25⟩
+    step_loop using
+      fd_ed25519_point_dbln.loop r a n v87 v88 v89 v90 v91 v92 S₀.alloc.nextFreeBlock _ _
+        (n.toNat - 2) 1 ⟨u03, u14, u25⟩
     · dsimp only [fd_ed25519_point_dbln.LoopEnv]
       env_reads
     · exact Quad.foldUnsignedC_lt _hu
@@ -278,8 +341,8 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
       block_init
       finish_block
       have hiter :
-          fd_ed25519_point_dbln.iter (n.toNat - 2 + 1) ⟨u03, u14, u25⟩ =
-            fd_ed25519_point_dbln.spec (S₀.mem.readQuad a) n.toNat := by
+        fd_ed25519_point_dbln.iter (n.toNat - 2 + 1) ⟨u03, u14, u25⟩ =
+          fd_ed25519_point_dbln.spec (S₀.mem.readQuad a) n.toNat := by
         rw [fd_ed25519_point_dbln.spec, fd_ed25519_point_dbln.repeat_eq_iter, hA,
           show n.toNat - 1 = n.toNat - 2 + 1 by omega]
       have hro := hr'.1

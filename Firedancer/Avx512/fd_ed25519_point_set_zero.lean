@@ -22,10 +22,11 @@ section Proof
 
 /-- `fd_ed25519_point_set_zero` stores the neutral point at `r` and returns `r`. -/
 public theorem fd_ed25519_point_set_zero.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.QuadFit r) :
+    (hr : s.mem.QuadRoom r) :
     fd_ed25519_point_set_zero.call (fd_ed25519_point_set_zero.args (.value r)) s =
-      .value (.cons (.value r) .nil,
-        { s with mem := s.mem.storeQuad r fd_ed25519_point_set_zero.spec }) := by
+      .value
+        (.cons (.value r) .nil,
+          { s with mem := s.mem.storeQuad r fd_ed25519_point_set_zero.spec }) := by
   func_init
   block_init
   step_pure
@@ -33,7 +34,7 @@ public theorem fd_ed25519_point_set_zero.call_eq (r : Pointer) (s : GlobalState)
   step_pure
   step_store
   step_pure
-  have hr_1024 := hr.fits_14_25
+  have hr_1024 := hr.room_14_25
   step_memset consuming hr_1024
   finish_block
   subst hS

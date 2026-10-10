@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.Avx512.Common.Vec
+public import Firedancer.Common.Tactics
 public import Firedancer.Avx512.fd_r43x6_repsqr_mul2
 public import Firedancer.Avx512.Mlir.fd_r43x6_pow22523_2
 
@@ -34,18 +35,20 @@ end
 
 section Proof
 
-/-- A `fd_r43x6_repsqr_mul2` call on the loads of `a` and `b`, their reads consumed. -/
+/-- A `fd_r43x6_repsqr_mul2` call on the loads of `a` and `b`, their slots' facts dropped. -/
 local macro "repsqr_mul2 " a:ident b:ident : tactic =>
-  let h (x : Lean.Ident) := Lean.mkIdent (.mkSimple s!"hread__{x.getId}")
+  let h (x : Lean.Ident) (suf : String) := Lean.mkIdent (.mkSimple s!"hread__{x.getId}{suf}")
+  let slot (x : Lean.Ident) := Lean.mkIdent (.mkSimple s!"_{x.getId}")
   `(tactic|
-    ( step_load with $a:ident consuming $(h a)
-      step_load with $b:ident consuming $(h b)
+    ( step_load with $a:ident consuming $(h a "") $(h a "_readAt")
+      step_load with $b:ident consuming $(h b "") $(h b "_readAt")
+      clear_facts $(slot a) $(slot b)
       step_call using fd_r43x6_repsqr_mul2.call_eq))
 
 /-- `fd_r43x6_pow22523_2` stores `spec za` at `_za`, then `spec zb` at `_zb`; its `20`
 temporaries are freed again, the counter moves on by `20` blocks. -/
 public theorem fd_r43x6_pow22523_2.call_eq (_za _zb : Pointer) (za zb : Wwl) (s : GlobalState)
-    (hwf : s.WF) (h_za : Fits s.mem _za 512) (h_zb : Fits s.mem _zb 512) :
+    (hwf : s.WF) (h_za : Room s.mem _za 512) (h_zb : Room s.mem _zb 512) :
     fd_r43x6_pow22523_2.call
         (fd_r43x6_pow22523_2.args (.value _za) (Ty.wrap za) (.value _zb) (Ty.wrap zb)) s =
       .value

@@ -42,11 +42,11 @@ theorem MemoryState.storeQuad_readQuad_self {m : MemoryState} (h : m.QuadFit p) 
 theorem MemoryState.storeQuad_readQuad_self' {m : MemoryState} (h : m.QuadFit p)
     (hP : m.readQuad p = P) : m.storeQuad p P = m := by rw [← hP, storeQuad_readQuad_self h]
 
-/-- A point fits before a point store if it fits after it. -/
-theorem MemoryState.QuadFit.of_storeQuad {m : MemoryState} (h : (m.storeQuad p P).QuadFit q) :
-    m.QuadFit q := by
-  simpa only [MemoryState.QuadFit, MemoryState.storeQuad, MemoryState.storeVec,
-    Fits.storeAt_iff] using h
+/-- Room for a point before a point store if there is after it. -/
+theorem MemoryState.QuadRoom.of_storeQuad {m : MemoryState} (h : (m.storeQuad p P).QuadRoom q) :
+    m.QuadRoom q := by
+  simpa only [MemoryState.QuadRoom, MemoryState.storeQuad, MemoryState.storeVec,
+    Room.storeAt_iff] using h
 
 /-- A point stored twice at the same place: the second. -/
 theorem MemoryState.storeQuad_storeQuad_self {m : MemoryState} {p : Pointer}
@@ -112,6 +112,28 @@ theorem MemoryState.QuadFit.entry {m : MemoryState} {p : Pointer} (h : Fits m p 
   · rw [show (128#64 : BitVec 64) = BitVec.ofNat 64 128 from rfl, add_ofNat_add]
     exact hf 128 (by omega)
 
+/-- Room for entry `k` of a table of `n` points from `p` where there is room for the table. -/
+theorem MemoryState.QuadRoom.entry {m : MemoryState} {p : Pointer} (h : Room m p (1536 * n))
+    (hp : p.offset.toNat + 192 * n < 2 ^ 64) (hk : k < n) :
+    m.QuadRoom (p.add (BitVec.ofNat 64 (192 * k))) := by
+  have hf (o : Nat) (ho : o + 64 ≤ 192) : Room m (p.add (BitVec.ofNat 64 (192 * k + o))) 512 :=
+    Room.add_of_le
+      (by
+        simp [BitVec.uaddOverflow]; omega)
+      (by
+        simp; omega)
+      h
+  have hoff : (p.add (BitVec.ofNat 64 (192 * k))).offset.toNat = p.offset.toNat + 192 * k := by
+    simp only [Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat]
+    omega
+  have hf0 := hf 0 (by omega)
+  simp only [Nat.add_zero] at hf0
+  refine ⟨by omega, hf0, ?_, ?_⟩
+  · rw [show (64#64 : BitVec 64) = BitVec.ofNat 64 64 from rfl, add_ofNat_add]
+    exact hf 64 (by omega)
+  · rw [show (128#64 : BitVec 64) = BitVec.ofNat 64 128 from rfl, add_ofNat_add]
+    exact hf 128 (by omega)
+
 /-- A vector at byte `o` of a known read: its bits. -/
 theorem MemoryState.readVec_add_of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v}
     (hf : Fits m p v) (h : m.readAt p v = x) (hp : p.offset.toNat + o + 64 ≤ 2 ^ 64)
@@ -121,7 +143,7 @@ theorem MemoryState.readVec_add_of_readAt {m : MemoryState} {p : Pointer} {x : B
   have ho : (BitVec.ofNat 64 o).toNat = o := by
     simp; omega
   rw [MemoryState.readVec,
-    MemoryState.readAt_add_of_readAt hf
+    MemoryState.readAt_add_of_readAt hf.inBounds
       (by
         simp [BitVec.uaddOverflow]; omega)
       (by
