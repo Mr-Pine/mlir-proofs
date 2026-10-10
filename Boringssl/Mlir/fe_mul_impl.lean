@@ -5,10 +5,10 @@ module
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
-public import Boringssl.Mlir.fiat_25519_carry_mul
+public import Firedancer.Ref.Mlir.fiat_25519_carry_mul
 
 meta import MLIR.Semantics.Func
-meta import Boringssl.Mlir.fiat_25519_carry_mul
+meta import Firedancer.Ref.Mlir.fiat_25519_carry_mul
 
 namespace MLIR.Boringssl
 
@@ -20,7 +20,7 @@ mlir_def fe_mul_impl :=
   "llvm.call"(%arg142, %arg143, %arg144) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}, {llvm.noundef}], callee = @_ZL20fiat_25519_carry_mulPmPKmS1_, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
   "llvm.return"() : () -> ()
 }) : () -> ()
-  with @_ZL20fiat_25519_carry_mulPmPKmS1_ := fiat_25519_carry_mul
+  with @_ZL20fiat_25519_carry_mulPmPKmS1_ := MLIR.Firedancer.Ref.fiat_25519_carry_mul
 
 end
 

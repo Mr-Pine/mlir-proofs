@@ -1,0 +1,51 @@
+module
+
+public import Boringssl.fe_isnegative
+
+meta import Boringssl.fe_isnegative
+
+namespace MLIR.Boringssl
+
+/-- A block holding the `n` bytes `b`. -/
+private def blk (n : Nat) (b : BitVec (8 * n)) : MemoryBlock :=
+  .ofBytes n b
+
+/-- Limbs as the 40 bytes of a field element. -/
+private def bytesOf (l : Fin 5 → BitVec 64) : BitVec 320 :=
+  l 4 ++ l 3 ++ l 2 ++ l 1 ++ l 0
+
+/-- Limbs' number. -/
+private def natOf (l : Fin 5 → BitVec 64) : Nat :=
+  (l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
+    (l 4).toNat * 2 ^ 204
+
+private def p : Nat :=
+  2 ^ 255 - 19
+
+/-- `b ^ e % m` by squaring. -/
+private def powMod (b e m : Nat) : Nat :=
+  if e = 0 then 1 % m
+  else
+    let h := powMod (b * b % m) (e / 2) m
+    if e % 2 = 0 then h else h * b % m
+termination_by e
+decreasing_by omega
+
+/-- Test elements: small, near `2^52` (not tight), mixed, and `p`'s limbs. -/
+private def xs : List (Fin 5 → BitVec 64) :=
+  [fun i => #v[1, 2, 3, 4, 5][i], fun i =>
+    #v[0xfffffffffffff, 0x8000000000000, 0x7ffffffffffff, 0xfffffffffffed, 0x1][i], fun i =>
+    #v[0x123456789abcd, 0x7edcba9876543, 0x1111111111111, 0x0, 0x7ffffffffffff][i], fun i =>
+    #v[0x7ffffffffffed, 0x7ffffffffffff, 0x7ffffffffffff, 0x7ffffffffffff, 0x7ffffffffffff][i]]
+
+/-- `f` in block 1; the result, or `none` for UB. -/
+private def run (f : Fin 5 → BitVec 64) : Option (BitVec 32) :=
+  let s : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, blk 40 (bytesOf f))]⟩⟩
+  match fe_isnegative.call (fe_isnegative.args (.value ⟨⟨1⟩, 0⟩)) s with
+  | .value (.cons (.value r) .nil, _) => some r
+  | _ => none
+
+-- the canonical value's parity, for tight limbs
+#guard (xs.eraseIdx 1).all fun f => run f == some (BitVec.ofNat 32 (natOf f % p % 2))
+
+end MLIR.Boringssl

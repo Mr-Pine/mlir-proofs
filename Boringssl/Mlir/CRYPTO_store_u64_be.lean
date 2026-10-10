@@ -5,11 +5,11 @@ module
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
-public import Boringssl.Mlir.CRYPTO_bswap8
+public import Firedancer.Ref.Mlir.fd_ulong_bswap
 public import Boringssl.Mlir.OPENSSL_memcpy
 
 meta import MLIR.Semantics.Func
-meta import Boringssl.Mlir.CRYPTO_bswap8
+meta import Firedancer.Ref.Mlir.fd_ulong_bswap
 meta import Boringssl.Mlir.OPENSSL_memcpy
 
 namespace MLIR.Boringssl
@@ -27,7 +27,7 @@ mlir_def CRYPTO_store_u64_be :=
   %188 = "llvm.call"(%arg22, %186, %185) <{CConv = #llvm.cconv<ccc>, TailCallKind = #llvm.tailcallkind<none>, arg_attrs = [{llvm.noundef}, {llvm.nonnull, llvm.noundef}, {llvm.noundef}], callee = @_ZN4bssl14OPENSSL_memcpyEPvPKvm, fastmathFlags = #llvm.fastmath<none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>, res_attrs = [{llvm.noundef}]}> : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
   "llvm.return"() : () -> ()
 }) : () -> ()
-  with @_ZN4bssl13CRYPTO_bswap8Em := CRYPTO_bswap8,
+  with @_ZN4bssl13CRYPTO_bswap8Em := MLIR.Firedancer.Ref.fd_ulong_bswap,
     @_ZN4bssl14OPENSSL_memcpyEPvPKvm := OPENSSL_memcpy
 
 end

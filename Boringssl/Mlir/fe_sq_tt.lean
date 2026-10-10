@@ -5,10 +5,10 @@ module
 
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
-public import Boringssl.Mlir.fiat_25519_carry_square
+public import Firedancer.Ref.Mlir.fiat_25519_carry_square
 
 meta import MLIR.Semantics.Func
-meta import Boringssl.Mlir.fiat_25519_carry_square
+meta import Firedancer.Ref.Mlir.fiat_25519_carry_square
 
 namespace MLIR.Boringssl
 
@@ -20,7 +20,7 @@ mlir_def fe_sq_tt :=
   "llvm.call"(%arg131, %arg132) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}], callee = @_ZL23fiat_25519_carry_squarePmPKm, fastmathFlags = #llvm.fastmath<none>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 2, 0>}> : (!llvm.ptr, !llvm.ptr) -> ()
   "llvm.return"() : () -> ()
 }) : () -> ()
-  with @_ZL23fiat_25519_carry_squarePmPKm := fiat_25519_carry_square
+  with @_ZL23fiat_25519_carry_squarePmPKm := MLIR.Firedancer.Ref.fiat_25519_carry_square
 
 end
 

@@ -6,13 +6,13 @@ module
 public import MLIR.Semantics.Func
 public import MLIR.Syntax.Elab
 public import Boringssl.Mlir.fiat_25519_cmovznz_u64
-public import Boringssl.Mlir.fiat_25519_addcarryx_u51
-public import Boringssl.Mlir.fiat_25519_subborrowx_u51
+public import Firedancer.Ref.Mlir.fiat_25519_addcarryx_u51
+public import Firedancer.Ref.Mlir.fiat_25519_subborrowx_u51
 
 meta import MLIR.Semantics.Func
 meta import Boringssl.Mlir.fiat_25519_cmovznz_u64
-meta import Boringssl.Mlir.fiat_25519_addcarryx_u51
-meta import Boringssl.Mlir.fiat_25519_subborrowx_u51
+meta import Firedancer.Ref.Mlir.fiat_25519_addcarryx_u51
+meta import Firedancer.Ref.Mlir.fiat_25519_subborrowx_u51
 
 namespace MLIR.Boringssl
 
@@ -282,8 +282,8 @@ mlir_def fiat_25519_to_bytes :=
   "llvm.return"() : () -> ()
 }) : () -> ()
   with @_ZL22fiat_25519_cmovznz_u64Pmhmm := fiat_25519_cmovznz_u64,
-    @_ZL24fiat_25519_addcarryx_u51PmPhhmm := fiat_25519_addcarryx_u51,
-    @_ZL25fiat_25519_subborrowx_u51PmPhhmm := fiat_25519_subborrowx_u51
+    @_ZL24fiat_25519_addcarryx_u51PmPhhmm := MLIR.Firedancer.Ref.fiat_25519_addcarryx_u51,
+    @_ZL25fiat_25519_subborrowx_u51PmPhhmm := MLIR.Firedancer.Ref.fiat_25519_subborrowx_u51
 
 end
 
