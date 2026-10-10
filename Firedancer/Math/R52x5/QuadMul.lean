@@ -13,7 +13,7 @@ radix-`2^51` columns, then the C's fold of columns 5-9 by `2^255 = 19`. -/
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open Firedancer.Avx512 (madd52lo madd52hi)
 open Firedancer.Avx512.R43x6 (madd52lo_lt madd52lo_toNat madd52hi_toNat madd52_split)
 
@@ -176,12 +176,12 @@ theorem quadFold_spec {z0_1 z1_1 z2_1 z3_1 z4_1 z1_2 z2_2 z3_2 z4_2 z5 z6 z7 z8 
   refine ⟨?_, fun i => ?_⟩
   · have s (c : ℕ) : (19 : ZMod p) * c = lo19 c + 2 ^ 52 * K c := by
       exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (lo19_hi19 c)
-    rw [Quad5.val, Ref.Limbs.val_eq, r0, r1, r2, r3, r4]
+    rw [Quad5.val, Ed25519.Limbs.val_eq, r0, r1, r2, r3, r4]
     simp only [limbs5]
     push_cast
     linear_combination
       -(s (C 5) + 2 ^ 51 * s (C 6) + 2 ^ 102 * s (C 7) + 2 ^ 153 * s (C 8) + 2 ^ 204 * s (C 9)) -
-        2 * (K (C 9) : ZMod p) * Ref.two_pow_255
+        2 * (K (C 9) : ZMod p) * Ed25519.two_pow_255
   · have k (c : ℕ) (hc : c < 2 ^ 64) : K c ≤ 77823 := by
       have := hi19_lt c; simp only [K]; omega
     have := k (C 5) (hC5 ▸ z5[j].isLt); have := k (C 6) (hC6 ▸ z6[j].isLt)
@@ -225,7 +225,7 @@ public def Quad5.laneN (Q : Quad5) (j : Fin 4) : ℕ → BitVec 64
   | _ => 0
 
 public theorem Quad5.nat_elem (Q : Quad5) (j : Fin 4) :
-    Ref.Limbs.nat (Q.elem j) = limbs5 fun k => (Q.laneN j k).toNat :=
+    Ed25519.Limbs.nat (Q.elem j) = limbs5 fun k => (Q.laneN j k).toNat :=
   rfl
 
 public theorem Quad5.laneN_lt {Q : Quad5} (h : Q.Below 52) (j : Fin 4) {k : ℕ} (hk : k < 5) :
@@ -368,8 +368,8 @@ public theorem fd_r52x5_quad_mul_fast.spec_lane {X Y : Quad5} (hX : X.Below 52) 
   · rw [cast_of_core
         (mul_core (L := lq X Y j) (H := hq X Y j) fun k i hk hi =>
           madd52_split (X.laneN_lt hX j hk) (Y.laneN_lt hY j hi)),
-      Quad5.val, Quad5.val, Ref.Limbs.val_nat, Ref.Limbs.val_nat, Quad5.nat_elem, Quad5.nat_elem,
-      Nat.cast_mul]
+      Quad5.val, Quad5.val, Ed25519.Limbs.val_nat, Ed25519.Limbs.val_nat, Quad5.nat_elem,
+      Quad5.nat_elem, Nat.cast_mul]
 
 /-- `fd_r52x5_quad_mul_fast` of QUADs with limbs below `2^52`: the four products, limbs at most
 `2^56 - 2^52`. -/

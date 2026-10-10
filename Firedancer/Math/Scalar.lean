@@ -1,5 +1,6 @@
 module
 
+public import Ed25519.Scalar
 public import Firedancer.Ref.fd_curve25519_scalar_reduce
 public import Firedancer.Ref.fd_curve25519_scalar_validate
 import Std.Tactic.BVDecide
@@ -7,20 +8,7 @@ meta import Lean.Elab.Tactic
 
 namespace MLIR.Firedancer.Ref
 
-/-! ## The group order -/
-
-@[expose] public section
-
-/-- `ℓ = 2^252 + 27742317777372353535851937790883648493`, the order of edwards25519's prime-order
-subgroup. -/
-def Ed25519.ell : Nat :=
-  2 ^ 252 + 27742317777372353535851937790883648493
-
-end
-
-/-- `ℓ` fits in 253 bits. -/
-public theorem Ed25519.ell_lt : Ed25519.ell < 2 ^ 253 := by
-  unfold Ed25519.ell; omega
+open _root_.Ed25519
 
 /-! ## Signed bounds -/
 

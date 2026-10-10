@@ -15,7 +15,7 @@ which decides `val = 0` on folded or nearly reduced inputs, so `eq` decides equa
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 
 namespace R43x6
 

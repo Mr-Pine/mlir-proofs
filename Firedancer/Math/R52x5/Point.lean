@@ -4,7 +4,7 @@ public import Firedancer.Math.Curve
 public import Firedancer.Math.R52x5.Fe
 public import Firedancer.R52x5.fd_curve25519_into_precomputed
 public import Firedancer.R52x5.fd_ed25519_point_neg
-import Firedancer.Math.Ext
+import Ed25519.Ext
 import Firedancer.Math.Avx512.Mul
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.LinearCombination
@@ -15,7 +15,7 @@ forms the point operations take and give, and the QUAD macros as operations on t
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open Firedancer.Avx512 (madd52lo madd52hi)
 open Firedancer.Avx512.R43x6 (madd52lo_lt madd52hi_lt madd52lo_toNat madd52_split)
 
@@ -27,7 +27,7 @@ namespace Quad5
 
 /-- The field element of coordinate `j` (`X, Y, Z, T`). -/
 abbrev val (Q : Quad5) (j : Fin 4) : ZMod p :=
-  Ref.Limbs.val (Q.elem j)
+  Ed25519.Limbs.val (Q.elem j)
 
 /-- Every limb below `2^n`; `Below 52` is what `FD_R52X5_QUAD_REDUCE` gives. -/
 abbrev Below (n : ℕ) (Q : Quad5) : Prop :=
@@ -49,8 +49,8 @@ abbrev Ext (Q : Quad5) (x y : ZMod p) : Prop :=
 `(Y - X, Y + X, 2 Z, 2d T)` of extended coordinates (`121666` absorbed into them). -/
 def Pre (Q : Quad5) (x y : ZMod p) : Prop :=
   ∃ X Y T Z,
-    Ref.Ed25519.IsExt x y X Y T Z ∧
-      Q.val 0 = Y - X ∧ Q.val 1 = Y + X ∧ Q.val 2 = 2 * Z ∧ Q.val 3 = 2 * Ref.Ed25519.d * T
+    Ed25519.IsExt x y X Y T Z ∧
+      Q.val 0 = Y - X ∧ Q.val 1 = Y + X ∧ Q.val 2 = 2 * Z ∧ Q.val 3 = 2 * Ed25519.d * T
 
 /-- `Q` is `(x, y)` as `add_with_opts`' second operand: extended for `pre = 0`, else
 precomputed. -/
@@ -74,7 +74,7 @@ end
 namespace Quad5
 
 public theorem ext_iff_isExt {Q : Quad5} {x y : ZMod p} :
-    Q.Ext x y ↔ Ref.Ed25519.IsExt x y (Q.val 0) (Q.val 1) (Q.val 3) (Q.val 2) :=
+    Q.Ext x y ↔ Ed25519.IsExt x y (Q.val 0) (Q.val 1) (Q.val 3) (Q.val 2) :=
   Iff.rfl
 
 public theorem proj_iff {Q : Quad5} {x y : ZMod p} :
@@ -125,10 +125,10 @@ public theorem Is.congr {Q : Quad5} (h : Q.Is v b) (hv : ∀ j, v j = v' j) (hb 
 /-- `32 p`'s limbs, `FD_R52X5_QUAD_NEGATE_LAZY`'s bias. -/
 def bias32p : Fin 5 → BitVec 64 := fun i => if i = 0 then 0xFFFFFFFFFFFDA0 else 0xFFFFFFFFFFFFE0
 
-theorem val_bias32p : Ref.Limbs.val bias32p = 0 := by
-  rw [Ref.Limbs.val_nat,
-    show Ref.Limbs.nat bias32p = 32 * p by
-      unfold Ref.Limbs.nat; rfl]
+theorem val_bias32p : Ed25519.Limbs.val bias32p = 0 := by
+  rw [Ed25519.Limbs.val_nat,
+    show Ed25519.Limbs.nat bias32p = 32 * p by
+      unfold Ed25519.Limbs.nat; rfl]
   rw [Nat.cast_mul, ZMod.natCast_self, mul_zero]
 
 theorem negateLazy_elem (S : Quad5) (j : Fin 4) (i : Fin 5) :
@@ -229,15 +229,15 @@ public theorem val_of_carry {l r : Fin 5 → BitVec 64}
     (h2 : (r 2).toNat = (l 2).toNat % 2 ^ 51 + (l 1).toNat / 2 ^ 51)
     (h3 : (r 3).toNat = (l 3).toNat % 2 ^ 51 + (l 2).toNat / 2 ^ 51)
     (h4 : (r 4).toNat = (l 4).toNat % 2 ^ 51 + (l 3).toNat / 2 ^ 51) :
-    Ref.Limbs.val r = Ref.Limbs.val l := by
+    Ed25519.Limbs.val r = Ed25519.Limbs.val l := by
   have e (y : ℕ) : ((y % 2 ^ 51 : ℕ) : ZMod p) + 2 ^ 51 * (y / 2 ^ 51 : ℕ) = y := by
     exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (Nat.mod_add_div y (2 ^ 51))
-  rw [Ref.Limbs.val_eq, Ref.Limbs.val_eq, h0, h1, h2, h3, h4]
+  rw [Ed25519.Limbs.val_eq, Ed25519.Limbs.val_eq, h0, h1, h2, h3, h4]
   push_cast
   linear_combination
     e (l 0).toNat + 2 ^ 51 * e (l 1).toNat + 2 ^ 102 * e (l 2).toNat + 2 ^ 153 * e (l 3).toNat +
         2 ^ 204 * e (l 4).toNat -
-      ((l 4).toNat / 2 ^ 51 : ℕ) * Ref.two_pow_255
+      ((l 4).toNat / 2 ^ 51 : ℕ) * Ed25519.two_pow_255
 
 /-! ## `FD_R52X5_QUAD_REDUCE` -/
 
@@ -245,8 +245,8 @@ theorem reduce_lane0 (x y : BitVec 64) :
     ((x &&& 2251799813685247#64) + madd52lo (y >>> 51) 19).toNat =
       x.toNat % 2 ^ 51 + 19 * (y.toNat / 2 ^ 51) := by
   have := y.isLt
-  have hc : (y >>> 51).toNat = y.toNat / 2 ^ 51 := Ref.toNat_shift y
-  rw [BitVec.toNat_add, Ref.toNat_and_mask, madd52lo_toNat (by omega) (by decide), hc,
+  have hc : (y >>> 51).toNat = y.toNat / 2 ^ 51 := Ed25519.toNat_shift y
+  rw [BitVec.toNat_add, Ed25519.toNat_and_mask, madd52lo_toNat (by omega) (by decide), hc,
     show BitVec.toNat (19 : BitVec 64) = 19 from rfl, Nat.mod_eq_of_lt (a := _ * 19) (by omega),
     Nat.mod_eq_of_lt (by omega)]
   ring
@@ -254,7 +254,7 @@ theorem reduce_lane0 (x y : BitVec 64) :
 theorem reduce_lane (x y : BitVec 64) :
     ((x &&& 2251799813685247#64) + y >>> 51).toNat = x.toNat % 2 ^ 51 + y.toNat / 2 ^ 51 := by
   have := y.isLt
-  rw [BitVec.toNat_add, Ref.toNat_and_mask, Ref.toNat_shift, Nat.mod_eq_of_lt (by omega)]
+  rw [BitVec.toNat_add, Ed25519.toNat_and_mask, Ed25519.toNat_shift, Nat.mod_eq_of_lt (by omega)]
 
 namespace Quad5
 
@@ -345,11 +345,12 @@ public theorem mulConstant_is {S : Quad5} {y : Wl} (h : S.Is v b) (hb : ∀ j, b
       push_cast
       ring
     show _ = v j * _
-    rw [← h.val j, val, val, Ref.Limbs.val_eq, Ref.Limbs.val_eq, r0, e1, e2, e3, e4, ri, ri, ri, ri]
+    rw [← h.val j, val, val, Ed25519.Limbs.val_eq, Ed25519.Limbs.val_eq, r0, e1, e2, e3, e4, ri, ri,
+      ri, ri]
     push_cast
     linear_combination
       -(sp 0 + 2 ^ 51 * sp 1 + 2 ^ 102 * sp 2 + 2 ^ 153 * sp 3 + 2 ^ 204 * sp 4) -
-        2 * ((madd52hi y[j] (S.elem j 4)).toNat : ZMod p) * Ref.two_pow_255
+        2 * ((madd52hi y[j] (S.elem j 4)).toNat : ZMod p) * Ed25519.two_pow_255
   · show _ ≤ 2 ^ 53
     have := l 0; have := l 1; have := l 2; have := l 3; have := l 4
     have := k 0; have := k 1; have := k 2; have := k 3; have := k 4
@@ -378,13 +379,13 @@ end Quad5
 /-! ## Extended coordinates scaled -/
 
 /-- `d = -121665 / 121666`. -/
-public theorem d_mul_121666 : Ref.Ed25519.d * 121666 = -121665 := by
-  unfold Ref.Ed25519.d
+public theorem d_mul_121666 : Ed25519.d * 121666 = -121665 := by
+  unfold Ed25519.d
   decide
 
 /-- Extended coordinates scaled by a nonzero `c` are extended coordinates of the same point. -/
-public theorem isExt_mul {x y X Y T Z c : ZMod p} (h : Ref.Ed25519.IsExt x y X Y T Z) (hc : c ≠ 0) :
-    Ref.Ed25519.IsExt x y (c * X) (c * Y) (c * T) (c * Z) := by
+public theorem isExt_mul {x y X Y T Z c : ZMod p} (h : Ed25519.IsExt x y X Y T Z) (hc : c ≠ 0) :
+    Ed25519.IsExt x y (c * X) (c * Y) (c * T) (c * Z) := by
   obtain ⟨hZ, hX, hY, hT⟩ := h
   exact
     ⟨mul_ne_zero hc hZ, by
@@ -443,7 +444,7 @@ public theorem fd_ed25519_point_neg.spec_ext {A : Quad5} {x y : ZMod p} (hA : A.
     (fd_ed25519_point_neg.spec A).Ext (-x) y ∧ (fd_ed25519_point_neg.spec A).Below 52 := by
   have h := spec_is hb.is fun _ => by norm_num
   refine ⟨?_, h.below fun _ => by norm_num⟩
-  have := Ref.Ed25519.isExt_neg (Quad5.ext_iff_isExt.1 hA)
+  have := Ed25519.IsExt.neg (Quad5.ext_iff_isExt.1 hA)
   rw [Quad5.ext_iff_isExt, h.val 0, h.val 1, h.val 2, h.val 3]
   simpa using this
 

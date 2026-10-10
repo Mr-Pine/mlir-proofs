@@ -1,7 +1,7 @@
 module
 
 public import Firedancer.Math.BaseTable
-public import Firedancer.Math.Group
+public import Ed25519.Group
 public import Firedancer.Math.Wnaf
 public import Firedancer.Ref.fd_ed25519_double_scalar_mul_base
 import Mathlib.Algebra.BigOperators.Fin
@@ -11,6 +11,8 @@ import Mathlib.Tactic.Module
 `ai` holds `A`'s, each wNAF digit adds its odd multiple, and the ladder doubles between digits. -/
 
 namespace MLIR.Firedancer.Ref
+
+open _root_.Ed25519
 
 namespace fd_ed25519_double_scalar_mul_base
 

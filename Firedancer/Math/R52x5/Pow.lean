@@ -7,7 +7,7 @@ public import Firedancer.R52x5.Decode2.Spec
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 
 namespace fd_r52x5_ge_decode2
 

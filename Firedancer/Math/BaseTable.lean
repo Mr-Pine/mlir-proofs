@@ -1,7 +1,8 @@
 module
 
+public import Ed25519.BasePoint
 public import Firedancer.Math.Curve
-public import Firedancer.Math.Group
+public import Ed25519.Group
 public import Firedancer.Ref.fd_ed25519_double_scalar_mul_base
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.LinearCombination
@@ -13,6 +14,7 @@ bits; the points are checked by the kernel, mod `p`, against the curve formulas.
 
 namespace MLIR.Firedancer.Ref
 
+open _root_.Ed25519
 open fd_ed25519_double_scalar_mul_base
 
 /-! ## Definitions -/
@@ -20,14 +22,6 @@ open fd_ed25519_double_scalar_mul_base
 @[expose] public section
 
 namespace Ed25519
-
-/-- The base point's `x`, the even root. -/
-def Bx : ZMod p :=
-  15112221349535400772501151409588531511454012693041857206046113283949847762202
-
-/-- The base point's `y`, `4 / 5`. -/
-def By : ZMod p :=
-  46316835694926478169428394003475163141307993866256225615783033603165251855960
 
 /-- `(2 j + 1) B`: `B` plus `j` times `2 B`. -/
 def oddMul : ℕ → ZMod p × ZMod p
@@ -284,16 +278,6 @@ theorem entry_of_ok {P : PointLimbs} {x y : ℕ} (h : entryOk P x y = true) :
 
 /-! ## The table -/
 
-/-- `B`'s `y` is `4 / 5`. -/
-public theorem Ed25519.By_eq : Ed25519.By = 4 / 5 := by
-  rw [eq_div_iff (by decide)]
-  decide
-
-/-- `B` is on the curve. -/
-public theorem Ed25519.onCurve_B : Ed25519.OnCurve Ed25519.Bx Ed25519.By := by
-  have h := (entry_of_ok (entries_ok 0 (by decide))).2.2.2.2.2
-  rwa [base_ok.1, ZMod.natCast_zmod_val, ZMod.natCast_zmod_val] at h
-
 /-- `(2 j + 1) B` is the point entry `j` stores. -/
 theorem Ed25519.oddMul_eq {j : ℕ} (hj : j < 128) :
     Ed25519.oddMul j = (((affine (baseTbl j)).1 : ZMod p), ((affine (baseTbl j)).2 : ZMod p)) := by
@@ -317,10 +301,6 @@ public theorem fd_ed25519_double_scalar_mul_base.baseTbl_operand {j : ℕ} (hj :
       Limbs.Tight (baseTbl j).T ∧ Limbs.Tight (baseTbl j).Z ∧ Ed25519.OnCurve Q.1 Q.2 := by
   rw [Ed25519.oddMul_eq hj, baseTbl_eq hj]
   exact entry_of_ok (entries_ok j hj)
-
-/-- The base point `B`. -/
-@[expose] public def Ed25519.basePoint : Ed25519.Point :=
-  ⟨Ed25519.Bx, Ed25519.By, Ed25519.onCurve_B⟩
 
 /-- `oddMul j` is `(2 j + 1) B`. -/
 public theorem Ed25519.oddMul_eq_nsmul (j : ℕ) :

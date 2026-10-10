@@ -6,23 +6,24 @@ public import Firedancer.Math.Verify
 public import Firedancer.R52x5.fd_ed25519_verify
 import Mathlib.Tactic.Abel
 
-/-! The R52x5 `fd_ed25519_verify` computes `Ed25519.verify`, as Ref's does. -/
+/-! The R52x5 `fd_ed25519_verify` computes `Ed25519.Firedancer.verify`, as Ref's does. -/
 
 namespace MLIR.Firedancer.R52x5
 
 open Firedancer.Ref
-open Ref.Ed25519 (decode)
+open _root_.Ed25519 (decode bytesLE)
 
-/-- `fd_ed25519_verify`'s return code, on the base point's table, is `Ed25519.verify`'s. -/
+/-- `fd_ed25519_verify`'s return code, on the base point's table, is
+`Ed25519.Firedancer.verify`'s. -/
 public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 * msgSz.toNat))
     (r S A : BitVec 256) (buf0 : BitVec 1024) :
     (fd_ed25519_verify.spec fd_ed25519_base_point_wnaf_table.point msgSz msg r S A buf0).ret =
-      Ed25519.verify (bytesLE msg) r S A := by
+      Ed25519.Firedancer.verify (bytesLE msg) r S A := by
   have hval := fd_curve25519_scalar_validate.spec_iff S
   -- the table stays opaque: unfolded, the kernel would evaluate its literal
   generalize hT : fd_ed25519_base_point_wnaf_table.point = tbl
   -- by the equations: unfolding under `.ret` by defeq makes the kernel evaluate `validate S`
-  rw [fd_ed25519_verify.spec, Ed25519.verify]
+  rw [fd_ed25519_verify.spec, Ed25519.Firedancer.verify]
   by_cases hS : Ed25519.ell ≤ S.toNat
   · have : fd_curve25519_scalar_validate.spec S = false := by
       cases h : fd_curve25519_scalar_validate.spec S
@@ -56,13 +57,17 @@ public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 *
   have hd := Ref.fd_ed25519_verify.hash_eq buf0 r A msgSz msg
   generalize Firedancer.fd_ed25519_verify.hash buf0 r A msgSz msg = H at hd ⊢
   obtain ⟨sha4, kw⟩ := H
-  have hk : (fd_curve25519_scalar_reduce.spec (Words8.bits kw)).toNat =
-      Ed25519.natLE (Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)) % Ed25519.ell := by
+  have hk :
+    (fd_curve25519_scalar_reduce.spec (Words8.bits kw)).toNat =
+      Ed25519.natLE (Ed25519.Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)) %
+        Ed25519.ell := by
     rw [fd_curve25519_scalar_reduce.spec_val, ← hd, Ed25519.natLE_bytesLE (n := 64)]
   generalize fd_curve25519_scalar_reduce.spec (Words8.bits kw) = k at hk ⊢
   have hkl : k.toNat < 2 ^ 255 := by
-    have := Nat.mod_lt (Ed25519.natLE (Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)))
-      (show 0 < Ed25519.ell by unfold Ed25519.ell; decide)
+    have :=
+      Nat.mod_lt (Ed25519.natLE (Ed25519.Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)))
+        (show 0 < Ed25519.ell by
+          unfold Ed25519.ell; decide)
     have := Ed25519.ell_lt
     omega
   -- `-A'`, then `k (-A') + S B`
@@ -72,9 +77,10 @@ public theorem fd_ed25519_verify.spec_ret (msgSz : BitVec 64) (msg : BitVec (8 *
     (by have := Ed25519.ell_lt; omega)
   rw [hT] at heQ bQ
   rw [fd_ed25519_point_affine_eq.spec_point heQ.proj hRa.ext.proj bQ hRf, hk]
-  generalize Ed25519.natLE (Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)) % Ed25519.ell = n
-  have key : n • -PA + S.toNat • Ed25519.basePoint = PR ↔
-      S.toNat • Ed25519.basePoint = PR + n • PA := by
+  generalize
+    Ed25519.natLE (Ed25519.Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg)) % Ed25519.ell = n
+  have key :
+    n • -PA + S.toNat • Ed25519.basePoint = PR ↔ S.toNat • Ed25519.basePoint = PR + n • PA := by
     rw [smul_neg]
     constructor <;> intro h
     · rw [← h]; abel

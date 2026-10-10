@@ -14,7 +14,7 @@ folds. -/
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 
 /-! ## Definitions -/
 

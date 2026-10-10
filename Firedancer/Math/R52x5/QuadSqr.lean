@@ -10,7 +10,7 @@ radix-`2^51` columns, off-diagonal ones doubled, then the fold of `fd_r52x5_quad
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open Firedancer.Avx512 (madd52lo madd52hi)
 open Firedancer.Avx512.R43x6 (madd52lo_lt madd52_split)
 
@@ -117,7 +117,7 @@ public theorem fd_r52x5_quad_sqr_fast.spec_lane {X : Quad5} (hX : X.Below 52) (j
   · rw [cast_of_core
         (sqr_core (L := lsq X j) (H := hsq X j) fun i k _ hk =>
           madd52_split (X.laneN_lt hX j (by omega)) (X.laneN_lt hX j hk)),
-      Quad5.val, Ref.Limbs.val_nat, Quad5.nat_elem, Nat.cast_mul, sq]
+      Quad5.val, Ed25519.Limbs.val_nat, Quad5.nat_elem, Nat.cast_mul, sq]
 
 /-- `fd_r52x5_quad_sqr_fast` of a QUAD with limbs below `2^52`: the four squares, limbs at most
 `2^56 - 2^52`. -/

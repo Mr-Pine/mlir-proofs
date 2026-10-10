@@ -1,5 +1,7 @@
 module
 
+public import Ed25519.Field
+public import Ed25519.Limbs
 public import Mathlib.Algebra.BigOperators.Fin
 public import Mathlib.Data.ZMod.Basic
 public import Firedancer.Ref.fd_f25519_add
@@ -26,17 +28,11 @@ on the limbs' values, under fiat-crypto's tight and loose limb bounds. -/
 
 namespace MLIR.Firedancer.Ref
 
+open _root_.Ed25519
+
 /-! ## Definitions -/
 
 @[expose] public section
-
-/-- The field's prime. -/
-abbrev p : ℕ :=
-  2 ^ 255 - 19
-
-/-- A field element's value: limb `i` weighs `2^(51 i)`. -/
-def Limbs.val (l : Fin 5 → BitVec 64) : ZMod p :=
-  ∑ i : Fin 5, ((l i).toNat : ZMod p) * 2 ^ (51 * (i : ℕ))
 
 /-- fiat-crypto's tight bounds: every limb at most `2^51`. -/
 abbrev Limbs.Tight (l : Fin 5 → BitVec 64) : Prop :=
@@ -46,42 +42,15 @@ abbrev Limbs.Tight (l : Fin 5 → BitVec 64) : Prop :=
 abbrev Limbs.Loose (l : Fin 5 → BitVec 64) : Prop :=
   ∀ i, (l i).toNat ≤ 0x18000000000000
 
-/-- The limbs' natural number, before reduction mod `p`. -/
-def Limbs.nat (l : Fin 5 → BitVec 64) : ℕ :=
-  (l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
-    (l 4).toNat * 2 ^ 204
-
 /-- Limbs at most `2p`'s, `2^52 - 38` and `2^52 - 2`: what `fiat_25519_sub` may subtract. -/
 abbrev Limbs.Under2p (l : Fin 5 → BitVec 64) : Prop :=
   ∀ i, (l i).toNat ≤ if i = 0 then 4503599627370458 else 4503599627370494
 
 end
 
-/-! ## Proof macros -/
-
-/-- `Nat.Prime n` by `prime_of_pratt a fs`; `norm_num` proves the factors prime except `hs`'s. -/
-local macro "pratt " a:term:max fs:term:max " [" hs:term,* "]" : tactic =>
-  `(tactic| (
-    refine $(Lean.mkIdent `prime_of_pratt) $a $fs ?_ ?_ ?_ ?_
-    · norm_num
-    · simp only [List.forall_mem_cons, List.not_mem_nil, IsEmpty.forall_iff, implies_true,
-        and_true, true_and, $[$hs:term],*]
-      norm_num
-    · reduce_mod_char
-    · simp only [List.forall_mem_cons, List.not_mem_nil, IsEmpty.forall_iff, implies_true,
-        and_true]
-      repeat' apply And.intro
-      all_goals reduce_mod_char; decide))
-
 /-! ## Basic facts -/
 
 section Basic
-
-public theorem Limbs.val_eq (l : Fin 5 → BitVec 64) :
-    Limbs.val l =
-      (l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
-        (l 4).toNat * 2 ^ 204 := by
-  simp [Limbs.val, Fin.sum_univ_five]
 
 public theorem Limbs.tight_iff (l : Fin 5 → BitVec 64) :
     Limbs.Tight l ↔
@@ -107,11 +76,6 @@ public theorem Limbs.Tight.loose {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) :
 public theorem Limbs.Tight.under2p {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) : Limbs.Under2p l :=
   fun i => (h i).trans (by split <;> decide)
 
-public theorem Limbs.val_nat (l : Fin 5 → BitVec 64) : Limbs.val l = (Limbs.nat l : ZMod p) := by
-  rw [Limbs.val_eq, Limbs.nat]
-  push_cast
-  rfl
-
 public theorem Limbs.Tight.nat_lt {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) :
     Limbs.nat l < 2 * p := by
   rw [Limbs.tight_iff] at h
@@ -121,100 +85,24 @@ public theorem Limbs.Tight.nat_lt {l : Fin 5 → BitVec 64} (h : Limbs.Tight l) 
 
 /-- The bounds `Under2p` gives each limb. -/
 theorem Limbs.Under2p.bounds {l : Fin 5 → BitVec 64} (h : Limbs.Under2p l) :
-    (l 0).toNat ≤ 4503599627370458 ∧ (l 1).toNat ≤ 4503599627370494 ∧
-      (l 2).toNat ≤ 4503599627370494 ∧ (l 3).toNat ≤ 4503599627370494 ∧
-        (l 4).toNat ≤ 4503599627370494 :=
-  ⟨by simpa using h 0, by simpa using h 1, by simpa using h 2, by simpa using h 3,
-    by simpa using h 4⟩
-
-public theorem two_pow_255 : (2 : ZMod p) ^ 255 = 19 := by
-  have h : 2 ^ 255 = p + 19 := by norm_num
-  rw [show (2 : ZMod p) ^ 255 = ((2 ^ 255 : ℕ) : ZMod p) by
-      push_cast; rfl,
-    h, Nat.cast_add, ZMod.natCast_self, zero_add]
-  rfl
+    (l 0).toNat ≤ 4503599627370458 ∧
+      (l 1).toNat ≤ 4503599627370494 ∧
+      (l 2).toNat ≤ 4503599627370494 ∧
+      (l 3).toNat ≤ 4503599627370494 ∧ (l 4).toNat ≤ 4503599627370494 :=
+  ⟨by simpa using h 0, by simpa using h 1, by simpa using h 2, by simpa using h 3, by
+    simpa using h 4⟩
 
 end Basic
-
-/-! ## `p` is prime -/
-
-section Prime
-
-/-- Lucas's test, `p - 1 = ∏ q ^ k` over the pairs `(q, k)` of `fs`, `a` the witness. -/
-theorem prime_of_pratt {p : ℕ} (a : ℕ) (fs : List (ℕ × ℕ))
-    (hfs : (fs.map fun f => f.1 ^ f.2).prod = p - 1) (hprime : ∀ f ∈ fs, f.1.Prime)
-    (ha : (a : ZMod p) ^ (p - 1) = 1) (hd : ∀ f ∈ fs, (a : ZMod p) ^ ((p - 1) / f.1) ≠ 1) :
-    p.Prime := by
-  refine lucas_primality p a ha fun q hq hdvd => ?_
-  rw [← hfs] at hdvd
-  obtain ⟨_, hm, hqf⟩ := (Prime.dvd_prod_iff hq.prime).1 hdvd
-  obtain ⟨f, hf, rfl⟩ := List.mem_map.1 hm
-  rw [(Nat.prime_dvd_prime_iff_eq hq (hprime f hf)).1 (hq.dvd_of_dvd_pow hqf)]
-  exact hd f hf
-
-theorem prime_1923133 : Nat.Prime 1923133 := by
-  pratt 2 [(2, 2), (3, 1), (43, 1), (3727, 1)] []
-
-theorem prime_31757755568855353 : Nat.Prime 31757755568855353 := by
-  pratt 10 [(2, 3), (3, 1), (31, 1), (107, 1), (223, 1), (4153, 1), (430751, 1)] []
-
-theorem prime_2773320623 : Nat.Prime 2773320623 := by
-  pratt 5 [(2, 1), (2437, 1), (569003, 1)] []
-
-theorem prime_72106336199 : Nat.Prime 72106336199 := by
-  pratt 7 [(2, 1), (13, 1), (2773320623, 1)] [prime_2773320623]
-
-theorem prime_8574133 : Nat.Prime 8574133 := by
-  pratt 2 [(2, 2), (3, 1), (7, 1), (103, 1), (991, 1)] []
-
-theorem prime_1919519569386763 : Nat.Prime 1919519569386763 := by
-  pratt 2 [(2, 1), (3, 1), (7, 1), (19, 1), (47, 2), (127, 1), (8574133, 1)] [prime_8574133]
-
-theorem prime_75445702479781427272750846543864801 :
-    Nat.Prime 75445702479781427272750846543864801 := by
-  pratt 7
-    [(2, 5), (3, 2), (5, 2), (75707, 1), (72106336199, 1), (1919519569386763, 1)]
-    [prime_72106336199, prime_1919519569386763]
-
-theorem prime_74058212732561358302231226437062788676166966415465897661863160754340907 :
-    Nat.Prime 74058212732561358302231226437062788676166966415465897661863160754340907 := by
-  pratt 2
-    [(2, 1), (3, 1), (353, 1), (57467, 1), (132049, 1), (1923133, 1), (31757755568855353, 1),
-      (75445702479781427272750846543864801, 1)]
-    [prime_1923133, prime_31757755568855353, prime_75445702479781427272750846543864801]
-
-theorem prime_p : p.Prime := by
-  pratt 2
-    [(2, 2), (3, 1), (65147, 1),
-      (74058212732561358302231226437062788676166966415465897661863160754340907, 1)]
-    [prime_74058212732561358302231226437062788676166966415465897661863160754340907]
-
-public instance fact_prime_p : Fact p.Prime :=
-  ⟨prime_p⟩
-
-end Prime
 
 /-! ## Limb arithmetic -/
 
 section Arith
-
-public theorem toNat_and_mask (x : BitVec 64) :
-    (x &&& 2251799813685247#64).toNat = x.toNat % 2 ^ 51 := by
-  rw [BitVec.toNat_and, ← Nat.and_two_pow_sub_one_eq_mod]
-  rfl
-
-public theorem toNat_shift (x : BitVec 64) : (x >>> 51).toNat = x.toNat / 2 ^ 51 := by
-  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 theorem toNat_shift_lo (x : BitVec 128) :
     (x >>> 51 &&& 18446744073709551615#128).toNat = x.toNat / 2 ^ 51 % 2 ^ 64 := by
   rw [BitVec.toNat_and, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, ←
     Nat.and_two_pow_sub_one_eq_mod]
   rfl
-
-theorem toNat_setWidth_mask (x : BitVec 128) :
-    (x.setWidth 64 &&& 2251799813685247#64).toNat = x.toNat % 2 ^ 51 := by
-  rw [toNat_and_mask, BitVec.toNat_setWidth, Nat.mod_mod_of_dvd _ (by decide)]
 
 theorem toNat_shift_setWidth (x : BitVec 128) :
     ((x >>> 51).setWidth 64).toNat = x.toNat / 2 ^ 51 % 2 ^ 64 := by
@@ -237,33 +125,6 @@ def carryCols (c0 c1 c2 c3 c4 : BitVec 128) : Fin 5 → BitVec 64 :=
   | ⟨2, _⟩ => (u1 >>> 51) + (r2.setWidth 64 &&& mask)
   | ⟨3, _⟩ => r3.setWidth 64 &&& mask
   | ⟨4, _⟩ => r4.setWidth 64 &&& mask
-
-/-- The carries' value identity in `ℕ`, cast to `ZMod p`. -/
-public theorem carry_val {C0 C1 C2 C3 C4 t1 t2 t3 t4 u0 u1 : ℕ} (ht1 : t1 = C1 + C0 / 2 ^ 51)
-    (ht2 : t2 = C2 + t1 / 2 ^ 51) (ht3 : t3 = C3 + t2 / 2 ^ 51) (ht4 : t4 = C4 + t3 / 2 ^ 51)
-    (hu0 : u0 = t4 / 2 ^ 51 * 19 + C0 % 2 ^ 51) (hu1 : u1 = u0 / 2 ^ 51 + t1 % 2 ^ 51) :
-    ((u0 % 2 ^ 51 : ℕ) : ZMod p) + (u1 % 2 ^ 51 : ℕ) * 2 ^ 51 +
-        (u1 / 2 ^ 51 + t2 % 2 ^ 51 : ℕ) * 2 ^ 102 +
-        (t3 % 2 ^ 51 : ℕ) * 2 ^ 153 +
-        (t4 % 2 ^ 51 : ℕ) * 2 ^ 204 =
-      C0 + C1 * 2 ^ 51 + C2 * 2 ^ 102 + C3 * 2 ^ 153 + C4 * 2 ^ 204 := by
-  have e (x : ℕ) : ((x % 2 ^ 51 : ℕ) : ZMod p) + 2 ^ 51 * (x / 2 ^ 51 : ℕ) = x := by
-    exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (Nat.mod_add_div x (2 ^ 51))
-  have T1 := congrArg (Nat.cast (R := ZMod p)) ht1
-  have T2 := congrArg (Nat.cast (R := ZMod p)) ht2
-  have T3 := congrArg (Nat.cast (R := ZMod p)) ht3
-  have T4 := congrArg (Nat.cast (R := ZMod p)) ht4
-  have U0 := congrArg (Nat.cast (R := ZMod p)) hu0
-  have U1 := congrArg (Nat.cast (R := ZMod p)) hu1
-  push_cast at T1 T2 T3 T4 U0 U1 ⊢
-  linear_combination
-    2 ^ 51 * e u1 + 2 ^ 51 * U1 + e u0 + U0 + e C0 + 2 ^ 51 * T1 + 2 ^ 51 * e t1 + 2 ^ 102 * T2 +
-        2 ^ 102 * e t2 +
-        2 ^ 153 * T3 +
-        2 ^ 153 * e t3 +
-        2 ^ 204 * T4 +
-        2 ^ 204 * e t4 -
-      (t4 / 2 ^ 51 : ℕ) * two_pow_255
 
 /-- The carries keep a positive number positive: the top carry folds back as `19`, never `0`. -/
 theorem carry_pos {C0 C1 C2 C3 C4 t1 t2 t3 t4 u0 u1 : ℕ} (ht1 : t1 = C1 + C0 / 2 ^ 51)
@@ -316,39 +177,6 @@ theorem carryCols_spec {c0 c1 c2 c3 c4 : BitVec 128} (h0 : c0.toNat ≤ 2 ^ 114)
   simp only [toNat_and_mask, ko2]
   refine ⟨⟨carry_val k1 k2 k3 k4 ku0 ku1, ?_, ?_, ?_, ?_, ?_⟩, carry_pos k1 k2 k3 k4 ku0 ku1⟩ <;>
     omega
-
-/-- `x` holds `n`, at most `M`. -/
-@[expose] public def ValLe (x : BitVec w) (n M : ℕ) : Prop :=
-  x.toNat = n ∧ n ≤ M
-
-public theorem ValLe.const (c : BitVec w) : ValLe c c.toNat c.toNat :=
-  ⟨rfl, le_rfl⟩
-
-public theorem ValLe.add {x y : BitVec w} (hx : ValLe x m M) (hy : ValLe y n N)
-    (h : M + N < 2 ^ w) :
-    ValLe (x + y) (m + n) (M + N) := by
-  obtain ⟨rfl, hm⟩ := hx
-  obtain ⟨rfl, hn⟩ := hy
-  exact ⟨by rw [BitVec.toNat_add, Nat.mod_eq_of_lt (by omega)], by omega⟩
-
-public theorem ValLe.mul {x y : BitVec w} (hx : ValLe x m M) (hy : ValLe y n N)
-    (h : M * N < 2 ^ w) :
-    ValLe (x * y) (m * n) (M * N) := by
-  obtain ⟨rfl, hm⟩ := hx
-  obtain ⟨rfl, hn⟩ := hy
-  have := Nat.mul_le_mul hm hn
-  exact ⟨by rw [BitVec.toNat_mul, Nat.mod_eq_of_lt (by omega)], this⟩
-
-public theorem ValLe.setWidth {x : BitVec w} (hx : ValLe x n M) (h : M < 2 ^ v) :
-    ValLe (x.setWidth v) n M := by
-  obtain ⟨rfl, hn⟩ := hx
-  exact ⟨by rw [BitVec.toNat_setWidth, Nat.mod_eq_of_lt (by omega)], hn⟩
-
-public theorem ValLe.shl {x : BitVec w} (hx : ValLe x n M) (h : M * 2 ^ k < 2 ^ w) :
-    ValLe (x <<< k) (n * 2 ^ k) (M * 2 ^ k) := by
-  obtain ⟨rfl, hn⟩ := hx
-  have := Nat.mul_le_mul_right (2 ^ k) hn
-  exact ⟨by rw [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq, Nat.mod_eq_of_lt (by omega)], this⟩
 
 /-- `carryCols_spec` over column sums known through `ValLe`; `Q` makes their number positive. -/
 theorem carryCols_valLe {Q : Prop} {c0 c1 c2 c3 c4 : BitVec 128} (h0 : ValLe c0 n0 M0)

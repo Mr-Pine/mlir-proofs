@@ -6,10 +6,12 @@ import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 
-/-! Point decompression's algebra: the candidate square root, the curve's `x` for a `y`, and the
-`is_nonzero`/sign flags a decoder combines. -/
+/-! Point decompression's algebra: the candidate square root, and the `is_nonzero`/sign flags a
+decoder combines. -/
 
 namespace MLIR.Firedancer.Ref
+
+open _root_.Ed25519
 
 public section
 
@@ -61,31 +63,6 @@ theorem ofNat_bit_inj {a b : ℕ} (ha : a < 2) (hb : b < 2) :
 theorem neg_one_ne_bit {b : ℕ} (hb : b < 2) : (-1 : BitVec 32) ≠ BitVec.ofNat 32 b := by
   match b, hb with
   | 0, _ | 1, _ => decide
-
-namespace Ed25519
-
-/-- `v = d y² + 1` is never zero. -/
-theorem v_ne (y : ZMod p) : Ref.Ed25519.d * y ^ 2 + 1 ≠ 0 := by
-  intro h
-  exact Ref.Ed25519.one_add_ne 1 y (by linear_combination h)
-
-/-- A point with `y` exists exactly when `(y² - 1) / (d y² + 1)` is a square. -/
-theorem exists_onCurve_iff (y : ZMod p) :
-    (∃ x, OnCurve x y) ↔ IsSquare ((y ^ 2 - 1) / (Ref.Ed25519.d * y ^ 2 + 1)) := by
-  simp only [Ref.Ed25519.onCurve_iff, IsSquare, div_eq_iff (v_ne y)]
-  constructor <;> rintro ⟨r, hr⟩ <;> exact ⟨r, by linear_combination -hr⟩
-
-/-- `decode` finds a point that decodes. -/
-theorem decodes_of_decode {buf : BitVec 256} {P : Ref.Ed25519.Point}
-    (h : decode buf = some P) : Decodes buf P := by
-  by_cases hex : ∃ P, Decodes buf P
-  · obtain ⟨Q, hQ⟩ := hex
-    rw [Ref.Ed25519.decode_eq_some hQ, Option.some.injEq] at h
-    exact h ▸ hQ
-  · rw [Ref.Ed25519.decode_eq_none.2 fun P hP => hex ⟨P, hP⟩] at h
-    exact absurd h (by simp)
-
-end Ed25519
 
 end
 

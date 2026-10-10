@@ -12,7 +12,7 @@ summed by radix-`2^51` columns, `za + 19 zb`, then `fold`. -/
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open Firedancer.Avx512 (Wwl madd52lo madd52hi)
 open Firedancer.Avx512.R43x6 (wwl_add_get wwl_and_get wwl_andnot_get wwl_shl_get wwl_shl_vector_get
   wwl_madd52lo_get wwl_madd52hi_get wwl_permute_get wwl_slide_get wwl_bcast_get wwl_get0 wwl_get1
@@ -26,7 +26,7 @@ set_option linter.unusedSimpArgs false
 
 @[expose] public section
 
-/-- Five radix-`2^51` limbs `f 0 … f 4`, packed as `Ref.Limbs.nat`. -/
+/-- Five radix-`2^51` limbs `f 0 … f 4`, packed as `Ed25519.Limbs.nat`. -/
 def limbs5 (f : ℕ → ℕ) : ℕ :=
   f 0 + f 1 * 2 ^ 51 + f 2 * 2 ^ 102 + f 3 * 2 ^ 153 + f 4 * 2 ^ 204
 
@@ -186,9 +186,9 @@ public theorem cast_of_core {u v w : ℕ} (h : (u : ℤ) + p * v = w) : (u : ZMo
   simpa only [Int.cast_add, Int.cast_mul, Int.cast_natCast, ZMod.natCast_self, zero_mul,
     add_zero] using e
 
-/-- An element's `Ref.Limbs.nat` as `limbs5` of its lanes. -/
-theorem nat_eq_limbs5 (x : Wwl) : Ref.Limbs.nat (limbs x) = limbs5 fun k => x[k]!.toNat := by
-  simp [Ref.Limbs.nat, limbs5, limbs, getElem!_pos]
+/-- An element's `Ed25519.Limbs.nat` as `limbs5` of its lanes. -/
+theorem nat_eq_limbs5 (x : Wwl) : Ed25519.Limbs.nat (limbs x) = limbs5 fun k => x[k]!.toNat := by
+  simp [Ed25519.Limbs.nat, limbs5, limbs, getElem!_pos]
 
 /-- `madd52hi` of 52-bit operands is below `2^52`. -/
 public theorem madd52hi_lt52 {a b : BitVec 64} (ha : a.toNat < 2 ^ 52) (hb : b.toNat < 2 ^ 52) :
@@ -347,16 +347,17 @@ theorem Below.get! {x : Wwl} (h : Below 52 x) {k : ℕ} (hk : k < 5) : x[k]!.toN
 theorem mul_z_val {a b : Wwl} (ha : Below 52 a) (hb : Below 52 b) :
     val (fd_f25519_mul.z a b) = val a * val b := by
   have hz :
-    Ref.Limbs.nat (limbs (fd_f25519_mul.z a b)) =
+    Ed25519.Limbs.nat (limbs (fd_f25519_mul.z a b)) =
       limbs5 fun n => mcol (lmul a b) (hmul a b) n + 19 * mcol (lmul a b) (hmul a b) (n + 5) := by
     rw [nat_eq_limbs5]
     simp only [limbs5, getElem!_pos, Nat.reduceLT, mul_lane0 ha hb, mul_lane1 ha hb,
       mul_lane2 ha hb, mul_lane3 ha hb, mul_lane4 ha hb, Nat.reduceAdd]
-  rw [val, Ref.Limbs.val_nat, hz,
+  rw [val, Ed25519.Limbs.val_nat, hz,
     cast_of_core
       (mul_core (L := lmul a b) (H := hmul a b) (X := fun k => a[k]!.toNat) (Y := fun j =>
         b[j]!.toNat) fun k j hk hj => madd52_split (ha.get! hk) (hb.get! hj)),
-    val, val, Ref.Limbs.val_nat, Ref.Limbs.val_nat, nat_eq_limbs5, nat_eq_limbs5, Nat.cast_mul]
+    val, val, Ed25519.Limbs.val_nat, Ed25519.Limbs.val_nat, nat_eq_limbs5, nat_eq_limbs5,
+    Nat.cast_mul]
 
 /-- `fd_f25519_mul` multiplies `B(52)` elements into a `B(52)` one. -/
 public theorem fd_f25519_mul.spec_val {a b : Wwl} (ha : Below 52 a) (hb : Below 52 b) :
@@ -477,16 +478,16 @@ theorem sqr_lane4 {a : Wwl} (ha : Below 52 a) :
 /-- `fd_f25519_sqr`'s `z` of a `B(52)` operand has value `a ^ 2`. -/
 theorem sqr_z_val {a : Wwl} (ha : Below 52 a) : val (fd_f25519_sqr.z a) = val a ^ 2 := by
   have hz :
-    Ref.Limbs.nat (limbs (fd_f25519_sqr.z a)) =
+    Ed25519.Limbs.nat (limbs (fd_f25519_sqr.z a)) =
       limbs5 fun n => scol (lsqr a) (hsqr a) n + 19 * scol (lsqr a) (hsqr a) (n + 5) := by
     rw [nat_eq_limbs5]
     simp only [limbs5, getElem!_pos, Nat.reduceLT, sqr_lane0 ha, sqr_lane1 ha, sqr_lane2 ha,
       sqr_lane3 ha, sqr_lane4 ha, Nat.reduceAdd]
-  rw [val, Ref.Limbs.val_nat, hz,
+  rw [val, Ed25519.Limbs.val_nat, hz,
     cast_of_core
       (sqr_core (L := lsqr a) (H := hsqr a) (X := fun k => a[k]!.toNat) fun i j hij hj =>
         madd52_split (ha.get! (by omega)) (ha.get! hj)),
-    val, Ref.Limbs.val_nat, nat_eq_limbs5, Nat.cast_mul, sq]
+    val, Ed25519.Limbs.val_nat, nat_eq_limbs5, Nat.cast_mul, sq]
 
 /-- `fd_f25519_sqr` squares a `B(52)` element into a `B(52)` one. -/
 public theorem fd_f25519_sqr.spec_val {a : Wwl} (ha : Below 52 a) :

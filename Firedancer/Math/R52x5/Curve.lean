@@ -6,7 +6,7 @@ public import Firedancer.Math.R52x5.QuadSqr
 public import Firedancer.R52x5.fd_ed25519_partial_dbl
 public import Firedancer.R52x5.fd_ed25519_point_dbln
 public import Firedancer.R52x5.fd_ed25519_point_sub_with_opts
-import Firedancer.Math.Ext
+import Ed25519.Ext
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
@@ -16,9 +16,7 @@ curve operation on the points its QUADs represent, reduced (`Below 52`). -/
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
-open MLIR.Firedancer.Ref.Ed25519 (d OnCurve IsExt isExt_add isExt_dbl isExt_neg dblN_succ'
-  dblN_onCurve)
+open _root_.Ed25519 (p d OnCurve IsExt isExt_add isExt_dbl dblN_succ' dblN_onCurve)
 
 /-! ## The QUAD formulas -/
 
@@ -53,7 +51,7 @@ their sum in extended coordinates, reduced. -/
 public theorem geAddTable_ext {P1 T2 : Quad5} {x₁ y₁ x₂ y₂ : ZMod p} (hP : P1.Ext x₁ y₁)
     (hPb : P1.Below 52) (hT : T2.Pre x₂ y₂) (hTb : T2.Below 52) (h1 : OnCurve x₁ y₁)
     (h2 : OnCurve x₂ y₂) :
-    let Q := Ref.Ed25519.add x₁ y₁ x₂ y₂
+    let Q := Ed25519.add x₁ y₁ x₂ y₂
     (geAddTable P1 T2).Ext Q.1 Q.2 ∧ (geAddTable P1 T2).Below 52 := by
   obtain ⟨X, Y, T, Z, hE, e0, e1, e2, e3⟩ := hT
   have hp := hPb.is.congr (v' := ![P1.val 0, P1.val 1, P1.val 2, P1.val 3])
@@ -68,7 +66,7 @@ public theorem geAddTable_ext {P1 T2 : Quad5} {x₁ y₁ x₂ y₂ : ZMod p} (hP
 theorem quad5Zero_is : quad5Zero.Is ![0, 0, 0, 0] (fun _ => 0) := by
   intro j
   refine ⟨?_, fun i => ?_⟩ <;> fin_cases j <;> (try fin_cases i) <;>
-    simp [Quad5.val, Ref.Limbs.val_eq, Quad5.elem, Quad5.limb, quad5Zero]
+    simp [Quad5.val, Ed25519.Limbs.val_eq, Quad5.elem, Quad5.limb, quad5Zero]
 
 /-- `FD_R52X5_GE_DBL` of `P1`, limbs below `2^63`: `A = X^2`, `B = Y^2`, `H = A + B`,
 `E = H - (Y + X)^2`, `G = A - B`, `F = G + 2 Z^2`, then `(E F, G H, G F, E H)`. -/
@@ -116,9 +114,10 @@ variable {A B : Quad5} {x y x₁ y₁ x₂ y₂ : ZMod p}
 public theorem fd_ed25519_partial_dbl.spec_ext (hA : A.Proj x y) (hc : OnCurve x y)
     (hb : A.Below 52) :
     let D := fd_ed25519_partial_dbl.spec A
-    D.Ext (Ref.Ed25519.dbl x y).1 (Ref.Ed25519.dbl x y).2 ∧ D.Below 52 := by
-  have ha := hb.is.congr (v' := ![A.val 0, A.val 1, A.val 2, A.val 3])
-    (fun j => by fin_cases j <;> rfl) (fun _ => le_rfl)
+    D.Ext (Ed25519.dbl x y).1 (Ed25519.dbl x y).2 ∧ D.Below 52 := by
+  have ha :=
+    hb.is.congr (v' := ![A.val 0, A.val 1, A.val 2, A.val 3]) (fun j => by fin_cases j <;> rfl)
+      (fun _ => le_rfl)
   have h : (fd_ed25519_partial_dbl.spec A).Is _ _ := geDbl_is ha fun _ => by norm_num
   refine ⟨?_, h.below fun _ => by norm_num⟩
   obtain ⟨hz, hx, hy⟩ := Quad5.proj_iff.1 hA
@@ -131,7 +130,7 @@ public theorem fd_ed25519_partial_dbl.spec_ext (hA : A.Proj x y) (hc : OnCurve x
 public theorem fd_ed25519_point_add_with_opts.spec_ext {pre : BitVec 32} (hA : A.Ext x₁ y₁)
     (hAb : A.Below 52) (hB : B.Operand pre x₂ y₂) (hBb : B.Below 52) (h1 : OnCurve x₁ y₁)
     (h2 : OnCurve x₂ y₂) :
-    let Q := Ref.Ed25519.add x₁ y₁ x₂ y₂
+    let Q := Ed25519.add x₁ y₁ x₂ y₂
     let R := fd_ed25519_point_add_with_opts.spec A B pre
     R.Ext Q.1 Q.2 ∧ R.Below 52 := by
   rw [Quad5.Operand] at hB
@@ -152,8 +151,7 @@ public theorem fd_ed25519_point_neg_precomputed.spec_pre (hA : A.Pre x y) (hb : 
   have h : (fd_ed25519_point_neg_precomputed.spec A).Is _ _ :=
     Quad5.laneIf_is 0 0 0 1 (Quad5.negateLazy_is ha fun _ => by norm_num).reduce
       (Quad5.permute_is 1 0 2 3 ha)
-  refine ⟨⟨-X, Y, -T, Z, isExt_neg hE, ?_, ?_, ?_, ?_⟩, h.below fun j => by
-    fin_cases j <;> simp⟩
+  refine ⟨⟨-X, Y, -T, Z, hE.neg, ?_, ?_, ?_, ?_⟩, h.below fun j => by fin_cases j <;> simp⟩
   · rw [h.val 0]; simp [Quad5.sel, e1]
   · rw [h.val 1]; simp [Quad5.sel, e0]; ring
   · rw [h.val 2]; simp [Quad5.sel, e2]
@@ -164,7 +162,7 @@ public theorem fd_ed25519_point_neg_precomputed.spec_pre (hA : A.Pre x y) (hb : 
 public theorem fd_ed25519_point_sub_with_opts.spec_ext {pre : BitVec 32} (hA : A.Ext x₁ y₁)
     (hAb : A.Below 52) (hB : B.Operand pre x₂ y₂) (hBb : B.Below 52) (h1 : OnCurve x₁ y₁)
     (h2 : OnCurve x₂ y₂) :
-    let Q := Ref.Ed25519.add x₁ y₁ (-x₂) y₂
+    let Q := Ed25519.add x₁ y₁ (-x₂) y₂
     let R := fd_ed25519_point_sub_with_opts.spec A B pre
     R.Ext Q.1 Q.2 ∧ R.Below 52 := by
   have hn : (if pre = 0 then fd_ed25519_point_neg.spec B
@@ -181,7 +179,7 @@ public theorem fd_ed25519_point_sub_with_opts.spec_ext {pre : BitVec 32} (hA : A
 coordinates, reduced, for `n ≥ 1`. -/
 public theorem fd_ed25519_point_dbln.spec_ext {n : ℕ} (hA : A.Proj x y) (hc : OnCurve x y)
     (hb : A.Below 52) (hn : 1 ≤ n) :
-    let Q := Ref.Ed25519.dblN n (x, y)
+    let Q := Ed25519.dblN n (x, y)
     (fd_ed25519_point_dbln.spec A n).Ext Q.1 Q.2 ∧ (fd_ed25519_point_dbln.spec A n).Below 52 := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
   simp only [fd_ed25519_point_dbln.spec, Nat.add_sub_cancel]

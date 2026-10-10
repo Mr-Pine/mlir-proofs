@@ -12,15 +12,7 @@ import Mathlib.Tactic.ReduceModChar
 
 namespace MLIR.Firedancer.Ref
 
-/-! ## Definitions -/
-
-@[expose] public section
-
-/-- `√-1`, the root `fd_f25519_sqrtm1` holds. -/
-def sqrtM1 : ZMod p :=
-  19681161376707505956807079304988542015446066515923890162744021073123829784752
-
-end
+open _root_.Ed25519
 
 /-! ## Flags -/
 
@@ -59,10 +51,6 @@ end Flags
 /-! ## Square roots -/
 
 section Sqrt
-
-public theorem sqrtM1_sq : sqrtM1 ^ 2 = -1 := by
-  unfold sqrtM1
-  reduce_mod_char
 
 /-- `fd_f25519_sqrtm1` is `√-1`, tight. -/
 public theorem fd_f25519_sqrtm1.val :

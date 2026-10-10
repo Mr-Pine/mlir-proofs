@@ -13,7 +13,8 @@ formulas. -/
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p dN x2N y2N curveOk addOk dblOk natCast_eq dN_eq add_of_ok dbl_of_ok
+open _root_.Ed25519 (p)
+open MLIR.Firedancer.Ref (dN x2N y2N curveOk addOk dblOk natCast_eq dN_eq add_of_ok dbl_of_ok
   onCurve_of_ok)
 
 namespace BaseTable
@@ -112,7 +113,7 @@ Natural number checks, mod `p`, that the kernel decides. -/
 
 /-- Coordinate `k`'s integer. -/
 abbrev coord (T : Quad5) (k : Fin 4) : ℕ :=
-  Ref.Limbs.nat (T.elem k)
+  Ed25519.Limbs.nat (T.elem k)
 
 /-- `1 / 243332` mod `p`. -/
 def inv243332 : ℕ :=
@@ -133,9 +134,8 @@ abbrev EntryOk (T : Quad5) (x y : ℕ) : Prop :=
 
 /-- Entry `0` stores `B`, and `2 B` is `(x2N, y2N)`. -/
 theorem base_ok :
-    affine (entry fd_ed25519_base_point_wnaf_table.lit[0]) =
-        (Ref.Ed25519.Bx.val, Ref.Ed25519.By.val) ∧
-      dblOk Ref.Ed25519.Bx.val Ref.Ed25519.By.val x2N y2N = true := by
+    affine (entry fd_ed25519_base_point_wnaf_table.lit[0]) = (Ed25519.Bx.val, Ed25519.By.val) ∧
+      dblOk Ed25519.Bx.val Ed25519.By.val x2N y2N = true := by
   decide +kernel
 
 /-- Every entry stores its point, on the curve. -/
@@ -170,7 +170,7 @@ theorem entry_of_ok {T : Quad5} {x y : ℕ} (h : EntryOk T x y) : T.Pre x y ∧ 
       ⟨⟨121666 * x, 121666 * y, 121666 * (x * y), 121666, ⟨by decide, by ring, by ring, by ring⟩,
           ?_, ?_, ?_, ?_⟩,
         hb⟩ <;>
-    rw [Quad5.val, Ref.Limbs.val_nat]
+    rw [Quad5.val, Ed25519.Limbs.val_nat]
   · linear_combination e0
   · linear_combination e1
   · linear_combination e2

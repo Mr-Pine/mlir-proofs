@@ -18,10 +18,9 @@ point, affine, of the parity its top bit asks for (any sign for `x = 0`, as Dale
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open MLIR.Firedancer.Ref (sqrt_ratio_iff flags_and_eq_zero ofNat_bit_inj neg_one_ne_bit)
-open MLIR.Firedancer.Ref.Ed25519 (OnCurve exists_decodes_iff)
-open MLIR.Firedancer.Ref.Ed25519 (v_ne exists_onCurve_iff decodes_of_decode)
+open _root_.Ed25519 (OnCurve exists_decodes_iff v_ne exists_onCurve_iff decodes_of_decode)
 open fd_r43x6_ge_decode2
 
 /-! ## The compiled forms as `fd_r43x6` operations -/
@@ -157,11 +156,11 @@ open R43x6 (val Folded Unsigned Unreduced)
 /-- `fd_r43x6_one()`, `fd_r43x6_d()`, `fd_r43x6_imag()`: `1`, `d`, `√-1`. -/
 theorem consts :
     (val one = 1 ∧ Folded one) ∧
-      (val fd_r43x6_ge_decode2.d = Ref.Ed25519.d ∧ Folded fd_r43x6_ge_decode2.d) ∧
-      (val fd_r43x6_ge_decode2.sqrtM1 = Ref.sqrtM1 ∧ Folded fd_r43x6_ge_decode2.sqrtM1) := by
+      (val fd_r43x6_ge_decode2.d = Ed25519.d ∧ Folded fd_r43x6_ge_decode2.d) ∧
+      (val fd_r43x6_ge_decode2.sqrtM1 = Ed25519.sqrtM1 ∧ Folded fd_r43x6_ge_decode2.sqrtM1) := by
   refine ⟨⟨by decide, by decide⟩, ⟨?_, by decide⟩, ⟨?_, by decide⟩⟩
-  · unfold Ref.Ed25519.d; decide
-  · unfold Ref.sqrtM1; decide
+  · unfold Ed25519.d; decide
+  · unfold Ed25519.sqrtM1; decide
 
 /-- The encoding's low 255 bits, as `^bb0` reads them with the sign bit cleared. -/
 theorem wvNat_dec (s : BitVec 256) :
@@ -212,9 +211,11 @@ theorem dec_spec (s : BitVec 256) :
     let D := dec s
     let y : ZMod p := ((s.toNat % 2 ^ 255 : ℕ) : ZMod p)
     let u := y ^ 2 - 1
-    let v := Ref.Ed25519.d * y ^ 2 + 1
-    val D.y = y ∧ R43x6.Unpacked D.y ∧
-      val D.x = u * v ^ 3 * (u * v ^ 7) ^ ((p - 5) / 8) ∧ Folded D.x ∧
+    let v := Ed25519.d * y ^ 2 + 1
+    val D.y = y ∧
+      R43x6.Unpacked D.y ∧
+      val D.x = u * v ^ 3 * (u * v ^ 7) ^ ((p - 5) / 8) ∧
+      Folded D.x ∧
       D.x0 = BitVec.ofNat 32 (s.toNat / 2 ^ 255) ∧
       D.t1nz = (if v * val D.x ^ 2 - u = 0 then 0 else 1) ∧
       D.t2nz = (if v * val D.x ^ 2 + u = 0 then 0 else 1) := by
@@ -302,7 +303,7 @@ theorem dec_spec (s : BitVec 256) :
       vu]
 
 /-- An encoding's checks pass exactly when a point decodes from it. -/
-theorem dec_ok_iff (s : BitVec 256) : (dec s).ok ↔ ∃ P, Ref.Ed25519.Decodes s P := by
+theorem dec_ok_iff (s : BitVec 256) : (dec s).ok ↔ ∃ P, Ed25519.Decodes s P := by
   obtain ⟨-, -, hx, -, -, h1, h2⟩ := dec_spec s
   rw [exists_decodes_iff, Dec.ok, h1, h2, flags_and_eq_zero, exists_onCurve_iff]
   generalize ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) = y at hx ⊢
@@ -348,9 +349,11 @@ theorem fixSign {x : Wwl} (hx : Folded x) {b : ℕ} (hb : b < 2) :
 /-- A passing encoding's QUAD is the point that decodes from it, affine and folded. -/
 theorem dec_point {s : BitVec 256} (h : (dec s).ok) :
     let D := dec s
-    let Q := quadOf (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec
-      fd_r43x6_ge_decode2.sqrtM1 one D.x D.y D.t1nz D.x0)
-    ∃ P, Ref.Ed25519.Decodes s P ∧ Q.Affine P.x P.y ∧ Q.Folded := by
+    let Q :=
+      quadOf
+        (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec fd_r43x6_ge_decode2.sqrtM1 one D.x
+          D.y D.t1nz D.x0)
+    ∃ P, Ed25519.Decodes s P ∧ Q.Affine P.x P.y ∧ Q.Folded := by
   intro D Q
   obtain ⟨vy, uy, vx, fx, ex0, h1, h2⟩ := dec_spec s
   obtain ⟨⟨v1, f1⟩, -, ⟨vi, fi⟩⟩ := consts
@@ -358,13 +361,20 @@ theorem dec_point {s : BitVec 256} (h : (dec s).ok) :
   rw [Dec.ok, h1, h2, flags_and_eq_zero] at hok
   have hb : s.toNat / 2 ^ 255 < 2 := by have := s.isLt; omega
   -- the root: `x`, or `x √-1` when `v x² ≠ u`
-  have hroot : Folded (fold (fd_r43x6_mul_fast.spec D.x
-        (if D.t1nz = 0 then one else fd_r43x6_ge_decode2.sqrtM1))) ∧
-      OnCurve (val (fold (fd_r43x6_mul_fast.spec D.x
-        (if D.t1nz = 0 then one else fd_r43x6_ge_decode2.sqrtM1)))) (val D.y) := by
-    rw [Ref.Ed25519.onCurve_iff, vy]
-    by_cases h0 : (Ref.Ed25519.d * ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 + 1) *
-        val (dec s).x ^ 2 - (((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 - 1) = 0
+  have hroot :
+    Folded
+        (fold
+          (fd_r43x6_mul_fast.spec D.x (if D.t1nz = 0 then one else fd_r43x6_ge_decode2.sqrtM1))) ∧
+      OnCurve
+        (val
+          (fold
+            (fd_r43x6_mul_fast.spec D.x (if D.t1nz = 0 then one else fd_r43x6_ge_decode2.sqrtM1))))
+        (val D.y) := by
+    rw [Ed25519.onCurve_iff, vy]
+    by_cases h0 :
+      (Ed25519.d * ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 + 1) * val (dec s).x ^ 2 -
+          (((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 - 1) =
+        0
     · have ht : D.t1nz = 0 := by rw [h1, ite_eq_left_of_eq_true _ _ (eq_true h0)]
       rw [ht, ite_eq_left_of_eq_true _ _ (eq_true rfl)]
       obtain ⟨vm, fm⟩ := mulF fx.unreduced f1.unreduced
@@ -377,8 +387,10 @@ theorem dec_point {s : BitVec 256} (h : (dec s).ok) :
       refine ⟨fm, ?_⟩
       rw [vm, vi]
       have e := hok.resolve_right h0
-      linear_combination (-1 : ZMod p) * e + val D.x ^ 2 * (Ref.Ed25519.d *
-        (((s.toNat % 2 ^ 255 : ℕ) : ZMod p)) ^ 2 + 1) * Ref.sqrtM1_sq
+      linear_combination
+        (-1 : ZMod p) * e +
+          val D.x ^ 2 * (Ed25519.d * (((s.toNat % 2 ^ 255 : ℕ) : ZMod p)) ^ 2 + 1) *
+            Ed25519.sqrtM1_sq
   obtain ⟨fr, hc⟩ := hroot
   have hs := fixSign fr hb
   rw [← ex0] at hs
@@ -414,16 +426,16 @@ end Dec
 
 section Decode
 
-open Ref.Ed25519 (Decodes decode)
+open _root_.Ed25519 (Decodes decode)
 
 /-- An encoding's checks pass exactly when `decode` succeeds. -/
 theorem dec_ok_iff_decode (s : BitVec 256) : (dec s).ok ↔ decode s ≠ none := by
-  rw [dec_ok_iff, ne_eq, Ref.Ed25519.decode_eq_none]
+  rw [dec_ok_iff, ne_eq, Ed25519.decode_eq_none]
   push Not
   rfl
 
 /-- A passing encoding's QUAD is the point `decode` finds, affine and folded. -/
-theorem dec_point_decode {s : BitVec 256} {P : Ref.Ed25519.Point} (h : decode s = some P) :
+theorem dec_point_decode {s : BitVec 256} {P : Ed25519.Point} (h : decode s = some P) :
     let D := dec s
     let Q := quadOf (decodePt fd_r43x6_mul_fast.spec fd_r43x6_diagnose.spec
       fd_r43x6_ge_decode2.sqrtM1 one D.x D.y D.t1nz D.x0)
@@ -468,19 +480,19 @@ public theorem fd_ed25519_point_frombytes_2x.spec_decode (e1 e2 : BitVec 256) :
 
 /-- `is_small_order` on an affine point of the group, folded (as decoding gives it): `1` exactly
 when `8 P = 0`. -/
-public theorem fd_ed25519_affine_is_small_order.spec_point {A : Quad} {P : Ref.Ed25519.Point}
+public theorem fd_ed25519_affine_is_small_order.spec_point {A : Quad} {P : Ed25519.Point}
     (hA : A.Affine P.x P.y) (hr : A.Folded) :
     fd_ed25519_affine_is_small_order.spec A = if 8 • P = 0 then 1 else 0 :=
   (fd_ed25519_affine_is_small_order.spec_val hA.1 hA.2.1 P.on hr).trans
-    (if_congr (Ref.Ed25519.Point.smallOrder_iff_nsmul P) rfl rfl)
+    (if_congr (Ed25519.Point.smallOrder_iff_nsmul P) rfl rfl)
 
 /-- `point_eq` on points of the group, projective with elements below `2^44`: `1` exactly when
 they are equal. -/
-public theorem fd_ed25519_point_eq.spec_point {X Y : Quad} {P Q : Ref.Ed25519.Point}
+public theorem fd_ed25519_point_eq.spec_point {X Y : Quad} {P Q : Ed25519.Point}
     (hX : X.Proj P.x P.y) (hY : Y.Proj Q.x Q.y) (rX : X.Unsigned 44) (rY : Y.Unsigned 44) :
     fd_ed25519_point_eq.spec X Y = if P = Q then 1 else 0 :=
   (fd_ed25519_point_eq.spec_val hX hY rX rY).trans
-    (if_congr (Ref.Ed25519.Point.ext_iff (x := P) (y := Q)).symm rfl rfl)
+    (if_congr (Ed25519.Point.ext_iff (x := P) (y := Q)).symm rfl rfl)
 
 end Decode
 

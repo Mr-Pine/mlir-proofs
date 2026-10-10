@@ -10,7 +10,7 @@ import Mathlib.Tactic.NormNum
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 
 namespace R43x6
 

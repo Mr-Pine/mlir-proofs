@@ -1,5 +1,5 @@
 name = "rir-firedancer"
-defaultTargets = ["Firedancer"]
+defaultTargets = ["Ed25519", "Firedancer"]
 
 # Firedancer's ed25519 verify (ref), lifted to the register-based IR and proved.
 [[require]]
@@ -10,6 +10,11 @@ path = "../lean-mlir"
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4-nightly-testing"
 rev = "nightly-testing-2026-09-16"
+
+# Ed25519 as mathematics: the field, the curve's group, SHA-512, decoding, verification.
+[[lean_lib]]
+name = "Ed25519"
+globs = ["Ed25519.*"]
 
 [[lean_lib]]
 name = "Firedancer"

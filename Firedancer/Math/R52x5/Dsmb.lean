@@ -15,7 +15,7 @@ namespace MLIR.Firedancer.R52x5
 
 namespace fd_ed25519_double_scalar_mul_base
 
-open Ref.Ed25519 (Point)
+open _root_.Ed25519 (Point)
 open Ref.fd_ed25519_double_scalar_mul_base (low low_succ low_256 low_add)
 
 /-! ## Definitions -/
@@ -39,7 +39,7 @@ theorem zero_extF : ExtF quadZero 0 := by
   have h : quadZero.Is ![0, 1, 1, 0] (fun _ => 1) := by
     intro j
     refine ⟨?_, fun i => ?_⟩ <;> fin_cases j <;> (try fin_cases i) <;>
-      simp [Quad5.val, Ref.Limbs.val_eq, Quad5.elem, Quad5.limb, quadZero, wl, wl_zero]
+      simp [Quad5.val, Ed25519.Limbs.val_eq, Quad5.elem, Quad5.limb, quadZero, wl, wl_zero]
   refine ⟨?_, h.below fun _ => by norm_num⟩
   rw [Quad5.ext_iff_isExt, h.val 0, h.val 1, h.val 2, h.val 3]
   exact ⟨one_ne_zero, by simp, by simp, by simp⟩
@@ -60,7 +60,7 @@ theorem sub_extF {t b : Quad5} {Q P : Point} (ht : ExtF t Q) (hb : PreF b P) :
 theorem dbl_extF {r : Quad5} {Q : Point} (hr : ExtF r Q) :
     ExtF (fd_ed25519_partial_dbl.spec r) (Q + Q) := by
   have h := fd_ed25519_partial_dbl.spec_ext hr.1.proj Q.on hr.2
-  rw [Ref.Ed25519.Point.dbl_eq] at h
+  rw [Ed25519.Point.dbl_eq] at h
   exact h
 
 /-! ## Digits -/
@@ -137,7 +137,7 @@ theorem aiTable_preF {A : Quad5} {PA : Point} (hA : ExtF A PA) (k : ℕ) :
     PreF (aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A) k)
       ((2 * k + 1) • PA) := by
   have h2 := fd_ed25519_point_dbln.spec_ext hA.1.proj PA.on hA.2 (n := 1) le_rfl
-  rw [Ref.Ed25519.Point.dblN_eq] at h2
+  rw [Ed25519.Point.dblN_eq] at h2
   induction k with
   | zero =>
     rw [mul_zero, zero_add, one_smul]
@@ -242,7 +242,7 @@ public theorem spec_val_base {A : Quad5} {n1 n2 : BitVec 256} (PA : Point)
     (hA : A.Ext PA.x PA.y) (hAF : A.Below 52) (h1 : n1.toNat < 2 ^ 255)
     (h2 : n2.toNat < 2 ^ 255) :
     let R := fd_ed25519_double_scalar_mul_base.spec fd_ed25519_base_point_wnaf_table.point n1 A n2
-    let Q := n1.toNat • PA + n2.toNat • Ref.Ed25519.basePoint
+    let Q := n1.toNat • PA + n2.toNat • Ed25519.basePoint
     R.Ext Q.x Q.y ∧ R.Below 52 := by
   refine spec_val PA _ hA hAF (fun j hj => ?_) h1 h2
   have h := fd_ed25519_base_point_wnaf_table.point_pre hj

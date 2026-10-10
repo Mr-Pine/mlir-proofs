@@ -14,7 +14,7 @@ namespace MLIR.Firedancer.Avx512
 
 namespace fd_ed25519_double_scalar_mul_base
 
-open Ref.Ed25519 (Point)
+open _root_.Ed25519 (Point)
 open Ref.fd_ed25519_double_scalar_mul_base (low low_succ low_256 low_add)
 
 /-! ## Definitions -/
@@ -55,7 +55,7 @@ theorem sub_extF {t b : Quad} {Q P : Point} (ht : ExtF t Q) (hb : PreF b P) :
 theorem dbl_extF {r : Quad} {Q : Point} (hr : ExtF r Q) :
     ExtF (fd_ed25519_partial_dbl.spec r) (Q + Q) := by
   have h := fd_ed25519_partial_dbl.spec_ext hr.1.proj Q.on hr.2.unsigned
-  rw [Ref.Ed25519.Point.dbl_eq] at h
+  rw [Ed25519.Point.dbl_eq] at h
   exact h
 
 /-! ## Digits -/
@@ -132,7 +132,7 @@ theorem aiTable_preF {A : Quad} {PA : Point} (hA : ExtF A PA) (k : ℕ) :
     PreF (aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A) k)
       ((2 * k + 1) • PA) := by
   have h2 := fd_ed25519_point_dbln.spec_ext hA.1.proj PA.on hA.2.unsigned (n := 1) le_rfl
-  rw [Ref.Ed25519.Point.dblN_eq] at h2
+  rw [Ed25519.Point.dblN_eq] at h2
   induction k with
   | zero =>
     rw [mul_zero, zero_add, one_smul]
@@ -237,7 +237,7 @@ public theorem spec_val_base {A : Quad} {n1 n2 : BitVec 256} (PA : Point)
     (hA : A.Ext PA.x PA.y) (hAF : A.Folded) (h1 : n1.toNat < 2 ^ 255)
     (h2 : n2.toNat < 2 ^ 255) :
     let R := fd_ed25519_double_scalar_mul_base.spec fd_ed25519_base_point_wnaf_table.point n1 A n2
-    let Q := n1.toNat • PA + n2.toNat • Ref.Ed25519.basePoint
+    let Q := n1.toNat • PA + n2.toNat • Ed25519.basePoint
     R.Ext Q.x Q.y ∧ R.Folded := by
   refine spec_val PA _ hA hAF (fun j hj => ?_) h1 h2
   obtain ⟨e0, e1, e2, e3, hf, -⟩ := fd_ed25519_base_point_wnaf_table.point_operand hj

@@ -9,7 +9,7 @@ of the QUAD's vectors one element's limbs. -/
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 
 namespace R43x6
 

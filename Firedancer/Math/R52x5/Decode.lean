@@ -18,10 +18,9 @@ point, affine, of the parity its top bit asks for (any sign for `x = 0`, as Dale
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open MLIR.Firedancer.Ref (sqrt_ratio_iff flags_and_eq_zero ofNat_bit_inj neg_one_ne_bit)
-open MLIR.Firedancer.Ref.Ed25519 (OnCurve exists_decodes_iff)
-open MLIR.Firedancer.Ref.Ed25519 (v_ne exists_onCurve_iff decodes_of_decode)
+open _root_.Ed25519 (OnCurve exists_decodes_iff v_ne exists_onCurve_iff decodes_of_decode)
 open Firedancer.Avx512 (Wwl)
 open fd_r52x5_ge_decode2
 
@@ -32,11 +31,11 @@ section Lanes
 /-- `1`, `d` and `√-1`, reduced. -/
 theorem consts :
     (val fd_f25519_one.vec = 1 ∧ Below 52 fd_f25519_one.vec) ∧
-      (val fd_f25519_d.vec = Ref.Ed25519.d ∧ Below 52 fd_f25519_d.vec) ∧
-      (val fd_f25519_sqrtm1.vec = Ref.sqrtM1 ∧ Below 52 fd_f25519_sqrtm1.vec) := by
+      (val fd_f25519_d.vec = Ed25519.d ∧ Below 52 fd_f25519_d.vec) ∧
+      (val fd_f25519_sqrtm1.vec = Ed25519.sqrtM1 ∧ Below 52 fd_f25519_sqrtm1.vec) := by
   refine ⟨⟨?_, by decide⟩, ⟨?_, by decide⟩, ⟨?_, by decide⟩⟩
   · rw [val, fd_f25519_one.limbs_eq]
-    simp [Ref.Limbs.val_eq, Ref.fd_f25519_one.limbs]
+    simp [Ed25519.Limbs.val_eq, Ref.fd_f25519_one.limbs]
   · rw [val, fd_f25519_d.limbs_eq]
     exact Ref.fd_f25519_d.val.1
   · rw [val, fd_f25519_sqrtm1.limbs_eq]
@@ -128,9 +127,11 @@ theorem pre_spec (s : BitVec 256) :
     let A := pre s
     let y : ZMod p := ((s.toNat % 2 ^ 255 : ℕ) : ZMod p)
     let u := y ^ 2 - 1
-    let v := Ref.Ed25519.d * y ^ 2 + 1
-    (val A.y = y ∧ Below 52 A.y) ∧ (val A.u = u ∧ Below 52 A.u) ∧
-      (val A.v = v ∧ Below 52 A.v) ∧ (val A.uv3 = u * v ^ 3 ∧ Below 52 A.uv3) ∧
+    let v := Ed25519.d * y ^ 2 + 1
+    (val A.y = y ∧ Below 52 A.y) ∧
+      (val A.u = u ∧ Below 52 A.u) ∧
+      (val A.v = v ∧ Below 52 A.v) ∧
+      (val A.uv3 = u * v ^ 3 ∧ Below 52 A.uv3) ∧
       (val A.uv7 = u * v ^ 7 ∧ Below 52 A.uv7) ∧ A.x0 = BitVec.ofNat 32 (s.toNat / 2 ^ 255) := by
   intro A y u v
   obtain ⟨⟨v1, b1⟩, ⟨vd, bd⟩, -⟩ := consts
@@ -175,7 +176,7 @@ theorem dec_spec (s : BitVec 256) {xp : Wwl}
     let D := dec (pre s) xp
     let y : ZMod p := ((s.toNat % 2 ^ 255 : ℕ) : ZMod p)
     let u := y ^ 2 - 1
-    let v := Ref.Ed25519.d * y ^ 2 + 1
+    let v := Ed25519.d * y ^ 2 + 1
     (val D.y = y ∧ Below 52 D.y) ∧
       (val D.x = u * v ^ 3 * (u * v ^ 7) ^ ((p - 5) / 8) ∧ Below 52 D.x) ∧
       D.x0 = BitVec.ofNat 32 (s.toNat / 2 ^ 255) ∧
@@ -209,12 +210,11 @@ theorem Dec.err_eq_false (D : Dec) : D.err = false ↔ D.t2nz &&& D.t1nz = 0#32 
   simp [Dec.err]
 
 /-- An encoding's checks pass exactly when `decode` succeeds. -/
-theorem dec_ok_iff (s : BitVec 256) {xp : Wwl}
-    (hxp : val xp = val (pre s).uv7 ^ ((p - 5) / 8)) (bxp : Below 52 xp) :
-    (dec (pre s) xp).err = false ↔ Ref.Ed25519.decode s ≠ none := by
+theorem dec_ok_iff (s : BitVec 256) {xp : Wwl} (hxp : val xp = val (pre s).uv7 ^ ((p - 5) / 8))
+    (bxp : Below 52 xp) : (dec (pre s) xp).err = false ↔ Ed25519.decode s ≠ none := by
   obtain ⟨-, ⟨hx, -⟩, -, h1, h2⟩ := dec_spec s hxp bxp
-  rw [ne_eq, Ref.Ed25519.decode_eq_none, not_forall_not, exists_decodes_iff, Dec.err_eq_false,
-    h1, h2, flags_and_eq_zero, exists_onCurve_iff]
+  rw [ne_eq, Ed25519.decode_eq_none, not_forall_not, exists_decodes_iff, Dec.err_eq_false, h1, h2,
+    flags_and_eq_zero, exists_onCurve_iff]
   generalize ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) = y at hx ⊢
   rw [← sqrt_ratio_iff (v_ne y) hx]
   generalize val (dec (pre s) xp).x = x
@@ -260,11 +260,11 @@ theorem fixSign {x : Wwl} (hx : Below 52 x) {b : ℕ} (hb : b < 2) :
   omega
 
 /-- A passing encoding's QUAD is the point that decodes from it, affine and reduced. -/
-theorem dec_point (s : BitVec 256) {xp : Wwl}
-    (hxp : val xp = val (pre s).uv7 ^ ((p - 5) / 8)) (bxp : Below 52 xp)
-    (h : (dec (pre s) xp).err = false) :
-    ∃ P, Ref.Ed25519.Decodes s P ∧ (dec (pre s) xp).point.Affine P.x P.y ∧
-      (dec (pre s) xp).point.Below 52 := by
+theorem dec_point (s : BitVec 256) {xp : Wwl} (hxp : val xp = val (pre s).uv7 ^ ((p - 5) / 8))
+    (bxp : Below 52 xp) (h : (dec (pre s) xp).err = false) :
+    ∃ P,
+      Ed25519.Decodes s P ∧
+        (dec (pre s) xp).point.Affine P.x P.y ∧ (dec (pre s) xp).point.Below 52 := by
   obtain ⟨⟨vy, by'⟩, ⟨vx, bx⟩, ex0, h1, h2⟩ := dec_spec s hxp bxp
   obtain ⟨⟨v1, b1⟩, -, ⟨vi, bi⟩⟩ := consts
   generalize hD : dec (pre s) xp = D at vy by' vx bx ex0 h1 h2 h
@@ -272,13 +272,19 @@ theorem dec_point (s : BitVec 256) {xp : Wwl}
   rw [Dec.err_eq_false, h1, h2, flags_and_eq_zero] at hok
   have hb : s.toNat / 2 ^ 255 < 2 := by have := s.isLt; omega
   -- the root: `x`, or `x √-1` when `v x² ≠ u`
-  have hroot : Below 52 (fd_f25519_mul.spec D.x
-        (fd_f25519_if.spec D.t1nz fd_f25519_sqrtm1.vec fd_f25519_one.vec)) ∧
-      OnCurve (val (fd_f25519_mul.spec D.x
-        (fd_f25519_if.spec D.t1nz fd_f25519_sqrtm1.vec fd_f25519_one.vec))) (val D.y) := by
-    rw [Ref.Ed25519.onCurve_iff, vy, fd_f25519_if.spec]
-    by_cases h0 : (Ref.Ed25519.d * ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 + 1) *
-        val D.x ^ 2 - (((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 - 1) = 0
+  have hroot :
+    Below 52
+        (fd_f25519_mul.spec D.x (fd_f25519_if.spec D.t1nz fd_f25519_sqrtm1.vec fd_f25519_one.vec)) ∧
+      OnCurve
+        (val
+          (fd_f25519_mul.spec D.x
+            (fd_f25519_if.spec D.t1nz fd_f25519_sqrtm1.vec fd_f25519_one.vec)))
+        (val D.y) := by
+    rw [Ed25519.onCurve_iff, vy, fd_f25519_if.spec]
+    by_cases h0 :
+      (Ed25519.d * ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 + 1) * val D.x ^ 2 -
+          (((s.toNat % 2 ^ 255 : ℕ) : ZMod p) ^ 2 - 1) =
+        0
     · rw [h1, ite_eq_left h0, ite_eq_left rfl]
       obtain ⟨vm, bm⟩ := fd_f25519_mul.spec_val bx b1
       refine ⟨bm, ?_⟩
@@ -289,8 +295,10 @@ theorem dec_point (s : BitVec 256) {xp : Wwl}
       refine ⟨bm, ?_⟩
       rw [vm, vi]
       have e := hok.resolve_right h0
-      linear_combination (-1 : ZMod p) * e + val D.x ^ 2 * (Ref.Ed25519.d *
-        (((s.toNat % 2 ^ 255 : ℕ) : ZMod p)) ^ 2 + 1) * Ref.sqrtM1_sq
+      linear_combination
+        (-1 : ZMod p) * e +
+          val D.x ^ 2 * (Ed25519.d * (((s.toNat % 2 ^ 255 : ℕ) : ZMod p)) ^ 2 + 1) *
+            Ed25519.sqrtM1_sq
   obtain ⟨br, hc⟩ := hroot
   have hs := fixSign br hb
   rw [← ex0] at hs
@@ -313,7 +321,7 @@ end Dec
 
 section Decode
 
-open Ref.Ed25519 (decode)
+open _root_.Ed25519 (decode)
 
 /-- `fd_r52x5_ge_decode2` of the encodings `sa` and `sb`: `-1`, `Pa` untouched and `Pb` neutral when
 `sa` does not decode, else `-2` and the same when `sb` does not, else `0` and the two points

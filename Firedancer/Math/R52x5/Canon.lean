@@ -10,7 +10,7 @@ it subtracts `p` at most once and leaves canonical limbs; with `fold` this is
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open Firedancer.Avx512 (Wwl)
 
 /-- The `q` chain is `(nat + 19) / 2^255`. -/
@@ -34,29 +34,30 @@ theorem toNat_add_lt {x y : BitVec 64} (h : x.toNat + y.toNat < 2 ^ 64) :
 
 /-- `fd_r52x5_reduce` on limbs below `2^52` and a number below `2p`: canonical, same value. -/
 public theorem fd_r52x5_reduce.spec_canon {l : Fin 5 → BitVec 64} (hl : ∀ i, (l i).toNat < 2 ^ 52)
-    (hn : Ref.Limbs.nat l < 2 * p) :
-    Canon (fd_r52x5_reduce.spec l) ∧ Ref.Limbs.val (fd_r52x5_reduce.spec l) = Ref.Limbs.val l := by
+    (hn : Ed25519.Limbs.nat l < 2 * p) :
+    Canon (fd_r52x5_reduce.spec l) ∧
+      Ed25519.Limbs.val (fd_r52x5_reduce.spec l) = Ed25519.Limbs.val l := by
   simp only [fd_r52x5_reduce.spec]
   have h0 := hl 0; have h1 := hl 1; have h2 := hl 2; have h3 := hl 3; have h4 := hl 4
   have hc19 : (19#64).toNat = 19 := rfl
   have eQ0 : ((l 0 + 19#64) >>> 51).toNat = ((l 0).toNat + 19) / 2 ^ 51 := by
-    rw [Ref.toNat_shift, toNat_add_lt (by omega), hc19]
+    rw [Ed25519.toNat_shift, toNat_add_lt (by omega), hc19]
   generalize (l 0 + 19#64) >>> 51 = q0 at eQ0 ⊢
   have eQ1 : ((l 1 + q0) >>> 51).toNat = ((l 1).toNat + q0.toNat) / 2 ^ 51 := by
-    rw [Ref.toNat_shift, toNat_add_lt (by omega)]
+    rw [Ed25519.toNat_shift, toNat_add_lt (by omega)]
   generalize (l 1 + q0) >>> 51 = q1 at eQ1 ⊢
   have eQ2 : ((l 2 + q1) >>> 51).toNat = ((l 2).toNat + q1.toNat) / 2 ^ 51 := by
-    rw [Ref.toNat_shift, toNat_add_lt (by omega)]
+    rw [Ed25519.toNat_shift, toNat_add_lt (by omega)]
   generalize (l 2 + q1) >>> 51 = q2 at eQ2 ⊢
   have eQ3 : ((l 3 + q2) >>> 51).toNat = ((l 3).toNat + q2.toNat) / 2 ^ 51 := by
-    rw [Ref.toNat_shift, toNat_add_lt (by omega)]
+    rw [Ed25519.toNat_shift, toNat_add_lt (by omega)]
   generalize (l 3 + q2) >>> 51 = q3 at eQ3 ⊢
   have eQ4 : ((l 4 + q3) >>> 51).toNat = ((l 4).toNat + q3.toNat) / 2 ^ 51 := by
-    rw [Ref.toNat_shift, toNat_add_lt (by omega)]
+    rw [Ed25519.toNat_shift, toNat_add_lt (by omega)]
   generalize (l 4 + q3) >>> 51 = q at eQ4 ⊢
   have hq := chain_q eQ0 eQ1 eQ2 eQ3 eQ4
   have hN :
-    Ref.Limbs.nat l =
+    Ed25519.Limbs.nat l =
       (l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
         (l 4).toNat * 2 ^ 204 :=
     rfl
@@ -71,45 +72,45 @@ public theorem fd_r52x5_reduce.spec_canon {l : Fin 5 → BitVec 64} (hl : ∀ i,
   have eX1 : (l 1 + (x0 >>> 51)).toNat = (l 1).toNat + x0.toNat / 2 ^ 51 := by
     rw [toNat_add_lt
         (by
-          rw [Ref.toNat_shift]; omega),
-      Ref.toNat_shift]
+          rw [Ed25519.toNat_shift]; omega),
+      Ed25519.toNat_shift]
   generalize l 1 + (x0 >>> 51) = x1 at eX1 ⊢
   have eX2 : (l 2 + (x1 >>> 51)).toNat = (l 2).toNat + x1.toNat / 2 ^ 51 := by
     rw [toNat_add_lt
         (by
-          rw [Ref.toNat_shift]; omega),
-      Ref.toNat_shift]
+          rw [Ed25519.toNat_shift]; omega),
+      Ed25519.toNat_shift]
   generalize l 2 + (x1 >>> 51) = x2 at eX2 ⊢
   have eX3 : (l 3 + (x2 >>> 51)).toNat = (l 3).toNat + x2.toNat / 2 ^ 51 := by
     rw [toNat_add_lt
         (by
-          rw [Ref.toNat_shift]; omega),
-      Ref.toNat_shift]
+          rw [Ed25519.toNat_shift]; omega),
+      Ed25519.toNat_shift]
   generalize l 3 + (x2 >>> 51) = x3 at eX3 ⊢
   have eX4 : (l 4 + (x3 >>> 51)).toNat = (l 4).toNat + x3.toNat / 2 ^ 51 := by
     rw [toNat_add_lt
         (by
-          rw [Ref.toNat_shift]; omega),
-      Ref.toNat_shift]
+          rw [Ed25519.toNat_shift]; omega),
+      Ed25519.toNat_shift]
   generalize l 4 + (x3 >>> 51) = x4 at eX4 ⊢
   have hr := chain_r eX0 eX1 eX2 eX3 eX4
   have hT : x4.toNat / 2 ^ 51 = q.toNat := by omega
-  rw [Ref.Limbs.val_nat, Ref.Limbs.val_nat, hN]
-  simp only [Ref.Limbs.nat, Ref.toNat_and_mask]
+  rw [Ed25519.Limbs.val_nat, Ed25519.Limbs.val_nat, hN]
+  simp only [Ed25519.Limbs.nat, Ed25519.toNat_and_mask]
   refine ⟨⟨fun i => ?_, ?_⟩, ?_⟩
-  · fin_cases i <;> simp only [Ref.toNat_and_mask] <;> omega
-  · simp only [Ref.Limbs.nat, Ref.toNat_and_mask]
+  · fin_cases i <;> simp only [Ed25519.toNat_and_mask] <;> omega
+  · simp only [Ed25519.Limbs.nat, Ed25519.toNat_and_mask]
     change _ < 2 ^ 255 - 19
     omega
   · rw [hT] at hr
     have H := congrArg (Nat.cast (R := ZMod p)) hr
     push_cast at H ⊢
-    linear_combination H - (q.toNat : ZMod p) * Ref.two_pow_255
+    linear_combination H - (q.toNat : ZMod p) * Ed25519.two_pow_255
 
 /-- `fd_f25519_canonical_limbs`: canonical limbs of `a`'s value. -/
 public theorem fd_f25519_canonical_limbs.spec_val (a : Wwl) :
     Canon (fd_f25519_canonical_limbs.spec a) ∧
-      Ref.Limbs.val (fd_f25519_canonical_limbs.spec a) = val a :=
+      Ed25519.Limbs.val (fd_f25519_canonical_limbs.spec a) = val a :=
   let h := fd_r52x5_reduce.spec_canon (fold.spec_val a).2.2 (fold.nat_lt a)
   ⟨h.1, h.2.trans (fold.spec_val a).1⟩
 

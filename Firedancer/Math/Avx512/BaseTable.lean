@@ -14,8 +14,9 @@ formulas. -/
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p dN x2N y2N curveOk addOk dblOk natCast_eq natCast_ne dN_eq
-  add_of_ok dbl_of_ok onCurve_of_ok)
+open _root_.Ed25519 (p)
+open MLIR.Firedancer.Ref (dN x2N y2N curveOk addOk dblOk natCast_eq natCast_ne dN_eq add_of_ok
+  dbl_of_ok onCurve_of_ok)
 open R43x6 (quadElem)
 
 /-! ## Reading the table -/
@@ -112,9 +113,8 @@ abbrev EntryOk (T : Quad) (x y : ℕ) : Prop :=
 
 /-- Entry `0` stores `B`, and `2 B` is `(x2N, y2N)`. -/
 theorem base_ok :
-    affine (entry fd_ed25519_base_point_wnaf_table.lit[0]) =
-        (Ref.Ed25519.Bx.val, Ref.Ed25519.By.val) ∧
-      dblOk Ref.Ed25519.Bx.val Ref.Ed25519.By.val x2N y2N = true := by
+    affine (entry fd_ed25519_base_point_wnaf_table.lit[0]) = (Ed25519.Bx.val, Ed25519.By.val) ∧
+      dblOk Ed25519.Bx.val Ed25519.By.val x2N y2N = true := by
   decide +kernel
 
 /-- Every entry stores its point, on the curve. -/
@@ -147,8 +147,8 @@ theorem entry_of_ok {T : Quad} {x y : ℕ} (h : EntryOk T x y) :
     R43x6.val (quadElem T.P03 T.P14 T.P25 0) = (y : ZMod p) - x ∧
       R43x6.val (quadElem T.P03 T.P14 T.P25 1) = (y : ZMod p) + x ∧
       R43x6.val (quadElem T.P03 T.P14 T.P25 2) = 1 ∧
-      R43x6.val (quadElem T.P03 T.P14 T.P25 3) = 2 * Ref.Ed25519.d * ((x : ZMod p) * y) ∧
-      (∀ k < 4, R43x6.Folded (quadElem T.P03 T.P14 T.P25 k)) ∧ Ref.Ed25519.OnCurve x y := by
+      R43x6.val (quadElem T.P03 T.P14 T.P25 3) = 2 * Ed25519.d * ((x : ZMod p) * y) ∧
+      (∀ k < 4, R43x6.Folded (quadElem T.P03 T.P14 T.P25 k)) ∧ Ed25519.OnCurve x y := by
   obtain ⟨h0, h1, h2, h3, f0, f1, f2, f3, hc⟩ := h
   have e0 := natCast_eq h0
   have e1 := natCast_eq h1
@@ -190,8 +190,8 @@ public theorem fd_ed25519_base_point_wnaf_table.point_operand {j : ℕ} (hj : j 
     R43x6.val (quadElem T.P03 T.P14 T.P25 0) = Q.2 - Q.1 ∧
       R43x6.val (quadElem T.P03 T.P14 T.P25 1) = Q.2 + Q.1 ∧
       R43x6.val (quadElem T.P03 T.P14 T.P25 2) = 1 ∧
-      R43x6.val (quadElem T.P03 T.P14 T.P25 3) = 2 * Ref.Ed25519.d * (Q.1 * Q.2) ∧
-      (∀ k < 4, R43x6.Folded (quadElem T.P03 T.P14 T.P25 k)) ∧ Ref.Ed25519.OnCurve Q.1 Q.2 := by
+      R43x6.val (quadElem T.P03 T.P14 T.P25 3) = 2 * Ed25519.d * (Q.1 * Q.2) ∧
+      (∀ k < 4, R43x6.Folded (quadElem T.P03 T.P14 T.P25 k)) ∧ Ed25519.OnCurve Q.1 Q.2 := by
   intro T Q
   have h := entries_ok j hj
   rw [← point_eq hj] at h

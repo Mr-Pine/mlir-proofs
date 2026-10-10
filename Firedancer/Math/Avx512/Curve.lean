@@ -2,8 +2,8 @@ module
 
 public import Firedancer.Math.Avx512.Point
 public import Firedancer.Math.Avx512.F25519
-public import Firedancer.Math.Group
-public import Firedancer.Math.Ext
+public import Ed25519.Group
+public import Ed25519.Ext
 public import Firedancer.Avx512.fd_ed25519_partial_dbl
 public import Firedancer.Avx512.fd_ed25519_point_sub_with_opts
 public import Firedancer.Avx512.fd_ed25519_point_dbln
@@ -22,9 +22,7 @@ its curve operation on the points its QUADs represent, folded. -/
 
 namespace MLIR.Firedancer.Avx512
 
-open MLIR.Firedancer.Ref (p)
-open MLIR.Firedancer.Ref.Ed25519 (d OnCurve IsExt)
-open MLIR.Firedancer.Ref.Ed25519 (isExt_add isExt_dbl isExt_neg dblN_succ' dblN_onCurve)
+open _root_.Ed25519 (p d OnCurve IsExt isExt_add isExt_dbl dblN_succ' dblN_onCurve)
 
 /-! ## The QUAD formulas -/
 
@@ -166,7 +164,7 @@ variable {A B : Quad} {x y x₁ y₁ x₂ y₂ : ZMod p}
 public theorem fd_ed25519_partial_dbl.spec_ext (hA : A.Proj x y) (hc : OnCurve x y)
     (hr : A.Unsigned 44) :
     let D := fd_ed25519_partial_dbl.spec A
-    D.Ext (Ref.Ed25519.dbl x y).1 (Ref.Ed25519.dbl x y).2 ∧ D.Folded := by
+    D.Ext (Ed25519.dbl x y).1 (Ed25519.dbl x y).2 ∧ D.Folded := by
   obtain ⟨hv, hf⟩ := geDbl_is (Quad.Is.of_unsigned hr (by decide))
   exact ⟨Quad.Is.ext hv (isExt_dbl hA.1 hA.2.1 hA.2.2 hc), hf⟩
 
@@ -176,7 +174,7 @@ elements below `2^61`, `B`'s below `2^61`, or `2^47` precomputed. -/
 public theorem fd_ed25519_point_add_with_opts.spec_ext {pre : BitVec 32} (hA : A.Ext x₁ y₁)
     (hB : B.Operand pre x₂ y₂) (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) (hAr : A.Unsigned 61)
     (hBr : B.Unsigned (if pre = 0 then 61 else 47)) :
-    let Q := Ref.Ed25519.add x₁ y₁ x₂ y₂
+    let Q := Ed25519.add x₁ y₁ x₂ y₂
     let R := fd_ed25519_point_add_with_opts.spec A B pre
     R.Ext Q.1 Q.2 ∧ R.Folded := by
   have ha := Quad.Is.of_unsigned hAr (by decide)
@@ -198,9 +196,10 @@ public theorem fd_ed25519_point_neg.spec_ext (hA : A.Ext x y) (hr : A.Folded) :
     let N := fd_ed25519_point_neg.spec A
     N.Ext (-x) y ∧ N.Folded := by
   have ha := Quad.Is.of_unsigned hr.unsigned (by decide)
-  obtain ⟨hv, hf⟩ := Quad.Is.foldUnsigned (Quad.Is.laneSubFast_p ha hr 1 0 0 1
-    ![-A.val 0, A.val 1, A.val 2, -A.val 3])
-  exact ⟨Quad.Is.ext hv (isExt_neg hA), hf⟩
+  obtain ⟨hv, hf⟩ :=
+    Quad.Is.foldUnsigned
+      (Quad.Is.laneSubFast_p ha hr 1 0 0 1 ![-A.val 0, A.val 1, A.val 2, -A.val 3])
+  exact ⟨Quad.Is.ext hv hA.neg, hf⟩
 
 /-- `neg_precomputed` takes a folded precomputed `(x, y)` to `(-x, y)` precomputed, its elements
 below `2^44`. -/
@@ -214,7 +213,7 @@ public theorem fd_ed25519_point_neg_precomputed.spec_pre (hA : A.Pre x y) (hr : 
   have h1 := Quad.Is.laneSubFast_p ha hr 0 0 0 1 ![a0, a1, a2, -a3]
   generalize hb : -a3 = b3 at h1
   have h2 := Quad.Is.permute h1 1 0 2 3 ![a1, a0, a2, b3]
-  refine ⟨⟨-X, Y, -T, Z, isExt_neg hE, ?_, ?_, ?_, ?_⟩, h2.unsigned fun _ => by norm_num⟩
+  refine ⟨⟨-X, Y, -T, Z, hE.neg, ?_, ?_, ?_, ?_⟩, h2.unsigned fun _ => by norm_num⟩
   · exact (h2.val 0).trans (by simp [e1])
   · exact (h2.val 1).trans (by simp [e0]; ring)
   · exact (h2.val 2).trans (by simp [e2])
@@ -250,7 +249,7 @@ in extended coordinates, folded; `A`'s elements below `2^61`. -/
 public theorem fd_ed25519_point_sub_with_opts.spec_ext {pre : BitVec 32} (hA : A.Ext x₁ y₁)
     (hB : B.Operand pre x₂ y₂) (h1 : OnCurve x₁ y₁) (h2 : OnCurve x₂ y₂) (hAr : A.Unsigned 61)
     (hBr : B.Folded) :
-    let Q := Ref.Ed25519.add x₁ y₁ (-x₂) y₂
+    let Q := Ed25519.add x₁ y₁ (-x₂) y₂
     let R := fd_ed25519_point_sub_with_opts.spec A B pre
     R.Ext Q.1 Q.2 ∧ R.Folded := by
   simp only [fd_ed25519_point_sub_with_opts.spec, ne_eq, ite_not]
@@ -304,7 +303,7 @@ public theorem fd_ed25519_point_from.spec_folded {x y z t : Wwl} (hx : R43x6.Fol
 extended coordinates, folded, for `n ≥ 1`. -/
 public theorem fd_ed25519_point_dbln.spec_ext {n : ℕ} (hA : A.Proj x y) (hc : OnCurve x y)
     (hr : A.Unsigned 44) (hn : 1 ≤ n) :
-    let Q := Ref.Ed25519.dblN n (x, y)
+    let Q := Ed25519.dblN n (x, y)
     (fd_ed25519_point_dbln.spec A n).Ext Q.1 Q.2 ∧ (fd_ed25519_point_dbln.spec A n).Folded := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
   simp only [fd_ed25519_point_dbln.spec, Nat.add_sub_cancel]
@@ -400,18 +399,17 @@ public theorem fd_ed25519_point_eq_z1.spec_val {X Y : Quad} (hX : X.Proj x₁ y�
 
 /-- The order-8 `y`s' lanes: `y8` and `-y8`. -/
 theorem order8_y :
-    (R43x6.val fd_ed25519_order8_point_y0.vec = Ref.Ed25519.y8 ∧
+    (R43x6.val fd_ed25519_order8_point_y0.vec = Ed25519.y8 ∧
         R43x6.Signed 61 fd_ed25519_order8_point_y0.vec) ∧
-      (R43x6.val fd_ed25519_order8_point_y1.vec = -Ref.Ed25519.y8 ∧
+      (R43x6.val fd_ed25519_order8_point_y1.vec = -Ed25519.y8 ∧
         R43x6.Signed 61 fd_ed25519_order8_point_y1.vec) := by
-  refine ⟨⟨?_, by decide⟩, ⟨?_, by decide⟩⟩ <;> unfold Ref.Ed25519.y8 <;> decide
+  refine ⟨⟨?_, by decide⟩, ⟨?_, by decide⟩⟩ <;> unfold Ed25519.y8 <;> decide
 
 /-- `is_small_order` on an affine point `(x, y)` on the curve (`X = x`, `Y = y`), folded: `1`
 exactly when `8 (x, y)` is the neutral point. -/
 public theorem fd_ed25519_affine_is_small_order.spec_val {A : Quad} (hx : A.val 0 = x)
     (hy : A.val 1 = y) (hc : OnCurve x y) (hr : A.Folded) :
-    fd_ed25519_affine_is_small_order.spec A =
-      if Ref.Ed25519.SmallOrder x y then 1 else 0 := by
+    fd_ed25519_affine_is_small_order.spec A = if Ed25519.SmallOrder x y then 1 else 0 := by
   obtain ⟨⟨v0, s0⟩, ⟨v1, s1⟩⟩ := order8_y
   have sy : R43x6.Signed 61 A.Y := by
     rw [Quad.Y_eq]
@@ -423,7 +421,7 @@ public theorem fd_ed25519_affine_is_small_order.spec_val {A : Quad} (hx : A.val 
     R43x6.fd_f25519_is_zero_spec (by rw [Quad.X_eq]; exact .inl (hr 0 (by decide))),
     R43x6.fd_f25519_eq_spec sy s0, R43x6.fd_f25519_eq_spec sy s1, v0, v1, hx', hy']
   simp only [ite_or_ite']
-  exact if_congr (by rw [Ref.Ed25519.smallOrder_iff hc]; tauto) rfl rfl
+  exact if_congr (by rw [Ed25519.smallOrder_iff hc]; tauto) rfl rfl
 
 end Compare
 

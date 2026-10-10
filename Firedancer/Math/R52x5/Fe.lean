@@ -14,7 +14,7 @@ the values and ranges of `fd_f25519_fold_unsigned` and of `fd_f25519_add`, `sub`
 
 namespace MLIR.Firedancer.R52x5
 
-open MLIR.Firedancer.Ref (p)
+open _root_.Ed25519 (p)
 open Firedancer.Avx512
 
 /-! ## Definitions -/
@@ -23,7 +23,7 @@ open Firedancer.Avx512
 
 /-- The field element of lanes 0-4. -/
 abbrev val (x : Wwl) : ZMod p :=
-  Ref.Limbs.val (limbs x)
+  Ed25519.Limbs.val (limbs x)
 
 /-- Lanes 5-7 zero. -/
 abbrev Hi0 (x : Wwl) : Prop :=
@@ -35,7 +35,7 @@ abbrev Below (n : ℕ) (x : Wwl) : Prop :=
 
 /-- Canonical limbs: each below `2^51`, the number below `p`. -/
 abbrev Canon (l : Fin 5 → BitVec 64) : Prop :=
-  (∀ i, (l i).toNat < 2 ^ 51) ∧ Ref.Limbs.nat l < p
+  (∀ i, (l i).toNat < 2 ^ 51) ∧ Ed25519.Limbs.nat l < p
 
 end
 
@@ -56,7 +56,8 @@ public theorem Canon.tight {l : Fin 5 → BitVec 64} (h : Canon l) : Ref.Limbs.T
 public theorem Canon.under2p {l : Fin 5 → BitVec 64} (h : Canon l) : Ref.Limbs.Under2p l :=
   h.tight.under2p
 
-public theorem Canon.nat_lt {l : Fin 5 → BitVec 64} (h : Canon l) : Ref.Limbs.nat l < 2 * p := by
+public theorem Canon.nat_lt {l : Fin 5 → BitVec 64} (h : Canon l) :
+    Ed25519.Limbs.nat l < 2 * p := by
   have := h.2
   omega
 
@@ -65,8 +66,8 @@ public theorem Canon.nat_lt {l : Fin 5 → BitVec 64} (h : Canon l) : Ref.Limbs.
 /-- Limbs summing limbwise in `ℕ` sum in value. -/
 public theorem val_of_toNat {r x y : Fin 5 → BitVec 64}
     (h : ∀ i, (r i).toNat = (x i).toNat + (y i).toNat) :
-    Ref.Limbs.val r = Ref.Limbs.val x + Ref.Limbs.val y := by
-  simp only [Ref.Limbs.val_eq, h]
+    Ed25519.Limbs.val r = Ed25519.Limbs.val x + Ed25519.Limbs.val y := by
+  simp only [Ed25519.Limbs.val_eq, h]
   push_cast
   ring
 
@@ -115,7 +116,7 @@ theorem fold_lane_toNat (x y c : BitVec 64) (hc : c.toNat ≤ 19)
   have hy := y.isLt
   have hd : c.toNat * (y.toNat / 2 ^ 51) ≤ 19 * (2 ^ 13 - 1) := Nat.mul_le_mul hc (by omega)
   have hs : (c * (y >>> 51)).toNat = c.toNat * (y.toNat / 2 ^ 51) := by
-    rw [BitVec.toNat_mul, Ref.toNat_shift, Nat.mod_eq_of_lt (by omega)]
+    rw [BitVec.toNat_mul, Ed25519.toNat_shift, Nat.mod_eq_of_lt (by omega)]
   rw [hm, BitVec.toNat_add, toNat_and_mask51, hs, Nat.mod_eq_of_lt (by omega)]
 
 /-- `fold`'s limbs in `ℕ`. -/
@@ -140,8 +141,8 @@ public theorem fold.spec_val (x : Wwl) : val (fold x) = val x ∧ Below 52 (fold
   refine ⟨?_, fold_hi0 x, fun i => ?_⟩
   · have e (y : ℕ) : ((y % 2 ^ 51 : ℕ) : ZMod p) + 2 ^ 51 * (y / 2 ^ 51 : ℕ) = y := by
       exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (Nat.mod_add_div y (2 ^ 51))
-    show Ref.Limbs.val _ = Ref.Limbs.val _
-    rw [Ref.Limbs.val_eq, Ref.Limbs.val_eq, h0, h1, h2, h3, h4]
+    show Ed25519.Limbs.val _ = Ed25519.Limbs.val _
+    rw [Ed25519.Limbs.val_eq, Ed25519.Limbs.val_eq, h0, h1, h2, h3, h4]
     change
       _ =
         ((x[0].toNat : ℕ) : ZMod p) + (x[1].toNat : ℕ) * 2 ^ 51 + (x[2].toNat : ℕ) * 2 ^ 102 +
@@ -151,16 +152,16 @@ public theorem fold.spec_val (x : Wwl) : val (fold x) = val x ∧ Below 52 (fold
     linear_combination
       e x[0].toNat + 2 ^ 51 * e x[1].toNat + 2 ^ 102 * e x[2].toNat + 2 ^ 153 * e x[3].toNat +
           2 ^ 204 * e x[4].toNat -
-        (x[4].toNat / 2 ^ 51 : ℕ) * Ref.two_pow_255
+        (x[4].toNat / 2 ^ 51 : ℕ) * Ed25519.two_pow_255
   · have := x[0].isLt; have := x[1].isLt; have := x[2].isLt; have := x[3].isLt; have := x[4].isLt
     fin_cases i <;> simp only [Fin.zero_eta, Fin.mk_one, Fin.reduceFinMk, h0, h1, h2, h3, h4] <;>
       omega
 
 /-- `fold`'s output number is below `2p`. -/
-public theorem fold.nat_lt (x : Wwl) : Ref.Limbs.nat (limbs (fold x)) < 2 * p := by
+public theorem fold.nat_lt (x : Wwl) : Ed25519.Limbs.nat (limbs (fold x)) < 2 * p := by
   obtain ⟨h0, h1, h2, h3, h4⟩ := fold_toNat x
   have := x[0].isLt; have := x[1].isLt; have := x[2].isLt; have := x[3].isLt; have := x[4].isLt
-  unfold Ref.Limbs.nat
+  unfold Ed25519.Limbs.nat
   rw [h0, h1, h2, h3, h4]
   change _ < 2 * (2 ^ 255 - 19)
   omega
@@ -177,9 +178,9 @@ theorem bias16p_toNat (i : Fin 5) :
     (limbs bias16p i).toNat = if i = 0 then 2 ^ 55 - 304 else 2 ^ 55 - 16 := by fin_cases i <;> rfl
 
 public theorem val_bias16p : val bias16p = 0 := by
-  rw [val, Ref.Limbs.val_nat,
-    show Ref.Limbs.nat (limbs bias16p) = 16 * p by
-      unfold Ref.Limbs.nat; rfl]
+  rw [val, Ed25519.Limbs.val_nat,
+    show Ed25519.Limbs.nat (limbs bias16p) = 16 * p by
+      unfold Ed25519.Limbs.nat; rfl]
   rw [Nat.cast_mul, ZMod.natCast_self, mul_zero]
 
 /-- `fd_f25519_add`: lanes below `2^63`. -/
