@@ -82,7 +82,7 @@ section Proof
 /-- `mul` stores the product of `a` and `b` at `out`. The loads all come before the stores, so
 `out` may alias `a` or `b`; the `nuw`/`nsw` flags never fire. -/
 public theorem fiat_25519_carry_mul.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) (hb : s.mem.LimbsFit b) :
+    (hout : s.mem.LimbsRoom out) (ha : s.mem.LimbsFit a) (hb : s.mem.LimbsFit b) :
     fiat_25519_carry_mul.call (fiat_25519_carry_mul.args (.value out) (.value a) (.value b)) s =
       .value
         (.nil,

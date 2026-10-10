@@ -138,7 +138,7 @@ local macro "load_out " x:ident " from " p:ident : tactic =>
   let n := p.getId.toString
   `(tactic|
     ( step_load with $x:ident consuming $(mkIdent (.mkSimple s!"hread_{n}")):ident
-      clear $(mkIdent (.mkSimple s!"h{n}_fits"))))
+      clear $(mkIdent (.mkSimple s!"hfits_{n}")) $(mkIdent (.mkSimple s!"hroom_{n}"))))
 
 set_option hygiene false in
 /-- `out1[k] = …`: the address, the store, then the store merged into the bytes before it, so the
@@ -153,28 +153,20 @@ local macro "store_byte" : tactic =>
 
 /-! ## Staged for Common -/
 
-private theorem insert_insert_self' (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
-    (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
-  apply Std.ExtHashMap.ext_getElem?
-  intro a
-  simp only [Std.ExtHashMap.getElem?_insert]
-  split <;> rfl
-
 /-- A store right after another: one store of both. -/
 private theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {off : BitVec 64}
     {x : BitVec v} {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  cases hblk : m[p.id]? with
-  | none => simp [MemoryState.storeAt, hblk, Pointer.add_id]
-  | some
-    blk =>
-    simp only [MemoryState.storeAt, hblk, MemoryState.getElem?_eq, Pointer.add_id,
-      insert_insert_self', Std.ExtHashMap.getElem?_insert_self, Pointer.offsetInBits_add hov, hoff]
-    congr 3
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append]
-    grind
+  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    MemoryState.modifyBlock_modifyBlock_self]
+  congr 1
+  funext blk
+  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
+    true_and, and_true]
+  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
+    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
+  · grind
+  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
 
 /-- The stored bytes, as the code computes them: `pack`'s. -/
 theorem fiat_25519_to_bytes.pack_eq {x12 x14 x16 x18 x20 x38 x51 x66 x79 : BitVec 64}
@@ -221,23 +213,35 @@ theorem fiat_25519_to_bytes.pack_eq {x12 x14 x16 x18 x20 x38 x51 x66 x79 : BitVe
 
 -- 154 steps late in a 260-instruction block: just under 200000 heartbeats
 set_option maxHeartbeats 400000 in
-/-- From `%137` on: `x12 … x20`'s bytes, stored at `out1`, as `pack x12 x14 x16 x18 x20`. -/
+/-- From `%137` up to the lifetimes' ends: `x12 … x20`'s bytes, stored at `out1`, as
+`pack x12 x14 x16 x18 x20`. -/
 theorem fiat_25519_to_bytes.store_bytes {E : ⟪fiat_25519_to_bytes.Γ⟫} {S : GlobalState}
     {g : ⟪fiat_25519_to_bytes.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β} {out1 arg1 : Pointer}
     {x12 x14 x16 x18 x20 : BitVec 64}
+    {px1 px2 px3 px4 px5 px6 px7 px8 px9 px10 px11 px12 px13 px14 px15 px16 px17 px18 px19 px20
+      px21 : Pointer}
     (hArgs : E.args = (fiat_25519_to_bytes.args (.value out1) (.value arg1)).get)
     (hR :
       E ⊨ [%66 := 8#64, %68 := 16#64, %69 := 24#64, %70 := 32#64, %77 := 40#64, %78 := 48#64, %79 :=
         255#64, %80 := 56#64, %129 := x20 <<< 4, %131 := x18 <<< 1, %133 := x16 <<< 6, %135 :=
         x14 <<< 3, %136 := x12])
-    (hwf : S.WF) (hout1 : Fits S.mem out1 (8 * 32)) (hout1_off : ¬out1.offset.uaddOverflow 32#64)
+    (hpx :
+      E ⊨ [%81 := px1, %82 := px2, %83 := px3, %84 := px4, %85 := px5, %86 := px6, %87 := px7,
+        %88 := px8, %89 := px9, %90 := px10, %91 := px11, %92 := px12, %93 := px13, %94 := px14,
+        %95 := px15, %96 := px16, %97 := px17, %98 := px18, %99 := px19, %100 := px20, %101 :=
+        px21])
+    (hwf : S.WF) (hout1 : Room S.mem out1 (8 * 32)) (hout1_off : ¬out1.offset.uaddOverflow 32#64)
     (hK :
       ∀ E',
-        (fiat_25519_to_bytes.entry.runBodyFrom E' 260
-              { S with
-                mem := S.mem.storeAt out1 (fiat_25519_to_bytes.pack x12 x14 x16 x18 x20) } >>=
-            g) =
-          K) :
+        E' ⊨ [%81 := px1, %82 := px2, %83 := px3, %84 := px4, %85 := px5, %86 := px6, %87 := px7,
+            %88 := px8, %89 := px9, %90 := px10, %91 := px11, %92 := px12, %93 := px13, %94 := px14,
+            %95 := px15, %96 := px16, %97 := px17, %98 := px18, %99 := px19, %100 := px20, %101 :=
+            px21] →
+          (fiat_25519_to_bytes.entry.runBodyFrom E' 239
+                { S with
+                  mem := S.mem.storeAt out1 (fiat_25519_to_bytes.pack x12 x14 x16 x18 x20) } >>=
+              g) =
+            K) :
     (fiat_25519_to_bytes.entry.runBodyFrom E 106 S >>= g) = K := by
   -- x26 … x36: x12's low six bytes
   iterate 11 step_pure
@@ -268,10 +272,8 @@ theorem fiat_25519_to_bytes.store_bytes {E : ⟪fiat_25519_to_bytes.Γ⟫} {S : 
   step_store
   clear_reads
   iterate 31 store_byte
-  -- the slots' lifetimes end
-  iterate 21 step_pure
   rw [hS, fiat_25519_to_bytes.pack_eq hx38 hx51 hx66 hx79]
-  exact hK E
+  exact hK E (by env_reads)
 
 -- 106 steps early in a 260-instruction block (each step rescans the rest of the block): just under
 -- 200000 heartbeats
@@ -280,7 +282,7 @@ set_option maxHeartbeats 400000 in
 all come before the stores, so `out1` may alias `arg1`. Its 21 out-parameter slots are freed again:
 only the counter moves on, by 21 blocks. -/
 public theorem fiat_25519_to_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout1 : Fits s.mem out1 (8 * 32)) (hout1_off : ¬out1.offset.uaddOverflow 32#64)
+    (hout1 : Room s.mem out1 (8 * 32)) (hout1_off : ¬out1.offset.uaddOverflow 32#64)
     (harg1 : s.mem.LimbsFit arg1) :
     fiat_25519_to_bytes.call (fiat_25519_to_bytes.args (.value out1) (.value arg1)) s =
       .value
@@ -323,6 +325,8 @@ public theorem fiat_25519_to_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalStat
   step_alloca with px19
   step_alloca with px20
   step_alloca with px21
+  -- the slots' lifetimes start
+  iterate 21 step_pure
   -- unused: the slots' offsets, `out1` apart from them, `arg1` apart from those written after
   -- its last load
   clear hout1_ne_px1 hout1_ne_px2 hout1_ne_px3 hout1_ne_px4 hout1_ne_px5 hout1_ne_px6 hout1_ne_px7
@@ -330,10 +334,12 @@ public theorem fiat_25519_to_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalStat
     hout1_ne_px15 hout1_ne_px16 hout1_ne_px17 hout1_ne_px18 hout1_ne_px19 hout1_ne_px20
     hout1_ne_px21 hpx1_off hpx2_off hpx3_off hpx4_off hpx5_off hpx6_off hpx7_off hpx8_off hpx9_off
     hpx10_off hpx11_off hpx12_off hpx13_off hpx14_off hpx15_off hpx16_off hpx17_off hpx18_off
-    hpx19_off hpx20_off hpx21_off harg1_ne_px9 harg1_ne_px10 harg1_ne_px11 harg1_ne_px12
-    harg1_ne_px13 harg1_ne_px14 harg1_ne_px15 harg1_ne_px16 harg1_ne_px17 harg1_ne_px18
-    harg1_ne_px19 harg1_ne_px20 harg1_ne_px21
-  iterate 21 step_pure
+    hpx19_off hpx20_off hpx21_off hpx1_bounds hpx2_bounds hpx3_bounds hpx4_bounds hpx5_bounds
+    hpx6_bounds hpx7_bounds hpx8_bounds hpx9_bounds hpx10_bounds hpx11_bounds hpx12_bounds
+    hpx13_bounds hpx14_bounds hpx15_bounds hpx16_bounds hpx17_bounds hpx18_bounds hpx19_bounds
+    hpx20_bounds hpx21_bounds harg1_ne_px9 harg1_ne_px10 harg1_ne_px11 harg1_ne_px12 harg1_ne_px13
+    harg1_ne_px14 harg1_ne_px15 harg1_ne_px16 harg1_ne_px17 harg1_ne_px18 harg1_ne_px19
+    harg1_ne_px20 harg1_ne_px21
   -- fiat_25519_subborrowx_u51(&x1, &x2, 0x0, (arg1[0]), UINT64_C(0x7ffffffffffed));
   step_load inline consuming harg1_0
   step_call using fiat_25519_subborrowx_u51.call_eq
@@ -385,7 +391,7 @@ public theorem fiat_25519_to_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalStat
   load_out x9 from px9
   step_call using fiat_25519_addcarryx_u51.call_eq
   -- x21, the last carry, is never read
-  clear hread_px21 hpx21_fits
+  clear hread_px21 hfits_px21 hroom_px21
   -- x22 … x25: the limbs' shifts
   load_out x20 from px20
   step_pure
@@ -396,8 +402,11 @@ public theorem fiat_25519_to_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalStat
   load_out x14 from px14
   step_pure
   load_out x12 from px12
-  -- x26 … x91, `out1[0] … out1[31]`, the lifetimes' ends
+  -- x26 … x91, `out1[0] … out1[31]`
   step_pattern using fiat_25519_to_bytes.store_bytes
+  -- the slots' lifetimes end; `out1`'s facts, apart from them, no longer needed
+  clear hout1 hfits_out1
+  iterate 21 step_pure
   finish_block
   subst hS
   erase_frame

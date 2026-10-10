@@ -17,7 +17,8 @@ private def y : Pointer :=
 
 /-- Three 40-byte blocks: `out` zeroed, `x` and `y` holding `xb` and `yb`. -/
 private def state (xb yb : BitVec 320) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, xb⟩), (⟨2⟩, ⟨40, yb⟩)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 xb), (⟨2⟩, .ofBytes 40 yb)]⟩⟩
 
 /-- The limbs `1, 2, 3, 4, 5` and `10, 20, 30, 40, 50`. -/
 private def xBytes : BitVec 320 :=
@@ -66,9 +67,17 @@ private def selects (c : BitVec 8) : Bool :=
   | some (l, _), some (l', _) => (List.finRange 5).all fun i => l i == l' i
   | _, _ => false
 
--- A poison pointer, or a poison condition, is UB.
+/-- Which of the 320 bits at `out` are defined after the run, or `none` for UB. -/
+private def definedAfter (c : ⟦Ty.bv 8⟧) : Option (BitVec 320) :=
+  match fiat_25519_selectznz.call (fiat_25519_selectznz.args (.value out) c (.value x) (.value y))
+      (state xBytes yBytes) with
+  | .value (.nil, s') => some (s'.mem.definedAt out 320)
+  | _ => none
+
+-- A poison pointer is UB.
 #guard (result (.value out) (.value 0#8) .poison (.value y) out).isNone
 
-#guard (result (.value out) .poison (.value x) (.value y) out).isNone
+-- A poison condition selects poison limbs: `out` is left undefined.
+#guard definedAfter .poison == some 0#320
 
 end MLIR.Firedancer.Ref

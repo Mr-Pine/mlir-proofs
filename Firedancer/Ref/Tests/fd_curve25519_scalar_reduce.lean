@@ -18,11 +18,14 @@ private def ell : Nat :=
 
 /-- The 64 bytes `x` at `inp`, 32 zero bytes at `out`. -/
 private def state (x : BitVec 512) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, x⟩), (⟨2⟩, ⟨32, 0#256⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 64 x), (⟨2⟩, .ofBytes 32 (0#256))]⟩⟩
 
 /-- The returned pointer and the 32 bytes at `out` after the run, or `none` for UB / out of fuel. -/
-private def run (x : BitVec 512) (o : ⟦Ty.ptr⟧ := .value out) : Option (PoisonOr Pointer × BitVec 256) :=
-  match fd_curve25519_scalar_reduce.eval 10 (fd_curve25519_scalar_reduce.args o (.value inp)) (state x) with
+private def run (x : BitVec 512) (o : ⟦Ty.ptr⟧ := .value out) :
+    Option (PoisonOr Pointer × BitVec 256) :=
+  match
+    fd_curve25519_scalar_reduce.eval 10 (fd_curve25519_scalar_reduce.args o (.value inp))
+      (state x) with
   | .value (some (.cons r .nil), s') => some (r, s'.mem.readAt out 256)
   | _ => none
 

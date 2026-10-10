@@ -135,7 +135,7 @@ theorem MemoryState.readAt_of_readAt_low {m : MemoryState} {p : Pointer} {x : Bi
     (hfits : Fits m p v) (hw : w ≤ v) (h : m.readAt p v = x) :
     m.readAt p w = x.extractLsb' 0 w := by
   have :=
-    MemoryState.readAt_add_of_readAt (off := 0#64) hfits
+    MemoryState.readAt_add_of_readAt (off := 0#64) hfits.inBounds
       (by
         simp [BitVec.uaddOverflow]; omega)
       (by simpa using hw) h
@@ -266,27 +266,40 @@ abbrev fiat_25519_from_bytes.byteAt (x : BitVec 256) (i : Nat) : BitVec 64 :=
 /-- `x39`'s `or disjoint`s hold: `arg1[0 … 3]`, `x27`, `x28` and `x26`'s low bits do not overlap. -/
 theorem fiat_25519_from_bytes.x39_disjoint (x : BitVec 256) :
     byteAt x 40 <<< 40 &&& BitVec.setWidth 64 (x.extractLsb' 0 32) = 0#64 ∧
-      (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32)) &&&
-        byteAt x 32 <<< 32 = 0#64 ∧
+      (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32)) &&& byteAt x 32 <<< 32 =
+        0#64 ∧
       (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32) ||| byteAt x 32 <<< 32) &&&
-        (byteAt x 48 <<< 48 &&& 1970324836974592#64) = 0#64 := by
+          (byteAt x 48 <<< 48 &&& 1970324836974592#64) =
+        0#64 := by
   bv_decide
 
 /-- `x47`'s `or disjoint`s hold: `x40`, `x21 … x25` and `x20`'s low bits do not overlap. -/
 theorem fiat_25519_from_bytes.x47_disjoint (x : BitVec 256) :
     byteAt x 88 <<< 37 &&& (byteAt x 96 <<< 45 &&& 2216615441596416#64) = 0#64 ∧
-      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64)) &&&
-        byteAt x 80 <<< 29 = 0#64 ∧
+      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64)) &&& byteAt x 80 <<< 29 =
+        0#64 ∧
       (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-        byteAt x 80 <<< 29) &&& byteAt x 72 <<< 21 = 0#64 ∧
+            byteAt x 80 <<< 29) &&&
+          byteAt x 72 <<< 21 =
+        0#64 ∧
       (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-        byteAt x 80 <<< 29 ||| byteAt x 72 <<< 21) &&& byteAt x 64 <<< 13 = 0#64 ∧
+            byteAt x 80 <<< 29 |||
+            byteAt x 72 <<< 21) &&&
+          byteAt x 64 <<< 13 =
+        0#64 ∧
       (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-        byteAt x 80 <<< 29 ||| byteAt x 72 <<< 21 ||| byteAt x 64 <<< 13) &&&
-        byteAt x 56 <<< 5 = 0#64 ∧
+            byteAt x 80 <<< 29 |||
+            byteAt x 72 <<< 21 |||
+            byteAt x 64 <<< 13) &&&
+          byteAt x 56 <<< 5 =
+        0#64 ∧
       (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-        byteAt x 80 <<< 29 ||| byteAt x 72 <<< 21 ||| byteAt x 64 <<< 13 ||| byteAt x 56 <<< 5) &&&
-        byteAt x 48 >>> 3 = 0#64 := by
+            byteAt x 80 <<< 29 |||
+            byteAt x 72 <<< 21 |||
+            byteAt x 64 <<< 13 |||
+            byteAt x 56 <<< 5) &&&
+          byteAt x 48 >>> 3 =
+        0#64 := by
   bv_decide
 
 /-- `x13 | … | x19`'s `or disjoint`s hold. -/
@@ -294,14 +307,23 @@ theorem fiat_25519_from_bytes.x55_disjoint (x : BitVec 256) :
     byteAt x 144 <<< 42 &&& byteAt x 152 <<< 50 = 0#64 ∧
       (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50) &&& byteAt x 136 <<< 34 = 0#64 ∧
       (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34) &&&
-        byteAt x 128 <<< 26 = 0#64 ∧
+          byteAt x 128 <<< 26 =
+        0#64 ∧
       (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
-        byteAt x 128 <<< 26) &&& byteAt x 120 <<< 18 = 0#64 ∧
+            byteAt x 128 <<< 26) &&&
+          byteAt x 120 <<< 18 =
+        0#64 ∧
       (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
-        byteAt x 128 <<< 26 ||| byteAt x 120 <<< 18) &&& byteAt x 112 <<< 10 = 0#64 ∧
+            byteAt x 128 <<< 26 |||
+            byteAt x 120 <<< 18) &&&
+          byteAt x 112 <<< 10 =
+        0#64 ∧
       (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
-        byteAt x 128 <<< 26 ||| byteAt x 120 <<< 18 ||| byteAt x 112 <<< 10) &&&
-        byteAt x 104 <<< 2 = 0#64 := by
+            byteAt x 128 <<< 26 |||
+            byteAt x 120 <<< 18 |||
+            byteAt x 112 <<< 10) &&&
+          byteAt x 104 <<< 2 =
+        0#64 := by
   bv_decide
 
 /-- `x7 | … | x12`'s `or disjoint`s hold. -/
@@ -309,11 +331,17 @@ theorem fiat_25519_from_bytes.x63_disjoint (x : BitVec 256) :
     byteAt x 192 <<< 39 &&& byteAt x 200 <<< 47 = 0#64 ∧
       (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47) &&& byteAt x 184 <<< 31 = 0#64 ∧
       (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31) &&&
-        byteAt x 176 <<< 23 = 0#64 ∧
+          byteAt x 176 <<< 23 =
+        0#64 ∧
       (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31 |||
-        byteAt x 176 <<< 23) &&& byteAt x 168 <<< 15 = 0#64 ∧
+            byteAt x 176 <<< 23) &&&
+          byteAt x 168 <<< 15 =
+        0#64 ∧
       (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31 |||
-        byteAt x 176 <<< 23 ||| byteAt x 168 <<< 15) &&& byteAt x 160 <<< 7 = 0#64 := by
+            byteAt x 176 <<< 23 |||
+            byteAt x 168 <<< 15) &&&
+          byteAt x 160 <<< 7 =
+        0#64 := by
   bv_decide
 
 /-- `x1 | … | x6`'s `or disjoint`s hold. -/
@@ -321,11 +349,17 @@ theorem fiat_25519_from_bytes.x71_disjoint (x : BitVec 256) :
     (byteAt x 248 &&& 127#64) <<< 44 &&& byteAt x 240 <<< 36 = 0#64 ∧
       ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36) &&& byteAt x 232 <<< 28 = 0#64 ∧
       ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36 ||| byteAt x 232 <<< 28) &&&
-        byteAt x 224 <<< 20 = 0#64 ∧
+          byteAt x 224 <<< 20 =
+        0#64 ∧
       ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36 ||| byteAt x 232 <<< 28 |||
-        byteAt x 224 <<< 20) &&& byteAt x 216 <<< 12 = 0#64 ∧
+            byteAt x 224 <<< 20) &&&
+          byteAt x 216 <<< 12 =
+        0#64 ∧
       ((byteAt x 248 &&& 127#64) <<< 44 ||| byteAt x 240 <<< 36 ||| byteAt x 232 <<< 28 |||
-        byteAt x 224 <<< 20 ||| byteAt x 216 <<< 12) &&& byteAt x 208 <<< 4 = 0#64 := by
+            byteAt x 224 <<< 20 |||
+            byteAt x 216 <<< 12) &&&
+          byteAt x 208 <<< 4 =
+        0#64 := by
   bv_decide
 
 -- 196 instructions in one block: the steps need more than 300000 heartbeats
@@ -333,7 +367,7 @@ set_option maxHeartbeats 400000 in
 /-- `fiat_25519_from_bytes` stores `spec` of the 32 bytes at `arg1` as limbs at `out1`. The loads
 all come before the stores, so `out1` may alias `arg1`. -/
 public theorem fiat_25519_from_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout1 : s.mem.LimbsFit out1) (harg1 : Fits s.mem arg1 (8 * 32))
+    (hout1 : s.mem.LimbsRoom out1) (harg1 : Fits s.mem arg1 (8 * 32))
     (harg1_off : ¬arg1.offset.uaddOverflow 32#64) :
     fiat_25519_from_bytes.call (fiat_25519_from_bytes.args (.value out1) (.value arg1)) s =
       .value

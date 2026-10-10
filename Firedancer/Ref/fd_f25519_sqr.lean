@@ -23,7 +23,7 @@ section Proof
 
 /-- `fd_f25519_sqr` stores `spec a` at `r` and returns `r`; `r` may alias `a`. -/
 public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.LimbsFit r) (ha : s.mem.LimbsFit a) :
+    (hr : s.mem.LimbsRoom r) (ha : s.mem.LimbsFit a) :
     fd_f25519_sqr.call (fd_f25519_sqr.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,

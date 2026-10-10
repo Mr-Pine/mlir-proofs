@@ -24,7 +24,7 @@ section Proof
 /-- `fiat_25519_sub` stores `spec x y` limbwise at `out`. The loads all come before the stores, so `out`
 may alias `x` or `y`. -/
 public theorem fiat_25519_sub.call_eq (out x y : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (hx : s.mem.LimbsFit x) (hy : s.mem.LimbsFit y) :
+    (hout : s.mem.LimbsRoom out) (hx : s.mem.LimbsFit x) (hy : s.mem.LimbsFit y) :
     fiat_25519_sub.call (fiat_25519_sub.args (.value out) (.value x) (.value y)) s =
       .value
         (.nil,

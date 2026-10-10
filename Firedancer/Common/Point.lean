@@ -26,58 +26,52 @@ theorem spliceBits_comm {n w v : Nat} (b : BitVec n) {o₁ o₂ : Nat} (x : BitV
 theorem MemoryState.storeAt_comm {m : MemoryState} {p q : Pointer} {x : BitVec v} {y : BitVec w}
     (h : (Range.of p v).Disjoint (Range.of q w)) :
     (m.storeAt p x).storeAt q y = (m.storeAt q y).storeAt p x := by
-  rcases m with ⟨mm⟩
-  unfold MemoryState.storeAt
+  simp only [MemoryState.storeAt, MemoryState.storeDef]
   by_cases hid : p.id = q.id
   · simp only [Range.Disjoint, Range.of, hid, ne_eq, not_true_eq_false, false_or] at h
-    cases hb : (⟨mm⟩ : MemoryState)[q.id]? with
-    | none => simp [hid, hb]
-    | some
-      blk =>
-      simp only [hid, hb, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_insert_self,
-        spliceBits_comm _ _ _ (by omega : _ ∨ _)]
-      congr 1
-      apply Std.ExtHashMap.ext_getElem?
-      intro a
-      simp only [Std.ExtHashMap.getElem?_insert]
-      split <;> rfl
-  · have hqp : q.id ≠ p.id := Ne.symm hid
-    cases hp : mm[p.id]? <;> cases hq : mm[q.id]? <;>
-      simp only [MemoryState.getElem?_eq, hp, hq, Std.ExtHashMap.getElem?_insert, beq_iff_eq, hid,
-        hqp, ite_false]
+    rw [hid, modifyBlock_modifyBlock_self, modifyBlock_modifyBlock_self]
     congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro a
-    simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
-    grind
+    funext blk
+    simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
+    exact
+      ⟨heq_of_eq (spliceBits_comm _ _ _ (by omega)), heq_of_eq (spliceBits_comm _ _ _ (by omega))⟩
+  · exact modifyBlock_comm hid
 
 /-! ### Storing what is there -/
 
-/-- Storing the bits a range holds changes nothing. -/
+/-- Storing the known bits a range holds changes nothing. -/
 theorem MemoryState.storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
     m.storeAt p (m.readAt p w) = m := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  rcases m with ⟨mm⟩
-  have hb : mm[p.id]? = some blk := by simpa [MemoryState.getElem?_eq] using hblk
-  simp only [MemoryState.storeAt, MemoryState.readAt, MemoryState.getElem?_eq, hb]
-  congr 1
+  obtain ⟨blk, hblk, -, hsz, hd⟩ := h
+  have hb : m.mem[p.id]? = some blk := hblk
+  unfold MemoryBlock.lengthInBits at hsz
+  simp only [MemoryState.storeAt, MemoryState.storeDef, MemoryState.readAt, hblk,
+    MemoryState.modifyBlock]
+  ext1
   apply Std.ExtHashMap.ext_getElem?
   intro k
-  simp only [Std.ExtHashMap.getElem?_insert, beq_iff_eq]
+  simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
   split
   · subst_vars
     rw [hb]
-    congr 1
+    simp only [Option.map_some, Option.some.injEq]
     cases blk
-    congr 1
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    rw [getLsbD_spliceBits, BitVec.getLsbD_extractLsb']
-    split
-    · have h1 : p.offsetInBits + (i - p.offsetInBits) = i := by omega
-      have h2 : i - p.offsetInBits < w := by omega
-      simp [h1, h2]
-    · rfl
+    simp only [MemoryBlock.mk.injEq, true_and, and_true] at hsz hd ⊢
+    refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
+      rw [getLsbD_spliceBits]
+    · rw [BitVec.getLsbD_extractLsb']
+      split
+      · have h1 : p.offsetInBits + (i - p.offsetInBits) = i := by omega
+        have h2 : i - p.offsetInBits < w := by omega
+        simp [h1, h2]
+      · rfl
+    · split
+      · have := congrArg (·.getLsbD (i - p.offsetInBits)) hd
+        have h1 : p.offsetInBits + (i - p.offsetInBits) = i := by omega
+        simp only [BitVec.getLsbD_extractLsb', BitVec.getLsbD_allOnes] at this
+        have h2 : i - p.offsetInBits < w := by omega
+        simp_all
+      · rfl
   · rfl
 
 /-- Storing the limbs a field element holds changes nothing. -/
@@ -144,6 +138,25 @@ def MemoryState.storePoint (m : MemoryState) (p : Pointer) (P : PointLimbs) : Me
 abbrev MemoryState.PointFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 160 ≤ 2 ^ 64 ∧
     m.LimbsFit p ∧ m.LimbsFit (p.add 40#64) ∧ m.LimbsFit (p.add 80#64) ∧ m.LimbsFit (p.add 120#64)
+
+/-- Room for the point at `p` (an output): its offsets do not wrap, room for each field element. -/
+abbrev MemoryState.PointRoom (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 160 ≤ 2 ^ 64 ∧
+    m.LimbsRoom p ∧
+    m.LimbsRoom (p.add 40#64) ∧ m.LimbsRoom (p.add 80#64) ∧ m.LimbsRoom (p.add 120#64)
+
+theorem MemoryState.PointFit.room {m : MemoryState} (h : m.PointFit p) : m.PointRoom p :=
+  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.room⟩
+
+/-- `LimbsFit` in a memory where more bits are known. -/
+theorem MemoryState.LimbsFit.of_imp {m m' : MemoryState}
+    (hf : ∀ {q : Pointer} {w : Nat}, Fits m q w → Fits m' q w) (h : m.LimbsFit p) : m'.LimbsFit p :=
+  ⟨h.1, hf h.2.1, hf h.2.2.1, hf h.2.2.2.1, hf h.2.2.2.2.1, hf h.2.2.2.2.2⟩
+
+/-- `PointFit` in a memory where more bits are known. -/
+theorem MemoryState.PointFit.of_imp {m m' : MemoryState}
+    (hf : ∀ {q : Pointer} {w : Nat}, Fits m q w → Fits m' q w) (h : m.PointFit p) : m'.PointFit p :=
+  ⟨h.1, h.2.1.of_imp hf, h.2.2.1.of_imp hf, h.2.2.2.1.of_imp hf, h.2.2.2.2.of_imp hf⟩
 
 /-- Two field elements of one point, at byte offsets `a` and `b` 40 apart, do not overlap. -/
 theorem Range.disjoint_coords {p : Pointer} {a b : Nat} (hp : p.offset.toNat + 160 ≤ 2 ^ 64)
@@ -220,6 +233,25 @@ theorem MemoryState.PointFit.limbsFit_Z {m : MemoryState} (h : m.PointFit p) :
     m.LimbsFit (p.add 120#64) :=
   h.2.2.2.2
 
+@[mlir_transport]
+theorem MemoryState.PointRoom.limbsRoom_X {m : MemoryState} (h : m.PointRoom p) : m.LimbsRoom p :=
+  h.2.1
+
+@[mlir_transport]
+theorem MemoryState.PointRoom.limbsRoom_Y {m : MemoryState} (h : m.PointRoom p) :
+    m.LimbsRoom (p.add 40#64) :=
+  h.2.2.1
+
+@[mlir_transport]
+theorem MemoryState.PointRoom.limbsRoom_T {m : MemoryState} (h : m.PointRoom p) :
+    m.LimbsRoom (p.add 80#64) :=
+  h.2.2.2.1
+
+@[mlir_transport]
+theorem MemoryState.PointRoom.limbsRoom_Z {m : MemoryState} (h : m.PointRoom p) :
+    m.LimbsRoom (p.add 120#64) :=
+  h.2.2.2.2
+
 @[mlir_read]
 theorem MemoryState.readLimbs_storePoint_of_id_ne {m : MemoryState} {p q : Pointer}
     (h : p.id ≠ q.id) : (m.storePoint p P).readLimbs q = m.readLimbs q := by
@@ -246,7 +278,7 @@ theorem Pointer.coord_offset {p : Pointer} {a : Nat} (hp : p.offset.toNat + 160 
 /-- A coordinate of a point read past a store to another coordinate. -/
 @[mlir_read]
 theorem MemoryState.readLimbs_storeLimbs_coord {m : MemoryState} {p : Pointer} {a b : Nat}
-    (h : m.PointFit p) (ha : a ≤ 120) (hb : b ≤ 120) (hab : a + 40 ≤ b ∨ b + 40 ≤ a) :
+    (h : m.PointRoom p) (ha : a ≤ 120) (hb : b ≤ 120) (hab : a + 40 ≤ b ∨ b + 40 ≤ a) :
     (m.storeLimbs (p.add (BitVec.ofNat 64 a)) l).readLimbs (p.add (BitVec.ofNat 64 b)) =
       m.readLimbs (p.add (BitVec.ofNat 64 b)) :=
   readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords h.1 ha hb hab)
@@ -255,7 +287,7 @@ theorem MemoryState.readLimbs_storeLimbs_coord {m : MemoryState} {p : Pointer} {
 /-- `readLimbs_storeLimbs_coord` for a store to `X`. -/
 @[mlir_read]
 theorem MemoryState.readLimbs_storeLimbs_coord_X {m : MemoryState} {p : Pointer} {b : Nat}
-    (h : m.PointFit p) (hb : b ≤ 120) (h40 : 40 ≤ b) :
+    (h : m.PointRoom p) (hb : b ≤ 120) (h40 : 40 ≤ b) :
     (m.storeLimbs p l).readLimbs (p.add (BitVec.ofNat 64 b)) =
       m.readLimbs (p.add (BitVec.ofNat 64 b)) :=
   readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords_base' h.1 hb h40) (by omega)
@@ -264,13 +296,13 @@ theorem MemoryState.readLimbs_storeLimbs_coord_X {m : MemoryState} {p : Pointer}
 /-- `readLimbs_storeLimbs_coord` for a read of `X`. -/
 @[mlir_read]
 theorem MemoryState.readLimbs_storeLimbs_coord_of_X {m : MemoryState} {p : Pointer} {a : Nat}
-    (h : m.PointFit p) (ha : a ≤ 120) (h40 : 40 ≤ a) :
+    (h : m.PointRoom p) (ha : a ≤ 120) (h40 : 40 ≤ a) :
     (m.storeLimbs (p.add (BitVec.ofNat 64 a)) l).readLimbs p = m.readLimbs p :=
   readLimbs_storeLimbs_of_disjoint (Range.disjoint_coord_base h.1 ha h40)
     (Pointer.coord_offset h.1 ha) (by omega)
 
 @[mlir_read]
-theorem MemoryState.readLimbs_storePoint_X {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+theorem MemoryState.readLimbs_storePoint_X {m : MemoryState} {p : Pointer} (h : m.PointRoom p) :
     (m.storePoint p P).readLimbs p = P.X := by
   have hp : p.offset.toNat + 32 < 2 ^ 64 := by omega
   simp only [MemoryState.storePoint]
@@ -285,7 +317,7 @@ theorem MemoryState.readLimbs_storePoint_X {m : MemoryState} {p : Pointer} (h : 
     readLimbs_storeLimbs_self h.2.1]
 
 @[mlir_read]
-theorem MemoryState.readLimbs_storePoint_Y {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+theorem MemoryState.readLimbs_storePoint_Y {m : MemoryState} {p : Pointer} (h : m.PointRoom p) :
     (m.storePoint p P).readLimbs (p.add 40#64) = P.Y := by
   simp only [MemoryState.storePoint]
   rw [readLimbs_storeLimbs_of_disjoint
@@ -299,7 +331,7 @@ theorem MemoryState.readLimbs_storePoint_Y {m : MemoryState} {p : Pointer} (h : 
     readLimbs_storeLimbs_self h.2.2.1.storeLimbs]
 
 @[mlir_read]
-theorem MemoryState.readLimbs_storePoint_Z {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+theorem MemoryState.readLimbs_storePoint_Z {m : MemoryState} {p : Pointer} (h : m.PointRoom p) :
     (m.storePoint p P).readLimbs (p.add 120#64) = P.Z := by
   simp only [MemoryState.storePoint]
   rw [readLimbs_storeLimbs_of_disjoint
@@ -309,13 +341,13 @@ theorem MemoryState.readLimbs_storePoint_Z {m : MemoryState} {p : Pointer} (h : 
     readLimbs_storeLimbs_self h.2.2.2.2.storeLimbs.storeLimbs]
 
 @[mlir_read]
-theorem MemoryState.readLimbs_storePoint_T {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+theorem MemoryState.readLimbs_storePoint_T {m : MemoryState} {p : Pointer} (h : m.PointRoom p) :
     (m.storePoint p P).readLimbs (p.add 80#64) = P.T := by
   simp only [MemoryState.storePoint]
   rw [readLimbs_storeLimbs_self h.2.2.2.1.storeLimbs.storeLimbs.storeLimbs]
 
 @[mlir_read]
-theorem MemoryState.readPoint_storePoint_self {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
+theorem MemoryState.readPoint_storePoint_self {m : MemoryState} {p : Pointer} (h : m.PointRoom p) :
     (m.storePoint p P).readPoint p = P := by
   simp only [MemoryState.readPoint, readLimbs_storePoint_X h, readLimbs_storePoint_Y h,
     readLimbs_storePoint_Z h, readLimbs_storePoint_T h]
@@ -337,13 +369,18 @@ theorem MemoryState.readPoint_storeLimbs_of_id_ne {m : MemoryState} {p q : Point
 /-! ### Points across writes, `alloca`s and frames -/
 
 @[simp, mlir_state]
-theorem MemoryState.limbsFit_storePoint_iff {m : MemoryState} :
-    (m.storePoint p P).LimbsFit q ↔ m.LimbsFit q := by simp [MemoryState.storePoint]
+theorem MemoryState.limbsRoom_storePoint_iff {m : MemoryState} :
+    (m.storePoint p P).LimbsRoom q ↔ m.LimbsRoom q := by simp [MemoryState.storePoint]
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.storePoint {m : MemoryState} (h : m.LimbsFit q) :
     (m.storePoint p P).LimbsFit q :=
-  MemoryState.limbsFit_storePoint_iff.mpr h
+  h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storePoint {m : MemoryState} (h : m.LimbsRoom q) :
+    (m.storePoint p P).LimbsRoom q :=
+  MemoryState.limbsRoom_storePoint_iff.mpr h
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.PointFit.storeAt {m : MemoryState} {x : BitVec w} (h : m.PointFit q) :
@@ -361,8 +398,46 @@ theorem MemoryState.PointFit.storePoint {m : MemoryState} (h : m.PointFit q) :
   ⟨h.1, h.2.1.storePoint, h.2.2.1.storePoint, h.2.2.2.1.storePoint, h.2.2.2.2.storePoint⟩
 
 @[mlir_mem, mlir_transport]
+theorem MemoryState.PointRoom.storeAt {m : MemoryState} {x : BitVec w} (h : m.PointRoom q) :
+    (m.storeAt p x).PointRoom q :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.1.storeAt, h.2.2.2.2.storeAt⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointRoom.storeLimbs {m : MemoryState} (h : m.PointRoom q) :
+    (m.storeLimbs p l).PointRoom q :=
+  ⟨h.1, h.2.1.storeLimbs, h.2.2.1.storeLimbs, h.2.2.2.1.storeLimbs, h.2.2.2.2.storeLimbs⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointRoom.storePoint {m : MemoryState} (h : m.PointRoom q) :
+    (m.storePoint p P).PointRoom q :=
+  ⟨h.1, h.2.1.storePoint, h.2.2.1.storePoint, h.2.2.2.1.storePoint, h.2.2.2.2.storePoint⟩
+
+/-- A point stored where there is room is known. -/
+@[mlir_fresh, mlir_mem]
+theorem MemoryState.PointFit.storePoint_self {m : MemoryState} {p : Pointer} (h : m.PointRoom p) :
+    (m.storePoint p P).PointFit p := by
+  have hX : (m.storeLimbs p P.X).LimbsFit p := .storeLimbs_self h.2.1
+  have hY : ((m.storeLimbs p P.X).storeLimbs (p.add 40#64) P.Y).LimbsFit (p.add 40#64) :=
+    .storeLimbs_self h.2.2.1.storeLimbs
+  have hZ :
+    (((m.storeLimbs p P.X).storeLimbs (p.add 40#64) P.Y).storeLimbs (p.add 120#64) P.Z).LimbsFit
+      (p.add 120#64) :=
+    .storeLimbs_self h.2.2.2.2.storeLimbs.storeLimbs
+  exact
+    ⟨h.1, hX.storeLimbs.storeLimbs.storeLimbs, hY.storeLimbs.storeLimbs,
+      .storeLimbs_self h.2.2.2.1.storeLimbs.storeLimbs.storeLimbs, hZ.storeLimbs⟩
+
+@[mlir_mem, mlir_transport]
 theorem MemoryState.PointFit.alloca {s : GlobalState} (hne : q.id ≠ s.allocaPtr.id)
-    (h : s.mem.PointFit q) : (s.alloca n).mem.PointFit q := by
+    (h : s.mem.PointFit q) : (s.alloca n d).mem.PointFit q := by
+  have hne' (k : BitVec 64) : (q.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.alloca hne, h.2.2.1.alloca (hne' _), h.2.2.2.1.alloca (hne' _),
+      h.2.2.2.2.alloca (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointRoom.alloca {s : GlobalState} (hne : q.id ≠ s.allocaPtr.id)
+    (h : s.mem.PointRoom q) : (s.alloca n d).mem.PointRoom q := by
   have hne' (k : BitVec 64) : (q.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
   exact
     ⟨h.1, h.2.1.alloca hne, h.2.2.1.alloca (hne' _), h.2.2.2.1.alloca (hne' _),
@@ -372,6 +447,55 @@ theorem MemoryState.PointFit.alloca {s : GlobalState} (hne : q.id ≠ s.allocaPt
 theorem MemoryState.PointFit.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
     (h : s.mem.PointFit q) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).PointFit q :=
   ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.1.addBlock hwf, h.2.2.2.2.addBlock hwf⟩
+
+@[mlir_transport]
+theorem MemoryState.PointRoom.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
+    (h : s.mem.PointRoom q) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).PointRoom q :=
+  ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.1.addBlock hwf, h.2.2.2.2.addBlock hwf⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointFit.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.PointFit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).PointFit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart (hne' _), h.2.2.2.1.lifetimeStart (hne' _),
+      h.2.2.2.2.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointFit.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.PointFit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).PointFit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd (hne' _), h.2.2.2.1.lifetimeEnd (hne' _),
+      h.2.2.2.2.lifetimeEnd (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointRoom.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.PointRoom p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).PointRoom p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart (hne' _), h.2.2.2.1.lifetimeStart (hne' _),
+      h.2.2.2.2.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.PointRoom.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.PointRoom p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).PointRoom p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd (hne' _), h.2.2.2.1.lifetimeEnd (hne' _),
+      h.2.2.2.2.lifetimeEnd (hne' _)⟩
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readPoint_lifetimeStart {m : MemoryState} :
+    (m.lifetimeStart q).readPoint p = m.readPoint p := by
+  simp only [MemoryState.readPoint, readLimbs_lifetimeStart]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readPoint_lifetimeEnd {m : MemoryState} :
+    (m.lifetimeEnd q).readPoint p = m.readPoint p := by
+  simp only [MemoryState.readPoint, readLimbs_lifetimeEnd]
 
 /-- Field element `k` bytes into a 160-byte block. -/
 theorem MemoryState.LimbsFit.of_fits_add {m : MemoryState} {k : BitVec 64} (h : Fits m p 1280)
@@ -390,6 +514,23 @@ theorem MemoryState.LimbsFit.of_fits_add {m : MemoryState} {k : BitVec 64} (h : 
         simp [hoff]; omega, hf.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
     exact Fits.add_of_le (hov _ (by decide)) (by decide) hf
 
+/-- `LimbsFit.of_fits_add` for room. -/
+theorem MemoryState.LimbsRoom.of_room_add {m : MemoryState} {k : BitVec 64} (h : Room m p 1280)
+    (ho : p.offset = 0) (hk : k.toNat ≤ 120) : m.LimbsRoom (p.add k) := by
+  have hf : Room m (p.add k) 320 :=
+    Room.add_of_le
+      (by
+        simp [ho, BitVec.uaddOverflow]; omega)
+      (by omega) h
+  have hoff : (p.add k).offset = k := by simp [Pointer.add, ho]
+  have hov (off : BitVec 64) (hoff' : off.toNat ≤ 32) : ¬(p.add k).offset.uaddOverflow off := by
+    simp [hoff, BitVec.uaddOverflow]
+    omega
+  refine
+      ⟨by
+        simp [hoff]; omega, hf.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
+    exact Room.add_of_le (hov _ (by decide)) (by decide) hf
+
 /-- A 160-byte block from its start holds one point. -/
 theorem MemoryState.PointFit.of_fits {m : MemoryState} (h : Fits m p 1280) (ho : p.offset = 0) :
     m.PointFit p :=
@@ -407,10 +548,16 @@ theorem GlobalState.WF.storePoint {s : GlobalState} (h : s.WF) :
     ({ s with mem := s.mem.storePoint p P } : GlobalState).WF :=
   GlobalState.WF_storePoint.mpr h
 
+/-- A 160-byte live block from its start has room for one point. -/
+theorem MemoryState.PointRoom.of_room {m : MemoryState} (h : Room m p 1280) (ho : p.offset = 0) :
+    m.PointRoom p :=
+  ⟨by simp [ho], .of_room (h.mono (by omega)) ho, .of_room_add h ho (by decide),
+    .of_room_add h ho (by decide), .of_room_add h ho (by decide)⟩
+
 /-- A point elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
 theorem MemoryState.readPoint_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n).mem.readPoint p = s.mem.readPoint p := by
+    (s.alloca n d).mem.readPoint p = s.mem.readPoint p := by
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
   simp only [MemoryState.readPoint, readLimbs_alloca hne, readLimbs_alloca (hne' _)]
 
@@ -422,11 +569,11 @@ theorem MemoryState.readPoint_addBlock_of_id_ne {m : MemoryState} {x : BitVec v}
   simp only [MemoryState.readPoint, readLimbs_addBlock_of_id_ne h,
     readLimbs_addBlock_of_id_ne (h' _)]
 
-/-- A point fits in a memory before a point store when it fits after it. -/
-theorem MemoryState.PointFit.of_storePoint {m : MemoryState} (h : (m.storePoint p P).PointFit q) :
-    m.PointFit q :=
-  ⟨h.1, limbsFit_storePoint_iff.mp h.2.1, limbsFit_storePoint_iff.mp h.2.2.1,
-    limbsFit_storePoint_iff.mp h.2.2.2.1, limbsFit_storePoint_iff.mp h.2.2.2.2⟩
+/-- Room for a point before a point store when there is room after it. -/
+theorem MemoryState.PointRoom.of_storePoint {m : MemoryState} (h : (m.storePoint p P).PointRoom q) :
+    m.PointRoom q :=
+  ⟨h.1, limbsRoom_storePoint_iff.mp h.2.1, limbsRoom_storePoint_iff.mp h.2.2.1,
+    limbsRoom_storePoint_iff.mp h.2.2.2.1, limbsRoom_storePoint_iff.mp h.2.2.2.2⟩
 
 /-- `WF.storePoint` for a state written as a constructor, which unifies first-order. -/
 @[mlir_transport]
@@ -467,10 +614,12 @@ theorem MemoryState.storePoint_of_T {m : MemoryState} {p : Pointer} (h : m.Point
       ((m.storeLimbs p X).storeLimbs (p.add 40#64) Y).storeLimbs (p.add 120#64) Z := by
   have h' := h.storeLimbs (p := p) (l := X) |>.storeLimbs (p := p.add 40#64) (l := Y)
   simp only [MemoryState.storePoint]
-  rw [← readLimbs_storeLimbs_coord_X (l := X) h (b := 80) (by omega) (by omega), ←
-    readLimbs_storeLimbs_coord (l := Y) (h.storeLimbs) (a := 40) (b := 80) (by omega) (by omega)
+  rw [← readLimbs_storeLimbs_coord_X (l := X) h.room (b := 80) (by omega) (by omega), ←
+    readLimbs_storeLimbs_coord (l := Y) (h.storeLimbs.room) (a := 40) (b := 80) (by omega)
+      (by omega) (by omega),
+    ←
+    readLimbs_storeLimbs_coord (l := Z) h'.room (a := 120) (b := 80) (by omega) (by omega)
       (by omega),
-    ← readLimbs_storeLimbs_coord (l := Z) h' (a := 120) (b := 80) (by omega) (by omega) (by omega),
     storeLimbs_readLimbs_self h'.storeLimbs.2.2.2.1]
 
 /-- A point store that keeps `Z`: the `X`, `Y` and `T` stores. -/
@@ -478,8 +627,8 @@ theorem MemoryState.storePoint_of_Z {m : MemoryState} {p : Pointer} (h : m.Point
     m.storePoint p ⟨X, Y, T, m.readLimbs (p.add 120#64)⟩ =
       ((m.storeLimbs p X).storeLimbs (p.add 40#64) Y).storeLimbs (p.add 80#64) T := by
   simp only [MemoryState.storePoint]
-  rw [← readLimbs_storeLimbs_coord_X (l := X) h (b := 120) (by omega) (by omega), ←
-    readLimbs_storeLimbs_coord (l := Y) h.storeLimbs (a := 40) (b := 120) (by omega) (by omega)
+  rw [← readLimbs_storeLimbs_coord_X (l := X) h.room (b := 120) (by omega) (by omega), ←
+    readLimbs_storeLimbs_coord (l := Y) h.storeLimbs.room (a := 40) (b := 120) (by omega) (by omega)
       (by omega),
     storeLimbs_readLimbs_self h.storeLimbs.storeLimbs.2.2.2.2]
 
@@ -600,9 +749,22 @@ theorem MemoryState.readPoint_storeAt_of_id_ne {m : MemoryState} {p q : Pointer}
   congr 1 <;> funext i <;> fin_cases i <;>
     simp only [MemoryState.readLimbs, Pointer.add_add, Tactic.readThroughStore]
 
-/-- A point store keeps every block's size. -/
+/-- A point store keeps known bits known. -/
 @[mlir_transport]
 theorem Fits.storePoint {m : MemoryState} (h : Fits m q w) : Fits (m.storePoint p P) q w := by
+  simp only [MemoryState.storePoint]
+  exact h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+/-- A point store keeps every block and its length. -/
+@[mlir_transport]
+theorem InBounds.storePoint {m : MemoryState} (h : InBounds m q w) :
+    InBounds (m.storePoint p P) q w := by
+  simp only [MemoryState.storePoint]
+  exact h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+/-- A point store keeps every block, its length and lifetime. -/
+@[mlir_transport]
+theorem Room.storePoint {m : MemoryState} (h : Room m q w) : Room (m.storePoint p P) q w := by
   simp only [MemoryState.storePoint]
   exact h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
 
@@ -630,7 +792,37 @@ theorem Fits.storePointOpt {m : MemoryState} (h : Fits m q w) :
     Fits (m.storePointOpt p P?) q w := by
   cases P?
   · exact h
-  · simpa [MemoryState.storePointOpt_some, MemoryState.storePoint] using h
+  · exact h.storePoint
+
+/-- `storePointOpt` keeps every block and its length. -/
+@[mlir_transport]
+theorem InBounds.storePointOpt {m : MemoryState} (h : InBounds m q w) :
+    InBounds (m.storePointOpt p P?) q w := by
+  cases P?
+  · exact h
+  · exact h.storePoint
+
+/-- `storePointOpt` keeps every block, its length and lifetime. -/
+@[mlir_transport]
+theorem Room.storePointOpt {m : MemoryState} (h : Room m q w) :
+    Room (m.storePointOpt p P?) q w := by
+  cases P?
+  · exact h
+  · exact h.storePoint
+
+@[mlir_transport]
+theorem MemoryState.LimbsRoom.storePointOpt {m : MemoryState} (h : m.LimbsRoom q) :
+    (m.storePointOpt p P?).LimbsRoom q := by
+  cases P?
+  · exact h
+  · exact h.storePoint
+
+@[mlir_transport]
+theorem MemoryState.PointRoom.storePointOpt {m : MemoryState} (h : m.PointRoom q) :
+    (m.storePointOpt p P?).PointRoom q := by
+  cases P?
+  · exact h
+  · exact h.storePoint
 
 @[mlir_transport]
 theorem MemoryState.LimbsFit.storePointOpt {m : MemoryState} (h : m.LimbsFit q) :
@@ -677,6 +869,12 @@ theorem MemoryState.eraseFrom_storePointOpt {m : MemoryState} :
   cases P?
   · rfl
   · exact MemoryState.eraseFrom_storePoint
+
+-- last among the transports: tried after the structural ones, which carry a `…Room` fact
+-- directly, so they do not search the `…Fit` facts first
+attribute [-mlir_transport] MemoryState.LimbsFit.room
+
+attribute [mlir_transport] MemoryState.LimbsFit.room MemoryState.PointFit.room
 
 end
 

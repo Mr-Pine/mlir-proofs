@@ -103,7 +103,7 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
         rfl
       · have hr₀ := hr
         rw [hS] at hr₀
-        replace hr₀ := hr₀.of_storePoint.of_storePoint
+        replace hr₀ := hr₀.room.of_storePoint.of_storePoint
         rw [hS]
         simp only [GlobalState.mk.injEq, AllocState.mk.injEq]
         refine ⟨by omega, ?_⟩
@@ -136,10 +136,10 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
   block_init
   iterate 2 step_pure
   step_alloca with tp
-  have htp := MemoryState.PointFit.of_fits htp_fits htp_off
-  clear htp_fits
   step_pure
-  step_call using fd_ed25519_partial_dbl.call_eq
+  have htp := MemoryState.PointRoom.of_room hroom_tp htp_off
+  clear hroom_tp htp_bounds
+  step_call using fd_ed25519_partial_dbl.call_eq consuming htp
   step_pure
   finish_block
   · -- `n > 1`: the loop, `n - 1` iterations
@@ -148,7 +148,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
       omega
     refine
       fd_ed25519_point_dbln.loop r a tp n _ _ (n.toNat - 2) 1 _ S E hArgs ?_ (by omega) le_rfl hn
-        hwf hr htp hr_ne_tp hread_tp ?_
+        hwf hr ‹_› hr_ne_tp hread_tp ?_
     · env_reads
     · intro E' S' h1 h2 h3
       block_init
@@ -177,6 +177,35 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     erase_frame
     simp only [GlobalState.alloca, fd_ed25519_point_dbln.spec, hn1']
     rfl
+
+/-- `fd_ed25519_point_dbln.call_eq` at `n = 1`, where no iteration keeps `r`'s old `T`: room for
+`r` suffices. -/
+public theorem fd_ed25519_point_dbln.call_eq_one (r a : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) :
+    fd_ed25519_point_dbln.call (fd_ed25519_point_dbln.args (.value r) (.value a) (.value 1#32)) s =
+      .value
+        (.cons (.value r) .nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1 + 5 * (1#32 : BitVec 32).toNat⟩,
+            mem :=
+              s.mem.storePoint r
+                (fd_ed25519_point_dbln.spec (s.mem.readPoint a) (1#32 : BitVec 32).toNat) }) := by
+  func_init
+  block_init
+  iterate 2 step_pure
+  step_alloca with tp
+  step_pure
+  have htp := MemoryState.PointRoom.of_room hroom_tp htp_off
+  clear hroom_tp htp_bounds
+  step_call using fd_ed25519_partial_dbl.call_eq consuming htp
+  step_pure
+  finish_block
+  block_init
+  step_call using fd_ed25519_point_add_final_mul.call_eq
+  step_pure
+  finish_block
+  subst_vars
+  erase_frame
+  rfl
 
 end Proof
 

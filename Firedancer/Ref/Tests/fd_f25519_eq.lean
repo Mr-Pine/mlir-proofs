@@ -14,7 +14,7 @@ private def b : Pointer :=
 
 /-- Two 40-byte blocks, `a` and `b` holding `ab` and `bb`. -/
 private def state (ab bb : BitVec 320) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, ab⟩), (⟨1⟩, ⟨40, bb⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 ab), (⟨1⟩, .ofBytes 40 bb)]⟩⟩
 
 /-- `eq a q`'s result if it is `spec` of the inputs' limbs, the inputs are unchanged and the
 counter moved on by one block; else `none`. -/

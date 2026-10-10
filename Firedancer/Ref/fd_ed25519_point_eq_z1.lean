@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
+public import Firedancer.Common.Tactics
 public import Firedancer.Ref.fd_f25519_mul
 public import Firedancer.Ref.fd_f25519_eq
 public import Firedancer.Ref.Mlir.fd_ed25519_point_eq_z1
@@ -41,12 +42,11 @@ public theorem fd_ed25519_point_eq_z1.call_eq (a b : Pointer) (s : GlobalState) 
   step_alloca with x1
   step_alloca with y1
   iterate 2 step_pure
-  have hx1_limbs := MemoryState.LimbsFit.of_fits hx1_fits hx1_off
-  have hy1_limbs := MemoryState.LimbsFit.of_fits hy1_fits hy1_off
+  limbs_room x1
+  limbs_room y1
   -- reads of the temporaries go through the stores over the state after the `alloca`s
   have hx1₀ := hS ▸ hx1_limbs
   have hy1₀ := hS ▸ hy1_limbs
-  clear hx1_fits hy1_fits
   -- fd_f25519_mul( x1, b->X, a->Z );
   step_pure
   step_call using fd_f25519_mul.call_eq
@@ -55,10 +55,11 @@ public theorem fd_ed25519_point_eq_z1.call_eq (a b : Pointer) (s : GlobalState) 
   step_call using fd_f25519_mul.call_eq consuming hb
   -- return fd_f25519_eq( x1, a->X ) & fd_f25519_eq( y1, a->Y );
   step_call using fd_f25519_eq.call_eq consuming hread_x1
-  clear hx1_limbs hx1₀
+  clear_facts x1
   step_pure
   step_call using fd_f25519_eq.call_eq consuming hread_y1
-  clear ha hy1_limbs hy1₀
+  clear ha
+  clear_facts y1
   iterate 3 step_pure
   finish_block
   subst hS

@@ -17,7 +17,9 @@ private def b : Pointer :=
 
 /-- Three 40-byte blocks: `out` zeroed, `a` and `b` holding `aBytes` and `bBytes`. -/
 private def state (aBytes bBytes : BitVec 320) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, aBytes⟩), (⟨2⟩, ⟨40, bBytes⟩)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList
+        [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 aBytes), (⟨2⟩, .ofBytes 40 bBytes)]⟩⟩
 
 /-- Every limb `2^64 - 1`: the largest products and carries. -/
 private def ones : BitVec 320 :=

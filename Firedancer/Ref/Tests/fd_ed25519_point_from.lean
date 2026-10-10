@@ -13,7 +13,8 @@ private def ptr (k : Nat) : Pointer :=
 private def state : GlobalState :=
   ⟨⟨5⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨0⟩, ⟨160, 0⟩), (⟨1⟩, ⟨40, 1⟩), (⟨2⟩, ⟨40, 2⟩), (⟨3⟩, ⟨40, 3⟩), (⟨4⟩, ⟨40, 4⟩)]⟩⟩
+        [(⟨0⟩, .ofBytes 160 0), (⟨1⟩, .ofBytes 40 1), (⟨2⟩, .ofBytes 40 2), (⟨3⟩, .ofBytes 40 3),
+          (⟨4⟩, .ofBytes 40 4)]⟩⟩
 
 -- `r` is returned, and its fields X, Y, Z, T hold `x, y, z, t`
 #guard

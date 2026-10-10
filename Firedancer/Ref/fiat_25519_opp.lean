@@ -24,7 +24,7 @@ section Proof
 /-- `opp` stores `2p - x` limbwise at `out`. The loads all come before the stores, so `out` may
 alias `x`. -/
 public theorem fiat_25519_opp.call_eq (out x : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (hx : s.mem.LimbsFit x) :
+    (hout : s.mem.LimbsRoom out) (hx : s.mem.LimbsFit x) :
     fiat_25519_opp.call (fiat_25519_opp.args (.value out) (.value x)) s =
       .value
         (.nil,

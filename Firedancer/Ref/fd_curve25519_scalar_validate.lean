@@ -37,13 +37,14 @@ public theorem MemoryState.readAt_add_of_fits {m : MemoryState} {len : BitVec 64
           have := len.isLt; omega)
   have hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) :=
     BitVec.not_uaddOverflow_of_le hoff (by omega)
-  rw [MemoryState.readAt_add_of_readAt (w := w) hfits hov (by omega) rfl, hk', Nat.mul_comm k 8]
+  rw [MemoryState.readAt_add_of_readAt (w := w) hfits.inBounds hov (by omega) rfl, hk',
+    Nat.mul_comm k 8]
 
 /-- A read at a buffer's start: the low bits of the buffer's read. -/
 public theorem MemoryState.readAt_of_fits {m : MemoryState} (hfits : Fits m p v) (hw : w ≤ v) :
     m.readAt p w = (m.readAt p v).extractLsb' 0 w := by
   have :=
-    MemoryState.readAt_add_of_readAt (off := 0#64) (w := w) hfits
+    MemoryState.readAt_add_of_readAt (off := 0#64) (w := w) hfits.inBounds
       (by
         have := p.offset.isLt; simp [BitVec.uaddOverflow]; omega)
       (by simpa using hw) rfl

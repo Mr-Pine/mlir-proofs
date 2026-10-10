@@ -14,7 +14,7 @@ private def out2 : Pointer :=
 
 /-- An 8-byte block for `out1` and a 1-byte block for `out2`, both zeroed. -/
 private def s0 : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨8, 0⟩), (⟨1⟩, ⟨1, 0⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 8 0), (⟨1⟩, .ofBytes 1 0)]⟩⟩
 
 /-- The two outputs, or `none` for UB / out of fuel. -/
 private def outs (o1 : ⟦Ty.ptr⟧) (c : BitVec 8) (a b : BitVec 64) : Option (BitVec 64 × BitVec 8) :=

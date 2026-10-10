@@ -68,7 +68,7 @@ are read after `r` is written, so `r` is in another block, while `u` may alias `
 `fd_f25519_sqrtm1`, the ten temporaries and the callees' blocks are freed again: only the counter
 moves on, by 50 blocks. -/
 public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.LimbsFit r) (hu : s.mem.LimbsFit u) (hv : s.mem.LimbsFit v) (hru : r.id ≠ u.id)
+    (hr : s.mem.LimbsRoom r) (hu : s.mem.LimbsFit u) (hv : s.mem.LimbsFit v) (hru : r.id ≠ u.id)
     (hrv : r.id ≠ v.id) :
     fd_f25519_sqrt_ratio.call (fd_f25519_sqrt_ratio.args (.value r) (.value u) (.value v)) s =
       .value
@@ -99,56 +99,52 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
   have hsqrtm1_read := fd_f25519_sqrtm1.readLimbs hsqrtm1_fits hsqrtm1_off hread_sqrtm1
   clear hread_sqrtm1
   limbs_fit sqrtm1
-  limbs_fit v2
-  limbs_fit v3
-  limbs_fit uv3
-  limbs_fit v6
-  limbs_fit v7
-  limbs_fit uv7
-  limbs_fit check
-  limbs_fit u_neg
-  limbs_fit u_neg_sqrtm1
-  limbs_fit r_prime
-  -- `r` is first written after these temporaries are dead
-  clear hr_ne_v2 hr_ne_v3 hr_ne_v6 hr_ne_v7
+  -- each temporary's lifetime starts before its first write: then its limbs have room
   -- fd_f25519_sqr( v2, v );
   step_pure
+  limbs_room v2
   step_call using fd_f25519_sqr.call_eq
   name_limbs lv2
   -- fd_f25519_mul( v3, v2, v );
   step_pure
+  limbs_room v3
   step_call using fd_f25519_mul.call_eq consuming hread_v2
   name_limbs lv3
-  clear hv2_limbs
+  clear_facts v2
   -- fd_f25519_mul( uv3, u, v3 );
   step_pure
+  limbs_room uv3
   step_call using fd_f25519_mul.call_eq
   name_limbs luv3
   -- fd_f25519_sqr( v6, v3 );
   step_pure
+  limbs_room v6
   step_call using fd_f25519_sqr.call_eq consuming hread_v3
   name_limbs lv6
-  clear hv3_limbs
+  clear_facts v3
   -- fd_f25519_mul( v7, v6, v );
   step_pure
+  limbs_room v7
   step_call using fd_f25519_mul.call_eq consuming hread_v6
   name_limbs lv7
-  clear hv6_limbs
+  clear_facts v6
   -- fd_f25519_mul( uv7, u, v7 );
   step_pure
+  limbs_room uv7
   step_call using fd_f25519_mul.call_eq consuming hread_v7
   name_limbs luv7
-  clear hv7_limbs
+  clear_facts v7
   -- fd_f25519_pow22523( r, uv7 );
   step_call using fd_f25519_pow22523.call_eq consuming hread_uv7
   name_limbs lr0
-  clear huv7_limbs hr_ne_uv7
+  clear_facts uv7
   -- fd_f25519_mul( r, r, uv3 );
   step_call using fd_f25519_mul.call_eq consuming hread_uv3
   name_limbs lr1
-  clear huv3_limbs hr_ne_uv3
+  clear_facts uv3
   -- fd_f25519_sqr( check, r );
   step_pure
+  limbs_room check
   step_call using fd_f25519_sqr.call_eq
   name_limbs lcheck0
   -- fd_f25519_mul( check, check, v );
@@ -158,10 +154,12 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
     hv_ne_u_neg hv_ne_u_neg_sqrtm1 hv_ne_r_prime
   -- fd_f25519_neg( u_neg, u );
   step_pure
+  limbs_room u_neg
   step_call using fd_f25519_neg.call_eq
   name_limbs lu_neg
   -- fd_f25519_mul( u_neg_sqrtm1, u_neg, fd_f25519_sqrtm1 );
   step_pure
+  limbs_room u_neg_sqrtm1
   step_call using fd_f25519_mul.call_eq
   name_limbs lu_neg_sqrtm1
   -- int correct_sign_sqrt   = fd_f25519_eq( check, u );
@@ -170,29 +168,32 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
     hu_ne_u_neg hu_ne_u_neg_sqrtm1 hu_ne_r_prime
   -- int flipped_sign_sqrt   = fd_f25519_eq( check, u_neg );
   step_call using fd_f25519_eq.call_eq with flipped_sign_sqrt consuming hread_u_neg
-  clear hu_neg_limbs hr_ne_u_neg
+  clear_facts u_neg
   -- int flipped_sign_sqrt_i = fd_f25519_eq( check, u_neg_sqrtm1 );
   step_call using fd_f25519_eq.call_eq with flipped_sign_sqrt_i consuming hread_u_neg_sqrtm1
-  clear hu_neg_sqrtm1_limbs hr_ne_u_neg_sqrtm1 hread_check hcheck_limbs hr_ne_check
+  clear_facts u_neg_sqrtm1 check
+  clear hread_check
   -- the returned values unfold the limbs' names: fold them back
   rw [← hlcheck0, ← hlcheck1] at hcorrect_sign_sqrt
   rw [← hlcheck0, ← hlcheck1, ← hlu_neg] at hflipped_sign_sqrt
   rw [← hlcheck0, ← hlcheck1, ← hlu_neg, ← hlu_neg_sqrtm1] at hflipped_sign_sqrt_i
   -- fd_f25519_mul( r_prime, r, fd_f25519_sqrtm1 );
   step_pure
+  limbs_room r_prime
   step_call using fd_f25519_mul.call_eq consuming hsqrtm1_read
   name_limbs lr_prime
-  clear hsqrtm1_limbs hr_ne_sqrtm1
+  clear_facts sqrtm1
   -- fd_f25519_if( r, flipped_sign_sqrt|flipped_sign_sqrt_i, r_prime, r );
   step_pure
   have hcond := fd_f25519_eq.spec_or_lt
   step_call using fd_f25519_if.call_eq consuming hread_r_prime
   name_limbs lr2
-  clear hr_prime_limbs hr_ne_r_prime
+  clear_facts r_prime
   -- fd_f25519_abs( r, r );
   step_call using fd_f25519_abs.call_eq
   name_limbs lr3
-  -- return correct_sign_sqrt|flipped_sign_sqrt;
+  -- return correct_sign_sqrt|flipped_sign_sqrt; the temporaries' lifetimes end
+  clear_facts r
   step_pure
   iterate 10 step_pure
   finish_block

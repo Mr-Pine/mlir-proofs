@@ -18,7 +18,8 @@ private def ramp (n : Nat) : BitVec (8 * n) :=
 
 /-- The struct's block holding `v`, the data block holding `ramp n`. -/
 private def state (v : ShaState) (n : Nat) : GlobalState :=
-  let s : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨256, 0⟩), (⟨1⟩, ⟨n, ramp n⟩)]⟩⟩
+  let s : GlobalState :=
+    ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 256 0), (⟨1⟩, .ofBytes n (ramp n))]⟩⟩
   { s with mem := s.mem.storeSha sha v }
 
 /-- Whether the lift, appending the `n` bytes, leaves the struct the spec gives. -/

@@ -22,7 +22,7 @@ section Proof
 /-- The value case: with room at `ptr`, the function stores `spec c a b` there and changes
 nothing else. -/
 public theorem fiat_25519_cmovznz_u64.call_eq (ptr : Pointer) (c : BitVec 8) (a b : BitVec 64)
-    (s : GlobalState) (hwf : s.WF) (hfits : Fits s.mem ptr 64) :
+    (s : GlobalState) (hwf : s.WF) (hroom : Room s.mem ptr 64) :
     fiat_25519_cmovznz_u64.call
         (fiat_25519_cmovznz_u64.args (.value ptr) (.value c) (.value a) (.value b)) s =
       .value (.nil, { s with mem := s.mem.storeAt ptr (fiat_25519_cmovznz_u64.spec c a b) }) := by

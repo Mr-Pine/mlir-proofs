@@ -13,7 +13,7 @@ section Proof
 /-- `set` copies `src`'s limbs to `dst`, which is `src` itself or in another block, and returns
 `dst`. -/
 public theorem fd_f25519_set.call_eq (dst src : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hdst : s.mem.LimbsFit dst) (hsrc : s.mem.LimbsFit src) (hsep : dst = src ∨ dst.id ≠ src.id) :
+    (hdst : s.mem.LimbsRoom dst) (hsrc : s.mem.LimbsFit src) (hsep : dst = src ∨ dst.id ≠ src.id) :
     fd_f25519_set.call (fd_f25519_set.args (.value dst) (.value src)) s =
       .value
         (.cons (.value dst) .nil,

@@ -64,7 +64,7 @@ theorem SlidesAt.of_readAt {m : MemoryState} {p : Pointer} {w : Vector Int 256} 
           rw [h2k]; omega)
         hf,
       ?_⟩
-  rw [MemoryState.readAt_add_of_readAt hf hov
+  rw [MemoryState.readAt_add_of_readAt hf.inBounds hov
       (by
         rw [h2k]; omega)
       h,

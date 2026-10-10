@@ -65,8 +65,8 @@ attribute [local mlir_transport] GlobalState.WF.add_blocks_storeSha
 /-! ### The memory after the SHA-512 calls -/
 
 theorem MemoryState.PointFit.hashMem {m : MemoryState} (h : m.PointFit q) :
-    (fd_ed25519_verify.hashMem m sha k X v).PointFit q := by
-  simpa only [MemoryState.PointFit, MemoryState.LimbsFit, Fits.hashMem_iff] using h
+    (fd_ed25519_verify.hashMem m sha k X v).PointFit q :=
+  h.of_imp Fits.hashMem
 
 /-- `readAt_hashMem_of_id_ne` for limbs. -/
 theorem MemoryState.readLimbs_hashMem_of_id_ne {m : MemoryState} (hsha : q.id ≠ sha.id)
@@ -95,6 +95,11 @@ attribute [local mlir_read] MemoryState.readAt_hashMem_of_id_ne
 
 attribute [local mlir_erase high] MemoryState.eraseFrom_hashMem_of_le
 
+attribute [local mlir_fresh] Fits.hashMem_k
+
+attribute [local mlir_transport] MemoryState.Words8Room.storeSha InBounds.hashMem
+  MemoryState.Words8Room.hashMem
+
 /-- `fd_sha512_fini( fd_sha512_append( fd_sha512_append( fd_sha512_append( fd_sha512_init( sha ),
 r, 32UL ), public_key, 32UL ), msg, msg_sz ), k )`: the hash object and the digest's words at `k`
 as `fd_ed25519_verify.hash` gives them. -/
@@ -109,12 +114,12 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
     (hsig : Fits S.mem sig (8 * 32)) (hsig_off : ¬sig.offset.uaddOverflow 32#64)
     (hpk : Fits S.mem pk (8 * 32)) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
     (hmsg : Fits S.mem msg (8 * msgSz.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgSz)
-    (hk : S.mem.Words8Fit k) (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id)
+    (hk : S.mem.Words8Room k) (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id)
     (hmsg_sha : msg.id ≠ sha.id) (hk_sha : k.id ≠ sha.id)
     (hK :
       (fd_ed25519_verify.bb5.runBodyFrom
-            E[%800 := .value sha, %801 := .value sha, %802 := .value sha, %803 := .value sha, %804 :=
-              .value k]
+            E[%800 := .value sha, %801 := .value sha, %802 := .value sha, %803 := .value sha,
+              %804 := .value k]
             6
             {
               alloc :=
@@ -129,16 +134,15 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
           g) =
         K) :
     (fd_ed25519_verify.bb5.runBodyFrom E 1 S >>= g) = K := by
+  -- the hash object `init` leaves, an equation that stays about the state before it
+  have hinit := fd_sha512_init.readSha hsha
   obtain ⟨hsha_fits, hsha_off⟩ := hsha
   step_call using fd_sha512_init.call_eq
   rename_i S₀
-  -- the hash object `init` leaves
   have hsh0 : S.mem.readSha sha = ⟨S₀.mem.readAt sha 1024, sha512IV, 0#64, 0#64, 0#64⟩ := by
-    have hf : S₀.mem.ShaFit sha :=
-      ⟨by
-        rw [hS] at hsha_fits; simpa only [Fits.storeAt_iff] using hsha_fits, hsha_off⟩
     rw [hS]
-    simpa using fd_sha512_init.readSha hf
+    simpa using hinit
+  clear hinit
   have hsha : S.mem.ShaFit sha := ⟨hsha_fits, hsha_off⟩
   clear hsha_fits hread_sha_200 hread_sha_184 hread_sha_176 hread_sha_168 hread_sha_160
     hread_sha_152 hread_sha_144 hread_sha_136 hread_sha_128
@@ -242,15 +246,15 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
     clear hbr
     have hsig32 : ¬sig.offset.uaddOverflow 32#64 :=
       BitVec.not_uaddOverflow_of_le hsig_off (by decide)
-    have hA_pt := MemoryState.PointFit.of_fits hA_fits hA_off
-    have hR_pt := MemoryState.PointFit.of_fits hR_fits hR_off
-    clear hA_fits hR_fits
     block_init
     iterate 2 step_pure
+    have hA_pt := MemoryState.PointRoom.of_room hroom_A hA_off
+    have hR_pt := MemoryState.PointRoom.of_room hroom_R hR_off
+    clear hroom_A hroom_R hA_bounds hR_bounds
     -- reads of the decoded points go through the stores over the state after the `alloca`s
     have hA₀ := hS ▸ hA_pt
     have hR₀ := hS ▸ hR_pt
-    have hk₀ := hS ▸ hk_fits
+    have hk₀ := hS ▸ hk_bounds
     -- int res = fd_ed25519_point_frombytes_2x( Aprime, public_key, R, r );
     step_call using fd_ed25519_point_frombytes_2x.call_eq
     step_pure
@@ -281,6 +285,13 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
       · simp [fd_ed25519_point_frombytes_2x.spec, hA?, hR?] at hbr
       simp only [hA?, hR?, Option.isSome_some, ite_true, MemoryState.storePointOpt_some] at hS
       clear hbr
+      -- the decoded points are known
+      have hAf : S.mem.PointFit A := by
+        rw [hS]
+        exact (MemoryState.PointFit.storePoint_self hA₀).storePoint
+      have hRf : S.mem.PointFit R := by
+        rw [hS]
+        exact MemoryState.PointFit.storePoint_self hR₀.storePoint
       -- if( fd_ed25519_affine_is_small_order( Aprime ) ) return FD_ED25519_ERR_PUBKEY;
       block_init
       step_call using fd_ed25519_affine_is_small_order.call_eq
@@ -316,11 +327,13 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           have hsoR := hbr
           clear hbr
           block_init
+          -- `k`'s lifetime starts
           step_pure
           -- fd_sha512_fini( fd_sha512_append( fd_sha512_append( fd_sha512_append( fd_sha512_init( sha ),
           --   r, 32UL ), public_key, 32UL ), msg, msg_sz ), k );
           have hsha : S.mem.ShaFit sha := ⟨hsha_fits, hsha_off⟩
-          have hk_w := MemoryState.Words8Fit.of_fits hk_fits hk_off
+          have hk_w := MemoryState.Words8Room.of_room hroom_k hk_off
+          clear hroom_k hA_pt hR_pt
           step_pattern using fd_ed25519_verify.hash_run
           obtain ⟨⟨sha4, kw⟩, hH⟩ :
             ∃ H,
@@ -348,7 +361,9 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           erase_frame
           -- `k`'s 32 bytes as `reduce` stored them
           rw [MemoryState.readAt_storeAt_self
-              (Fits.hashMem (Fits.storePoint (Fits.storePoint (hk₀.mono (by decide)))))]
+              (InBounds.hashMem
+                (InBounds.lifetimeStart
+                  (InBounds.storePoint (InBounds.storePoint (hk₀.mono (by decide))))))]
           simp only [fd_ed25519_verify.spec, hv, hA?, hR?, hsoA, hsoR, hH,
             fd_ed25519_verify.Result.mem, ite_ofBool_beq]
           simp

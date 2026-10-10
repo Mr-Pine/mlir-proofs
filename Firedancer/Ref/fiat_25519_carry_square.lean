@@ -46,7 +46,7 @@ section Proof
 so `out` may alias `a`; the `nuw` products are of zero-extended limbs, and the `nsw nuw` adds are
 of a 13-bit carry and a 51-bit limb, so no flag ever fires. -/
 public theorem fiat_25519_carry_square.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (ha : s.mem.LimbsFit a) :
+    (hout : s.mem.LimbsRoom out) (ha : s.mem.LimbsFit a) :
     fiat_25519_carry_square.call (fiat_25519_carry_square.args (.value out) (.value a)) s =
       .value
         (.nil,

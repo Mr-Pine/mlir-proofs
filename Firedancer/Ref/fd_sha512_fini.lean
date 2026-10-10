@@ -70,7 +70,7 @@ abbrev hdr2 (sha : Pointer) (lo hi x : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
 theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) (v : ShaState)
     (S₁ : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (fd_sha512_fini.args (.value sha) (.value hash)).get) (hwf : S₁.WF)
-    (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hh : S₁.mem.Words8Fit hash)
+    (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hh : S₁.mem.Words8Room hash)
     (hsep : hash.id ≠ sha.id) (hx : x.toNat ≤ 112) (hlo : v.bitCntLo = lo) (hhi : v.bitCntHi = hi)
     (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hK :
@@ -158,7 +158,7 @@ stores the state's words, byte-swapped, at `hash` (64 bytes); returns `hash`. Ea
 `fd_sha512_core` call leaves two blocks counted; `hash` is in another block than `sha`. -/
 public theorem fd_sha512_fini.call_eq (sha hash : Pointer) (s : GlobalState) (hwf : s.WF)
     (hsha : s.mem.ShaFit sha) (hu : (s.mem.readSha sha).bufUsed.toNat < 128)
-    (hh : s.mem.Words8Fit hash) (hsep : hash.id ≠ sha.id) :
+    (hh : s.mem.Words8Room hash) (hsep : hash.id ≠ sha.id) :
     fd_sha512_fini.call (fd_sha512_fini.args (.value sha) (.value hash)) s =
       .value
         (.cons (.value hash) .nil,
@@ -312,7 +312,7 @@ public theorem fd_sha512_init.readSha {m : MemoryState} (h : m.ShaFit sha) :
     | exact Range.disjoint_sha h.2 (by decide) (by decide) (by decide)
     | exact (Range.disjoint_sha_base h.2 (by decide) (by decide)).symm
     |
-      ((repeat apply Fits.storeAt); refine h.fits_add ?_;
+      ((repeat apply InBounds.storeAt); refine (h.fits_add ?_).inBounds;
        decide)) only [MemoryState.readAt_storeAt_disjoint,
     MemoryState.readAt_storeAt_self]
   have hov (k : Nat) (hk : k ≤ 16) : ¬(sha.add 200#64).offset.uaddOverflow (BitVec.ofNat 64 k) := by
@@ -330,7 +330,7 @@ public theorem fd_sha512_init.readSha {m : MemoryState} (h : m.ShaFit sha) :
       apply BitVec.eq_of_toNat_eq
       simp
     rw [e,
-      MemoryState.readAt_storeAt_add hm (hov k (by omega))
+      MemoryState.readAt_storeAt_add hm.inBounds (hov k (by omega))
         (by
           simp; omega)]
     simp only [BitVec.toNat_ofNat]

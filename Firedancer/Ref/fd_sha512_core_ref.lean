@@ -1,6 +1,7 @@
 module
 
 public import MLIR.Run.Tactic
+public import Firedancer.Common.Memory
 import Std.Data.ExtHashMap.Lemmas
 public import Firedancer.Ref.fd_ulong_bswap
 public import Firedancer.Ref.fd_ulong_rotate_right
@@ -40,12 +41,33 @@ abbrev MemoryState.Words8Fit (m : MemoryState) (p : Pointer) : Prop :=
     Fits m (p.add 32#64) 64 ∧
     Fits m (p.add 40#64) 64 ∧ Fits m (p.add 48#64) 64 ∧ Fits m (p.add 56#64) 64
 
-attribute [mlir_mem] MemoryState.Words8Fit
+/-- Room for the eight words at `p` (an output), and the word offsets do not wrap. -/
+abbrev MemoryState.Words8Room (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 56 < 2 ^ 64 ∧
+    Room m p 64 ∧
+    Room m (p.add 8#64) 64 ∧
+    Room m (p.add 16#64) 64 ∧
+    Room m (p.add 24#64) 64 ∧
+    Room m (p.add 32#64) 64 ∧
+    Room m (p.add 40#64) 64 ∧ Room m (p.add 48#64) 64 ∧ Room m (p.add 56#64) 64
+
+attribute [mlir_mem] MemoryState.Words8Fit MemoryState.Words8Room
+
+theorem MemoryState.Words8Fit.room {m : MemoryState} (h : m.Words8Fit p) : m.Words8Room p :=
+  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.1.room,
+    h.2.2.2.2.2.2.1.room, h.2.2.2.2.2.2.2.1.room, h.2.2.2.2.2.2.2.2.room⟩
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Words8Fit.storeAt (h : MemoryState.Words8Fit m p) :
-    MemoryState.Words8Fit (m.storeAt q x) p := by
-  unfold MemoryState.Words8Fit at h ⊢
+    MemoryState.Words8Fit (m.storeAt q x) p :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.1.storeAt, h.2.2.2.2.1.storeAt,
+    h.2.2.2.2.2.1.storeAt, h.2.2.2.2.2.2.1.storeAt, h.2.2.2.2.2.2.2.1.storeAt,
+    h.2.2.2.2.2.2.2.2.storeAt⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Room.storeAt (h : MemoryState.Words8Room m p) :
+    MemoryState.Words8Room (m.storeAt q x) p := by
+  unfold MemoryState.Words8Room at h ⊢
   simpa using h
 
 /-- A new block keeps words that fit. -/
@@ -57,29 +79,116 @@ theorem MemoryState.Words8Fit.addBlock {s : GlobalState} {x : BitVec v} (hwf : s
     ⟨ho, h0.addBlock hwf, h1.addBlock hwf, h2.addBlock hwf, h3.addBlock hwf, h4.addBlock hwf,
       h5.addBlock hwf, h6.addBlock hwf, h7.addBlock hwf⟩
 
+/-- A new block keeps room for words. -/
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Room.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
+    (h : s.mem.Words8Room p) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).Words8Room p := by
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, h0.addBlock hwf, h1.addBlock hwf, h2.addBlock hwf, h3.addBlock hwf, h4.addBlock hwf,
+      h5.addBlock hwf, h6.addBlock hwf, h7.addBlock hwf⟩
+
 /-- `alloca` keeps words that fit. -/
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Words8Fit.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.Words8Fit p) :
-    (s.alloca n).mem.Words8Fit p := by
+    (s.alloca n d).mem.Words8Fit p := by
   obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
   exact
     ⟨ho, h0.alloca hwf, h1.alloca hwf, h2.alloca hwf, h3.alloca hwf, h4.alloca hwf, h5.alloca hwf,
       h6.alloca hwf, h7.alloca hwf⟩
 
-/-- `storeWords8` keeps every block and its length. -/
+/-- `alloca` keeps room for words. -/
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Room.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.Words8Room p) :
+    (s.alloca n d).mem.Words8Room p := by
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, h0.alloca hwf, h1.alloca hwf, h2.alloca hwf, h3.alloca hwf, h4.alloca hwf, h5.alloca hwf,
+      h6.alloca hwf, h7.alloca hwf⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Fit.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.Words8Fit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).Words8Fit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, h0.lifetimeStart hne, h1.lifetimeStart (hne' _), h2.lifetimeStart (hne' _),
+      h3.lifetimeStart (hne' _), h4.lifetimeStart (hne' _), h5.lifetimeStart (hne' _),
+      h6.lifetimeStart (hne' _), h7.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Fit.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.Words8Fit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).Words8Fit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, h0.lifetimeEnd hne, h1.lifetimeEnd (hne' _), h2.lifetimeEnd (hne' _),
+      h3.lifetimeEnd (hne' _), h4.lifetimeEnd (hne' _), h5.lifetimeEnd (hne' _),
+      h6.lifetimeEnd (hne' _), h7.lifetimeEnd (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Room.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.Words8Room p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).Words8Room p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, h0.lifetimeStart hne, h1.lifetimeStart (hne' _), h2.lifetimeStart (hne' _),
+      h3.lifetimeStart (hne' _), h4.lifetimeStart (hne' _), h5.lifetimeStart (hne' _),
+      h6.lifetimeStart (hne' _), h7.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.Words8Room.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.Words8Room p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).Words8Room p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, h0.lifetimeEnd hne, h1.lifetimeEnd (hne' _), h2.lifetimeEnd (hne' _),
+      h3.lifetimeEnd (hne' _), h4.lifetimeEnd (hne' _), h5.lifetimeEnd (hne' _),
+      h6.lifetimeEnd (hne' _), h7.lifetimeEnd (hne' _)⟩
+
+/-- `storeWords8` keeps every block, its length and lifetime. -/
 @[simp]
-theorem Fits.storeWords8_iff {m : MemoryState} : Fits (m.storeWords8 q v) p w ↔ Fits m p w := by
+theorem Room.storeWords8_iff {m : MemoryState} : Room (m.storeWords8 q v) p w ↔ Room m p w := by
   simp [MemoryState.storeWords8]
 
+/-- `storeWords8` keeps known bits known. -/
 @[mlir_transport]
 theorem Fits.storeWords8 {m : MemoryState} (h : Fits m p w) : Fits (m.storeWords8 q v) p w :=
-  Fits.storeWords8_iff.2 h
+  h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+
+@[mlir_transport]
+theorem Room.storeWords8 {m : MemoryState} (h : Room m p w) : Room (m.storeWords8 q v) p w :=
+  Room.storeWords8_iff.2 h
+
+@[mlir_transport]
+theorem InBounds.storeWords8 {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeWords8 q v) p w :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
 
 @[mlir_transport]
 theorem MemoryState.Words8Fit.storeWords8 (h : MemoryState.Words8Fit m p) :
-    MemoryState.Words8Fit (m.storeWords8 q v) p := by
-  unfold MemoryState.Words8Fit at h ⊢
-  simpa using h
+    MemoryState.Words8Fit (m.storeWords8 q v) p :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+
+@[mlir_transport]
+theorem MemoryState.Words8Room.storeWords8 (h : MemoryState.Words8Room m p) :
+    MemoryState.Words8Room (m.storeWords8 q v) p :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+
+/-- Eight words stored where there is room are known. -/
+@[mlir_fresh, mlir_mem]
+theorem MemoryState.Words8Fit.storeWords8_self {m : MemoryState} {p : Pointer}
+    (h : m.Words8Room p) : (m.storeWords8 p v).Words8Fit p := by
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  exact
+    ⟨ho, (Fits.storeAt_self h0).storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h1.storeAt).storeAt.storeAt.storeAt.storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h2.storeAt.storeAt).storeAt.storeAt.storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h3.storeAt.storeAt.storeAt).storeAt.storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h4.storeAt.storeAt.storeAt.storeAt).storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h5.storeAt.storeAt.storeAt.storeAt.storeAt).storeAt.storeAt,
+      (Fits.storeAt_self h6.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt).storeAt,
+      Fits.storeAt_self h7.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt⟩
 
 @[mlir_transport]
 theorem GlobalState.WF.storeWords8 {s : GlobalState} (h : s.WF) :
@@ -87,33 +196,17 @@ theorem GlobalState.WF.storeWords8 {s : GlobalState} (h : s.WF) :
   unfold MemoryState.storeWords8
   exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
 
-private theorem insert_insert_self' (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
-    (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
-  apply Std.ExtHashMap.ext_getElem?
-  intro a
-  simp only [Std.ExtHashMap.getElem?_insert]
-  split <;> rfl
-
 open Memory in
 /-- Storing eight words twice at the same place keeps the second. -/
 theorem MemoryState.storeWords8_storeWords8_self {m : MemoryState} {p : Pointer} :
     (m.storeWords8 p v).storeWords8 p v' = m.storeWords8 p v' := by
-  cases hb : m[p.id]? with
-  | none =>
-    have hn :
-      ∀ {m' : MemoryState} {q : Pointer} {x : BitVec 64},
-        m'[q.id]? = none → m'.storeAt q x = m' := by
-      intro m' q x hq; simp [MemoryState.storeAt, hq]
-    simp [MemoryState.storeWords8, hn, hb]
-  | some blk =>
-    rw [MemoryState.getElem?_eq] at hb
-    simp [MemoryState.storeWords8, MemoryState.storeAt, MemoryState.getElem?_eq, hb,
-      insert_insert_self']
-    simp only [Pointer.offsetInBits]
-    congr 2
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [getLsbD_spliceBits]
+  simp only [MemoryState.storeWords8, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    MemoryState.modifyBlock_modifyBlock_self]
+  congr 1
+  funext blk
+  simp only [Function.comp_apply, Pointer.offsetInBits, MemoryBlock.mk.injEq, true_and, and_true]
+  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
+    simp only [getLsbD_spliceBits] <;>
     grind
 
 /-- Erasing a frame commutes with storing eight words. -/
@@ -143,6 +236,9 @@ theorem MemoryState.readAt_storeWords8_of_disjoint {m : MemoryState}
     MemoryState.readAt_storeAt_disjoint (hw 24 (by decide)),
     MemoryState.readAt_storeAt_disjoint (hw 16 (by decide)),
     MemoryState.readAt_storeAt_disjoint (hw 8 (by decide)), MemoryState.readAt_storeAt_disjoint h0]
+
+-- last among the transports, as `LimbsFit.room`
+attribute [mlir_transport] MemoryState.Words8Fit.room
 
 end
 
@@ -294,8 +390,7 @@ theorem Ch_eq (x y z : BitVec 64) :
 
 /-- `Ch`'s `or disjoint` holds: `x & y` and `~x & z` do not overlap. -/
 theorem Ch_disjoint (x y z : BitVec 64) :
-    x &&& y &&& (z &&& (x ^^^ 18446744073709551615#64)) = 0#64 := by
-  bv_decide
+    x &&& y &&& (z &&& (x ^^^ 18446744073709551615#64)) = 0#64 := by bv_decide
 
 theorem Maj_eq (x y z : BitVec 64) : x &&& (y ^^^ z) ^^^ y &&& z = Maj x y z := by
   rw [Maj]; bv_decide
@@ -405,12 +500,12 @@ theorem fits_K {m : MemoryState} {Kp : Pointer} (hK : Kp.offset = 0) (h : Fits m
 
 /-- `^bb0`'s constants, which every later block reads. -/
 abbrev consts (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%868 := .value 1#32, %869 := .value 16#64, %870 := .value 0#64, %871 := .value 3#64,
-    %872 := .value 14#32, %873 := .value 18#32, %874 := .value 41#32,
-    %875 := .value 18446744073709551615#64, %877 := .value 28#32, %878 := .value 34#32,
-    %879 := .value 39#32, %880 := .value 1#64, %881 := .value 15#64, %882 := .value 14#64,
-    %883 := .value 8#32, %884 := .value 7#64, %885 := .value 19#32, %886 := .value 61#32,
-    %887 := .value 6#64, %888 := .value 9#64, %889 := .value 80#64]
+  E[%868 := .value 1#32, %869 := .value 16#64, %870 := .value 0#64, %871 := .value 3#64, %872 :=
+    .value 14#32, %873 := .value 18#32, %874 := .value 41#32, %875 :=
+    .value 18446744073709551615#64, %877 := .value 28#32, %878 := .value 34#32, %879 :=
+    .value 39#32, %880 := .value 1#64, %881 := .value 15#64, %882 := .value 14#64, %883 :=
+    .value 8#32, %884 := .value 7#64, %885 := .value 19#32, %886 := .value 61#32, %887 :=
+    .value 6#64, %888 := .value 9#64, %889 := .value 80#64]
 
 /-- `^bb1`, a block's start: the constants, `K`, `X`, `&state[1 … 7]`, the state words
 `h0 … h7` (also `a … h`), `W` and the blocks left. -/
@@ -440,23 +535,23 @@ abbrev xNew (x0 x1 x9 x14 : BitVec 64) : BitVec 64 :=
 /-- `^bb2`, the first loop at round `i`, on `a … h`. -/
 abbrev hdr2 (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) (i : Nat) : ⟪Γ⟫ :=
-  (hdr1v st X Kp Wp H cnt E)[%916 := .value a, %917 := .value b, %918 := .value c,
-    %919 := .value d, %920 := .value e, %921 := .value f, %922 := .value (BitVec.ofNat 64 i),
-    %923 := .value h, %924 := .value g]
+  (hdr1v st X Kp Wp H cnt E)[%916 := .value a, %917 := .value b, %918 := .value c, %919 := .value d,
+    %920 := .value e, %921 := .value f, %922 := .value (BitVec.ofNat 64 i), %923 := .value h,
+    %924 := .value g]
 
 /-- `^bb3`, the second loop at round `i`, on `a … h`. -/
 abbrev hdr3 (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) (i : Nat) : ⟪Γ⟫ :=
-  (hdr1v st X Kp Wp H cnt E)[%959 := .value a, %960 := .value b, %961 := .value c,
-    %962 := .value d, %963 := .value e, %964 := .value f, %965 := .value (BitVec.ofNat 64 i),
-    %966 := .value h, %967 := .value g]
+  (hdr1v st X Kp Wp H cnt E)[%959 := .value a, %960 := .value b, %961 := .value c, %962 := .value d,
+    %963 := .value e, %964 := .value f, %965 := .value (BitVec.ofNat 64 i), %966 := .value h,
+    %967 := .value g]
 
 /-- `^bb4`, after the last round, with `a … h`. -/
 abbrev exit3 (st X Kp Wp : Pointer) (h0 h1 h2 h3 h4 h5 h6 h7 cnt : BitVec 64) (E : ⟪Γ⟫)
     (a b c d e f g h : BitVec 64) : ⟪Γ⟫ :=
-  (hdr1 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 cnt E)[%959 := .value b, %960 := .value c,
-    %961 := .value d, %963 := .value f, %964 := .value g, %967 := .value h, %1020 := .value e,
-    %1022 := .value a]
+  (hdr1 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 cnt E)[%959 := .value b, %960 := .value c, %961 :=
+    .value d, %963 := .value f, %964 := .value g, %967 := .value h, %1020 := .value e, %1022 :=
+    .value a]
 
 /-- `hdr2` on `a … h = v`. -/
 abbrev hdr2v (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (E : ⟪Γ⟫)
@@ -502,7 +597,7 @@ theorem readAt_K {m : MemoryState} {Kp : Pointer} {hw : (Ty.array 80 (.bv 64)).w
     (hi : i < 80) : m.readAt (Kp.add (BitVec.ofNat 64 (i * 8))) 64 = K[i] := by
   have hs : (Ty.bv 64).stride = 64 := rfl
   have hK : fd_sha512_core_ref_K.lit = K := by decide
-  rw [MemoryState.readAt_add_of_readAt hf
+  rw [MemoryState.readAt_add_of_readAt hf.inBounds
       (by
         simp [BitVec.uaddOverflow, ho]; omega)
       (by
@@ -524,7 +619,7 @@ theorem readAt_word {m : MemoryState} {Wp : Pointer} (hf : Fits m Wp 1024)
     (ho : Wp.offset.toNat + 128 < 2 ^ 64) {block : BitVec 1024} (h : m.readAt Wp 1024 = block)
     {i : Nat} (hi : i < 16) :
     m.readAt (Wp.add (BitVec.ofNat 64 (i * 8))) 64 = block.extractLsb' (64 * i) 64 := by
-  rw [MemoryState.readAt_add_of_readAt hf
+  rw [MemoryState.readAt_add_of_readAt hf.inBounds
       (by
         simp [BitVec.uaddOverflow]; omega)
       (by
@@ -548,10 +643,10 @@ theorem slot_offsetInBits {X : Pointer} (hX : X.offset = 0) {k : Nat} (hk : k < 
   omega
 
 theorem readAt_slot_storeAt_self {m : MemoryState} {X : Pointer} (hX : X.offset = 0)
-    (hf : Fits m X 1024) {k : Nat} (hk : k < 16) (x : BitVec 64) :
+    (hf : InBounds m X 1024) {k : Nat} (hk : k < 16) (x : BitVec 64) :
     (m.storeAt (slot X k) x).readAt (slot X k) 64 = x :=
   MemoryState.readAt_storeAt_self
-    (Fits.add_of_le
+    (InBounds.add_of_le
       (by
         simp [BitVec.uaddOverflow, hX]; omega)
       (by
@@ -573,7 +668,7 @@ theorem HoldsX.store {m : MemoryState} {X : Pointer} {Xv : Vector (BitVec 64) 16
   intro k hk
   by_cases hjk : j = k
   · subst hjk
-    rw [readAt_slot_storeAt_self hX hf hj, Vector.getElem_set_self]
+    rw [readAt_slot_storeAt_self hX hf.inBounds hj, Vector.getElem_set_self]
   · rw [readAt_slot_storeAt_ne hX hj hk hjk, h k hk, Vector.getElem_set_ne _ _ hjk]
 
 /-- The memory after the first loop's rounds `i … i + n - 1` stored
@@ -592,33 +687,101 @@ def mem2 (X : Pointer) : (i n : Nat) → Vector (BitVec 64) 16 → MemoryState �
     mem2 X (i + 1) n (Xv.set (i % 16) (xNext Xv i) (Nat.mod_lt _ (by decide)))
       (m.storeAt (slot X (i % 16)) (xNext Xv i))
 
-theorem fits_mem1 {m : MemoryState} : Fits (mem1 X block i n m) p w ↔ Fits m p w := by
+theorem room_mem1 {m : MemoryState} : Room (mem1 X block i n m) p w ↔ Room m p w := by
   induction n generalizing i m with
   | zero => rfl
   | succ n ih => simp [mem1, ih]
 
-theorem fits_mem2 {m : MemoryState} : Fits (mem2 X i n Xv m) p w ↔ Fits m p w := by
+theorem room_mem2 {m : MemoryState} : Room (mem2 X i n Xv m) p w ↔ Room m p w := by
   induction n generalizing i Xv m with
   | zero => rfl
   | succ n ih => simp [mem2, ih]
 
--- local: the lemmas are private, and an exported attribute would name them in importers
-attribute [local simp] fits_mem1 fits_mem2
+theorem inBounds_mem1 {m : MemoryState} : InBounds (mem1 X block i n m) p w ↔ InBounds m p w := by
+  induction n generalizing i m with
+  | zero => rfl
+  | succ n ih => simp [mem1, ih]
 
-theorem Fits.mem1 {m : MemoryState} (h : Fits m p w) : Fits (mem1 X block i n m) p w :=
-  fits_mem1.2 h
+theorem inBounds_mem2 {m : MemoryState} : InBounds (mem2 X i n Xv m) p w ↔ InBounds m p w := by
+  induction n generalizing i Xv m with
+  | zero => rfl
+  | succ n ih => simp [mem2, ih]
 
-theorem Fits.mem2 {m : MemoryState} (h : Fits m p w) : Fits (mem2 X i n Xv m) p w :=
-  fits_mem2.2 h
+theorem Fits.mem1 {m : MemoryState} (h : Fits m p w) : Fits (mem1 X block i n m) p w := by
+  induction n generalizing i m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+theorem Fits.mem2 {m : MemoryState} (h : Fits m p w) : Fits (mem2 X i n Xv m) p w := by
+  induction n generalizing i Xv m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+theorem Room.mem1 {m : MemoryState} (h : Room m p w) : Room (mem1 X block i n m) p w :=
+  room_mem1.2 h
+
+theorem Room.mem2 {m : MemoryState} (h : Room m p w) : Room (mem2 X i n Xv m) p w :=
+  room_mem2.2 h
+
+theorem InBounds.mem1 {m : MemoryState} (h : InBounds m p w) : InBounds (mem1 X block i n m) p w :=
+  inBounds_mem1.2 h
+
+theorem InBounds.mem2 {m : MemoryState} (h : InBounds m p w) : InBounds (mem2 X i n Xv m) p w :=
+  inBounds_mem2.2 h
 
 theorem Words8Fit.mem1 {m : MemoryState} (h : m.Words8Fit p) :
     (mem1 X block i n m).Words8Fit p := by
-  unfold MemoryState.Words8Fit at h ⊢
-  simpa using h
+  induction n generalizing i m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
 
 theorem Words8Fit.mem2 {m : MemoryState} (h : m.Words8Fit p) : (mem2 X i n Xv m).Words8Fit p := by
-  unfold MemoryState.Words8Fit at h ⊢
-  simpa using h
+  induction n generalizing i Xv m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+/-- The first loop's stores from `X[i]` on into room for them: those words are known. -/
+theorem fits_slot_mem1 {m : MemoryState} {X : Pointer} (hX : X.offset = 0) {k : Nat} (hk : k < 16)
+    (hik : i ≤ k) (hkn : k < i + n) (h : Room m X 1024) :
+    Fits (mem1 X block i n m) (slot X k) 64 := by
+  induction n generalizing i m with
+  | zero => omega
+  | succ n ih =>
+    rw [mem1]
+    by_cases hki : k = i
+    · subst hki
+      have hr : Room m (slot X k) 64 :=
+        Room.add_of_le
+          (by
+            simp [BitVec.uaddOverflow, hX]; omega)
+          (by
+            simp; omega)
+          h
+      exact Fits.mem1 (Fits.storeAt_self hr)
+    · exact ih (by omega) (by omega) h.storeAt
+
+/-- After the first loop into room for `X`, all of `X` is known. -/
+theorem fits_mem1 {m : MemoryState} {X : Pointer} (hX : X.offset = 0) (h : Room m X 1024) :
+    Fits (mem1 X block 0 16 m) X 1024 := by
+  have hs (k : Nat) (hk : k < 16) :=
+    fits_slot_mem1 (block := block) (i := 0) (n := 16) hX hk (by omega) (by omega) h
+  have hov (k : Nat) (hk : k < 16) : ¬X.offset.uaddOverflow (BitVec.ofNat 64 (k * 8)) := by
+    simp [BitVec.uaddOverflow, hX]; omega
+  have key : ∀ j, 0 < j → j ≤ 16 → Fits (mem1 X block 0 16 m) X (64 * j) := by
+    intro j
+    induction j with
+    | zero =>
+      intro h0; omega
+    | succ j ih =>
+      intro _ hj
+      rcases Nat.eq_zero_or_pos j with rfl | hj0
+      · simpa [slot, Pointer.add] using hs 0 (by omega)
+      · exact
+          Fits.append (hov j (by omega))
+            (by
+              simp; omega)
+            (by omega) (ih hj0 (by omega)) (hs j (by omega))
+  exact key 16 (by omega) (Nat.le_refl _)
 
 /-- Reads outside `X`'s block are unaffected by `mem1`. -/
 theorem readAt_mem1 {m : MemoryState} (h : p.id ≠ X.id) :
@@ -649,7 +812,8 @@ theorem WF_mem2 {s : GlobalState} (h : s.WF) :
   | zero => exact h
   | succ n ih => exact ih (s := { s with mem := _ }) h.storeAt
 
-attribute [local mlir_transport] Fits.mem1 Fits.mem2 Words8Fit.mem1 Words8Fit.mem2 WF_mem1 WF_mem2
+attribute [local mlir_transport] Fits.mem1 Fits.mem2 Room.mem1 Room.mem2 InBounds.mem1 InBounds.mem2
+  Words8Fit.mem1 Words8Fit.mem2 WF_mem1 WF_mem2
 
 attribute [local mlir_read] readAt_mem1 readAt_mem2
 
@@ -659,12 +823,12 @@ theorem WF_mem12 {s : GlobalState} (h : s.WF) :
   WF_mem2 (s := { s with mem := mem1 X block i' n' s.mem }) (WF_mem1 h)
 
 /-- After the first loop, `X` holds the block's words, byte-swapped. -/
-theorem holdsX_mem1 {m : MemoryState} {X : Pointer} (hX : X.offset = 0) (hf : Fits m X 1024)
+theorem holdsX_mem1 {m : MemoryState} {X : Pointer} (hX : X.offset = 0) (hf : InBounds m X 1024)
     (block : BitVec 1024) : HoldsX (mem1 X block 0 16 m) X (X0 block) := by
   suffices
     ∀ n i (m : MemoryState),
       i + n = 16 →
-        Fits m X 1024 →
+        InBounds m X 1024 →
         (∀ k (hk : k < 16), k < i → m.readAt (slot X k) 64 = (X0 block)[k]) →
         HoldsX (mem1 X block i n m) X (X0 block)
     from this 16 0 m rfl hf (fun _ _ hk => absurd hk (by omega))
@@ -689,7 +853,7 @@ after round `15`, else round `i + 1`. -/
 theorem words_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (i : Nat)
     (hi : i < 16) (a b c d e f g h w k : BitVec 64) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState)) (hwf : S.WF) (hX : X.offset = 0) (hKo : Kp.offset = 0)
-    (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hXK : X.id ≠ Kp.id) (hXf : Fits S.mem X 1024)
+    (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hXK : X.id ≠ Kp.id) (hXf : Room S.mem X 1024)
     (hKf : Fits S.mem Kp 5120) (hWf : Fits S.mem Wp 1024)
     (hw : S.mem.readAt (Wp.add (BitVec.ofNat 64 (i * 8))) 64 = w)
     (hk : S.mem.readAt (Kp.add (BitVec.ofNat 64 (i * 8))) 64 = k)
@@ -723,8 +887,8 @@ theorem words_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitV
       (by
         simp; omega)
       hWf
-  have fx : Fits S.mem (X.add (BitVec.ofNat 64 (i * 8))) 64 :=
-    Fits.add_of_le
+  have fx : Room S.mem (X.add (BitVec.ofNat 64 (i * 8))) 64 :=
+    Room.add_of_le
       (by
         simp [BitVec.uaddOverflow, hX]; omega)
       (by
@@ -792,7 +956,7 @@ theorem words_loop (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitV
     ∀ n i (v : Vector (BitVec 64) 8) (S : GlobalState) (E : ⟪Γ⟫),
       i + n + 1 = 16 →
         S.WF →
-        Fits S.mem X 1024 →
+        Room S.mem X 1024 →
         Fits S.mem Kp 5120 →
         Fits S.mem Wp 1024 →
         S.mem.readAt Wp 1024 = block →
@@ -1024,14 +1188,14 @@ theorem ofNat_add_neg_one (r : Nat) :
   generalize BitVec.ofNat 64 r = x
   bv_decide
 
-/-- `^bb4`: `state[k] += …`, `W += 16UL*sizeof(ulong)`, `--block_cnt`; then `^bb5` after the
-last block, else `^bb1`. -/
+/-- `^bb4`: `state[k] += …`, `W += 16UL*sizeof(ulong)`, `X`'s lifetime's end, `--block_cnt`; then
+`^bb5` after the last block, else `^bb1`. -/
 theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
     (h0 h1 h2 h3 h4 h5 h6 h7 a b c d e f g h : BitVec 64) (r : Nat) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (fd_sha512_core_ref.args (.value st) (.value data) (.value n)).get)
-    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hWo : Wp.offset.toNat + 128 < 2 ^ 64)
-    (hr : r + 1 < 2 ^ 63)
+    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hstX : st.id ≠ X.id)
+    (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hr : r + 1 < 2 ^ 63)
     (hexit :
       r = 0 →
         ∀ E' : ⟪Γ⟫,
@@ -1039,8 +1203,10 @@ theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
             fd_sha512_core_ref.runFrom E' 5
                 { S with
                   mem :=
-                    S.mem.storeWords8 st
-                      #v[h0 + a, h1 + b, h2 + c, h3 + d, h4 + e, h5 + f, h6 + g, h7 + h] } =
+                    (S.mem.storeWords8 st
+                          #v[h0 + a, h1 + b, h2 + c, h3 + d, h4 + e, h5 + f, h6 + g,
+                            h7 + h]).lifetimeEnd
+                      X } =
               R)
     (hback :
       r ≠ 0 →
@@ -1052,8 +1218,10 @@ theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
                 1
                 { S with
                   mem :=
-                    S.mem.storeWords8 st
-                      #v[h0 + a, h1 + b, h2 + c, h3 + d, h4 + e, h5 + f, h6 + g, h7 + h] } =
+                    (S.mem.storeWords8 st
+                          #v[h0 + a, h1 + b, h2 + c, h3 + d, h4 + e, h5 + f, h6 + g,
+                            h7 + h]).lifetimeEnd
+                      X } =
               R) :
     fd_sha512_core_ref.runFrom
         (exit3 st X Kp Wp h0 h1 h2 h3 h4 h5 h6 h7 (BitVec.ofNat 64 (r + 1)) E a b c d e f g h) 4 S =
@@ -1115,7 +1283,7 @@ theorem readAt_block {m : MemoryState} {data : Pointer} {N j : Nat} {D : BitVec 
     (hf : Fits m data (1024 * N)) (hdo : data.offset.toNat + 128 * N < 2 ^ 64) (hj : j < N)
     (h : m.readAt data (1024 * N) = D) :
     m.readAt (data.add (BitVec.ofNat 64 (128 * j))) 1024 = D.extractLsb' (1024 * j) 1024 := by
-  rw [MemoryState.readAt_add_of_readAt hf (block_noOverflow hdo hj)
+  rw [MemoryState.readAt_add_of_readAt hf.inBounds (block_noOverflow hdo hj)
       (by
         simp; omega)
       h]
@@ -1128,14 +1296,46 @@ theorem add_block {data : Pointer} (j : Nat) :
       data.add (BitVec.ofNat 64 (128 * (j + 1))) := by
   rw [Pointer.add_add, Nat.mul_succ, BitVec.ofNat_add]
 
-/-- The memory after blocks `j … j + n - 1`: each block's stores into `X`, then its state words. -/
+/-- The memory a block leaves: its stores into `X` within `X`'s lifetime, then its state words. -/
+def memBlock (st X : Pointer) (block : BitVec 1024) (H : Vector (BitVec 64) 8) (m : MemoryState) :
+    MemoryState :=
+  ((mem2 X 16 64 (X0 block) (mem1 X block 0 16 (m.lifetimeStart X))).storeWords8 st
+        (compress H block)).lifetimeEnd
+    X
+
+/-- The memory after blocks `j … j + n - 1`. -/
 def memBlocks (st X : Pointer) (D : BitVec w) :
     (j n : Nat) → Vector (BitVec 64) 8 → MemoryState → MemoryState
   | _, 0, _, m => m
   | j, n + 1, H, m =>
     let block := D.extractLsb' (1024 * j) 1024
-    memBlocks st X D (j + 1) n (compress H block)
-      ((mem2 X 16 64 (X0 block) (mem1 X block 0 16 m)).storeWords8 st (compress H block))
+    memBlocks st X D (j + 1) n (compress H block) (memBlock st X block H m)
+
+theorem WF_memBlock {s : GlobalState} (h : s.WF) :
+    ({ s with mem := memBlock st X block H s.mem } : GlobalState).WF := by
+  have h₁ :=
+    WF_mem12 (X := X) (Xv := X0 block) (block := block) (i := 16) (n := 64) (i' := 0) (n' := 16)
+      (s := { s with mem := s.mem.lifetimeStart X }) h.lifetimeStart
+  exact (GlobalState.WF.storeWords8 (p := st) (v := compress H block) h₁).lifetimeEnd (p := X)
+
+theorem Words8Fit.memBlock {m : MemoryState} (h : m.Words8Fit p) (hne : p.id ≠ X.id) :
+    (memBlock st X block H m).Words8Fit p :=
+  (Words8Fit.mem2 (Words8Fit.mem1 (h.lifetimeStart hne))).storeWords8.lifetimeEnd hne
+
+theorem InBounds.memBlock {m : MemoryState} (h : InBounds m p w) :
+    InBounds (memBlock st X block H m) p w :=
+  (InBounds.mem2 (InBounds.mem1 h.lifetimeStart)).storeWords8.lifetimeEnd
+
+theorem Fits.memBlock {m : MemoryState} (h : Fits m p w) (hne : p.id ≠ X.id) :
+    Fits (memBlock st X block H m) p w :=
+  (Fits.mem2 (Fits.mem1 (h.lifetimeStart hne))).storeWords8.lifetimeEnd hne
+
+/-- A read outside `X` and the state words: the read before the block. -/
+theorem readAt_memBlock {m : MemoryState} (hst : st.offset.toNat + 56 < 2 ^ 64)
+    (hd : (Range.of st 512).Disjoint (Range.of q w)) (hne : q.id ≠ X.id) :
+    (memBlock st X block H m).readAt q w = m.readAt q w := by
+  rw [memBlock, MemoryState.readAt_lifetimeEnd, MemoryState.readAt_storeWords8_of_disjoint hst hd,
+    readAt_mem2 hne, readAt_mem1 hne, MemoryState.readAt_lifetimeStart]
 
 /-- `X`'s stores are gone once its frame is erased. -/
 theorem eraseFrom_mem1 {m : MemoryState} (h : B ≤ X.id.id) :
@@ -1160,25 +1360,28 @@ theorem eraseFrom_memBlocks {m : MemoryState} {D : BitVec w} (h : B ≤ X.id.id)
       (m.eraseFrom B).storeWords8 st (compressFrom D j (n + 1) H) := by
   induction n generalizing j H m with
   | zero =>
-    simp only [memBlocks, compressFrom, MemoryState.eraseFrom_storeWords8, eraseFrom_mem2 h,
-      eraseFrom_mem1 h]
+    simp only [memBlocks, memBlock, compressFrom, MemoryState.eraseFrom_lifetimeEnd_of_le h,
+      MemoryState.eraseFrom_storeWords8, eraseFrom_mem2 h, eraseFrom_mem1 h,
+      MemoryState.eraseFrom_lifetimeStart_of_le h]
   | succ n
     ih =>
-    rw [memBlocks, ih, MemoryState.eraseFrom_storeWords8, eraseFrom_mem2 h, eraseFrom_mem1 h,
-      MemoryState.storeWords8_storeWords8_self]
+    rw [memBlocks, ih, memBlock, MemoryState.eraseFrom_lifetimeEnd_of_le h,
+      MemoryState.eraseFrom_storeWords8, eraseFrom_mem2 h, eraseFrom_mem1 h,
+      MemoryState.eraseFrom_lifetimeStart_of_le h, MemoryState.storeWords8_storeWords8_self]
     rfl
 
 /-- `update_block` on the state words `H` and the working variables `v`. -/
 theorem update_block_vec (st data X Kp Wp : Pointer) (n : BitVec 64) (H v : Vector (BitVec 64) 8)
     (r : Nat) (S : GlobalState) (E : ⟪Γ⟫) (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (fd_sha512_core_ref.args (.value st) (.value data) (.value n)).get)
-    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hWo : Wp.offset.toNat + 128 < 2 ^ 64)
-    (hr : r + 1 < 2 ^ 63)
+    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hstX : st.id ≠ X.id)
+    (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hr : r + 1 < 2 ^ 63)
     (hexit :
       r = 0 →
         ∀ E' : ⟪Γ⟫,
           E'.args = E.args →
-            fd_sha512_core_ref.runFrom E' 5 { S with mem := S.mem.storeWords8 st (addWords H v) } =
+            fd_sha512_core_ref.runFrom E' 5
+                { S with mem := (S.mem.storeWords8 st (addWords H v)).lifetimeEnd X } =
               R)
     (hback :
       r ≠ 0 →
@@ -1186,18 +1389,21 @@ theorem update_block_vec (st data X Kp Wp : Pointer) (n : BitVec 64) (H v : Vect
           E'.args = E.args →
             fd_sha512_core_ref.runFrom
                 (hdr1v st X Kp (Wp.add 128#64) (addWords H v) (BitVec.ofNat 64 r) E') 1
-                { S with mem := S.mem.storeWords8 st (addWords H v) } =
+                { S with mem := (S.mem.storeWords8 st (addWords H v)).lifetimeEnd X } =
               R) :
     fd_sha512_core_ref.runFrom (exit3v st X Kp Wp H (BitVec.ofNat 64 (r + 1)) E v) 4 S = R :=
   update_block st data X Kp Wp n H[0] H[1] H[2] H[3] H[4] H[5] H[6] H[7] v[0] v[1] v[2] v[3] v[4]
-    v[5] v[6] v[7] r S E R hArgs hwf hst hWo hr hexit hback
+    v[5] v[6] v[7] r S E R hArgs hwf hst hstX hWo hr hexit hback
 
+-- the continuation's 48 env reads through the loops' envs, and `X`'s lifetime start: just over
+-- 200000 heartbeats
+set_option maxHeartbeats 400000 in
 /-- A block's rounds from `^bb1`: the two loops, then `^bb4`. -/
 theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64)
     (block : BitVec 1024) (S : GlobalState) (E₁ : ⟪Γ⟫) (R : PoisonOr (Vals [] × GlobalState))
     {hw : (Ty.array 80 (.bv 64)).width = 5120} (hwf : S.WF) (hX : X.offset = 0)
     (hKo : Kp.offset = 0) (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hXK : X.id ≠ Kp.id)
-    (hXW : X.id ≠ Wp.id) (hXf : Fits S.mem X 1024) (hKf : Fits S.mem Kp 5120)
+    (hXW : X.id ≠ Wp.id) (hXb : InBounds S.mem X 1024) (hKf : Fits S.mem Kp 5120)
     (hWf : Fits S.mem Wp 1024) (hW : S.mem.readAt Wp 1024 = block)
     (hKr : S.mem.readAt Kp 5120 = Ty.flatBits fd_sha512_core_ref_K.lit (hw := hw))
     (hcont :
@@ -1205,7 +1411,8 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
         E'.args = E₁.args →
           fd_sha512_core_ref.runFrom
               (exit3v st X Kp Wp H cnt E' (loop2 16 (loop1 block 0 H) (X0 block))) 4
-              { S with mem := mem2 X 16 64 (X0 block) (mem1 X block 0 16 S.mem) } =
+              { S with
+                mem := mem2 X 16 64 (X0 block) (mem1 X block 0 16 (S.mem.lifetimeStart X)) } =
             R) :
     fd_sha512_core_ref.runFrom (hdr1v st X Kp Wp H cnt E₁) 1 S = R := by
   block_init
@@ -1216,9 +1423,15 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
   have hA : E.args = E₁.args := by
     rw [hE]; simp only [Env.write_args]
   step_loop using words_loop st X Kp Wp H cnt block R hX hKo hWo hXK hXW 15 0 H
+  -- the stores into the started `X` make it known
+  have hXr := room_mem1.1 (hS ▸ hroom_X)
+  have hXf : Fits S.mem X 1024 := by
+    rw [hS]
+    exact fits_mem1 hX hXr
   have hXv : HoldsX S.mem X (X0 block) := by
     rw [hS]
-    exact holdsX_mem1 hX (fits_mem1.1 (hS ▸ hXf)) block
+    exact holdsX_mem1 hX hXr.inBounds block
+  clear hXr hroom_X
   have hA : E.args = E₁.args := by
     rw [hE]; simp only [Env.write_args]; exact hArgs₀
   step_loop using schedule_loop st X Kp Wp H cnt R hX hKo hXK 63 16 (loop1 block 0 H) (X0 block)
@@ -1231,14 +1444,14 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
 theorem blocks_loop (st data X Kp : Pointer) (n : BitVec 64) (N : Nat) (D : BitVec (1024 * N))
     (R : PoisonOr (Vals [] × GlobalState)) {hw : (Ty.array 80 (.bv 64)).width = 5120}
     (hX : X.offset = 0) (hKo : Kp.offset = 0) (hdo : data.offset.toNat + 128 * N < 2 ^ 64)
-    (hXK : X.id ≠ Kp.id) (hXd : X.id ≠ data.id) (hKst : Kp.id ≠ st.id)
+    (hXK : X.id ≠ Kp.id) (hXd : X.id ≠ data.id) (hKst : Kp.id ≠ st.id) (hstX : st.id ≠ X.id)
     (hsep : (Range.of st 512).Disjoint (Range.of data (1024 * N))) :
     ∀ r j (H : Vector (BitVec 64) 8) (S : GlobalState) (E : ⟪Γ⟫),
       j + r + 1 = N →
         E.args = (fd_sha512_core_ref.args (.value st) (.value data) (.value n)).get →
         S.WF →
         S.mem.Words8Fit st →
-        Fits S.mem X 1024 →
+        InBounds S.mem X 1024 →
         Fits S.mem Kp 5120 →
         Fits S.mem data (1024 * N) →
         S.mem.readAt data (1024 * N) = D →
@@ -1254,51 +1467,57 @@ theorem blocks_loop (st data X Kp : Pointer) (n : BitVec 64) (N : Nat) (D : BitV
   intro r
   induction r with
   | zero =>
-    intro j H S E hj hA hwf hst hXf hKf hdf hD hKr hK
+    intro j H S E hj hA hwf hst hXb hKf hdf hD hKr hK
     exact
       rounds_block st X Kp _ H _ _ S E R hwf hX hKo
         (by
           rw [block_offset hdo (by omega)]; omega)
-        hXK hXd hXf hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
+        hXK hXd hXb hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
         fun E₁ h₁ =>
-        update_block_vec st data X Kp _ n H _ 0 _ E₁ R (h₁.trans hA) (WF_mem12 hwf)
-          (Words8Fit.mem2 (Words8Fit.mem1 hst))
+        update_block_vec st data X Kp _ n H _ 0 _ E₁ R (h₁.trans hA) (WF_mem12 hwf.lifetimeStart)
+          (Words8Fit.mem2 (Words8Fit.mem1 (hst.lifetimeStart hstX))) hstX
           (by
             rw [block_offset hdo (by omega)]; omega)
           (by decide) (fun _ E₂ h₂ => hK E₂ (h₂.trans h₁)) (fun h => absurd rfl h)
   | succ r ih =>
-    intro j H S E hj hA hwf hst hXf hKf hdf hD hKr hK
+    intro j H S E hj hA hwf hst hXb hKf hdf hD hKr hK
     refine
       rounds_block st X Kp _ H _ _ S E R hwf hX hKo
         (by
           rw [block_offset hdo (by omega)]; omega)
-        hXK hXd hXf hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
+        hXK hXd hXb hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
         fun E₁ h₁ =>
-        update_block_vec st data X Kp _ n H _ (r + 1) _ E₁ R (h₁.trans hA) (WF_mem12 hwf)
-          (Words8Fit.mem2 (Words8Fit.mem1 hst))
+        update_block_vec st data X Kp _ n H _ (r + 1) _ E₁ R (h₁.trans hA)
+          (WF_mem12 hwf.lifetimeStart) (Words8Fit.mem2 (Words8Fit.mem1 (hst.lifetimeStart hstX)))
+          hstX
           (by
             rw [block_offset hdo (by omega)]; omega)
           (by omega) (fun h => absurd h (by omega)) (fun _ E₂ h₂ => ?_)
     rw [add_block]
-    exact
-      ih (j + 1) _ _ E₂ (by omega) (h₂.trans (h₁.trans hA)) (WF_mem12 hwf).storeWords8
-        (Words8Fit.mem2 (Words8Fit.mem1 hst)).storeWords8 (Fits.mem2 (Fits.mem1 hXf)).storeWords8
-        (Fits.mem2 (Fits.mem1 hKf)).storeWords8 (Fits.mem2 (Fits.mem1 hdf)).storeWords8
-        (by
-          rw [MemoryState.readAt_storeWords8_of_disjoint hst.1 hsep, readAt_mem2 hXd.symm,
-            readAt_mem1 hXd.symm]
-          exact hD)
-        (by
-          rw [MemoryState.readAt_storeWords8_of_disjoint hst.1 (Range.disjoint_of_id_ne hKst.symm),
-            readAt_mem2 hXK.symm, readAt_mem1 hXK.symm]
-          exact hKr)
-        fun E₃ h₃ => hK E₃ (h₃.trans (h₂.trans h₁))
+    -- the block's memory, as `memBlock`
+    change
+      fd_sha512_core_ref.runFrom _ 1
+          { S with mem := memBlock st X (D.extractLsb' (1024 * j) 1024) H S.mem } =
+        R
+    apply ih (j + 1)
+    · omega
+    · exact h₂.trans (h₁.trans hA)
+    · exact WF_memBlock hwf
+    · exact Words8Fit.memBlock hst hstX
+    · exact InBounds.memBlock hXb
+    · exact Fits.memBlock hKf hXK.symm
+    · exact Fits.memBlock hdf hXd.symm
+    · rw [readAt_memBlock hst.1 hsep hXd.symm]
+      exact hD
+    · rw [readAt_memBlock hst.1 (Range.disjoint_of_id_ne hKst.symm) hXK.symm]
+      exact hKr
+    · exact fun E₃ h₃ => hK E₃ (h₃.trans (h₂.trans h₁))
 
 /-- A read of the entry state's memory, through `K`'s block and `X`'s `alloca`. -/
-theorem readAt_frame {s : GlobalState} {x : BitVec v} (hwf : s.WF) (h : Fits s.mem q w) :
+theorem readAt_frame {s : GlobalState} {x : BitVec v} (hwf : s.WF) (h : InBounds s.mem q w) :
     (({ alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ k x } :
                 GlobalState).alloca
-            b).mem.readAt
+            b d).mem.readAt
         q w =
       s.mem.readAt q w := by
   rw [MemoryState.readAt_alloca hwf.addBlock (h.addBlock hwf), MemoryState.readAt_addBlock hwf h]
@@ -1340,7 +1559,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
   finish_block
   have hD : S.mem.readAt data (1024 * n.toNat) = S₀.mem.readAt data (1024 * n.toNat) := by
     rw [hS]
-    exact readAt_frame hwf₀ hdata₀
+    exact readAt_frame hwf₀ hdata₀.inBounds
   have hN : n.toNat - 1 + 1 = n.toNat :=
     Nat.sub_add_cancel
       (Nat.pos_of_ne_zero
@@ -1358,7 +1577,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
                 (S₀.mem.readWords8 st) S.mem }) := by
     step_loop using
       blocks_loop st data X Kp n n.toNat _ _ hX_off hKp_off hdo hXK hdata_ne_X.symm hst_ne_Kp.symm
-        hsep (n.toNat - 1) 0 (S₀.mem.readWords8 st)
+        hst_ne_X hsep (n.toNat - 1) 0 (S₀.mem.readWords8 st)
     · rw [← hKp, ← hS]
       exact hread_Kp
     block_init

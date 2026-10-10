@@ -50,7 +50,7 @@ attribute [local mlir_read] MemoryState.readAt_alloca_of_ne
 /-- `selectznz` stores `spec c x y` at `out`. All loads of `x` and `y` come before the stores, so
 `out` may alias either. The five temporaries are freed again: only the counter moves on. -/
 public theorem fiat_25519_selectznz.call_eq (out : Pointer) (c : BitVec 8) (x y : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hout : s.mem.LimbsFit out) (hx : s.mem.LimbsFit x)
+    (s : GlobalState) (hwf : s.WF) (hout : s.mem.LimbsRoom out) (hx : s.mem.LimbsFit x)
     (hy : s.mem.LimbsFit y) :
     fiat_25519_selectznz.call
         (fiat_25519_selectznz.args (.value out) (.value c) (.value x) (.value y)) s =

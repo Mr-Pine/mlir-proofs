@@ -52,7 +52,7 @@ at `r` and returns `r`, else it returns null and stores nothing. `buf` is read b
 written, so `r` may alias it. The globals', temporaries' and callees' blocks are freed again: only
 the counter moves on, by 79 blocks (57 on failure). -/
 public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (hbuf : Fits s.mem buf (8 * 32))
+    (hr : s.mem.PointRoom r) (hbuf : Fits s.mem buf (8 * 32))
     (hbuf_off : ¬buf.offset.uaddOverflow 32#64) :
     fd_ed25519_point_frombytes.call (fd_ed25519_point_frombytes.args (.value r) (.value buf)) s =
       .value
@@ -88,12 +88,10 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
   clear hread_d hread_one
   limbs_fit d
   limbs_fit one
-  limbs_fit x
-  limbs_fit y
-  limbs_fit t
-  limbs_fit u
-  limbs_fit v
   iterate 3 step_pure
+  limbs_room x
+  limbs_room y
+  limbs_room t
   -- fd_f25519_frombytes( y, buf );
   step_call using fd_f25519_frombytes.call_eq
   name_limbs ly
@@ -101,6 +99,8 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
   step_pure
   step_load with buf31 consuming hbuf_read hbuf
   iterate 2 step_pure
+  limbs_room u
+  limbs_room v
   -- fd_f25519_sqr( u, y ); fd_f25519_mul( v, u, fd_f25519_d );
   step_call using fd_f25519_sqr.call_eq
   name_limbs lu0

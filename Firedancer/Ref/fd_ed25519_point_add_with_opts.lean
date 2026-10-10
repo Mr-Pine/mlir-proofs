@@ -60,10 +60,11 @@ set_option hygiene false in
 /-- From `^bb7`: `last_block`, then the frame erased and `spec` unfolded along the branches. -/
 local macro "last_close" : tactic =>
   `(tactic|
-    ( rw [fd_ed25519_point_add_with_opts.last_block r r1 r2 r3 r4 r5 r6 r7 r8 t skip_last_mul
-          (n := S₀.alloc.nextFreeBlock) hArgs (by env_reads) hwf hr hr1_limbs hr2_limbs hr3_limbs
-          hr4_limbs hr5_limbs hr6_limbs hr7_limbs hr8_limbs hsep (by slot_bound) (by slot_bound)
-          (by slot_bound) (by slot_bound) hread_r5 hread_r6 hread_r7 hread_r8]
+    ( rw [fd_ed25519_point_add_with_opts.last_block r r1 r2 r3 r4 r5 r6 r7 r8 t skip_last_mul (n :=
+          S₀.alloc.nextFreeBlock) hArgs (by env_reads) hwf hr (by mem_fact) (by mem_fact)
+          (by mem_fact) (by mem_fact) hr5_limbs hr6_limbs hr7_limbs hr8_limbs hsep (by slot_bound)
+          (by slot_bound) (by slot_bound) (by slot_bound) (by slot_bound) (by slot_bound)
+          (by slot_bound) (by slot_bound) (by slot_bound) hread_r5 hread_r6 hread_r7 hread_r8]
       clear_reads
       subst hS
       erase_frame
@@ -88,6 +89,7 @@ local macro "muls " "[" dead:ident,* "]" next:tactic : tactic =>
         step_pure
         step_call using fd_f25519_add_nr.call_eq
         name_limbs lt
+        limbs_stored t
         clear haZ_read haZ
         iterate 3 step_pure
         step_call using fd_f25519_mul4.call_eq
@@ -96,6 +98,7 @@ local macro "muls " "[" dead:ident,* "]" next:tactic : tactic =>
         name_limbs l7
         name_limbs l6
         name_limbs l5
+        limbs_stored r5 r6 r7 r8
         finish_block
         $next:tactic
       case isFalse =>
@@ -109,10 +112,12 @@ local macro "muls " "[" dead:ident,* "]" next:tactic : tactic =>
         name_limbs l7
         name_limbs l6
         name_limbs l5
+        limbs_stored r5 r6 r7
         step_pure
         step_call using fd_f25519_add.call_eq
         clear haZ_read haZ
         name_limbs l8
+        limbs_stored r8
         finish_block
         $next:tactic))
 
@@ -127,23 +132,24 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
         (fd_ed25519_point_add_with_opts.args (.value r) (.value a) (.value b) (.value b_Z_is_one)
             (.value b_is_precomputed) (.value skip_last_mul)).get)
     (hR :
-      E ⊨ [%1901 := 0#32, %1903 := r1, %1904 := r2, %1905 := r3, %1906 := r4, %1907 := r5, %1908 := r6, %1909 := r7,
-        %1910 := r8, %1911 := t])
-    (hwf : S.WF) (hr : S.mem.PointFit r) (hr1 : S.mem.LimbsFit r1) (hr2 : S.mem.LimbsFit r2)
-    (hr3 : S.mem.LimbsFit r3) (hr4 : S.mem.LimbsFit r4) (hr5 : S.mem.LimbsFit r5)
+      E ⊨ [%1901 := 0#32, %1903 := r1, %1904 := r2, %1905 := r3, %1906 := r4, %1907 := r5, %1908 :=
+        r6, %1909 := r7, %1910 := r8, %1911 := t])
+    (hwf : S.WF) (hr : S.mem.PointRoom r) (hr1 : S.mem.LimbsRoom r1) (hr2 : S.mem.LimbsRoom r2)
+    (hr3 : S.mem.LimbsRoom r3) (hr4 : S.mem.LimbsRoom r4) (hr5 : S.mem.LimbsFit r5)
     (hr6 : S.mem.LimbsFit r6) (hr7 : S.mem.LimbsFit r7) (hr8 : S.mem.LimbsFit r8)
     (hsep : [r.id, r1.id, r2.id, r3.id, r4.id, r5.id, r6.id, r7.id, r8.id].Nodup)
     (hn1 : n ≤ r1.id.id) (hn2 : n ≤ r2.id.id) (hn3 : n ≤ r3.id.id) (hn4 : n ≤ r4.id.id)
-    (h5 : S.mem.readLimbs r5 = v5) (h6 : S.mem.readLimbs r6 = v6) (h7 : S.mem.readLimbs r7 = v7)
-    (h8 : S.mem.readLimbs r8 = v8) :
+    (hn5 : n ≤ r5.id.id) (hn6 : n ≤ r6.id.id) (hn7 : n ≤ r7.id.id) (hn8 : n ≤ r8.id.id)
+    (hnt : n ≤ t.id.id) (h5 : S.mem.readLimbs r5 = v5) (h6 : S.mem.readLimbs r6 = v6)
+    (h7 : S.mem.readLimbs r7 = v7) (h8 : S.mem.readLimbs r8 = v8) :
     (fd_ed25519_point_add_with_opts.runFrom E 7 S >>= fun p =>
         PoisonOr.value (p.1, ({ alloc := p.2.alloc, mem := p.2.mem.eraseFrom n } : GlobalState))) =
       .value
         (.cons (.value r) .nil,
           ({ alloc := S.alloc,
-              mem :=
-                (S.mem.eraseFrom n).storePoint r
-                  (fd_ed25519_point_add_with_opts.last v5 v6 v7 v8 skip_last_mul) } :
+             mem :=
+               (S.mem.eraseFrom n).storePoint r
+                 (fd_ed25519_point_add_with_opts.last v5 v6 v7 v8 skip_last_mul) } :
             GlobalState)) := by
   block_init
   step_pure
@@ -159,12 +165,17 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
     step_call using fd_f25519_mul4.call_eq
     finish_block
     block_init
+    clear_facts r r1 r2 r3 r4 r5 r6 r7 r8
     iterate 9 step_pure
     finish_block
     simp only [hS, fd_ed25519_point_add_with_opts.last, hbr, ↓reduceIte,
       MemoryState.eraseFrom_storeLimbs, MemoryState.storeLimbs_eraseFrom_of_le hn1,
       MemoryState.storeLimbs_eraseFrom_of_le hn2, MemoryState.storeLimbs_eraseFrom_of_le hn3,
-      MemoryState.storeLimbs_eraseFrom_of_le hn4]
+      MemoryState.storeLimbs_eraseFrom_of_le hn4, MemoryState.eraseFrom_lifetimeEnd_of_le hn1,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn2, MemoryState.eraseFrom_lifetimeEnd_of_le hn3,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn4, MemoryState.eraseFrom_lifetimeEnd_of_le hn5,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn6, MemoryState.eraseFrom_lifetimeEnd_of_le hn7,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn8, MemoryState.eraseFrom_lifetimeEnd_of_le hnt]
     rfl
   case isFalse =>
     block_init
@@ -179,18 +190,26 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
     step_call using fd_f25519_add_nr.call_eq
     finish_block
     block_init
+    clear_facts r r1 r2 r3 r4 r5 r6 r7 r8
     iterate 9 step_pure
     finish_block
     simp only [hS, fd_ed25519_point_add_with_opts.last, hbr, ↓reduceIte,
-      MemoryState.eraseFrom_storeLimbs]
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn1, MemoryState.eraseFrom_lifetimeEnd_of_le hn2,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn3, MemoryState.eraseFrom_lifetimeEnd_of_le hn4,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn5, MemoryState.eraseFrom_lifetimeEnd_of_le hn6,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hn7, MemoryState.eraseFrom_lifetimeEnd_of_le hn8,
+      MemoryState.eraseFrom_lifetimeEnd_of_le hnt, MemoryState.eraseFrom_storeLimbs]
     rfl
 
+-- the nine temporaries' lifetime starts, then their facts through every step: about 300000
+-- heartbeats
+set_option maxHeartbeats 400000 in
 /-- `fd_ed25519_point_add_with_opts` stores `spec` of the points at `a` and `b` at `r` and returns
 `r`. `r` may alias `a` or `b`: every read of them comes before the first store to `r`. The global
 `fd_f25519_k` and the nine temporaries count ten blocks. -/
 public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
     (b_Z_is_one b_is_precomputed skip_last_mul : BitVec 32) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) (hb : s.mem.PointFit b) :
+    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) (hb : s.mem.PointFit b) :
     fd_ed25519_point_add_with_opts.call
         (fd_ed25519_point_add_with_opts.args (.value r) (.value a) (.value b) (.value b_Z_is_one)
           (.value b_is_precomputed) (.value skip_last_mul))
@@ -229,18 +248,18 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
   have hk_read := fd_f25519_k.readLimbs hk_fits hk_off hread_k
   clear hread_k
   limbs_fit k
-  limbs_fit r1
-  limbs_fit r2
-  limbs_fit r3
-  limbs_fit r4
-  limbs_fit r5
-  limbs_fit r6
-  limbs_fit r7
-  limbs_fit r8
-  limbs_fit t
+  limbs_room r1
+  limbs_room r2
+  limbs_room r3
+  limbs_room r4
+  limbs_room r5
+  limbs_room r6
+  limbs_room r7
+  limbs_room r8
+  limbs_room t
   have hsep : [r.id, r1.id, r2.id, r3.id, r4.id, r5.id, r6.id, r7.id, r8.id].Nodup := by
-    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_or,
-      List.nodup_nil, and_true]
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_or, List.nodup_nil,
+      and_true]
     and_intros <;> mem_fact
   -- the coordinates' limbs fit; of the points only their offsets stay, for the `getelementptr`s
   have haX := ha.limbsFit_X
@@ -257,8 +276,10 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
   step_pure
   step_call using fd_f25519_sub_nr.call_eq
   name_limbs l1
+  limbs_stored r1
   step_call using fd_f25519_add_nr.call_eq
   name_limbs l3
+  limbs_stored r3
   clear haX_read haY_read haX haY
   step_pure
   step_pure
@@ -271,10 +292,12 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
     name_limbs l2
     step_call using fd_f25519_add_nr.call_eq
     name_limbs l4
+    limbs_stored r2 r4
     clear hbX_read hbY_read hbX hbY
     finish_block
-    muls [hread_r2, hread_r4]
-      ( block_init
+    muls [hread_r2,
+      hread_r4](
+        block_init
         -- if( !b_is_precomputed ) fd_f25519_mul( r7, r7, fd_f25519_k );
         finish_block
         block_init
@@ -284,8 +307,9 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
   case isFalse =>
     branch hpre
     clear hk_read hk_limbs
-    muls [hbX_read, hbY_read, hbX, hbY]
-      ( block_init
+    muls [hbX_read, hbY_read, hbX,
+      hbY](
+        block_init
         -- if( !b_is_precomputed ): not taken
         finish_block
         last_close)

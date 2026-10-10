@@ -30,7 +30,9 @@ private def data : Pointer :=
 /-- The state block holding `h`, the data block holding `bytes` (`n` blocks of 128 bytes). -/
 private def state (h : Vector (BitVec 64) 8) (n : Nat) (bytes : BitVec (1024 * n)) : GlobalState :=
   let s : GlobalState :=
-    ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨64, 0⟩), (⟨1⟩, ⟨128 * n, bytes.cast (by omega)⟩)]⟩⟩
+    ⟨⟨2⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes (128 * n) (bytes.cast (by omega)))]⟩⟩
   { s with mem := s.mem.storeWords8 st h }
 
 /-- The state words after the run, or `none` for UB / out of fuel. -/

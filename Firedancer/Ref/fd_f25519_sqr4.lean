@@ -13,9 +13,9 @@ section Proof
 /-- `fd_f25519_sqr4` stores its 4 squares in order. No output is in the block of a later input, so each
 square is of the inputs as they were. -/
 public theorem fd_f25519_sqr4.call_eq (r1 a1 r2 a2 r3 a3 r4 a4 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr1 : s.mem.LimbsFit r1) (ha1 : s.mem.LimbsFit a1) (hr2 : s.mem.LimbsFit r2)
-    (ha2 : s.mem.LimbsFit a2) (hr3 : s.mem.LimbsFit r3) (ha3 : s.mem.LimbsFit a3)
-    (hr4 : s.mem.LimbsFit r4) (ha4 : s.mem.LimbsFit a4) (h1a2 : r1.id ≠ a2.id)
+    (hwf : s.WF) (hr1 : s.mem.LimbsRoom r1) (ha1 : s.mem.LimbsFit a1) (hr2 : s.mem.LimbsRoom r2)
+    (ha2 : s.mem.LimbsFit a2) (hr3 : s.mem.LimbsRoom r3) (ha3 : s.mem.LimbsFit a3)
+    (hr4 : s.mem.LimbsRoom r4) (ha4 : s.mem.LimbsFit a4) (h1a2 : r1.id ≠ a2.id)
     (h1a3 : r1.id ≠ a3.id) (h1a4 : r1.id ≠ a4.id) (h2a3 : r2.id ≠ a3.id) (h2a4 : r2.id ≠ a4.id)
     (h3a4 : r3.id ≠ a4.id) :
     fd_f25519_sqr4.call

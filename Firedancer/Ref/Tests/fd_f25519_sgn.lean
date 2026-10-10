@@ -11,7 +11,7 @@ private def a : Pointer :=
 
 /-- A 40-byte block holding the limbs `l`. -/
 private def state (l : BitVec 320) : GlobalState :=
-  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, l⟩)]⟩⟩
+  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 l)]⟩⟩
 
 /-- `sgn a`'s result if it is `spec` of `a`'s limbs, `a` is unchanged and the counter moved on by
 22 blocks; else `none`. -/

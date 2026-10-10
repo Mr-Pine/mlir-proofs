@@ -14,7 +14,7 @@ private def src : Pointer :=
 
 /-- Two 40-byte blocks: `dst` zeroed, `src` holding `bytes`. -/
 private def state (bytes : BitVec 320) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, bytes⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 bytes)]⟩⟩
 
 private def srcBytes : BitVec 320 :=
   0x05050505050505050404040404040404030303030303030302020202020202020101010101010101#320

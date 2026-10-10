@@ -33,7 +33,7 @@ theorem fd_f25519_sgn.spec_lt (a : Fin 5 → BitVec 64) : (fd_f25519_sgn.spec a)
 /-- `fd_f25519_abs` stores `spec a` at `r` and returns `r`; `r` may alias `a`. The temporary and
 the callees' blocks are freed again: only the counter moves on, by 28 blocks. -/
 public theorem fd_f25519_abs.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.LimbsFit r) (ha : s.mem.LimbsFit a) :
+    (hr : s.mem.LimbsRoom r) (ha : s.mem.LimbsFit a) :
     fd_f25519_abs.call (fd_f25519_abs.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,
@@ -45,7 +45,7 @@ public theorem fd_f25519_abs.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   -- fd_f25519_t neg_a[1];
   step_alloca with neg_a
   step_pure
-  have hneg_a_limbs := MemoryState.LimbsFit.of_fits hneg_a_fits hneg_a_off
+  limbs_room neg_a
   -- fd_f25519_neg( neg_a, a );
   step_call using fd_f25519_neg.call_eq
   -- return fd_f25519_if( r, fd_f25519_sgn(a), neg_a, a );

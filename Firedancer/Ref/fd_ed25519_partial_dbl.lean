@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
+public import Firedancer.Common.Tactics
 public import Firedancer.Ref.fd_f25519_add
 public import Firedancer.Ref.fd_f25519_sub
 public import Firedancer.Ref.fd_f25519_add_nr
@@ -38,7 +39,7 @@ section Proof
 /-- `fd_ed25519_partial_dbl` stores `spec` of the point at `a` at `r` and returns `r`; all reads of `a`
 come first, so `r` may alias it. Its five temporaries count five blocks. -/
 public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) :
+    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) :
     fd_ed25519_partial_dbl.call (fd_ed25519_partial_dbl.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,
@@ -52,13 +53,12 @@ public theorem fd_ed25519_partial_dbl.call_eq (r a : Pointer) (s : GlobalState) 
   step_alloca with r3
   step_alloca with r4
   step_alloca with r5
-  have hr1 := MemoryState.LimbsFit.of_fits hr1_fits hr1_off
-  have hr2 := MemoryState.LimbsFit.of_fits hr2_fits hr2_off
-  have hr3 := MemoryState.LimbsFit.of_fits hr3_fits hr3_off
-  have hr4 := MemoryState.LimbsFit.of_fits hr4_fits hr4_off
-  have hr5 := MemoryState.LimbsFit.of_fits hr5_fits hr5_off
-  clear hr1_fits hr2_fits hr3_fits hr4_fits hr5_fits
   iterate 5 step_pure
+  limbs_room r1
+  limbs_room r2
+  limbs_room r3
+  limbs_room r4
+  limbs_room r5
   -- fd_f25519_add_nr( r1, a->X, a->Y );
   step_pure
   step_call using fd_f25519_add_nr.call_eq

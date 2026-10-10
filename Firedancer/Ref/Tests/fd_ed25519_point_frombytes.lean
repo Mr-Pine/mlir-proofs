@@ -14,7 +14,7 @@ private def buf : Pointer :=
 
 /-- A zeroed 160-byte block for `r` and a 32-byte block holding `b`; block 0 is null's. -/
 private def state (b : BitVec 256) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨160, 0⟩), (⟨2⟩, ⟨32, b⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 b)]⟩⟩
 
 /-- The stored point's coordinates `X, Y, Z, T`, canonically encoded, if `frombytes r buf` returns
 `r`, leaves `buf` unchanged and moves the counter on by 79 blocks; `none` if it returns null,

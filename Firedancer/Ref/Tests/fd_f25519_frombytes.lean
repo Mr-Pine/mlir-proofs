@@ -14,7 +14,7 @@ private def buf : Pointer :=
 
 /-- A 40-byte block for `r`, zeroed, and a 32-byte block holding `bytes`. -/
 private def state (bytes : BitVec 256) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨32, bytes⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 32 bytes)]⟩⟩
 
 /-- Distinct bytes `0x01 … 0x1f`, then `0xff`: the top bit set. -/
 private def bytes : BitVec 256 :=

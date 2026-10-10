@@ -14,7 +14,7 @@ private def z : Pointer :=
 
 /-- Two 40-byte blocks: `r` zeroed, `z` holding `bytes`. -/
 private def state (bytes : BitVec 320) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, bytes⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 bytes)]⟩⟩
 
 /-- The limbs `1, 2, 3, 4, 5`. -/
 private def zBytes : BitVec 320 :=

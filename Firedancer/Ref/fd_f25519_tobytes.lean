@@ -24,7 +24,7 @@ section Proof
 /-- `fd_f25519_tobytes` stores `spec a` at `out` (32 bytes) and returns `out`; `out` may alias
 `a`. `fiat_25519_to_bytes`'s 21 slots are freed again: only the counter moves on. -/
 public theorem fd_f25519_tobytes.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : Fits s.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
+    (hout : Room s.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
     (ha : s.mem.LimbsFit a) :
     fd_f25519_tobytes.call (fd_f25519_tobytes.args (.value out) (.value a)) s =
       .value

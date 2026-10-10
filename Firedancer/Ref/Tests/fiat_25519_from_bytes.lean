@@ -14,11 +14,11 @@ private def buf : Pointer :=
 
 /-- A 40-byte block for `out`, zeroed, and a 32-byte block holding `bytes`. -/
 private def state (bytes : BitVec 256) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨32, bytes⟩)]⟩⟩
+  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 32 bytes)]⟩⟩
 
 /-- One 40-byte block whose first 32 bytes hold `bytes`, for `out` and `buf` both. -/
 private def aliased (bytes : BitVec 256) : GlobalState :=
-  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, bytes.setWidth 320⟩)]⟩⟩
+  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 (bytes.setWidth 320))]⟩⟩
 
 /-- Every bit set, bit 255 too: the masked top bit and every limb full. -/
 private def ones : BitVec 256 :=

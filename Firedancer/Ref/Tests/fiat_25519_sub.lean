@@ -17,7 +17,8 @@ private def y : Pointer :=
 
 /-- Three 40-byte blocks: `out` zeroed, `x` and `y` holding `xb` and `yb`. -/
 private def state (xb yb : BitVec 320) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, xb⟩), (⟨2⟩, ⟨40, yb⟩)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 xb), (⟨2⟩, .ofBytes 40 yb)]⟩⟩
 
 /-- The limbs `1, 2, 3, 4, 5` and `10, 20, 30, 40, 50`. -/
 private def xBytes : BitVec 320 :=

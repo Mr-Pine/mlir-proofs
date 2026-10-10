@@ -24,7 +24,7 @@ section Proof
 /-- `fd_sha512_init` stores `sha512IV` at `state` (byte `128`) and zeroes `buf_used`, `bit_cnt_lo`
 and `bit_cnt_hi` (bytes `200 … 223`), and returns `sha`. -/
 public theorem fd_sha512_init.call_eq (sha : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hfits : Fits s.mem sha (8 * 256)) (hoff : ¬sha.offset.uaddOverflow 256#64) :
+    (hroom : Room s.mem sha (8 * 256)) (hoff : ¬sha.offset.uaddOverflow 256#64) :
     fd_sha512_init.call (fd_sha512_init.args (.value sha)) s =
       .value
         (.cons (.value sha) .nil,

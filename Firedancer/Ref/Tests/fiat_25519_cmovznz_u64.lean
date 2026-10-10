@@ -7,7 +7,7 @@ meta import Firedancer.Ref.fiat_25519_cmovznz_u64
 namespace MLIR.Firedancer.Ref
 
 private def s0 : GlobalState :=
-  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨8, 0⟩)]⟩⟩
+  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 8 0)]⟩⟩
 
 private def p0 : Pointer :=
   ⟨⟨0⟩, 0⟩
@@ -28,14 +28,16 @@ private def out (c : BitVec 8) (a b : BitVec 64) : Option (BitVec 64) :=
 
 #guard out 7#8 11#64 22#64 == some 22#64
 
-/-- A poison argument that the store depends on is UB. -/
+/-- Which of the 64 bits at `p0` are defined after the run with a poison condition, or `none` for
+UB. -/
 private def outPoison : Option (BitVec 64) :=
   match
     fiat_25519_cmovznz_u64.eval 1
       (fiat_25519_cmovznz_u64.args (.value p0) .poison (.value 11#64) (.value 22#64)) s0 with
-  | .value (some _, s) => some (s.mem.readAt p0 64)
+  | .value (some _, s) => some (s.mem.definedAt p0 64)
   | _ => none
 
-#guard outPoison.isNone
+-- A poison value the store depends on is stored as undefined bits.
+#guard outPoison == some 0#64
 
 end MLIR.Firedancer.Ref

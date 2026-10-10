@@ -22,7 +22,7 @@ section Proof
 
 /-- `fd_f25519_add_nr` stores `spec a b` at `r` and returns `r`; `r` may alias `a` or `b`. -/
 public theorem fd_f25519_add_nr.call_eq (r a b : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.LimbsFit r) (ha : s.mem.LimbsFit a) (hb : s.mem.LimbsFit b) :
+    (hr : s.mem.LimbsRoom r) (ha : s.mem.LimbsFit a) (hb : s.mem.LimbsFit b) :
     fd_f25519_add_nr.call (fd_f25519_add_nr.args (.value r) (.value a) (.value b)) s =
       .value
         (.cons (.value r) .nil,

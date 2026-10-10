@@ -92,19 +92,19 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off
     (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
     (m.storeAt p u).storeAt (p.add off) y =
       m.storeAt p (Memory.spliceBits u (off.toNat * 8) y) := by
-  unfold MemoryState.storeAt
-  cases hb : m[p.id]? with
-  | none => simp [hb]
-  | some blk =>
-    simp only [MemoryState.getElem?_eq] at hb ⊢
-    simp only [Pointer.add_id, Pointer.offsetInBits_add hov, Std.ExtHashMap.getElem?_insert_self]
-    congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro a
-    simp only [Std.ExtHashMap.getElem?_insert]
-    split
-    · rw [spliceBits_spliceBits_add _ _ _ _ _ hw]
-    · rfl
+  have hones :
+    Memory.spliceBits (BitVec.allOnes wu) (off.toNat * 8) (BitVec.allOnes wy) =
+      BitVec.allOnes wu := by
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
+    grind
+  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    MemoryState.modifyBlock_modifyBlock_self]
+  congr 1
+  funext blk
+  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
+    spliceBits_spliceBits_add _ _ _ _ _ hw, hones]
 
 /-- `n[w]`'s byte offset `8 * w`, which does not wrap. -/
 theorem limb_offset {v : Pointer} (hv : v.offset = 0) (hw : w < 5) :
@@ -122,7 +122,8 @@ public theorem fd_curve25519_scalar_wnaf.readAt_limb {m : MemoryState} {v : Poin
     {n : BitVec 320} (hf : Fits m v 320) (hv : v.offset = 0) (hw : w < 5) :
     (m.storeAt v n).readAt (v.add (BitVec.ofNat 64 (8 * w))) 64 = n.extractLsb' (64 * w) 64 := by
   obtain ⟨h8, hov⟩ := limb_offset hv hw
-  rw [MemoryState.readAt_storeAt_add hf hov (by omega), h8, show 8 * w * 8 = 64 * w by omega]
+  rw [MemoryState.readAt_storeAt_add hf.inBounds hov (by omega), h8,
+    show 8 * w * 8 = 64 * w by omega]
 
 /-- `n[w]` fits where `n` does. -/
 theorem fits_limb {m : MemoryState} {v : Pointer} (hf : Fits m v 320) (hv : v.offset = 0)
@@ -1124,16 +1125,18 @@ theorem fd_curve25519_scalar_wnaf.main_loop (slides scalar v : Pointer) (bits : 
 
 /-! ### The function -/
 
-/-- `n` as `bb0` stores it, limb by limb over the slot's old bits, and `memset( _t, 0, 512 )`:
-`n0 x` and zero digits. -/
-theorem init_eq {m : MemoryState} {slides v : Pointer} (hfv : Fits m v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) (x : BitVec 256) :
+/-- `n` as `bb0` stores it, limb by limb, and `memset( _t, 0, 512 )`: `n0 x` and zero digits,
+stored over a zeroed `_t` and `n`. -/
+theorem init_eq {m : MemoryState} {slides v : Pointer} (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    (x : BitVec 256) :
     ((((((m.storeAt v (x.setWidth 64)).storeAt (v.add 8#64) (x.extractLsb' 64 64)).storeAt
                     (v.add 16#64) (x.extractLsb' 128 64)).storeAt
                 (v.add 24#64) (x.extractLsb' 192 64 &&& 9223372036854775807#64)).storeAt
             (v.add 32#64) 0#64).storeAt
         slides 0#4096) =
-      (m.storeAt slides (shorts (Vector.replicate 256 0))).storeAt v (n0 x) := by
+      ((((m.storeAt slides 0#4096).storeAt v 0#320).storeAt slides
+            (shorts (Vector.replicate 256 0))).storeAt
+        v (n0 x)) := by
   have hov : ∀ k : Nat, k ≤ 32 → ¬v.offset.uaddOverflow (BitVec.ofNat 64 k) := fun k hk => by
     simp only [BitVec.uaddOverflow, hv, BitVec.toNat_ofNat]
     simp
@@ -1148,30 +1151,32 @@ theorem init_eq {m : MemoryState} {slides v : Pointer} (hfv : Fits m v 320) (hv 
     simp only [BitVec.getLsbD_extractLsb', Vector.getElem_map, Vector.getElem_replicate] at h'
     simp only [shorts, BitVec.getLsbD_zero]
     simpa using h'.symm
-  have h0 :=
-    storeAt_storeAt_add (m := m) (u := m.readAt v 320) (wy := 64) (hov 0 (by omega)) (by decide)
-      (x.setWidth 64)
-  rw [show BitVec.ofNat 64 0 = 0#64 from rfl, Pointer.add_zero] at h0
-  conv_lhs => rw [← MemoryState.storeAt_readAt_self hfv (p := v), h0]
-  rw [show (8#64 : BitVec 64) = BitVec.ofNat 64 8 from rfl,
-    storeAt_storeAt_add (hov 8 (by omega)) (by decide),
+  have hd : (Range.of v 320).Disjoint (Range.of slides (16 * 256)) := .inl (Ne.symm hne)
+  have hR :
+    (((m.storeAt slides 0#4096).storeAt v 0#320).storeAt slides
+            (shorts (Vector.replicate 256 0))).storeAt
+        v (n0 x) =
+      (m.storeAt slides (shorts (Vector.replicate 256 0))).storeAt v (n0 x) := by
+    rw [MemoryState.storeAt_comm hd, MemoryState.storeAt_storeAt_self,
+      MemoryState.storeAt_storeAt_self]
+  rw [hR, show (8#64 : BitVec 64) = BitVec.ofNat 64 8 from rfl,
+    MemoryState.storeAt_storeAt_append (hov 8 (by omega)) rfl (by decide),
     show (16#64 : BitVec 64) = BitVec.ofNat 64 16 from rfl,
-    storeAt_storeAt_add (hov 16 (by omega)) (by decide),
+    MemoryState.storeAt_storeAt_append (hov 16 (by omega)) rfl (by decide),
     show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl,
-    storeAt_storeAt_add (hov 24 (by omega)) (by decide),
+    MemoryState.storeAt_storeAt_append (hov 24 (by omega)) rfl (by decide),
     show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
-    storeAt_storeAt_add (hov 32 (by omega)) (by decide), hz,
-    MemoryState.storeAt_comm (.inl (by simpa [Range.of] using Ne.symm hne))]
+    MemoryState.storeAt_storeAt_append (hov 32 (by omega)) rfl (by decide),
+    MemoryState.storeAt_comm (.inl (by simpa [Range.of] using Ne.symm hne)), hz]
   congr 1
-  generalize m.readAt v 320 = N
-  simp only [n0, spliceBits_eq, BitVec.toNat_ofNat]
+  simp only [n0]
   bv_decide
 
 /-- `fd_curve25519_scalar_wnaf( slides, s, bits )` stores `spec` of the 256-bit scalar at `scalar`
 as the 256 `short`s at `slides`, for `bits` in the documented range `1 … 12`; its `ulong n[5]` is
 a frame slot. -/
 public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits : BitVec 32)
-    (s : GlobalState) (hwf : s.WF) (hslides : Fits s.mem slides (8 * 512))
+    (s : GlobalState) (hwf : s.WF) (hslides : Room s.mem slides (8 * 512))
     (hso : ¬slides.offset.uaddOverflow 512#64) (hscalar : Fits s.mem scalar (8 * 32))
     (hco : ¬scalar.offset.uaddOverflow 32#64) (hbits : 1 ≤ bits.toNat ∧ bits.toNat ≤ 12) :
     fd_curve25519_scalar_wnaf.call
@@ -1191,11 +1196,34 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   block_init
   iterate 15 step_pure
   step_alloca with v
-  have hwfa : (S₀.alloca 40).WF := hS ▸ hwf
-  have hfsa : Fits (S₀.alloca 40).mem slides (8 * 512) := hS ▸ hslides
-  have hfva : Fits (S₀.alloca 40).mem v 320 := hS ▸ hv_fits
-  -- `ulong n[5] = { … };`
+  -- its lifetime starts
   step_pure
+  -- the loops run over `_t` and `n` stored over a zeroed `_t` and `n`, where both are known
+  have hwfa :
+    ({ alloc := (S₀.alloca 40 true).alloc, mem := (S₀.alloca 40 true).mem.lifetimeStart v } :
+        GlobalState).WF :=
+    hS ▸ hwf
+  have hrsa : Room ((S₀.alloca 40 true).mem.lifetimeStart v) slides (8 * 512) := by
+    rw [hS] at hslides
+    exact hslides
+  have hrva : Room ((S₀.alloca 40 true).mem.lifetimeStart v) v 320 := by
+    rw [hS] at hroom_v
+    exact hroom_v
+  have hwfb :
+    ({ alloc := (S₀.alloca 40 true).alloc,
+       mem := (((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320 } :
+        GlobalState).WF :=
+    hwfa.storeAt.storeAt
+  have hfsb :
+    Fits ((((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320) slides
+      (8 * 512) :=
+    (Fits.storeAt_self hrsa).storeAt
+  have hfvb :
+    Fits ((((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320) v
+      320 :=
+    Fits.storeAt_self hrva.storeAt
+  clear hrsa hrva hv_bounds
+  -- `ulong n[5] = { … };`
   step_call using fd_ulong_load_8.call_eq
   step_store
   iterate 2 step_pure
@@ -1212,7 +1240,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   step_store
   -- `memset( _t, 0, 256UL*sizeof(short) );`
   step_memset
-  rw [init_eq hfva hv_off hslides_ne_v x] at hS
+  rw [init_eq hv_off hslides_ne_v x] at hS
   -- `wid`, `mask`, `half`
   step_pure [signExtend_toNat32 (b := bits) (by omega), hB]
   step_pure [saddOverflow_one64 (i := B) (by omega), ← BitVec.ofNat_add]
@@ -1223,7 +1251,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   finish_block
   clear_reads
   step_loop using
-    fd_curve25519_scalar_wnaf.main_loop slides scalar v bits B (by omega) _ hwfa hfsa hso hfva
+    fd_curve25519_scalar_wnaf.main_loop slides scalar v bits B (by omega) _ hwfb hfsb hso hfvb
       hv_off hslides_ne_v _ _ 256 0 (n0 x) (Vector.replicate 256 0) _ _ (by omega) (by omega)
   -- `return`
   block_init
@@ -1231,6 +1259,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   finish_block
   subst hS
   erase_frame
+  rw [MemoryState.storeAt_storeAt_self]
   rfl
 
 end Proof

@@ -33,10 +33,10 @@ section Proof
 
 /-- `fd_ed25519_verify_equation` returns `spec` of the scalars at `k`, `S` and the points at `A`,
 `R`, and leaves `A` negated; `Rcmp` is freed. -/
-public theorem fd_ed25519_verify_equation.call_eq (k A S R : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hk : Fits s.mem k (8 * 32)) (hk_off : ¬k.offset.uaddOverflow 32#64)
-    (hA : s.mem.PointFit A) (hS : Fits s.mem S (8 * 32)) (hS_off : ¬S.offset.uaddOverflow 32#64)
-    (hR : s.mem.PointFit R) (hkA : k.id ≠ A.id) (hSA : S.id ≠ A.id) (hRA : R.id ≠ A.id) :
+public theorem fd_ed25519_verify_equation.call_eq (k A S R : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hk : Fits s.mem k (8 * 32)) (hk_off : ¬k.offset.uaddOverflow 32#64) (hA : s.mem.PointFit A)
+    (hS : Fits s.mem S (8 * 32)) (hS_off : ¬S.offset.uaddOverflow 32#64) (hR : s.mem.PointFit R)
+    (hkA : k.id ≠ A.id) (hSA : S.id ≠ A.id) (hRA : R.id ≠ A.id) :
     fd_ed25519_verify_equation.call
         (fd_ed25519_verify_equation.args (.value k) (.value A) (.value S) (.value R)) s =
       .value
@@ -55,8 +55,8 @@ public theorem fd_ed25519_verify_equation.call_eq (k A S R : Pointer) (s : Globa
   step_pure
   step_alloca with Rcmp
   step_pure
-  have hRcmp_pt := MemoryState.PointFit.of_fits hRcmp_fits hRcmp_off
-  clear hRcmp_fits
+  have hRcmp_pt := MemoryState.PointRoom.of_room hroom_Rcmp hRcmp_off
+  clear hroom_Rcmp hRcmp_bounds
   -- fd_ed25519_point_neg( A, A );
   step_call using (fd_ed25519_point_neg.call_eq (hsep := .inl rfl))
   -- fd_ed25519_double_scalar_mul_base( Rcmp, k, A, S );
@@ -67,8 +67,8 @@ public theorem fd_ed25519_verify_equation.call_eq (k A S R : Pointer) (s : Globa
   finish_block
   subst hS
   erase_frame
-  simp only [fd_ed25519_verify_equation.spec, fd_ed25519_verify_equation.blocks,
-    GlobalState.alloca, Nat.add_assoc]
+  simp only [fd_ed25519_verify_equation.spec, fd_ed25519_verify_equation.blocks, GlobalState.alloca,
+    Nat.add_assoc]
 
 end Proof
 

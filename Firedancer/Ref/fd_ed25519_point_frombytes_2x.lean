@@ -27,8 +27,8 @@ section Proof
 `r2`, each as `fd_ed25519_point_frombytes` stores it, and returns `spec`. `buf2` is read after `r1`
 is written, so they are in different blocks. -/
 public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr1 : s.mem.PointFit r1) (hbuf1 : Fits s.mem buf1 (8 * 32))
-    (hbuf1_off : ¬buf1.offset.uaddOverflow 32#64) (hr2 : s.mem.PointFit r2)
+    (hwf : s.WF) (hr1 : s.mem.PointRoom r1) (hbuf1 : Fits s.mem buf1 (8 * 32))
+    (hbuf1_off : ¬buf1.offset.uaddOverflow 32#64) (hr2 : s.mem.PointRoom r2)
     (hbuf2 : Fits s.mem buf2 (8 * 32)) (hbuf2_off : ¬buf2.offset.uaddOverflow 32#64)
     (hsep : r1.id ≠ buf2.id) :
     fd_ed25519_point_frombytes_2x.call
@@ -69,14 +69,16 @@ public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer)
     simp only [h1, fd_ed25519_point_frombytes_2x.spec, Option.isSome_none, Option.isNone_none,
       MemoryState.storePointOpt_none, ↓reduceIte, Bool.false_eq_true, BitVec.reduceNeg]
   · have hr1_null : (r1 == Pointer.null) = false :=
-      beq_eq_false_iff_ne.mpr fun h => hwf.ne_null_of_fits hr1.2.1.2.1 (congrArg (·.id) h)
+      beq_eq_false_iff_ne.mpr fun h =>
+        hwf.ne_null_of_inBounds hr1.2.1.2.1.inBounds (congrArg (·.id) h)
     step_pure [h1, hr1_null]
     finish_block
     -- res = fd_ed25519_point_frombytes( r2, buf2 );
     block_init
     step_call using fd_ed25519_point_frombytes.call_eq
     have hr2_null : (r2 == Pointer.null) = false :=
-      beq_eq_false_iff_ne.mpr fun h => hwf.ne_null_of_fits hr2.2.1.2.1 (congrArg (·.id) h)
+      beq_eq_false_iff_ne.mpr fun h =>
+        hwf.ne_null_of_inBounds hr2.2.1.2.1.inBounds (congrArg (·.id) h)
     -- if( res == NULL ) return -2; return 0;
     rcases h2 : fd_ed25519_point_frombytes.spec (S₀.mem.readAt buf2 256) with _ | P2 <;>
       · iterate 2 step_pure [h2, hr2_null]

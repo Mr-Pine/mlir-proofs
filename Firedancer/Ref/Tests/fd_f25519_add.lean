@@ -17,7 +17,8 @@ private def b : Pointer :=
 
 /-- Three 40-byte blocks: `r` zeroed, `a` and `b` holding `ab` and `bb`. -/
 private def state (ab bb : BitVec 320) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, ab⟩), (⟨2⟩, ⟨40, bb⟩)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 ab), (⟨2⟩, .ofBytes 40 bb)]⟩⟩
 
 /-- Every limb `2^52 - 1`, so every limb carries, and the limbs `1, 2, 3, 4, 5`. -/
 private def aBytes : BitVec 320 :=

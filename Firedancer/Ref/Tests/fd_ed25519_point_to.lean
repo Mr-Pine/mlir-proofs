@@ -13,7 +13,8 @@ private def ptr (k : Nat) : Pointer :=
 private def state (bytes : BitVec 1280) : GlobalState :=
   ⟨⟨5⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, 0⟩), (⟨2⟩, ⟨40, 0⟩), (⟨3⟩, ⟨40, 0⟩), (⟨4⟩, ⟨160, bytes⟩)]⟩⟩
+        [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 0), (⟨2⟩, .ofBytes 40 0), (⟨3⟩, .ofBytes 40 0),
+          (⟨4⟩, .ofBytes 160 bytes)]⟩⟩
 
 private def pBytes : BitVec 1280 :=
   BitVec.ofNat 1280 (2 ^ 1100 + 3 * 2 ^ 700 + 5 * 2 ^ 400 + 7)

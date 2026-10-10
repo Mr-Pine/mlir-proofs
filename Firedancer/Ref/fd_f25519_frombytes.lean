@@ -24,7 +24,7 @@ section Proof
 /-- `fd_f25519_frombytes` stores `spec` of the 32 bytes at `buf` as limbs at `r`, and returns `r`;
 `r` may alias `buf`. -/
 public theorem fd_f25519_frombytes.call_eq (r buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.LimbsFit r) (hbuf : Fits s.mem buf (8 * 32))
+    (hr : s.mem.LimbsRoom r) (hbuf : Fits s.mem buf (8 * 32))
     (hbuf_off : ¬buf.offset.uaddOverflow 32#64) :
     fd_f25519_frombytes.call (fd_f25519_frombytes.args (.value r) (.value buf)) s =
       .value

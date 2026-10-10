@@ -25,7 +25,7 @@ section Proof
 /-- `fd_ed25519_point_set_zero` stores the neutral point at `r` and returns `r`; the two globals it
 reads count two blocks. -/
 public theorem fd_ed25519_point_set_zero.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) :
+    (hr : s.mem.PointRoom r) :
     fd_ed25519_point_set_zero.call (fd_ed25519_point_set_zero.args (.value r)) s =
       .value
         (.cons (.value r) .nil,

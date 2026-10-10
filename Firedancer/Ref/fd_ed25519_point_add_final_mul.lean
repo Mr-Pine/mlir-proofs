@@ -26,7 +26,7 @@ section Proof
 /-- `fd_ed25519_point_add_final_mul` stores `spec` of the point at `a` at `r`, in another block,
 and returns `r`. -/
 public theorem fd_ed25519_point_add_final_mul.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) (hsep : r.id ≠ a.id) :
+    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) (hsep : r.id ≠ a.id) :
     fd_ed25519_point_add_final_mul.call (fd_ed25519_point_add_final_mul.args (.value r) (.value a))
         s =
       .value

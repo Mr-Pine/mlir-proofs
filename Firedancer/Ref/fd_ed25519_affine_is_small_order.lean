@@ -51,11 +51,11 @@ public theorem fd_ed25519_affine_is_small_order.call_eq (a : Pointer) (s : Globa
   have hy1_read := fd_ed25519_order8_point_y1.readLimbs hy1_fits hy1_off hread_y1
   have hy0_limbs := MemoryState.LimbsFit.of_fits hy0_fits hy0_off
   have hy1_limbs := MemoryState.LimbsFit.of_fits hy1_fits hy1_off
-  have hx_limbs := MemoryState.LimbsFit.of_fits hx_fits hx_off
-  have hy_limbs := MemoryState.LimbsFit.of_fits hy_fits hy_off
-  have hz_limbs := MemoryState.LimbsFit.of_fits hz_fits hz_off
-  have ht_limbs := MemoryState.LimbsFit.of_fits ht_fits ht_off
-  clear hread_y0 hread_y1 hy0_fits hy1_fits hx_fits hy_fits hz_fits ht_fits
+  limbs_room x
+  limbs_room y
+  limbs_room z
+  limbs_room t
+  clear hread_y0 hread_y1 hy0_fits hy1_fits hy0_room hy1_room
   -- `a` lies below the globals' blocks
   have ha_b0 : a.id ≠ ⟨S₀.alloc.nextFreeBlock⟩ := by
     rw [hy0] at ha_ne_y0; exact ha_ne_y0
@@ -63,10 +63,11 @@ public theorem fd_ed25519_affine_is_small_order.call_eq (a : Pointer) (s : Globa
     rw [hy1] at ha_ne_y1; exact ha_ne_y1
   -- fd_ed25519_point_to( x, y, z, t, a );
   step_call using fd_ed25519_point_to.call_eq consuming ha
-  clear hread_z hread_t hz_limbs ht_limbs ha_b0 ha_b1
+  clear hread_z hread_t ha_b0 ha_b1
+  clear_facts z t
   -- return fd_f25519_is_zero( x ) | fd_f25519_is_zero( y )
   step_call using fd_f25519_is_zero.call_eq consuming hread_x
-  clear hx_limbs
+  clear_facts x
   step_call using fd_f25519_is_zero.call_eq
   step_pure
   --   | fd_f25519_eq( y, fd_ed25519_order8_point_y0 )

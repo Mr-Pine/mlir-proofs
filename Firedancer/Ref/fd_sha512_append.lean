@@ -16,47 +16,23 @@ open Memory
 
 @[expose] public section
 
-/-- A second store to the same range overwrites the first. -/
-theorem MemoryState.storeAt_storeAt_self {m : MemoryState} {p : Pointer} {x y : BitVec w} :
-    (m.storeAt p x).storeAt p y = m.storeAt p y := by
-  rcases m with ⟨mm⟩
-  unfold MemoryState.storeAt
-  cases hb : (⟨mm⟩ : MemoryState)[p.id]? with
-  | none => simp [hb]
-  | some blk =>
-    simp only [MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_insert_self] at hb ⊢
-    simp only [spliceBits_spliceBits_self]
-    congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro a
-    simp only [Std.ExtHashMap.getElem?_insert]
-    split <;> rfl
-
 /-- A store inside a stored range: one store of the bits with the new ones spliced in. -/
 theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {x : BitVec v}
     {y : BitVec w} {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off)
     (hw : off.toNat * 8 + w ≤ v) :
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (spliceBits x (off.toNat * 8) y) := by
-  rcases m with ⟨mm⟩
-  unfold MemoryState.storeAt
-  cases hb : (⟨mm⟩ : MemoryState)[p.id]? with
-  | none => simp [hb]
-  | some
-    blk =>
-    simp only [MemoryState.getElem?_eq, Pointer.add_id, Std.ExtHashMap.getElem?_insert_self] at hb ⊢
-    congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro a
-    simp only [Std.ExtHashMap.getElem?_insert]
-    split
-    · have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
-        simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
-      congr 2
-      apply BitVec.eq_of_getLsbD_eq
-      intro i hi
-      simp only [getLsbD_spliceBits, Pointer.offsetInBits, ho]
-      grind
-    · rfl
+  have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
+    simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
+  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    MemoryState.modifyBlock_modifyBlock_self]
+  congr 1
+  funext blk
+  simp only [Function.comp_apply, Pointer.offsetInBits, ho, MemoryBlock.mk.injEq, true_and,
+    and_true]
+  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
+    simp only [getLsbD_spliceBits, BitVec.getLsbD_allOnes]
+  · grind
+  · split <;> split <;> (try simp only [decide_eq_decide]) <;> omega
 
 /-- `storeAt` past `storeWords8` to a disjoint range. -/
 theorem MemoryState.storeWords8_storeAt_comm {m : MemoryState} {p q : Pointer} {x : BitVec w}
@@ -317,20 +293,20 @@ theorem MemoryState.readSha_storeSha_self {m : MemoryState} (h : m.ShaFit p) :
         (Range.disjoint_sha_base h.2 (by decide) (by decide)).symm,
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha_base h.2 (by decide) (by decide)).symm,
-      MemoryState.readAt_storeAt_self h0]
+      MemoryState.readAt_storeAt_self h0.inBounds]
   · exact MemoryState.readWords8_storeWords8_self h.words8Fit.storeAt.storeAt.storeAt.storeAt
   · rw [MemoryState.readAt_storeWords8_of_disjoint hs (hd 200 64 (by decide) (by decide)),
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha h.2 (a := 216) (b := 200) (by decide) (by decide) (by decide)),
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha h.2 (a := 208) (b := 200) (by decide) (by decide) (by decide)),
-      MemoryState.readAt_storeAt_self (hu.storeAt)]
+      MemoryState.readAt_storeAt_self hu.storeAt.inBounds]
   · rw [MemoryState.readAt_storeWords8_of_disjoint hs (hd 208 64 (by decide) (by decide)),
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha h.2 (a := 216) (b := 208) (by decide) (by decide) (by decide)),
-      MemoryState.readAt_storeAt_self (hl.storeAt.storeAt)]
+      MemoryState.readAt_storeAt_self hl.storeAt.storeAt.inBounds]
   · rw [MemoryState.readAt_storeWords8_of_disjoint hs (hd 216 64 (by decide) (by decide)),
-      MemoryState.readAt_storeAt_self (hh.storeAt.storeAt.storeAt)]
+      MemoryState.readAt_storeAt_self hh.storeAt.storeAt.storeAt.inBounds]
 
 theorem MemoryState.readAt_storeSha_buf {m : MemoryState} (h : m.ShaFit p) :
     (m.storeSha p v).readAt p 1024 = v.buf :=
@@ -390,13 +366,20 @@ theorem MemoryState.readAt_storeSha_of_id_ne {m : MemoryState} {p q : Pointer} (
     MemoryState.readAt_storeAt_disjoint (p := p.add 200#64) (Range.disjoint_of_id_ne h.symm),
     MemoryState.readAt_storeAt_disjoint (Range.disjoint_of_id_ne h.symm)]
 
+/-- A struct store keeps known bits known. -/
+@[mlir_transport]
+theorem Fits.storeSha {m : MemoryState} (h : Fits m p w) : Fits (m.storeSha q v) p w := by
+  unfold MemoryState.storeSha
+  exact h.storeAt.storeAt.storeAt.storeAt.storeWords8
+
+/-- A struct store keeps every block, its length and lifetime. -/
 @[simp]
-theorem Fits.storeSha_iff {m : MemoryState} : Fits (m.storeSha q v) p w ↔ Fits m p w := by
+theorem Room.storeSha_iff {m : MemoryState} : Room (m.storeSha q v) p w ↔ Room m p w := by
   simp [MemoryState.storeSha]
 
 @[mlir_transport]
-theorem Fits.storeSha {m : MemoryState} (h : Fits m p w) : Fits (m.storeSha q v) p w :=
-  Fits.storeSha_iff.2 h
+theorem Room.storeSha {m : MemoryState} (h : Room m p w) : Room (m.storeSha q v) p w :=
+  Room.storeSha_iff.2 h
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.ShaFit.storeAt {m : MemoryState} {x : BitVec w} (h : m.ShaFit p) :
@@ -416,8 +399,8 @@ theorem MemoryState.ShaFit.storeSha {m : MemoryState} (h : m.ShaFit p) :
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Words8Fit.storeSha (h : MemoryState.Words8Fit m p) :
     MemoryState.Words8Fit (m.storeSha q v) p := by
-  unfold MemoryState.Words8Fit at h ⊢
-  simpa using h
+  unfold MemoryState.storeSha
+  exact h.storeAt.storeAt.storeAt.storeAt.storeWords8
 
 @[mlir_transport]
 theorem GlobalState.WF.storeSha {s : GlobalState} (h : s.WF) :
@@ -545,8 +528,8 @@ theorem toNat_and_neg128 (n : BitVec 64) :
 
 /-- `^bb7`, the leftover of the `n` bytes at `d`. -/
 abbrev hdr7 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%1035 := .value 0#64, %1041 := .value 127#64, %1042 := .value 18446744073709551488#64,
-    %1045 := .value (sha.add 200#64), %1067 := .value d, %1068 := .value n]
+  E[%1035 := .value 0#64, %1041 := .value 127#64, %1042 := .value 18446744073709551488#64, %1045 :=
+    .value (sha.add 200#64), %1067 := .value d, %1068 := .value n]
 
 /-- "Buffer any leftover bytes", then return `sha`. -/
 theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
@@ -587,7 +570,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
     have hX :
       S.mem.readAt (d.add (n &&& 18446744073709551488#64)) (8 * (n &&& 127#64).toNat) =
         D.extractLsb' (1024 * (n >>> 7).toNat) (8 * (n &&& 127#64).toNat) := by
-      rw [MemoryState.readAt_add_of_readAt hd hoff
+      rw [MemoryState.readAt_add_of_readAt hd.inBounds hoff
           (by
             rw [toNat_and_neg128, toNat_and_127]; omega)
           hD,
@@ -845,7 +828,7 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
             BitVec.toNat_sub_of_le
               (by
                 rw [BitVec.le_def]; omega)
-          rw [MemoryState.readAt_add_of_readAt hdata hov'
+          rw [MemoryState.readAt_add_of_readAt hdata.inBounds hov'
               (by
                 rw [hsub]; omega)
               hD]

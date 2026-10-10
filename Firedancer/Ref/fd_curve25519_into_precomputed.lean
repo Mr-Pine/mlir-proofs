@@ -50,13 +50,13 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
   iterate 2 step_pure
   have hk_read := fd_f25519_k.readLimbs hk_fits hk_off hread_k
   have hk_limbs := MemoryState.LimbsFit.of_fits hk_fits hk_off
-  have hadd_limbs := MemoryState.LimbsFit.of_fits hadd_fits hadd_off
-  have hsub_limbs := MemoryState.LimbsFit.of_fits hsub_fits hsub_off
+  limbs_room add
+  limbs_room sub
   -- reads go through the stores over the state after the `alloca`s
-  have hr₁ := hS ▸ hr
+  have hr₁ := (hS ▸ hr).room
   have hadd₀ := hS ▸ hadd_limbs
   have hsub₀ := hS ▸ hsub_limbs
-  clear hread_k hk_fits hadd_fits hsub_fits
+  clear hread_k hk_fits hk_room
   -- fd_f25519_add_nr( add, r->Y, r->X );
   step_pure
   step_call using fd_f25519_add_nr.call_eq
@@ -64,10 +64,10 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
   step_call using fd_f25519_sub_nr.call_eq consuming hread_add
   -- fd_f25519_set( r->X, sub );
   step_call using (fd_f25519_set.call_eq (hsep := .inr ?_)) consuming hread_sub
-  clear hsub_limbs hsub₀
+  clear_facts sub
   -- fd_f25519_set( r->Y, add );
   step_call using (fd_f25519_set.call_eq (hsep := .inr ?_)) consuming hread_r
-  clear hadd_limbs hadd₀
+  clear_facts add
   -- fd_f25519_mul( r->T, r->T, fd_f25519_k );
   step_pure
   step_call using fd_f25519_mul.call_eq consuming hread_r_40

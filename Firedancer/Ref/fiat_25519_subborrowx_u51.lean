@@ -28,19 +28,21 @@ section Proof
 /-- `arg3 + arg1` (the `add nuw nsw`) does not wrap signed for `arg3 < 2 ^ 51`. -/
 theorem subborrowx_saddOverflow (a : BitVec 64) (c : BitVec 8) (h : a.toNat < 2 ^ 51) :
     ¬a.saddOverflow (c.setWidth 64) := by
-  have : a < 2251799813685248#64 := by simp [BitVec.lt_def]; omega
+  have : a < 2251799813685248#64 := by
+    simp [BitVec.lt_def]; omega
   bv_decide
 
 /-- `arg3 + arg1` (the `add nuw nsw`) does not wrap unsigned for `arg3 < 2 ^ 51`. -/
 theorem subborrowx_uaddOverflow (a : BitVec 64) (c : BitVec 8) (h : a.toNat < 2 ^ 51) :
     ¬a.uaddOverflow (c.setWidth 64) := by
-  have : a < 2251799813685248#64 := by simp [BitVec.lt_def]; omega
+  have : a < 2251799813685248#64 := by
+    simp [BitVec.lt_def]; omega
   bv_decide
 
 /-- `subborrowx` stores the difference's low 51 bits at `out1`, then its borrow at `out2`. -/
 public theorem fiat_25519_subborrowx_u51.call_eq (out1 out2 : Pointer) (arg1 : BitVec 8)
-    (arg2 arg3 : BitVec 64) (s : GlobalState) (hwf : s.WF) (hout1 : Fits s.mem out1 64)
-    (hout2 : Fits s.mem out2 8) (harg3 : arg3.toNat < 2 ^ 51) :
+    (arg2 arg3 : BitVec 64) (s : GlobalState) (hwf : s.WF) (hout1 : Room s.mem out1 64)
+    (hout2 : Room s.mem out2 8) (harg3 : arg3.toNat < 2 ^ 51) :
     fiat_25519_subborrowx_u51.call
         (fiat_25519_subborrowx_u51.args (.value out1) (.value out2) (.value arg1) (.value arg2)
           (.value arg3))

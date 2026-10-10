@@ -25,8 +25,8 @@ section Proof
 
 /-- `addcarryx` stores the sum's low 51 bits at `out1`, then its carry at `out2`. -/
 public theorem fiat_25519_addcarryx_u51.call_eq (out1 out2 : Pointer) (arg1 : BitVec 8)
-    (arg2 arg3 : BitVec 64) (s : GlobalState) (hwf : s.WF) (hout1 : Fits s.mem out1 64)
-    (hout2 : Fits s.mem out2 8) :
+    (arg2 arg3 : BitVec 64) (s : GlobalState) (hwf : s.WF) (hout1 : Room s.mem out1 64)
+    (hout2 : Room s.mem out2 8) :
     fiat_25519_addcarryx_u51.call
         (fiat_25519_addcarryx_u51.args (.value out1) (.value out2) (.value arg1) (.value arg2)
           (.value arg3))

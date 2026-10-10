@@ -2,6 +2,7 @@ module
 
 public import MLIR.Semantics.Effectful.Memory.Operations
 public import MLIR.Semantics.Effectful.Memory.Fits
+public import Firedancer.Common.Memory
 import MLIR.Run.Tactic.Memory
 public meta import MLIR.Run.Tactic.Util
 public meta import Lean.Elab.Tactic
@@ -37,8 +38,18 @@ abbrev MemoryState.LimbsFit (m : MemoryState) (p : Pointer) : Prop :=
     Fits m (p.add 8#64) 64 ∧
     Fits m (p.add 16#64) 64 ∧ Fits m (p.add 24#64) 64 ∧ Fits m (p.add 32#64) 64
 
--- `simp [mlir_mem]` unfolds it, so goals and facts split into the same `Fits` conjuncts
-attribute [mlir_mem] MemoryState.LimbsFit
+/-- Room for the five limbs at `p` (an output), and the limb offsets do not wrap. -/
+abbrev MemoryState.LimbsRoom (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 32 < 2 ^ 64 ∧
+    Room m p 64 ∧
+    Room m (p.add 8#64) 64 ∧
+    Room m (p.add 16#64) 64 ∧ Room m (p.add 24#64) 64 ∧ Room m (p.add 32#64) 64
+
+-- `simp [mlir_mem]` unfolds them, so goals and facts split into the same conjuncts
+attribute [mlir_mem] MemoryState.LimbsFit MemoryState.LimbsRoom
+
+theorem MemoryState.LimbsFit.room {m : MemoryState} (h : m.LimbsFit p) : m.LimbsRoom p :=
+  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.room⟩
 
 /-- `storeLimbs` keeps the set of blocks, so the state stays `WF`. -/
 @[mlir_transport]
@@ -60,33 +71,17 @@ theorem Pointer.offsetInBits_add_limb {p : Pointer} (h : p.offset.toNat + 32 < 2
   rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
   omega
 
-private theorem insert_insert_self (m : Std.ExtHashMap BlockId MemoryBlock) (k : BlockId)
-    (v v' : MemoryBlock) : (m.insert k v).insert k v' = m.insert k v' := by
-  apply Std.ExtHashMap.ext_getElem?
-  intro a
-  simp only [Std.ExtHashMap.getElem?_insert]
-  split <;> rfl
-
 open Memory in
 /-- Storing limbs twice at the same place keeps the second: the limbs don't overlap. -/
 theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer} :
     (m.storeLimbs p l).storeLimbs p l' = m.storeLimbs p l' := by
-  cases hb : m[p.id]? with
-  | none =>
-    have hn :
-      ∀ {m' : MemoryState} {q : Pointer} {x : BitVec 64},
-        m'[q.id]? = none → m'.storeAt q x = m' := by
-      intro m' q x hq; simp [MemoryState.storeAt, hq]
-    simp [MemoryState.storeLimbs, hn, hb]
-  | some blk =>
-    rw [MemoryState.getElem?_eq] at hb
-    simp [MemoryState.storeLimbs, MemoryState.storeAt, MemoryState.getElem?_eq, hb,
-      insert_insert_self]
-    simp only [Pointer.offsetInBits]
-    congr 2
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [getLsbD_spliceBits]
+  simp only [MemoryState.storeLimbs, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    MemoryState.modifyBlock_modifyBlock_self]
+  congr 1
+  funext blk
+  simp only [Function.comp_apply, Pointer.offsetInBits, MemoryBlock.mk.injEq, true_and, and_true]
+  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
+    simp only [getLsbD_spliceBits] <;>
     grind
 
 /-- Limbs in another block are unaffected by `storeLimbs`. -/
@@ -101,50 +96,67 @@ theorem MemoryState.readLimbs_storeLimbs_of_id_ne {m : MemoryState} {p q : Point
 /-- `alloca` adds a block under a fresh id: limbs that fit elsewhere still fit. -/
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id)
-    (h : s.mem.LimbsFit p) : (s.alloca n).mem.LimbsFit p := by
-  have hf : ∀ {q : Pointer} {w}, q.id = p.id → Fits s.mem q w → Fits (s.alloca n).mem q w :=
-    fun hq ⟨b, hb, hs⟩ =>
+    (h : s.mem.LimbsFit p) : (s.alloca n d).mem.LimbsFit p := by
+  have hf : ∀ {q : Pointer} {w}, q.id = p.id → Fits s.mem q w → Fits (s.alloca n d).mem q w :=
+    fun hq ⟨b, hb, hl, hs, hd⟩ =>
     ⟨b, by
-      rw [GlobalState.getElem?_alloca (hq ▸ hne)]; exact hb, hs⟩
+      rw [GlobalState.getElem?_alloca (hq ▸ hne)]; exact hb, hl, hs, hd⟩
   obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
   exact ⟨ho, hf rfl h0, hf rfl h1, hf rfl h2, hf rfl h3, hf rfl h4⟩
 
-/-- A 40-byte `alloca` holds one field element. -/
+/-- `LimbsFit.alloca` for room. -/
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id)
+    (h : s.mem.LimbsRoom p) : (s.alloca n d).mem.LimbsRoom p := by
+  have hf : ∀ {q : Pointer} {w}, q.id = p.id → Room s.mem q w → Room (s.alloca n d).mem q w :=
+    fun hq ⟨b, hb, hl, hs⟩ =>
+    ⟨b, by
+      rw [GlobalState.getElem?_alloca (hq ▸ hne)]; exact hb, hl, hs⟩
+  obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
+  exact ⟨ho, hf rfl h0, hf rfl h1, hf rfl h2, hf rfl h3, hf rfl h4⟩
+
+/-- A live 40-byte `alloca` has room for one field element. -/
 @[simp, mlir_mem, mlir_frame]
-theorem MemoryState.limbsFit_allocaPtr {s : GlobalState} :
-    (s.alloca 40).mem.LimbsFit s.allocaPtr := by
-  refine ⟨by simp [GlobalState.allocaPtr], ?_, ?_, ?_, ?_, ?_⟩ <;>
-    exact
-      ⟨⟨40, 0⟩, by
-        simp [GlobalState.alloca, GlobalState.allocaPtr, MemoryState.getElem?_eq, Pointer.add], by
-        simp [Pointer.offsetInBits, GlobalState.allocaPtr, Pointer.add, MemoryBlock.lengthInBits]⟩
+theorem MemoryState.limbsRoom_allocaPtr {s : GlobalState} :
+    (s.alloca 40).mem.LimbsRoom s.allocaPtr := by
+  refine ⟨by simp [GlobalState.allocaPtr], ?_, ?_, ?_, ?_, ?_⟩ <;> simp
 
 /-- Reading limbs elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
 theorem MemoryState.readLimbs_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n).mem.readLimbs p = s.mem.readLimbs p := by
+    (s.alloca n d).mem.readLimbs p = s.mem.readLimbs p := by
   funext i
   fin_cases i <;>
     simp only [MemoryState.readLimbs, MemoryState.readAt, Pointer.add_id,
       GlobalState.getElem?_alloca hne]
 
-/-- `storeLimbs` keeps every block and its length. -/
+/-- `storeLimbs` keeps every block, its length and lifetime. -/
 @[simp]
-theorem Fits.storeLimbs_iff {m : MemoryState} : Fits (m.storeLimbs q l) p w ↔ Fits m p w := by
+theorem Room.storeLimbs_iff {m : MemoryState} : Room (m.storeLimbs q l) p w ↔ Room m p w := by
   simp [MemoryState.storeLimbs]
 
+/-- `storeLimbs` keeps known bits known. -/
 @[mlir_transport]
 theorem Fits.storeLimbs {m : MemoryState} (h : Fits m p w) : Fits (m.storeLimbs q l) p w :=
-  Fits.storeLimbs_iff.mpr h
+  h.storeAt.storeAt.storeAt.storeAt.storeAt
 
-/-- Stores never change a block's length: `LimbsFit` is the store chain's base's. -/
+@[mlir_transport]
+theorem Room.storeLimbs {m : MemoryState} (h : Room m p w) : Room (m.storeLimbs q l) p w :=
+  Room.storeLimbs_iff.mpr h
+
+@[mlir_transport]
+theorem InBounds.storeLimbs {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeLimbs q l) p w :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt
+
+/-- Stores never change a block's length or lifetime: `LimbsRoom` is the store chain's base's. -/
 @[simp, mlir_state]
-theorem MemoryState.limbsFit_storeLimbs_iff {m : MemoryState} :
-    (m.storeLimbs q l).LimbsFit p ↔ m.LimbsFit p := by simp [MemoryState.LimbsFit]
+theorem MemoryState.limbsRoom_storeLimbs_iff {m : MemoryState} :
+    (m.storeLimbs q l).LimbsRoom p ↔ m.LimbsRoom p := by simp [MemoryState.LimbsRoom]
 
-/-- Limbs stored where they fit read back. -/
+/-- Limbs stored where there is room read back. -/
 @[mlir_frame, mlir_read]
-theorem MemoryState.readLimbs_storeLimbs_self {m : MemoryState} (h : m.LimbsFit p) :
+theorem MemoryState.readLimbs_storeLimbs_self {m : MemoryState} (h : m.LimbsRoom p) :
     (m.storeLimbs p l).readLimbs p = l := by
   funext i
   fin_cases i <;>
@@ -155,7 +167,7 @@ theorem MemoryState.readLimbs_storeLimbs_self {m : MemoryState} (h : m.LimbsFit 
 @[mlir_frame]
 theorem MemoryState.readLimbs_storeLimbs_allocaPtr {s : GlobalState} :
     ((s.alloca 40).mem.storeLimbs s.allocaPtr l).readLimbs s.allocaPtr = l :=
-  readLimbs_storeLimbs_self limbsFit_allocaPtr
+  readLimbs_storeLimbs_self limbsRoom_allocaPtr
 
 /-- Erasing a frame commutes with storing limbs. -/
 @[mlir_frame, mlir_erase]
@@ -196,9 +208,13 @@ theorem GlobalState.WF_storeLimbs {s : GlobalState} :
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.LimbsFit.storeAt (h : MemoryState.LimbsFit m p) :
-    MemoryState.LimbsFit (m.storeAt q x) p := by
-  unfold MemoryState.LimbsFit at h ⊢
-  simpa using h
+    MemoryState.LimbsFit (m.storeAt q x) p :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.1.storeAt, h.2.2.2.2.1.storeAt, h.2.2.2.2.2.storeAt⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeAt (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeAt q x) p :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.1.storeAt, h.2.2.2.2.1.storeAt, h.2.2.2.2.2.storeAt⟩
 
 /-- `storeLimbs` keeps every block and its length, so limbs that fit still fit. -/
 @[mlir_mem, mlir_transport]
@@ -206,6 +222,47 @@ theorem MemoryState.LimbsFit.storeLimbs (h : MemoryState.LimbsFit m p) :
     MemoryState.LimbsFit (m.storeLimbs q l) p := by
   unfold MemoryState.storeLimbs
   exact h.storeAt.storeAt.storeAt.storeAt.storeAt
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.storeLimbs (h : MemoryState.LimbsRoom m p) :
+    MemoryState.LimbsRoom (m.storeLimbs q l) p :=
+  limbsRoom_storeLimbs_iff.mpr h
+
+/-- Limbs stored where there is room are known. -/
+@[mlir_fresh, mlir_mem]
+theorem MemoryState.LimbsFit.storeLimbs_self {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
+    (m.storeLimbs p l).LimbsFit p := by
+  obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
+  exact
+    ⟨ho, (Fits.storeAt_self h0).storeAt.storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h1.storeAt).storeAt.storeAt.storeAt,
+      (Fits.storeAt_self h2.storeAt.storeAt).storeAt.storeAt,
+      (Fits.storeAt_self h3.storeAt.storeAt.storeAt).storeAt,
+      Fits.storeAt_self h4.storeAt.storeAt.storeAt.storeAt⟩
+
+/-- Limbs stored where there is room stay known past later limb stores (a callee's several
+outputs), where the steps only take `storeLimbs_self` at the last store. -/
+@[mlir_fresh]
+theorem MemoryState.LimbsFit.storeLimbs_self_storeLimbs {m : MemoryState} {p : Pointer}
+    (h : m.LimbsRoom p) : ((m.storeLimbs p l).storeLimbs q₁ l₁).LimbsFit p :=
+  (storeLimbs_self h).storeLimbs
+
+@[inherit_doc storeLimbs_self_storeLimbs, mlir_fresh]
+theorem MemoryState.LimbsFit.storeLimbs_self_storeLimbs₂ {m : MemoryState} {p : Pointer}
+    (h : m.LimbsRoom p) : (((m.storeLimbs p l).storeLimbs q₁ l₁).storeLimbs q₂ l₂).LimbsFit p :=
+  (storeLimbs_self h).storeLimbs.storeLimbs
+
+@[inherit_doc storeLimbs_self_storeLimbs, mlir_fresh]
+theorem MemoryState.LimbsFit.storeLimbs_self_storeLimbs₃ {m : MemoryState} {p : Pointer}
+    (h : m.LimbsRoom p) :
+    ((((m.storeLimbs p l).storeLimbs q₁ l₁).storeLimbs q₂ l₂).storeLimbs q₃ l₃).LimbsFit p :=
+  (storeLimbs_self h).storeLimbs.storeLimbs.storeLimbs
+
+/-- A store's bits stay known past the next store, as a callee's two out-parameters leave them. -/
+@[mlir_fresh]
+theorem Fits.storeAt_storeAt_self {m : MemoryState} {p q : Pointer} {x : BitVec w} {y : BitVec v}
+    (h : Room m p w) : Fits ((m.storeAt p x).storeAt q y) p w :=
+  (Fits.storeAt_self h).storeAt
 
 /-- A 320-bit block from its start holds one field element. -/
 theorem MemoryState.LimbsFit.of_fits {m : MemoryState} (h : Fits m p 320) (ho : p.offset = 0) :
@@ -217,6 +274,16 @@ theorem MemoryState.LimbsFit.of_fits {m : MemoryState} (h : Fits m p 320) (ho : 
   refine ⟨by simp [ho], h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
     exact Fits.add_of_le (hov _ (by decide)) (by decide) h
 
+/-- A 320-bit live block from its start has room for one field element. -/
+theorem MemoryState.LimbsRoom.of_room {m : MemoryState} (h : Room m p 320) (ho : p.offset = 0) :
+    m.LimbsRoom p := by
+  have hov : ∀ off : BitVec 64, off.toNat ≤ 32 → ¬p.offset.uaddOverflow off := by
+    intro off hoff
+    simp [ho, BitVec.uaddOverflow]
+    omega
+  refine ⟨by simp [ho], h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
+    exact Room.add_of_le (hov _ (by decide)) (by decide) h
+
 /-- The limbs of a 320-bit read from a block's start: its 64-bit slices. -/
 theorem MemoryState.readLimbs_of_readAt {m : MemoryState} {x : BitVec 320} (hf : Fits m p 320)
     (ho : p.offset = 0) (h : m.readAt p 320 = x) :
@@ -226,7 +293,7 @@ theorem MemoryState.readLimbs_of_readAt {m : MemoryState} {x : BitVec 320} (hf :
     simp [ho, BitVec.uaddOverflow]
     omega
   have hread (off : BitVec 64) (hoff : off.toNat ≤ 32) :=
-    MemoryState.readAt_add_of_readAt (w := 64) hf (hov off hoff) (by omega) h
+    MemoryState.readAt_add_of_readAt (w := 64) hf.inBounds (hov off hoff) (by omega) h
   funext i
   fin_cases i
   · simpa [MemoryState.readLimbs, Pointer.add] using hread 0#64 (by decide)
@@ -259,19 +326,28 @@ theorem MemoryState.LimbsFit.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.
     MemoryState.LimbsFit.storeAt
       (MemoryState.LimbsFit.alloca (GlobalState.ne_allocaPtr_of_fits hwf h.2.1) h)
 
-/-- Limbs that fit before a new block: the limbs before it. -/
+/-- A new block keeps room for limbs. -/
+@[mlir_transport]
+theorem MemoryState.LimbsRoom.addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
+    (h : s.mem.LimbsRoom p) : (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).LimbsRoom p := by
+  rw [← GlobalState.alloca_storeAt_allocaPtr]
+  exact
+    MemoryState.LimbsRoom.storeAt
+      (MemoryState.LimbsRoom.alloca (GlobalState.ne_allocaPtr_of_room hwf h.2.1) h)
+
+/-- Limbs with room before a new block: the limbs before it. -/
 @[mlir_read]
 theorem MemoryState.readLimbs_addBlock {s : GlobalState} {x : BitVec v} (hwf : s.WF)
-    (h : s.mem.LimbsFit p) :
+    (h : s.mem.LimbsRoom p) :
     (s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ n x).readLimbs p = s.mem.readLimbs p := by
   obtain ⟨_, h0, h1, h2, h3, h4⟩ := h
   funext i
   fin_cases i
-  · exact MemoryState.readAt_addBlock hwf h0
-  · exact MemoryState.readAt_addBlock hwf h1
-  · exact MemoryState.readAt_addBlock hwf h2
-  · exact MemoryState.readAt_addBlock hwf h3
-  · exact MemoryState.readAt_addBlock hwf h4
+  · exact MemoryState.readAt_addBlock hwf h0.inBounds
+  · exact MemoryState.readAt_addBlock hwf h1.inBounds
+  · exact MemoryState.readAt_addBlock hwf h2.inBounds
+  · exact MemoryState.readAt_addBlock hwf h3.inBounds
+  · exact MemoryState.readAt_addBlock hwf h4.inBounds
 
 /-- Limbs outside a new block: the limbs before it. For a block below others added since the state
 (a second global's), where `readLimbs_addBlock` does not match. -/
@@ -283,6 +359,57 @@ theorem MemoryState.readLimbs_addBlock_of_id_ne {m : MemoryState} {x : BitVec v}
   fin_cases i
   · exact MemoryState.readAt_addBlock_of_id_ne h
   all_goals exact MemoryState.readAt_addBlock_of_id_ne (h' _)
+
+/-! ### Limbs and lifetime markers -/
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readLimbs_lifetimeStart {m : MemoryState} :
+    (m.lifetimeStart q).readLimbs p = m.readLimbs p := by
+  funext i
+  fin_cases i <;> simp only [MemoryState.readLimbs, MemoryState.readAt_lifetimeStart]
+
+/-- A lifetime marker keeps the bits. -/
+@[mlir_read]
+theorem MemoryState.readLimbs_lifetimeEnd {m : MemoryState} :
+    (m.lifetimeEnd q).readLimbs p = m.readLimbs p := by
+  funext i
+  fin_cases i <;> simp only [MemoryState.readLimbs, MemoryState.readAt_lifetimeEnd]
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsFit.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.LimbsFit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).LimbsFit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart (hne' _), h.2.2.2.1.lifetimeStart (hne' _),
+      h.2.2.2.2.1.lifetimeStart (hne' _), h.2.2.2.2.2.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsFit.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.LimbsFit p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).LimbsFit p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd (hne' _), h.2.2.2.1.lifetimeEnd (hne' _),
+      h.2.2.2.2.1.lifetimeEnd (hne' _), h.2.2.2.2.2.lifetimeEnd (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.lifetimeStart {m : MemoryState} {p q : Pointer} (h : m.LimbsRoom p)
+    (hne : p.id ≠ q.id) : (m.lifetimeStart q).LimbsRoom p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeStart hne, h.2.2.1.lifetimeStart (hne' _), h.2.2.2.1.lifetimeStart (hne' _),
+      h.2.2.2.2.1.lifetimeStart (hne' _), h.2.2.2.2.2.lifetimeStart (hne' _)⟩
+
+@[mlir_mem, mlir_transport]
+theorem MemoryState.LimbsRoom.lifetimeEnd {m : MemoryState} {p q : Pointer} (h : m.LimbsRoom p)
+    (hne : p.id ≠ q.id) : (m.lifetimeEnd q).LimbsRoom p := by
+  have hne' (k : BitVec 64) : (p.add k).id ≠ q.id := by simpa [Pointer.add_id] using hne
+  exact
+    ⟨h.1, h.2.1.lifetimeEnd hne, h.2.2.1.lifetimeEnd (hne' _), h.2.2.2.1.lifetimeEnd (hne' _),
+      h.2.2.2.2.1.lifetimeEnd (hne' _), h.2.2.2.2.2.lifetimeEnd (hne' _)⟩
+
+-- last among the transports: the structural ones carry a `LimbsRoom` fact first (see `Point`)
+attribute [mlir_transport] MemoryState.LimbsFit.room
 
 end
 

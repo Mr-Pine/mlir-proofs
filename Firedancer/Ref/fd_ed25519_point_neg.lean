@@ -25,7 +25,7 @@ section Proof
 /-- `fd_ed25519_point_neg` stores `spec` of the point at `a` at `r`, which is `a` itself or in another
 block, and returns `r`. -/
 public theorem fd_ed25519_point_neg.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) (hsep : r = a ∨ r.id ≠ a.id) :
+    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) (hsep : r = a ∨ r.id ≠ a.id) :
     fd_ed25519_point_neg.call (fd_ed25519_point_neg.args (.value r) (.value a)) s =
       .value
         (.cons (.value r) .nil,
@@ -34,7 +34,7 @@ public theorem fd_ed25519_point_neg.call_eq (r a : Pointer) (s : GlobalState) (h
   rcases hsep with rfl | hsep
   · func_init
     -- the stores' chain in `hS` is over `S₀`: reads through it need `S₀`'s point
-    have hr₀ : S₀.mem.PointFit r := hS ▸ hr
+    have hr₀ : S₀.mem.PointFit r := hS ▸ ha
     block_init
     step_call using fd_f25519_neg.call_eq
     iterate 2 

@@ -1,6 +1,7 @@
 module
 
 public import MLIR.Run.Tactic
+public import Firedancer.Common.Memory
 public import Firedancer.Ref.fd_ulong_load_8
 public import Firedancer.Ref.Mlir.fd_curve25519_scalar_reduce
 import Std.Tactic.BVDecide
@@ -305,27 +306,19 @@ public theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {
     {y : BitVec b} (hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k)) (ha : a = 8 * k)
     (hk : k < 2 ^ 64) :
     (m.storeAt p x).storeAt (p.add (BitVec.ofNat 64 k)) y = m.storeAt p (y ++ x) := by
-  cases hb : m[p.id]? with
-  | none =>
-    have hn :
-      ∀ {m' : MemoryState} {q : Pointer} {w} {z : BitVec w},
-        m'[q.id]? = none → m'.storeAt q z = m' := by
-      intro m' q w z hq
-      simp [MemoryState.storeAt, hq]
-    rw [hn hb, hn (q := p.add _) hb, hn hb]
-  | some blk =>
-    rw [MemoryState.getElem?_eq] at hb
-    have hid : (p.add (BitVec.ofNat 64 k)).id = p.id := rfl
-    have hoff : (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + a := by
-      rw [Pointer.offsetInBits_add hov, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hk]
-      omega
-    simp only [MemoryState.storeAt, MemoryState.getElem?_eq, hb, hid,
-      Std.ExtHashMap.getElem?_insert_self, hoff, spliceBits_spliceBits_append]
-    congr 1
-    apply Std.ExtHashMap.ext_getElem?
-    intro j
-    simp only [Std.ExtHashMap.getElem?_insert]
-    split <;> rfl
+  have hoff : (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + a := by
+    rw [Pointer.offsetInBits_add hov, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hk]
+    omega
+  have hones : BitVec.allOnes b ++ BitVec.allOnes a = BitVec.allOnes (b + a) := by
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    simp only [BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
+    split <;> simp <;> omega
+  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    MemoryState.modifyBlock_modifyBlock_self]
+  congr 1
+  funext blk
+  simp only [Function.comp_apply, hoff, spliceBits_spliceBits_append, hones]
 
 /-- `x`, as a signed integer, lies in `[lo, hi]`. -/
 public def Bnd (x : BitVec 64) (lo hi : Int) : Prop :=
@@ -611,8 +604,9 @@ public theorem residual63 (x : BitVec 64) (a b : Int) (hs : Bnd (x + 1048576#64)
 public theorem residual63_add (x y : BitVec 64) (c d lo hi : Int) (hy : Bnd y c d) (a b : Int)
     (hs : Bnd (x + 1048576#64) a b)
     (h :
-      0 ≤ a ∧ lo = -1048576 + c ∧ hi = 1048575 + d ∧ -9223372036854775808 ≤ lo ∧
-        hi ≤ 9223372036854775807) :
+      0 ≤ a ∧
+        lo = -1048576 + c ∧
+        hi = 1048575 + d ∧ -9223372036854775808 ≤ lo ∧ hi ≤ 9223372036854775807) :
     Bnd ((x + y) - ((x + 1048576#64) &&& 9223372036852678656#64)) lo hi := by
   rw [and_mask63_eq hs h.1]
   exact residual_add x y c d lo hi hy h.2
@@ -621,8 +615,9 @@ public theorem residual63_add (x y : BitVec 64) (c d lo hi : Int) (hy : Bnd y c 
 public theorem residual63_add' (x y : BitVec 64) (c d lo hi : Int) (hy : Bnd y c d) (a b : Int)
     (hs : Bnd (x + 1048576#64) a b)
     (h :
-      0 ≤ a ∧ lo = -1048576 + c ∧ hi = 1048575 + d ∧ -9223372036854775808 ≤ lo ∧
-        hi ≤ 9223372036854775807) :
+      0 ≤ a ∧
+        lo = -1048576 + c ∧
+        hi = 1048575 + d ∧ -9223372036854775808 ≤ lo ∧ hi ≤ 9223372036854775807) :
     Bnd ((y + x) - ((x + 1048576#64) &&& 9223372036852678656#64)) lo hi := by
   rw [and_mask63_eq hs h.1]
   exact residual_add' x y c d lo hi hy h.2
@@ -656,8 +651,7 @@ public theorem shl_sshiftRight (x : BitVec 64) (a b : Int) (hx : Bnd x a b) (n :
 
 /-- `(x >> 21 + y) << 39` keeps the low 25 bits, where the logical and arithmetic shifts agree. -/
 public theorem ushiftRight_add_shl39 (x y : BitVec 64) :
-    (x >>> 21 + y) <<< 39 = (y + x.sshiftRight 21) <<< 39 := by
-  bv_decide
+    (x >>> 21 + y) <<< 39 = (y + x.sshiftRight 21) <<< 39 := by bv_decide
 
 /-- A limb's low 21 bits are the limb less its shifted carry. -/
 public theorem and_mask_sub (x : BitVec 64) : x &&& 2097151#64 = x - x.sshiftRight 21 <<< 21 := by
@@ -2984,25 +2978,32 @@ theorem fd_curve25519_scalar_reduce.out0_disjoint (a b c d : BitVec 64) (hd : Bn
         0#64 := by
   have := Bnd.toInt_eq_toNat hd (by decide)
   have := hd.2
-  have hd' : d.ult 2097152#64 := by simp [BitVec.ult]; omega
+  have hd' : d.ult 2097152#64 := by
+    simp [BitVec.ult]; omega
   bv_decide
 
 /-- `out1`'s `or disjoint`s hold: the limbs' bits are masked or shifted apart. -/
 theorem fd_curve25519_scalar_reduce.out1_disjoint (a b c d : BitVec 64) :
     b <<< 20 &&& 2199022206976#64 &&& (a >>> 1 &&& 1048575#64) = 0#64 ∧
       (b <<< 20 &&& 2199022206976#64 ||| a >>> 1 &&& 1048575#64) &&&
-          (c <<< 41 &&& 4611683819404132352#64) = 0#64 ∧
+          (c <<< 41 &&& 4611683819404132352#64) =
+        0#64 ∧
       (b <<< 20 &&& 2199022206976#64 ||| a >>> 1 &&& 1048575#64 |||
-          c <<< 41 &&& 4611683819404132352#64) &&& d <<< 62 = 0#64 := by
+            c <<< 41 &&& 4611683819404132352#64) &&&
+          d <<< 62 =
+        0#64 := by
   bv_decide
 
 /-- `out2`'s `or disjoint`s hold: the limbs' bits are masked or shifted apart. -/
 theorem fd_curve25519_scalar_reduce.out2_disjoint (a b c d : BitVec 64) :
     b <<< 19 &&& 1099511103488#64 &&& (a >>> 2 &&& 524287#64) = 0#64 ∧
       (b <<< 19 &&& 1099511103488#64 ||| a >>> 2 &&& 524287#64) &&&
-          (c <<< 40 &&& 2305841909702066176#64) = 0#64 ∧
+          (c <<< 40 &&& 2305841909702066176#64) =
+        0#64 ∧
       (b <<< 19 &&& 1099511103488#64 ||| a >>> 2 &&& 524287#64 |||
-          c <<< 40 &&& 2305841909702066176#64) &&& d <<< 61 = 0#64 := by
+            c <<< 40 &&& 2305841909702066176#64) &&&
+          d <<< 61 =
+        0#64 := by
   bv_decide
 
 /-- `out3`'s `or disjoint`s hold: the limbs' bits are masked or shifted apart. -/
@@ -3019,7 +3020,7 @@ theorem fd_curve25519_scalar_reduce.run448 {β : Type} {out inp : Pointer}
     {g : ⟪fd_curve25519_scalar_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {s1_9 s0_6 s2_10 s3_11 s4_12 s5_13 s6_12 s7_13 s8_13 s9_13 s10_13 s11_13 t1550 : BitVec 64}
     (hArgs : E.args = (fd_curve25519_scalar_reduce.args (.value out) (.value inp)).get)
-    (hout : Fits S.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
+    (hout : Room S.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
     (hc : fd_curve25519_scalar_reduce.Consts E)
     (hR :
       E ⊨ [%1529 := s1_9, %1530 := s0_6, %1532 := s2_10, %1534 := s3_11, %1536 := s4_12, %1538 :=
@@ -3116,7 +3117,7 @@ theorem fd_curve25519_scalar_reduce.run448 {β : Type} {out inp : Pointer}
 /-- `reduce` stores `spec` of the 64 bytes at `inp` as the 32 bytes at `out`, and returns `out`. The
 loads all come before the stores, so `out` may alias `inp`. -/
 public theorem fd_curve25519_scalar_reduce.call_eq (out inp : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : Fits s.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
+    (hwf : s.WF) (hout : Room s.mem out (8 * 32)) (hout_off : ¬out.offset.uaddOverflow 32#64)
     (hin : Fits s.mem inp (8 * 64)) (hin_off : ¬inp.offset.uaddOverflow 64#64) :
     fd_curve25519_scalar_reduce.call (fd_curve25519_scalar_reduce.args (.value out) (.value inp))
         s =

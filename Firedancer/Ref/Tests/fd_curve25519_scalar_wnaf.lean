@@ -14,7 +14,7 @@ private def scalar : Pointer :=
 
 /-- `_t` filled with ones (stale data the `memset` clears), the scalar `x` at `scalar`. -/
 private def state (x : BitVec 256) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨512, BitVec.allOnes _⟩), (⟨2⟩, ⟨32, x⟩)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 512 (BitVec.allOnes _)), (⟨2⟩, .ofBytes 32 x)]⟩⟩
 
 /-- `_t` after the call, or `none` for UB / out of fuel. -/
 private def out (x : BitVec 256) (bits : BitVec 32) : Option (BitVec (16 * 256)) :=

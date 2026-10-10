@@ -13,7 +13,7 @@ section Proof
 
 /-- `fd_ed25519_point_set` copies the point at `a` to `r`, in another block, and returns `r`. -/
 public theorem fd_ed25519_point_set.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) (hsep : r.id ≠ a.id) :
+    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) (hsep : r.id ≠ a.id) :
     fd_ed25519_point_set.call (fd_ed25519_point_set.args (.value r) (.value a)) s =
       .value (.cons (.value r) .nil, { s with mem := s.mem.storePoint r (s.mem.readPoint a) }) := by
   func_init

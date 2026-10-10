@@ -23,7 +23,7 @@ section Proof
 /-- `fiat_25519_add` stores `spec x y` at `out`. The loads all come before the stores, so `out` may
 alias `x` or `y`. -/
 public theorem fiat_25519_add.call_eq (out x y : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (hx : s.mem.LimbsFit x) (hy : s.mem.LimbsFit y) :
+    (hout : s.mem.LimbsRoom out) (hx : s.mem.LimbsFit x) (hy : s.mem.LimbsFit y) :
     fiat_25519_add.call (fiat_25519_add.args (.value out) (.value x) (.value y)) s =
       .value
         (.nil,

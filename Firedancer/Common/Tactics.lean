@@ -23,14 +23,77 @@ elab "clear_reads" : tactic =>
         g ← g.tryClear d.fvarId
     replaceMainGoal [g]
 
-/-- `limbs_fit x`: the slot `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset, which
-are dropped. -/
+open Lean Elab Tactic Meta in
+/-- `clear_facts x`: drop the memory facts about the object at `x` (`P m x …` or `P m (x.add k) …`
+for a memory `m`: `Fits`, `Room`, `LimbsFit`, …), e.g. once it is dead. -/
+elab "clear_facts" xs:(ppSpace colGt ident)+ : tactic =>
+  withMainContext do
+    let mut g ← getMainGoal
+    for x in xs do
+      let xe ← elabTerm x none
+      let base (p : Expr) : Expr := (p.app2? ``Pointer.add).elim p (·.1)
+      for d in ← getLCtx do
+        if d.isImplementationDetail then
+          continue
+        let ty ← instantiateMVars d.type
+        let args := ty.getAppArgs
+        unless ty.getAppFn.isConst && args.size ≥ 2 do
+          continue
+        unless (← inferType args[0]!).isConstOf ``MemoryState do
+          continue
+        if base args[1]! == xe then
+          g ← g.tryClear d.fvarId
+    replaceMainGoal [g]
+
+open Lean Elab Tactic Meta in
+/-- `limbs_stored x`: after `x`'s first write, its newest `LimbsFit` fact becomes `hx_limbs`, in
+place of the slot's `LimbsRoom`. -/
+elab "limbs_stored" xs:(ppSpace colGt ident)+ : tactic =>
+  withMainContext do
+    let mut g ← getMainGoal
+    for x in xs do
+      let xe ← elabTerm x none
+      let name := Name.mkSimple s!"h{x.getId.toString}_limbs"
+      let some d ←
+        g.withContext do
+            return (← getLCtx).foldl (init := none) fun acc d =>
+                if
+                    !d.isImplementationDetail && d.type.isAppOfArity ``MemoryState.LimbsFit 2 &&
+                      d.type.appArg! == xe then
+                  some d
+                else acc | throwError "`limbs_stored`: no `LimbsFit` fact about {xe}"
+      let old ←
+        g.withContext do
+            return (← getLCtx).findFromUserName? name
+      if let some o := old then
+        if o.fvarId != d.fvarId then
+          g ← g.clear o.fvarId
+      g ← g.rename d.fvarId name
+    replaceMainGoal [g]
+
+/-- `limbs_fit x`: the global `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset,
+which are dropped with its `Room`. -/
 macro "limbs_fit " x:ident : tactic => do
   let n := x.getId.toString
   let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
+  let room := Lean.mkIdent (.mkSimple s!"h{n}_room")
   let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
-  `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $off))
+  `(tactic| (have $limbs := MemoryState.LimbsFit.of_fits $fits $off; clear $fits $room $off))
+
+/-- `limbs_room x`: room for the slot `x`'s limbs (`hx_limbs`), from its block's `Room` (after its
+`lifetime.start`, `hroom_x`; else `hx_room`) and offset, which are dropped with its bounds. -/
+macro "limbs_room " x:ident : tactic => do
+  let n := x.getId.toString
+  let started := Lean.mkIdent (.mkSimple s!"hroom_{n}")
+  let room := Lean.mkIdent (.mkSimple s!"h{n}_room")
+  let bounds := Lean.mkIdent (.mkSimple s!"h{n}_bounds")
+  let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
+  let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
+  `(tactic|
+      first
+      | (have $limbs := MemoryState.LimbsRoom.of_room $started $off; clear $started $bounds $off)
+      | (have $limbs := MemoryState.LimbsRoom.of_room $room $off; clear $room $off))
 
 open Lean Elab Tactic Meta in
 /-- `name_limbs x`: the limbs the latest `storeLimbs` of the current state writes become `x`, with

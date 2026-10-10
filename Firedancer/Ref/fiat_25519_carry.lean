@@ -43,7 +43,7 @@ section Proof
 /-- `carry` stores one carry pass of `x` at `out`. The loads all come before the stores, so `out`
 may alias `x`; the `nsw`/`nuw` flags never fire, since every flagged operand is below `2^52`. -/
 public theorem fiat_25519_carry.call_eq (out x : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsFit out) (hx : s.mem.LimbsFit x) :
+    (hout : s.mem.LimbsRoom out) (hx : s.mem.LimbsFit x) :
     fiat_25519_carry.call (fiat_25519_carry.args (.value out) (.value x)) s =
       .value
         (.nil,

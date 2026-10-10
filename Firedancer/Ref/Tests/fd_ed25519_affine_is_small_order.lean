@@ -11,7 +11,7 @@ private def a : Pointer :=
 
 /-- One 160-byte block, `a`, holding `bytes`. -/
 private def state (bytes : BitVec 1280) : GlobalState :=
-  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨160, bytes⟩)]⟩⟩
+  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 160 bytes)]⟩⟩
 
 /-- The point with limbs `x`, `y` in `X`, `Y`, `T = 0`, `Z = 1`. -/
 private def point (x y : Fin 5 → BitVec 64) : BitVec 1280 :=

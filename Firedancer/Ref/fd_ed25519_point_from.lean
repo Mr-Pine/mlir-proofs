@@ -14,7 +14,7 @@ section Proof
 /-- `fd_ed25519_point_from` stores the point with coordinates `x, y, z, t` at `r`, and returns `r`;
 none of them is in `r`'s block. -/
 public theorem fd_ed25519_point_from.call_eq (r x y z t : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) (hx : s.mem.LimbsFit x) (hy : s.mem.LimbsFit y) (hz : s.mem.LimbsFit z)
+    (hr : s.mem.PointRoom r) (hx : s.mem.LimbsFit x) (hy : s.mem.LimbsFit y) (hz : s.mem.LimbsFit z)
     (ht : s.mem.LimbsFit t) (hrx : r.id ≠ x.id) (hry : r.id ≠ y.id) (hrz : r.id ≠ z.id)
     (hrt : r.id ≠ t.id) :
     fd_ed25519_point_from.call

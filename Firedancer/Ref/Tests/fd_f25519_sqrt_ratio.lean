@@ -17,7 +17,8 @@ private def v : Pointer :=
 
 /-- Three 40-byte blocks: `r` zeroed, `u` and `v` holding the limbs `ub` and `vb`. -/
 private def state (ub vb : BitVec 320) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, ⟨40, 0⟩), (⟨1⟩, ⟨40, ub⟩), (⟨2⟩, ⟨40, vb⟩)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 ub), (⟨2⟩, .ofBytes 40 vb)]⟩⟩
 
 /-- The returned flag and `r`'s canonical encoding after `sqrt_ratio r u q`, if the inputs are
 unchanged and the counter moved on by 50 blocks; else `none`. `spec` itself is not evaluated: its

@@ -116,15 +116,29 @@ theorem _root_.MLIR.GlobalState.WF.add_blocks_storeSha {s : GlobalState} (h : s.
   GlobalState.WF.storeSha (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem⟩) h.add_blocks
 
 /-- `add_blocks_storeSha`, then the digest's words. -/
-theorem _root_.MLIR.GlobalState.WF.add_blocks_storeSha_storeWords8 {s : GlobalState}
-    (h : s.WF) :
+theorem _root_.MLIR.GlobalState.WF.add_blocks_storeSha_storeWords8 {s : GlobalState} (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + k⟩, (s.mem.storeSha p v).storeWords8 q w⟩ : GlobalState).WF :=
   GlobalState.WF.storeWords8 (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem.storeSha p v⟩)
     (GlobalState.WF.add_blocks_storeSha h)
 
+/-- Room for eight words in a 64-byte live block from its start. -/
+theorem _root_.MLIR.MemoryState.Words8Room.of_room {m : MemoryState} {p : Pointer}
+    (h : Room m p 512) (hoff : p.offset = 0) : m.Words8Room p := by
+  have hov (k : Nat) (hk : k ≤ 64) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
+    simp [BitVec.uaddOverflow, hoff]
+    omega
+  exact
+    ⟨by simp [hoff], h.mono (by decide), Room.add_of_le (hov 8 (by decide)) (by decide) h,
+      Room.add_of_le (hov 16 (by decide)) (by decide) h,
+      Room.add_of_le (hov 24 (by decide)) (by decide) h,
+      Room.add_of_le (hov 32 (by decide)) (by decide) h,
+      Room.add_of_le (hov 40 (by decide)) (by decide) h,
+      Room.add_of_le (hov 48 (by decide)) (by decide) h,
+      Room.add_of_le (hov 56 (by decide)) (by decide) h⟩
+
 /-- Eight words fit in a 64-byte block from its start. -/
-theorem _root_.MLIR.MemoryState.Words8Fit.of_fits {m : MemoryState} {p : Pointer}
-    (h : Fits m p 512) (hoff : p.offset = 0) : m.Words8Fit p := by
+theorem _root_.MLIR.MemoryState.Words8Fit.of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 512)
+    (hoff : p.offset = 0) : m.Words8Fit p := by
   have hov (k : Nat) (hk : k ≤ 64) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
     simp [BitVec.uaddOverflow, hoff]
     omega
@@ -139,25 +153,34 @@ theorem _root_.MLIR.MemoryState.Words8Fit.of_fits {m : MemoryState} {p : Pointer
 
 /-! ### The memory after the SHA-512 calls -/
 
-theorem _root_.MLIR.Fits.initStores_iff {m : MemoryState} :
-    Fits (fd_sha512_init.stores m p) q w ↔ Fits m q w := by
-  simp [fd_sha512_init.stores, Fits.storeAt_iff]
+theorem _root_.MLIR.Fits.initStores {m : MemoryState} (h : Fits m q w) :
+    Fits (fd_sha512_init.stores m p) q w := by
+  unfold fd_sha512_init.stores
+  exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
 
-theorem _root_.MLIR.Fits.hashMem_iff {m : MemoryState} :
-    Fits (fd_ed25519_verify.hashMem m sha k X v) q w ↔ Fits m q w := by
-  simp [fd_ed25519_verify.hashMem, Fits.storeWords8_iff, Fits.storeSha_iff, Fits.initStores_iff]
+theorem _root_.MLIR.InBounds.initStores {m : MemoryState} (h : InBounds m q w) :
+    InBounds (fd_sha512_init.stores m p) q w := by
+  unfold fd_sha512_init.stores
+  exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
 
 theorem _root_.MLIR.Fits.hashMem {m : MemoryState} (h : Fits m q w) :
     Fits (fd_ed25519_verify.hashMem m sha k X v) q w :=
-  Fits.hashMem_iff.2 h
+  h.initStores.storeSha.storeWords8
+
+theorem _root_.MLIR.InBounds.hashMem {m : MemoryState} (h : InBounds m q w) :
+    InBounds (fd_ed25519_verify.hashMem m sha k X v) q w := by
+  unfold fd_ed25519_verify.hashMem MemoryState.storeSha
+  exact h.initStores.storeAt.storeAt.storeAt.storeAt.storeWords8.storeWords8
 
 theorem _root_.MLIR.MemoryState.ShaFit.hashMem {m : MemoryState} (h : m.ShaFit q) :
-    (fd_ed25519_verify.hashMem m sha k X v).ShaFit q := by
-  simpa only [MemoryState.ShaFit, Fits.hashMem_iff] using h
+    (fd_ed25519_verify.hashMem m sha k X v).ShaFit q :=
+  ⟨h.1.hashMem, h.2⟩
 
 theorem _root_.MLIR.MemoryState.Words8Fit.hashMem {m : MemoryState} (h : m.Words8Fit q) :
     (fd_ed25519_verify.hashMem m sha k X v).Words8Fit q := by
-  simpa only [MemoryState.Words8Fit, Fits.hashMem_iff] using h
+  unfold fd_ed25519_verify.hashMem fd_sha512_init.stores
+  exact
+    h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeSha.storeWords8
 
 theorem _root_.MLIR.GlobalState.WF.hashMem_mk {s : GlobalState} (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + n⟩, fd_ed25519_verify.hashMem s.mem sha k X v⟩ :
@@ -169,10 +192,43 @@ theorem _root_.MLIR.GlobalState.WF.hashMem_mk {s : GlobalState} (h : s.WF) :
       (GlobalState.WF.storeSha
         h1.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt)
 
+/-- Eight words that fit: their 64 bytes. -/
+theorem _root_.MLIR.MemoryState.Words8Fit.fits {m : MemoryState} {p : Pointer} (h : m.Words8Fit p) :
+    Fits m p 512 := by
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  have hov (k : Nat) (hk : k ≤ 56) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
+    simp [BitVec.uaddOverflow]
+    omega
+  have f1 := Fits.append (v := 64) (u := 128) (hov 8 (by omega)) (by decide) (by decide) h0 h1
+  have f2 := Fits.append (v := 128) (u := 192) (hov 16 (by omega)) (by decide) (by decide) f1 h2
+  have f3 := Fits.append (v := 192) (u := 256) (hov 24 (by omega)) (by decide) (by decide) f2 h3
+  have f4 := Fits.append (v := 256) (u := 320) (hov 32 (by omega)) (by decide) (by decide) f3 h4
+  have f5 := Fits.append (v := 320) (u := 384) (hov 40 (by omega)) (by decide) (by decide) f4 h5
+  have f6 := Fits.append (v := 384) (u := 448) (hov 48 (by omega)) (by decide) (by decide) f5 h6
+  exact Fits.append (v := 448) (u := 512) (hov 56 (by omega)) (by decide) (by decide) f6 h7
+
+theorem _root_.MLIR.MemoryState.Words8Room.initStores {m : MemoryState} (h : m.Words8Room q) :
+    (fd_sha512_init.stores m p).Words8Room q := by
+  unfold fd_sha512_init.stores
+  exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+
+theorem _root_.MLIR.MemoryState.Words8Room.storeSha {m : MemoryState} (h : m.Words8Room q) :
+    (m.storeSha p X).Words8Room q := by
+  unfold MemoryState.storeSha
+  exact h.storeAt.storeAt.storeAt.storeAt.storeWords8
+
+theorem _root_.MLIR.MemoryState.Words8Room.hashMem {m : MemoryState} (h : m.Words8Room q) :
+    (fd_ed25519_verify.hashMem m sha k X v).Words8Room q :=
+  h.initStores.storeSha.storeWords8
+
+/-- The digest stored where there is room for it: its 64 bytes are known. -/
+theorem _root_.MLIR.Fits.hashMem_k {m : MemoryState} (h : m.Words8Room k) :
+    Fits (fd_ed25519_verify.hashMem m sha k X v) k 512 :=
+  (MemoryState.Words8Fit.storeWords8_self h.initStores.storeSha).fits
+
 /-- A read outside the hash object and the digest. -/
-theorem _root_.MLIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState}
-    (hsha : q.id ≠ sha.id) (hk : q.id ≠ k.id) :
-    (fd_ed25519_verify.hashMem m sha k X v).readAt q w = m.readAt q w := by
+theorem _root_.MLIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState} (hsha : q.id ≠ sha.id)
+    (hk : q.id ≠ k.id) : (fd_ed25519_verify.hashMem m sha k X v).readAt q w = m.readAt q w := by
   have h' (o : BitVec 64) : (sha.add o).id ≠ q.id := by simpa [Pointer.add_id] using hsha.symm
   simp only [fd_ed25519_verify.hashMem, fd_sha512_init.stores,
     MemoryState.readAt_storeWords8_of_id_ne hk, MemoryState.readAt_storeSha_of_id_ne hsha,
@@ -180,34 +236,27 @@ theorem _root_.MLIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState}
 
 /-- A store at the start of a known read: the bits spliced in. -/
 theorem _root_.MLIR.MemoryState.readAt_storeAt_base {m : MemoryState} {p : Pointer}
-    (hfits : Fits m p v) (hv : ¬p.offset.uaddOverflow 0#64) (hw : w ≤ v) (x : BitVec w) :
+    (hfits : InBounds m p v) (hv : ¬p.offset.uaddOverflow 0#64) (hw : w ≤ v) (x : BitVec w) :
     (m.storeAt p x).readAt p v = Memory.spliceBits (m.readAt p v) 0 x := by
   have := MemoryState.readAt_add_storeAt (off := 0#64) hfits hv (by simpa using hw) x
   simpa [Pointer.add] using this
 
 /-- The digest's 64 bytes read back from the eight words stored at `p`. -/
 theorem _root_.MLIR.MemoryState.readAt_storeWords8_self {m : MemoryState} {p : Pointer}
-    (h : Fits m p 512) (hov : ¬p.offset.uaddOverflow 64#64) :
+    (h : InBounds m p 512) (hov : ¬p.offset.uaddOverflow 64#64) :
     (m.storeWords8 p v).readAt p 512 = Words8.bits v := by
   have hov' (o : Nat) (ho : o ≤ 64) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 o) :=
     BitVec.not_uaddOverflow_of_le hov
       (by
         simp; omega)
   unfold MemoryState.storeWords8
-  rw [MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 56 (by omega))
-      (by decide),
-    MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 48 (by omega))
-      (by decide),
-    MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 40 (by omega))
-      (by decide),
-    MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 32 (by omega))
-      (by decide),
-    MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 24 (by omega))
-      (by decide),
-    MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 16 (by omega))
-      (by decide),
-    MemoryState.readAt_add_storeAt (by simpa [Fits.storeAt_iff] using h) (hov' 8 (by omega))
-      (by decide),
+  rw [MemoryState.readAt_add_storeAt (by simpa using h) (hov' 56 (by omega)) (by decide),
+    MemoryState.readAt_add_storeAt (by simpa using h) (hov' 48 (by omega)) (by decide),
+    MemoryState.readAt_add_storeAt (by simpa using h) (hov' 40 (by omega)) (by decide),
+    MemoryState.readAt_add_storeAt (by simpa using h) (hov' 32 (by omega)) (by decide),
+    MemoryState.readAt_add_storeAt (by simpa using h) (hov' 24 (by omega)) (by decide),
+    MemoryState.readAt_add_storeAt (by simpa using h) (hov' 16 (by omega)) (by decide),
+    MemoryState.readAt_add_storeAt (by simpa using h) (hov' 8 (by omega)) (by decide),
     MemoryState.readAt_storeAt_base h (hov' 0 (by omega)) (by decide)]
   generalize m.readAt p 512 = B
   apply BitVec.eq_of_getLsbD_eq
@@ -217,10 +266,13 @@ theorem _root_.MLIR.MemoryState.readAt_storeWords8_self {m : MemoryState} {p : P
   grind
 
 /-- The digest at `k` read back. -/
-theorem _root_.MLIR.MemoryState.readAt_hashMem_k {m : MemoryState} (h : Fits m k 512)
+theorem _root_.MLIR.MemoryState.readAt_hashMem_k {m : MemoryState} (h : InBounds m k 512)
     (hov : ¬k.offset.uaddOverflow 64#64) :
     (fd_ed25519_verify.hashMem m sha k X v).readAt k 512 = Words8.bits v :=
-  MemoryState.readAt_storeWords8_self (by simpa [Fits.storeSha_iff, Fits.initStores_iff] using h)
+  MemoryState.readAt_storeWords8_self
+    (by
+      unfold MemoryState.storeSha
+      exact h.initStores.storeAt.storeAt.storeAt.storeAt.storeWords8)
     hov
 
 theorem _root_.MLIR.MemoryState.eraseFrom_initStores {m : MemoryState} :
@@ -228,15 +280,14 @@ theorem _root_.MLIR.MemoryState.eraseFrom_initStores {m : MemoryState} :
   simp [fd_sha512_init.stores, MemoryState.eraseFrom_storeAt]
 
 /-- Eight words stored in the frame are gone once it is erased. -/
-theorem _root_.MLIR.MemoryState.eraseFrom_storeWords8_of_le {m : MemoryState}
-    (h : n ≤ p.id.id) : (m.storeWords8 p v).eraseFrom n = m.eraseFrom n := by
+theorem _root_.MLIR.MemoryState.eraseFrom_storeWords8_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.storeWords8 p v).eraseFrom n = m.eraseFrom n := by
   have h' (o : BitVec 64) : n ≤ (p.add o).id.id := by simpa [Pointer.add_id] using h
   simp only [MemoryState.storeWords8, MemoryState.eraseFrom_storeAt_of_le h,
     MemoryState.eraseFrom_storeAt_of_le (h' _)]
 
 /-- The digest in the frame, dropped before the erase moves past it. -/
-theorem _root_.MLIR.MemoryState.eraseFrom_hashMem_of_le {m : MemoryState}
-    (h : n ≤ k.id.id) :
+theorem _root_.MLIR.MemoryState.eraseFrom_hashMem_of_le {m : MemoryState} (h : n ≤ k.id.id) :
     (fd_ed25519_verify.hashMem m sha k X v).eraseFrom n =
       (fd_sha512_init.stores (m.eraseFrom n) sha).storeSha sha X := by
   rw [fd_ed25519_verify.hashMem, MemoryState.eraseFrom_storeWords8_of_le h,

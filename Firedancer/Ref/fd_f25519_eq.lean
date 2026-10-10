@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.Common.Limbs
+public import Firedancer.Common.Tactics
 public import Firedancer.Ref.fd_f25519_sub
 public import Firedancer.Ref.fd_f25519_is_zero
 public import Firedancer.Ref.Mlir.fd_f25519_eq
@@ -37,13 +38,12 @@ public theorem fd_f25519_eq.call_eq (a b : Pointer) (s : GlobalState) (hwf : s.W
   step_pure
   step_alloca with r
   step_pure
-  have hr_limbs := MemoryState.LimbsFit.of_fits hr_fits hr_off
+  limbs_room r
   -- fd_f25519_sub( r, a, b );
   step_call using fd_f25519_sub.call_eq consuming ha
   clear hb
   -- return fd_f25519_is_zero( r );
   step_call using fd_f25519_is_zero.call_eq consuming hread_r
-  clear hr_limbs hr_fits
   step_pure
   finish_block
   subst hS

@@ -19,9 +19,11 @@ private def b : Pointer :=
 private def state : GlobalState :=
   ⟨⟨3⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨0⟩, ⟨160, 0⟩),
-          (⟨1⟩, ⟨160, BitVec.ofNat 1280 (2 ^ 1100 + 3 * 2 ^ 700 + 5 * 2 ^ 400 + 7)⟩),
-          (⟨2⟩, ⟨160, BitVec.ofNat 1280 (11 * 2 ^ 1200 + 2 ^ 900 + 13 * 2 ^ 500 + 2 ^ 64 + 9)⟩)]⟩⟩
+        [(⟨0⟩, .ofBytes 160 0),
+          (⟨1⟩, .ofBytes 160 (BitVec.ofNat 1280 (2 ^ 1100 + 3 * 2 ^ 700 + 5 * 2 ^ 400 + 7))),
+          (⟨2⟩,
+            .ofBytes 160
+              (BitVec.ofNat 1280 (11 * 2 ^ 1200 + 2 ^ 900 + 13 * 2 ^ 500 + 2 ^ 64 + 9)))]⟩⟩
 
 /-- `P` with its limbs computed once: the specs' limbs are functions, recomputed at each use. -/
 private def memo (P : PointLimbs) : PointLimbs :=

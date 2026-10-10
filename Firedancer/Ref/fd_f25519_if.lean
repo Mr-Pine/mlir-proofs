@@ -33,7 +33,7 @@ theorem setWidth_setWidth_of_lt {cond : BitVec 32} (hcond : cond.toNat < 256) :
 `selectznz`'s five temporaries are freed again: only the counter moves on.
 `hcond` is the `range(0, 256)` that makes `(uchar)cond` a `trunc nuw`. -/
 public theorem fd_f25519_if.call_eq (r : Pointer) (cond : BitVec 32) (a0 a1 : Pointer)
-    (hcond : cond.toNat < 256) (s : GlobalState) (hwf : s.WF) (hr : s.mem.LimbsFit r)
+    (hcond : cond.toNat < 256) (s : GlobalState) (hwf : s.WF) (hr : s.mem.LimbsRoom r)
     (ha0 : s.mem.LimbsFit a0) (ha1 : s.mem.LimbsFit a1) :
     fd_f25519_if.call (fd_f25519_if.args (.value r) (.value cond) (.value a0) (.value a1)) s =
       .value

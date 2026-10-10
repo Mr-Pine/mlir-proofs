@@ -13,7 +13,9 @@ private def ptr (k : Nat) : Pointer :=
 (block 2) and `b2` (block 4); block 0 is null's. -/
 private def state (b1 b2 : BitVec 256) : GlobalState :=
   ⟨⟨5⟩,
-    ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨160, 0⟩), (⟨2⟩, ⟨32, b1⟩), (⟨3⟩, ⟨160, 0⟩), (⟨4⟩, ⟨32, b2⟩)]⟩⟩
+    ⟨Std.ExtHashMap.ofList
+        [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 b1), (⟨3⟩, .ofBytes 160 0),
+          (⟨4⟩, .ofBytes 32 b2)]⟩⟩
 
 /-- A point's coordinates `X, Y, Z, T` at `p`, canonically encoded. -/
 private def enc (m : MemoryState) (p : Pointer) : List (BitVec 256) :=
