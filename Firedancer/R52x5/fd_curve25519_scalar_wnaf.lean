@@ -177,7 +177,7 @@ theorem storeDef_readAt_definedAt {m : MemoryState} {p : Pointer} (h : InBounds 
     · rfl
   simp only [MemoryState.storeDef, MemoryState.readAt, MemoryState.definedAt, hblk,
     MemoryState.modifyBlock]
-  ext1
+  refine MemoryState.ext ?_ rfl
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]

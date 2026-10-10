@@ -542,7 +542,7 @@ theorem readAt_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n)
 
 theorem eraseFrom_eraseFrom {m : MemoryState} (h : n ≤ n') :
     (m.eraseFrom n').eraseFrom n = m.eraseFrom n := by
-  simp only [MemoryState.eraseFrom, MemoryState.mk.injEq]
+  simp only [MemoryState.eraseFrom, MemoryState.mk.injEq, and_true]
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_filter']

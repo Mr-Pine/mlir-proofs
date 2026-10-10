@@ -47,7 +47,7 @@ theorem MemoryState.storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
   unfold MemoryBlock.lengthInBits at hsz
   simp only [MemoryState.storeAt, MemoryState.storeDef, MemoryState.readAt, hblk,
     MemoryState.modifyBlock]
-  ext1
+  refine MemoryState.ext ?_ rfl
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]

@@ -13,7 +13,7 @@ namespace MLIR
 theorem MemoryState.modifyBlock_modifyBlock_self {m : MemoryState} {i : BlockId}
     {f g : MemoryBlock → MemoryBlock} :
     (m.modifyBlock i f).modifyBlock i g = m.modifyBlock i (g ∘ f) := by
-  simp only [modifyBlock, MemoryState.mk.injEq]
+  simp only [modifyBlock, MemoryState.mk.injEq, and_true]
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
@@ -23,7 +23,7 @@ theorem MemoryState.modifyBlock_modifyBlock_self {m : MemoryState} {i : BlockId}
 theorem MemoryState.modifyBlock_comm {m : MemoryState} {i j : BlockId}
     {f g : MemoryBlock → MemoryBlock} (h : i ≠ j) :
     (m.modifyBlock i f).modifyBlock j g = (m.modifyBlock j g).modifyBlock i f := by
-  simp only [modifyBlock, MemoryState.mk.injEq]
+  simp only [modifyBlock, MemoryState.mk.injEq, and_true]
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
