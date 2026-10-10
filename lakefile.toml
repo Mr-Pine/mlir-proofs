@@ -1,5 +1,5 @@
 name = "rir-firedancer"
-defaultTargets = ["Ed25519", "Firedancer"]
+defaultTargets = ["Ed25519", "Firedancer", "Zig", "Agave", "Boringssl", "Sodium"]
 
 # Firedancer's ed25519 verify (ref), lifted to the register-based IR and proved.
 [[require]]
@@ -20,3 +20,23 @@ globs = ["Ed25519.*"]
 name = "Firedancer"
 # every module, not just the root's imports
 globs = ["Firedancer.+"]
+
+# Zig std's ed25519 verify, lifted from `zig-build/out/op` and proved.
+[[lean_lib]]
+name = "Zig"
+globs = ["Zig.+"]
+
+# Agave's ed25519 verify (solana-ed25519), lifted from `agave-build/out/*/op` and proved.
+[[lean_lib]]
+name = "Agave"
+globs = ["Agave.*"]
+
+# BoringSSL's ED25519_verify, lifted from `boringssl-build/out/op` and proved.
+[[lean_lib]]
+name = "Boringssl"
+globs = ["Boringssl.+"]
+
+# libsodium's crypto_sign_ed25519_verify_detached, lifted from `sodium-build/out/op` and proved.
+[[lean_lib]]
+name = "Sodium"
+globs = ["Sodium.+"]

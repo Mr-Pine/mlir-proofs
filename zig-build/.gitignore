@@ -1,0 +1,4 @@
+# intermediate files; out/verify.ll (Zig's output) and out/op (the lifts' source) are kept
+/out/*
+!/out/verify.ll
+!/out/op/
