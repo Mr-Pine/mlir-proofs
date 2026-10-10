@@ -329,7 +329,6 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 : Vector Int 2
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb12 S >>= g) = K := by
   obtain ⟨hf1, hl1⟩ := hn1s i hi
   clear hn1s
-  dsimp only [LoopRegs] at hR
   block_init
   step_call using fd_ed25519_partial_dbl.call_eq
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
@@ -423,7 +422,6 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w2 : Vector Int
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb16 S >>= g) = K := by
   obtain ⟨hf2, hl2⟩ := hn2s i hi
   clear hn2s
-  dsimp only [LoopRegs] at hR
   block_init
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
     show i * 2 = 2 * i by omega]
@@ -517,7 +515,6 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer)
               S' = { S with mem := S.mem.storeQuad5 r T } →
               (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb12 S' >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb20 S >>= g) = K := by
-  dsimp only [LoopRegs] at hR
   block_init
   step_pure
   finish_block
@@ -706,7 +703,6 @@ theorem found_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer)
           (E' ⊨ [%1021 := BitVec.ofNat 64 j]) →
           (fd_ed25519_double_scalar_mul_base.runFrom E' ^bb12 S >>= g) = K) :
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb10 S >>= g) = K := by
-  dsimp only [LoopRegs] at hR
   block_init
   step_pure [slt_neg_one32 (show j < 2 ^ 31 by omega)]
   finish_block
@@ -1140,7 +1136,6 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     refine
       main_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ _ _ hL hw1 hw2 _ _ j.val j.isLt _ S E₂ h₁ h₂ h₃
         ⟨hwf', by mem_fact, htp', hsl1', hsl2', htA, htblB'⟩ hrz fun E₃ S₃ T' h₁' hR₃ hS₃ => ?_
-    dsimp only [LoopRegs] at hR₃
     rw [← hk, ← hP, blocks_of_some hj, spec_of_some hj]
     clear hwf' hr' htp' hsl1' hsl2' htA htblB' hrz hL
     subst hS₃
@@ -1165,7 +1160,6 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     simp only [GlobalState.alloca, Nat.add_assoc, Nat.reduceAdd]
   · -- no non-zero digit: `r` is zero
     intro hj E₂ h₁ hR₂
-    dsimp only [LoopRegs] at hR₂
     rw [← hk, ← hP, blocks_of_none hj, spec_of_none hj]
     clear hwf' hr' htp' hsl1' hsl2' htA htblB' hrz hL
     subst hS

@@ -139,7 +139,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
   step_pure
   have htp := MemoryState.PointRoom.of_room hroom_tp htp_off
   clear hroom_tp htp_bounds
-  step_call using fd_ed25519_partial_dbl.call_eq consuming htp
+  step_call using fd_ed25519_partial_dbl.call_eq
   step_pure
   finish_block
   · -- `n > 1`: the loop, `n - 1` iterations
@@ -148,7 +148,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
       omega
     refine
       fd_ed25519_point_dbln.loop r a tp n _ _ (n.toNat - 2) 1 _ S E hArgs ?_ (by omega) le_rfl hn
-        hwf hr ‹_› hr_ne_tp hread_tp ?_
+        hwf hr htp hr_ne_tp hread_tp ?_
     · env_reads
     · intro E' S' h1 h2 h3
       block_init
@@ -196,7 +196,7 @@ public theorem fd_ed25519_point_dbln.call_eq_one (r a : Pointer) (s : GlobalStat
   step_pure
   have htp := MemoryState.PointRoom.of_room hroom_tp htp_off
   clear hroom_tp htp_bounds
-  step_call using fd_ed25519_partial_dbl.call_eq consuming htp
+  step_call using fd_ed25519_partial_dbl.call_eq
   step_pure
   finish_block
   block_init

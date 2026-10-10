@@ -257,8 +257,6 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
       fd_ed25519_verify.hashMem, fd_sha512_init.stores]
   omega
 
--- the frame's four objects: eight lifetime markers as effectful steps, each carrying the facts
-set_option maxHeartbeats 300000 in
 /-- `fd_ed25519_verify` returns `spec`'s code and leaves `spec`'s hash object; its frame is freed.
 The signature, key and message are only read, the hash object only written by the SHA-512 calls. -/
 public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (sig pk sha : Pointer)
@@ -343,9 +341,7 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
     have hR_pt := MemoryState.Quad5Room.of_room (hroom_R.mono (by decide)) hR_off
     clear hroom_A hroom_R hA_bounds hR_bounds
     -- reads of the decoded points go through the stores over the state after the `alloca`s
-    have hk₀ := hS ▸ hk_bounds
     have hA₀ := hS ▸ hA_pt
-    have hR₀ := hS ▸ hR_pt
     have hRA : R.id ≠ A.id := by simp [hA, hR, GlobalState.slot]
     -- int res = fd_ed25519_point_frombytes_2x( Aprime, public_key, R, r );
     step_call using fd_ed25519_point_frombytes_2x.call_eq'
@@ -389,9 +385,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
       have hAf : S.mem.Quad5Fit A := by
         rw [hS]
         exact (MemoryState.Quad5Fit.storeQuad5_self hA₀).storeQuad5
-      have hRf : S.mem.Quad5Fit R := by
-        rw [hS]
-        exact MemoryState.Quad5Fit.storeQuad5_self hR₀.storeQuad5
       -- if( fd_ed25519_affine_is_small_order( Aprime ) ) return FD_ED25519_ERR_PUBKEY;
       block_init
       step_call using fd_ed25519_affine_is_small_order.call_eq
@@ -441,7 +434,7 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           --   fd_sha512_init( sha ), r, 32UL ), public_key, 32UL ), msg, msg_sz ), k );
           have hsha : S.mem.ShaFit sha := ⟨hsha_fits, hsha_off⟩
           have hk_w := MemoryState.Words8Room.of_room hroom_k hk_off
-          clear hroom_k hA_pt hR_pt
+          clear hroom_k hA_pt
           step_pattern using fd_ed25519_verify.hash_run
           obtain ⟨⟨sha4, kw⟩, hH⟩ :
             ∃ H,
@@ -465,9 +458,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           -- return FD_ED25519_ERR_MSG;
           step_call using fd_ed25519_point_affine_eq.call_eq
           -- the frame's lifetimes end
-          clear_facts A R Rc
-          clear hfits_k hmsg hsig hpk hsha_fits
-          clear hfits_k
           iterate 4 step_pure
           finish_block
           block_init
@@ -481,11 +471,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
             ite_eq_right (not_not.mpr hsoR)] at hres
           subst hS hres
           erase_frame
-          -- `k`'s 32 bytes as `reduce` stored them
-          rw [MemoryState.readAt_storeAt_self
-              (InBounds.hashMem
-                (InBounds.lifetimeStart
-                  (InBounds.storeQuad5 (InBounds.storeQuad5 (hk₀.mono (by decide))))))]
           simp only [fd_ed25519_verify.Result.mem, ite_ofBool_beq]
           simp
           omega

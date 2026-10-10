@@ -254,7 +254,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
     -- reads of the decoded points go through the stores over the state after the `alloca`s
     have hA₀ := hS ▸ hA_pt
     have hR₀ := hS ▸ hR_pt
-    have hk₀ := hS ▸ hk_bounds
     -- int res = fd_ed25519_point_frombytes_2x( Aprime, public_key, R, r );
     step_call using fd_ed25519_point_frombytes_2x.call_eq
     step_pure
@@ -359,11 +358,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           finish_block
           subst hS hres
           erase_frame
-          -- `k`'s 32 bytes as `reduce` stored them
-          rw [MemoryState.readAt_storeAt_self
-              (InBounds.hashMem
-                (InBounds.lifetimeStart
-                  (InBounds.storePoint (InBounds.storePoint (hk₀.mono (by decide))))))]
           simp only [fd_ed25519_verify.spec, hv, hA?, hR?, hsoA, hsoR, hH,
             fd_ed25519_verify.Result.mem, ite_ofBool_beq]
           simp

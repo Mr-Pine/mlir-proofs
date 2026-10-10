@@ -90,15 +90,13 @@ set_option hygiene false in
 local macro "probe " k:num : tactic =>
   `(tactic|
     ( have hj : i + $k < 256 := by omega
-      have hf := fits_lane (t := t) hfits hso hj
       block_init
       step_pure [and_ofNat64 (k := $k) hi8 (by decide), or_ofNat64 (k := $k) hi8 (by decide)]
       step_pure [Nat.mod_eq_of_lt (show i + $k < 2 ^ 64 by omega),
         show 2 * (i + $k) < 2 ^ 64 by omega, show (i + $k) * 2 = 2 * (i + $k) by omega]
       step_load
       step_pure
-      finish_block
-      clear hf))
+      finish_block))
 
 set_option hygiene false in
 /-- After a probe of `_t[j]`: at a non-zero, on to `^bb12`; at a zero, go on. -/
@@ -122,9 +120,8 @@ local macro "unpack_bit " j:term : tactic =>
         rw [hS]
         exact hbyte $j _ _ hj
       have hfb := fits_byte hfs hco hj
-      have hfl := room_lane hfits hso hj
       step_pattern using runBodyFrom_unpackBitRun (jn := $j) (x := x)
-      clear hb hfb hfl
+      clear hb hfb
       rw [storeDef_shorts hso hj (v := if x.getLsbD $j then 1 else 0) rfl] at hS))
 
 set_option hygiene false in
@@ -157,35 +154,6 @@ theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x 
   intro i hi
   simp only [Memory.getLsbD_spliceBits]
   grind
-
-/-- Storing what a range holds, defined as it is, changes nothing. -/
-theorem storeDef_readAt_definedAt {m : MemoryState} {p : Pointer} (h : InBounds m p w) :
-    m.storeDef p (m.readAt p w) (m.definedAt p w) = m := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  have hb : m.mem[p.id]? = some blk := hblk
-  unfold MemoryBlock.lengthInBits at hsz
-  have hsp (x : BitVec (8 * blk.length)) :
-    Memory.spliceBits x p.offsetInBits (x.extractLsb' p.offsetInBits w) = x := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    rw [Memory.getLsbD_spliceBits]
-    split
-    · rw [BitVec.getLsbD_extractLsb']
-      simp only [show i - p.offsetInBits < w by omega, decide_true, Bool.true_and]
-      congr 1
-      omega
-    · rfl
-  simp only [MemoryState.storeDef, MemoryState.readAt, MemoryState.definedAt, hblk,
-    MemoryState.modifyBlock]
-  refine MemoryState.ext ?_ rfl
-  apply Std.ExtHashMap.ext_getElem?
-  intro k
-  simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
-  split
-  · subst_vars
-    rw [hb]
-    simp only [Option.map_some, hsp]
-  · rfl
 
 /-- Two small counters are equal as 64-bit values exactly when they are. -/
 theorem eq_of_ofNat64_eq {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
@@ -361,26 +329,6 @@ public theorem fd_curve25519_scalar_wnaf.readAt_shorts {m : MemoryState} {p : Po
   rw [MemoryState.readAt_storeAt_add hfits hov hw, h2j, show 2 * j * 8 = j * 16 by omega,
     BitVec.extractLsb'_packLanes _ _ hj, Vector.getElem_map]
 
-/-- Room for `_t[j]` where there is room for `_t`. -/
-theorem room_lane {m : MemoryState} {p : Pointer} (hfits : Room m p (8 * 512))
-    (hso : ¬p.offset.uaddOverflow 512#64) (hj : j < 256) :
-    Room m (p.add (BitVec.ofNat 64 (2 * j))) 16 := by
-  obtain ⟨h2j, hov⟩ := lane_offset hso hj
-  have hw : (BitVec.ofNat 64 (2 * j)).toNat * 8 + 16 ≤ 8 * 512 := by
-    rw [h2j]
-    omega
-  exact Room.add_of_le hov hw hfits
-
-/-- `_t[j]` of a stored `_t` known, where there is room for `_t`. -/
-theorem fits_lane {m : MemoryState} {p : Pointer} {t : Vector Int 256} (hfits : Room m p (8 * 512))
-    (hso : ¬p.offset.uaddOverflow 512#64) (hj : j < 256) :
-    Fits (m.storeAt p (shorts t)) (p.add (BitVec.ofNat 64 (2 * j))) 16 := by
-  obtain ⟨h2j, hov⟩ := lane_offset hso hj
-  have hw : (BitVec.ofNat 64 (2 * j)).toNat * 8 + 16 ≤ 16 * 256 := by
-    rw [h2j]
-    omega
-  exact Fits.add_of_le hov hw (Fits.storeAt_self (hfits.mono (by omega)))
-
 /-- A store into `_t[j]` of a partly defined `_t`: the whole `_t`, `_t[j]` set and defined. -/
 theorem storeDef_storeAt_lane {m : MemoryState} {p : Pointer} {u d : BitVec (16 * 256)}
     (hso : ¬p.offset.uaddOverflow 512#64) (hj : j < 256) (y : BitVec 16) :
@@ -532,7 +480,6 @@ theorem fd_curve25519_scalar_wnaf.nonzero_head (slides scalar : Pointer) (w mx :
     simp [BitVec.uaddOverflow] at this
     omega
   have hj : i < 256 := by omega
-  have hf := fits_lane (t := t) hfits hso hj
   block_init
   seal_env
   -- `if( _t[i] ) break;`, unrolled
@@ -541,7 +488,6 @@ theorem fd_curve25519_scalar_wnaf.nonzero_head (slides scalar : Pointer) (w mx :
   step_load
   step_pure
   finish_block
-  clear hf
   found_or_next i with hK7
   probe 1
   found_or_next (i + 1) with hK7
@@ -766,10 +712,6 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar : Pointer) (w : BitV
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
     have hk' : k < 256 := by omega
     have hk1 : k + 1 < 256 := by omega
-    have hf := fits_lane (t := t) hfits hso hk'
-    have hf1 := fits_lane (t := t) hfits hso hk1
-    have hr := room_lane hfits hso hk'
-    have hr1 := room_lane hfits hso hk1
     block_init
     seal_env
     -- `_t[j] = 0;`
@@ -953,8 +895,6 @@ theorem fd_curve25519_scalar_wnaf.sub_branch (slides scalar : Pointer) (w : BitV
     omega
   replace hK26 := fun E' (h : E'.args = _) => hK26 E' (h.trans hArgs.symm)
   have hk1 : k + 1 < 256 := by omega
-  have hf1 := fits_lane (t := t) hfits hso hk1
-  have hr1 := room_lane hfits hso hk1
   have hd := delta_bounds (d := k + 1 - i) (by omega)
   block_init
   step_pure [ofInt_sub16]
@@ -971,8 +911,6 @@ theorem fd_curve25519_scalar_wnaf.sub_branch (slides scalar : Pointer) (w : BitV
     clear hbr
     have hk2 : k + 2 < 256 := by
       have := lt_255_of_ne_zero h255 hk1 hne; omega
-    have hf2 := fits_lane (t := t.set (k + 1) 0 hk1) hfits hso hk2
-    have hr2 := room_lane hfits hso hk2
     rw [absorbT_of_sub hk1 hne hfar hsub hm] at hK26
     dsimp only at hK26
     block_init
@@ -1063,8 +1001,6 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
     replace hK26 := fun E' (h : E'.args = _) => hK26 E' (h.trans hArgs.symm)
     replace hK25 := fun E' (h : E'.args = _) => hK25 E' (h.trans hArgs.symm)
     have hk1 : k + 1 < 256 := by omega
-    have hf1 := fits_lane (t := t) hfits hso hk1
-    have hr1 := room_lane hfits hso hk1
     block_init
     seal_env
     -- `short tj = _t[j]; if( !tj ) continue;`
@@ -1249,7 +1185,6 @@ theorem fd_curve25519_scalar_wnaf.outer_loop (slides scalar : Pointer) (w : BitV
   | succ n ih =>
     intro i t E hArgs hi hn hbits h255 hK
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
-    have hfi := room_lane hfits hso hi
     block_init
     seal_env
     step_pure [slt_ofNat32 (a := i) (b := 255) (by omega) (by omega)]
@@ -1537,9 +1472,8 @@ theorem fd_curve25519_scalar_wnaf.unpack_loop (slides scalar : Pointer) (w : Bit
         x.extractLsb' (i / 8 * 8) 8 :=
       hbyte i _ _ hj
     have hfb := fits_byte hfs hco hj
-    have hfl := room_lane hfits hso hj
     step_pattern using runBodyFrom_unpackBitRun (jn := i) (x := x)
-    clear hb hfb hfl
+    clear hb hfb
     rw [storeDef_shorts hso hj (v := if x.getLsbD i then 1 else 0) rfl] at hS
     next_bit 1
     next_bit 2
@@ -1616,7 +1550,7 @@ theorem shorts_tOf {m : MemoryState} {p : Pointer} : shorts (tOf m p) = m.readAt
 /-- `_t`'s old bytes, stored as `tOf` with their defined bits: the same state. -/
 theorem withTD_tOf {S : GlobalState} {slides : Pointer} (h : InBounds S.mem slides (8 * 512)) :
     withTD slides (tOf S.mem slides) (S.mem.definedAt slides (16 * 256)) S = S := by
-  rw [withTD, shorts_tOf, storeDef_readAt_definedAt h]
+  rw [withTD, shorts_tOf, MemoryState.storeDef_readAt_definedAt h]
 
 /-! ### `max` -/
 

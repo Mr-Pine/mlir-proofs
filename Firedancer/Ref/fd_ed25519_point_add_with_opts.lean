@@ -89,7 +89,6 @@ local macro "muls " "[" dead:ident,* "]" next:tactic : tactic =>
         step_pure
         step_call using fd_f25519_add_nr.call_eq
         name_limbs lt
-        limbs_stored t
         clear haZ_read haZ
         iterate 3 step_pure
         step_call using fd_f25519_mul4.call_eq
@@ -98,7 +97,6 @@ local macro "muls " "[" dead:ident,* "]" next:tactic : tactic =>
         name_limbs l7
         name_limbs l6
         name_limbs l5
-        limbs_stored r5 r6 r7 r8
         finish_block
         $next:tactic
       case isFalse =>
@@ -112,12 +110,10 @@ local macro "muls " "[" dead:ident,* "]" next:tactic : tactic =>
         name_limbs l7
         name_limbs l6
         name_limbs l5
-        limbs_stored r5 r6 r7
         step_pure
         step_call using fd_f25519_add.call_eq
         clear haZ_read haZ
         name_limbs l8
-        limbs_stored r8
         finish_block
         $next:tactic))
 
@@ -165,7 +161,6 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
     step_call using fd_f25519_mul4.call_eq
     finish_block
     block_init
-    clear_facts r r1 r2 r3 r4 r5 r6 r7 r8
     iterate 9 step_pure
     finish_block
     simp only [hS, fd_ed25519_point_add_with_opts.last, hbr, ↓reduceIte,
@@ -190,7 +185,6 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
     step_call using fd_f25519_add_nr.call_eq
     finish_block
     block_init
-    clear_facts r r1 r2 r3 r4 r5 r6 r7 r8
     iterate 9 step_pure
     finish_block
     simp only [hS, fd_ed25519_point_add_with_opts.last, hbr, ↓reduceIte,
@@ -276,10 +270,8 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
   step_pure
   step_call using fd_f25519_sub_nr.call_eq
   name_limbs l1
-  limbs_stored r1
   step_call using fd_f25519_add_nr.call_eq
   name_limbs l3
-  limbs_stored r3
   clear haX_read haY_read haX haY
   step_pure
   step_pure
@@ -292,7 +284,6 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
     name_limbs l2
     step_call using fd_f25519_add_nr.call_eq
     name_limbs l4
-    limbs_stored r2 r4
     clear hbX_read hbY_read hbX hbY
     finish_block
     muls [hread_r2,

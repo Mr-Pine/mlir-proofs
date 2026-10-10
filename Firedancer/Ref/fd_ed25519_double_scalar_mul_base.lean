@@ -430,7 +430,6 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 : Vector Int 2
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb8 S >>= g) = K := by
   obtain ⟨hf1, hl1⟩ := hn1s i hi
   clear hn1s
-  dsimp only [LoopRegs] at hR
   block_init
   step_call using fd_ed25519_partial_dbl.call_eq
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
@@ -528,7 +527,6 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w2 : Vector Int
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb12 S >>= g) = K := by
   obtain ⟨hf2, hl2⟩ := hn2s i hi
   clear hn2s
-  dsimp only [LoopRegs] at hR
   block_init
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
     show i * 2 = 2 * i by omega]
@@ -630,7 +628,6 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer)
   have hrT : S.mem.readLimbs (r.add 80#64) = R.T := by
     rw [← hrv]; rfl
   clear hrv
-  dsimp only [LoopRegs] at hR
   block_init
   step_pure
   finish_block
@@ -820,7 +817,6 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
   obtain ⟨hf1, hl1⟩ := hn1s i hi
   obtain ⟨hf2, hl2⟩ := hn2s i hi
   clear hn1s hn2s
-  dsimp only [LoopRegs] at hR
   block_init
   step_pure [msb_ofNat32 (show i < 2 ^ 31 by omega), setWidth_ofNat32 (show i < 2 ^ 32 by omega)]
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
@@ -842,9 +838,7 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
       step_pure [saddOverflow_neg_one32 (show i < 2 ^ 31 by omega)]
       step_pure
       finish_block
-      case isTrue =>
-        step_loop using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
-        env_reads
+      case isTrue => step_loop using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
       case isFalse =>
         have hi0 : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr fun h => hbr (by rw [h])
         subst hS
@@ -1263,9 +1257,9 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
       (fd_curve25519_scalar_wnaf.wnaf x2 8)
       (aiTable (fd_ed25519_point_dbln.spec A 1) (fd_curve25519_into_precomputed.spec A)) baseTbl
       (fd_ed25519_point_dbln.spec A 1) 1 :=
-    ⟨hwf, hr, htp_pt, ‹_›, hroom_ai, hread_a2, hsl1, hsl2, fun k hk => by
+    ⟨hwf, hr, htp_pt, ha2_pt, hroom_ai, hread_a2, hsl1, hsl2, fun k hk => by
       obtain rfl : k = 0 := by omega
-      simpa [Pointer.add_zero', aiTable] using And.intro ‹S.mem.PointFit ai› hread_ai, htblB⟩
+      simpa [Pointer.add_zero', aiTable] using And.intro hai_pt hread_ai, htblB⟩
   clear hread_a2 hread_ai hsl1 hsl2 htblB
   -- for( int i=1; i<WNAF_TBL_SZ; i++ ) { … }
   refine
@@ -1298,8 +1292,7 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     intro j hj E₂ h₁ h₂ h₃
     refine
       main_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ _ _ hL hw1 hw2 _ _ j.val j.isLt _ S E₂ h₁ h₂ h₃
-        ⟨hwf, ‹_›, htp_pt, hsl1, hsl2, htA, htB⟩ hrz fun E₃ S₃ T' h₁' hR₃ hS₃ => ?_
-    dsimp only [LoopRegs] at hR₃
+        ⟨hwf, hr, htp_pt, hsl1, hsl2, htA, htB⟩ hrz fun E₃ S₃ T' h₁' hR₃ hS₃ => ?_
     -- the lifetimes' ends: of the objects only `r` and the state's `WF` are left
     clear htp_pt hsl1 hsl2 htA htB hrz hTL hL
     block_init
@@ -1331,7 +1324,6 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     simp only [GlobalState.alloca, Nat.add_assoc, Nat.reduceAdd, Nat.reduceMul]
   · -- no non-zero digit: `r` is zero
     intro hj E₂ h₁ hR₂
-    dsimp only [LoopRegs] at hR₂
     clear htp_pt hsl1 hsl2 htA htB hrz hTL hL
     block_init
     iterate 5 step_pure

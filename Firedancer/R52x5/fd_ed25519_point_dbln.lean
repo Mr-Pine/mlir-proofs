@@ -122,20 +122,6 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
     (fd_ed25519_point_dbln.runFrom (hdr E P k) 3 S >>= g) = K := by
   obtain ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hI
   obtain ⟨hne, hne', hb0, hb1, hb2, hb3, hb4, hb5, hb6, hb7, hb8, hb9⟩ := hZ
-  have hrz {z : Pointer} (hb : b ≤ z.id.id) : r.id ≠ z.id := fun h => by
-    rw [h] at hrb
-    omega
-  have hr0 := hrz hb0
-  have hr1 := hrz hb1
-  have hr2 := hrz hb2
-  have hr3 := hrz hb3
-  have hr4 := hrz hb4
-  have hr5 := hrz hb5
-  have hr6 := hrz hb6
-  have hr7 := hrz hb7
-  have hr8 := hrz hb8
-  have hr9 := hrz hb9
-  clear hrz hrb
   block_init
   -- FD_R52X5_QUAD_PERMUTE( _ta, 1,0,3,2, P1 ), FD_R52X5_QUAD_ADD_FAST( _ta, _ta, P1 )
   step_pattern using runBodyFrom_permuteRun 1 0 3 2 inline
@@ -177,8 +163,6 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
   finish_block
   · step_loop using hback
     · exact (BitVec.ofNat_add _ _).symm
-    · dsimp only [LoopEnv]
-      env_reads
     · rw [← hS]
       exact ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩
     · rw [MemoryState.eraseFrom_callTmp5_of_le hb5 hb6 hb7 hb8 hb9,
@@ -321,13 +305,11 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     have hI :
       fd_ed25519_point_dbln.Inv S r (S₀.slot 10) (S₀.slot 11) (S₀.slot 12) (S₀.slot 13) (S₀.slot 14)
         (S₀.slot 15) (S₀.slot 16) (S₀.slot 17) (S₀.slot 18) (S₀.slot 19) :=
-      ⟨hwf, hr, hv22_bounds, hv23_bounds, hv24_bounds, hv25_bounds, hv26_bounds, hv27_bounds,
+      ⟨hwf, hr.room, hv22_bounds, hv23_bounds, hv24_bounds, hv25_bounds, hv26_bounds, hv27_bounds,
         hv28_bounds, hv29_bounds, hv30_bounds, hv31_bounds⟩
     step_loop using
       fd_ed25519_point_dbln.loop r a n _ _ _ _ _ _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ hZ hrb
         (n.toNat - 2) 1
-    · dsimp only [fd_ed25519_point_dbln.LoopEnv]
-      env_reads
     · -- `^bb1` stores the registers at `r`, `^bb2` returns
       intro _ _ _ hal hm
       block_init

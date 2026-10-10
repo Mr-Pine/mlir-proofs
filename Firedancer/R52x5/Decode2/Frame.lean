@@ -285,27 +285,25 @@ theorem Frame.storeTmp5 {B : GlobalState} {m : MemoryState} (h : Frame B m) :
     Frame B (m.storeTmp5 t0 t1 t2 t3 t4 Q) :=
   h.of (fun _ _ => InBounds.storeTmp5) fun _ _ _ => Room.storeTmp5
 
-/-- A slot past the field elements' started: the frame kept. The slot as `k + 37`, which unifies
-with a literal. -/
+/-- A slot past the field elements' started: the frame kept. -/
 @[mlir_transport]
-theorem Frame.lifetimeStart_slot {B : GlobalState} {m : MemoryState} (h : Frame B m) :
-    Frame B (m.lifetimeStart (B.slot (k + 37))) :=
+theorem Frame.lifetimeStart_slot {B : GlobalState} {m : MemoryState} (h : Frame B m) (hk : 37 ≤ k) :
+    Frame B (m.lifetimeStart (B.slot k)) :=
   h.of (fun _ _ => InBounds.lifetimeStart) fun _ _ hj hr =>
     hr.lifetimeStart (GlobalState.slot_id_ne (by omega))
 
 /-- A slot past the field elements' ended: the frame kept. -/
 @[mlir_transport]
-theorem Frame.lifetimeEnd_slot {B : GlobalState} {m : MemoryState} (h : Frame B m) :
-    Frame B (m.lifetimeEnd (B.slot (k + 37))) :=
+theorem Frame.lifetimeEnd_slot {B : GlobalState} {m : MemoryState} (h : Frame B m) (hk : 37 ≤ k) :
+    Frame B (m.lifetimeEnd (B.slot k)) :=
   h.of (fun _ _ => InBounds.lifetimeEnd) fun _ _ hj hr =>
     hr.lifetimeEnd (GlobalState.slot_id_ne (by omega))
 
 /-- A call's temporaries in slots past the field elements: the frame kept. -/
 @[mlir_transport]
-theorem Frame.callTmp5_slots {B : GlobalState} {m : MemoryState} (h : Frame B m) :
-    Frame B
-      (m.callTmp5 (B.slot (k0 + 37)) (B.slot (k1 + 37)) (B.slot (k2 + 37)) (B.slot (k3 + 37))
-        (B.slot (k4 + 37)) Q) :=
+theorem Frame.callTmp5_slots {B : GlobalState} {m : MemoryState} (h : Frame B m) (h0 : 37 ≤ k0)
+    (h1 : 37 ≤ k1) (h2 : 37 ≤ k2) (h3 : 37 ≤ k3) (h4 : 37 ≤ k4) :
+    Frame B (m.callTmp5 (B.slot k0) (B.slot k1) (B.slot k2) (B.slot k3) (B.slot k4) Q) :=
   h.of (fun _ _ => InBounds.callTmp5) fun _ _ hj hr =>
     hr.callTmp5 (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
       (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))

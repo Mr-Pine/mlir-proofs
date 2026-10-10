@@ -87,23 +87,6 @@ theorem InBounds.storeVec {m : MemoryState} (h : InBounds m p w) : InBounds (m.s
 theorem Fits.storeVec_self {m : MemoryState} (h : Room m p 512) : Fits (m.storeVec p v) p 512 :=
   Fits.storeAt_self h
 
-/-- Lanes stored where there is room stay known past the next store (a callee's two outputs),
-where the steps only take `storeVec_self` at the last store. -/
-@[mlir_fresh]
-theorem Fits.storeVec_self_storeVec {m : MemoryState} (h : Room m p 512) :
-    Fits ((m.storeVec p v).storeVec q v') p 512 :=
-  (Fits.storeVec_self h).storeVec
-
-@[inherit_doc storeVec_self_storeVec, mlir_fresh]
-theorem Fits.storeVec_self_storeVec₂ {m : MemoryState} (h : Room m p 512) :
-    Fits (((m.storeVec p v).storeVec q₁ v₁).storeVec q₂ v₂) p 512 :=
-  (Fits.storeVec_self h).storeVec.storeVec
-
-@[inherit_doc storeVec_self_storeVec, mlir_fresh]
-theorem Fits.storeVec_self_storeVec₃ {m : MemoryState} (h : Room m p 512) :
-    Fits ((((m.storeVec p v).storeVec q₁ v₁).storeVec q₂ v₂).storeVec q₃ v₃) p 512 :=
-  (Fits.storeVec_self h).storeVec.storeVec.storeVec
-
 /-- A read of the stored lanes. -/
 @[mlir_mem, mlir_read]
 theorem MemoryState.readAt_storeVec_self {m : MemoryState} (h : InBounds m p 512) :

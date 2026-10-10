@@ -58,11 +58,7 @@ theorem geAdd_run (r a b : Pointer) (pre : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z
         z1.id ≠ z2.id ∧
         z3.id ≠ z4.id ∧
         z3.id ≠ z5.id ∧ z4.id ≠ z5.id ∧ z6.id ≠ z7.id ∧ z6.id ≠ z8.id ∧ z7.id ≠ z8.id)
-    (hrz :
-      r.id ≠ z0.id ∧
-        r.id ≠ z1.id ∧
-        r.id ≠ z2.id ∧
-        r.id ≠ z3.id ∧ r.id ≠ z4.id ∧ r.id ≠ z5.id ∧ r.id ≠ z6.id ∧ r.id ≠ z7.id ∧ r.id ≠ z8.id)
+    (hrn : r.id.id < n)
     (hn :
       n ≤ z0.id.id ∧
         n ≤ z1.id.id ∧
@@ -78,7 +74,6 @@ theorem geAdd_run (r a b : Pointer) (pre : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z
   obtain ⟨hz0, hz1, hz2, hz3, hz4, hz5, hz6, hz7, hz8⟩ := hz
   obtain ⟨h01, h02, h12, h34, h35, h45, h67, h68, h78⟩ := hne
   obtain ⟨hn0, hn1, hn2, hn3, hn4, hn5, hn6, hn7, hn8⟩ := hn
-  obtain ⟨hr0, hr1, hr2, hr3, hr4, hr5, hr6, hr7, hr8⟩ := hrz
   generalize hA : S.mem.readQuad a = A at hK
   generalize hB : S.mem.readQuad b = B at hK
   block_init
@@ -174,7 +169,7 @@ theorem geAddTable_run (r a b : Pointer) (pre : BitVec 32) (z0 z1 z2 z3 z4 z5 : 
         InBounds S.mem z3 512 ∧ InBounds S.mem z4 512 ∧ InBounds S.mem z5 512)
     (hne :
       z0.id ≠ z1.id ∧ z0.id ≠ z2.id ∧ z1.id ≠ z2.id ∧ z3.id ≠ z4.id ∧ z3.id ≠ z5.id ∧ z4.id ≠ z5.id)
-    (hrz : r.id ≠ z0.id ∧ r.id ≠ z1.id ∧ r.id ≠ z2.id ∧ r.id ≠ z3.id ∧ r.id ≠ z4.id ∧ r.id ≠ z5.id)
+    (hrn : r.id.id < n)
     (hn : n ≤ z0.id.id ∧ n ≤ z1.id.id ∧ n ≤ z2.id.id ∧ n ≤ z3.id.id ∧ n ≤ z4.id.id ∧ n ≤ z5.id.id)
     (hK :
       ∀ S' : GlobalState,
@@ -187,7 +182,6 @@ theorem geAddTable_run (r a b : Pointer) (pre : BitVec 32) (z0 z1 z2 z3 z4 z5 : 
   obtain ⟨hz0, hz1, hz2, hz3, hz4, hz5⟩ := hz
   obtain ⟨h01, h02, h12, h34, h35, h45⟩ := hne
   obtain ⟨hn0, hn1, hn2, hn3, hn4, hn5⟩ := hn
-  obtain ⟨hr0, hr1, hr2, hr3, hr4, hr5⟩ := hrz
   generalize hA : S.mem.readQuad a = A at hK
   generalize hB : S.mem.readQuad b = B at hK
   block_init
@@ -308,7 +302,7 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
         ⟨hv88_bounds, hv89_bounds, hv90_bounds, hv91_bounds, hv92_bounds, hv93_bounds, hv94_bounds,
           hv95_bounds, hv96_bounds⟩
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> mem_fact
-    · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> mem_fact
+    · mem_fact
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> slot_bound
     · intro S' h1 h2
       simp only [h1, h2, hra, hrb, fd_ed25519_point_add_with_opts.spec, ne_eq]
@@ -324,7 +318,7 @@ public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : B
     · env_reads
     · exact ⟨hv82_bounds, hv83_bounds, hv84_bounds, hv85_bounds, hv86_bounds, hv87_bounds⟩
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> mem_fact
-    · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> mem_fact
+    · mem_fact
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> slot_bound
     · intro S' h1 h2
       simp only [h1, h2, hra, hrb, fd_ed25519_point_add_with_opts.spec, ne_eq, hpre,

@@ -85,13 +85,7 @@ attribute [local mlir_read] MemoryState.readAt_hashMem_of_id_ne
 
 attribute [local mlir_erase high] MemoryState.eraseFrom_hashMem_of_le
 
-/-- A point stored where there is room stays known past the next point store, as
-`fd_ed25519_point_frombytes_2x` leaves its first point. -/
-theorem MemoryState.QuadFit.storeQuad_self_storeQuad {m : MemoryState} (h : m.QuadRoom p) :
-    ((m.storeQuad p P).storeQuad q Q).QuadFit p :=
-  (MemoryState.QuadFit.storeQuad_self h).storeQuad
-
-attribute [local mlir_fresh] Fits.hashMem_k MemoryState.QuadFit.storeQuad_self_storeQuad
+attribute [local mlir_fresh] Fits.hashMem_k
 
 attribute [local mlir_transport] MemoryState.Words8Room.storeSha InBounds.hashMem
   MemoryState.Words8Room.hashMem
@@ -248,7 +242,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
     have hR_pt := MemoryState.QuadRoom.of_room hroom_R hR_off
     clear hroom_A hroom_R hA_bounds hR_bounds
     -- reads of the decoded points go through the stores over the state after the `alloca`s
-    have hk₀ := hS ▸ hk_bounds
     -- int res = fd_ed25519_point_frombytes_2x( Aprime, public_key, R, r );
     step_call using fd_ed25519_point_frombytes_2x.call_eq
     obtain ⟨⟨fres, Ap, Rp⟩, hfb⟩ :
@@ -256,7 +249,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
       ⟨_, rfl⟩
     rw [hfb] at hS hE hread_A hread_R
     dsimp only at hS hread_A hread_R
-    clear hA_pt hR_pt
     step_pure
     finish_block
     case isFalse =>
@@ -341,11 +333,6 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           finish_block
           subst hS hres
           erase_frame
-          -- `k`'s 32 bytes as `reduce` stored them
-          rw [MemoryState.readAt_storeAt_self
-              (InBounds.hashMem
-                (InBounds.lifetimeStart
-                  (InBounds.storeQuad (InBounds.storeQuad (hk₀.mono (by decide))))))]
           simp only [fd_ed25519_verify.spec, hv, hfb, hres0, hsoA, hsoR, hH,
             fd_ed25519_verify.Result.mem, ite_ofBool_beq]
           simp

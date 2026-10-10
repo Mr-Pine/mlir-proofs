@@ -47,17 +47,15 @@ public theorem fd_f25519_is_zero.call_eq (a : Pointer) (s : GlobalState) (hwf : 
   step_alloca with h
   step_pure
   have hh_limbs : S.mem.LimbsRoom h := .of_room hroom_h hh_off
-  rw [hS] at hh_limbs
+  have hh₀ := hh_limbs
+  rw [hS] at hh₀
   -- fd_f25519_canonical_limbs( h, a );
   step_call using fd_f25519_canonical_limbs.call_eq
-  generalize hl : fd_f25519_canonical_limbs.spec (S₀.mem.readVec a) = l at hS
-  have hread_h : S.mem.readAt h 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
-    rw [hS]; exact MemoryState.readAt_storeLimbs_wv hh_limbs
-  have hread_h_32 : S.mem.readAt (h.add 32#64) 64 = l 4 := by
-    rw [hS]; exact congrFun (MemoryState.readLimbs_storeLimbs_self hh_limbs) 4
-  have hh_fit : S.mem.LimbsFit h := by
-    rw [hS]; exact .storeLimbs_self hh_limbs
-  have hh256 : Fits S.mem h 256 := hh_fit.fits.mono (by omega)
+  generalize hl : fd_f25519_canonical_limbs.spec (S₀.mem.readVec a) = l at hS hread_h
+  have hread_h0 : S.mem.readAt h 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
+    rw [hS]; exact MemoryState.readAt_storeLimbs_wv hh₀
+  have hread_h_32 : S.mem.readAt (h.add 32#64) 64 = l 4 := congrFun hread_h 4
+  have hh256 : Fits S.mem h 256 := hh_limbs.fits.mono (by omega)
   -- return (h[0] | h[1] | h[2] | h[3] | h[4]) == 0;
   step_load
   step_pure

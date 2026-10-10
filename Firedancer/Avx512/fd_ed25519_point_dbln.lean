@@ -110,8 +110,7 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
     (hb0 : b ≤ z0.id.id) (hb1 : b ≤ z1.id.id) (hb2 : b ≤ z2.id.id) (hb3 : b ≤ z3.id.id)
     (hb4 : b ≤ z4.id.id) (hb5 : b ≤ z5.id.id) (h01 : z0.id ≠ z1.id) (h02 : z0.id ≠ z2.id)
     (h12 : z1.id ≠ z2.id) (h34 : z3.id ≠ z4.id) (h35 : z3.id ≠ z5.id) (h45 : z4.id ≠ z5.id)
-    (hr0 : r.id ≠ z0.id) (hr1 : r.id ≠ z1.id) (hr2 : r.id ≠ z2.id) (hr3 : r.id ≠ z3.id)
-    (hr4 : r.id ≠ z4.id) (hr5 : r.id ≠ z5.id)
+    (hrb : r.id.id < b)
     (hback :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value a) (.value n)).get →
@@ -172,8 +171,6 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
   · rw [hQ] at hback
     step_loop using hback
     · exact (BitVec.ofNat_add _ _).symm
-    · dsimp only [LoopEnv]
-      env_reads
     · simp only [MemoryState.eraseFrom_storeVec, MemoryState.eraseFrom_lifetimeStart,
         MemoryState.eraseFrom_lifetimeEnd, MemoryState.lifetimeStart_eraseFrom_of_le hb0,
         MemoryState.lifetimeStart_eraseFrom_of_le hb1,
@@ -230,12 +227,7 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
         z3.id ≠ z4.id →
         z3.id ≠ z5.id →
         z4.id ≠ z5.id →
-        r.id ≠ z0.id →
-        r.id ≠ z1.id →
-        r.id ≠ z2.id →
-        r.id ≠ z3.id →
-        r.id ≠ z4.id →
-        r.id ≠ z5.id →
+        r.id.id < b →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
           E'.args = (args (.value r) (.value a) (.value n)).get →
             (E' ⊨ [%3232 := r.add 64#64, %3235 := r.add 128#64, %3321 :=
@@ -251,10 +243,10 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
   induction m with
   | zero =>
     intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34
-      h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 hK
+      h35 h45 hrb hK
     refine
       trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2
-        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 ?_ ?_
+        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb ?_ ?_
     · -- around again: impossible, the counter has reached `n`
       intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hbr
       have : (BitVec.setWidth 32 (BitVec.ofNat 8 k + 1#8)).toNat = k + 1 := by
@@ -267,15 +259,15 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
   | succ m
     ih =>
     intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34
-      h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 hK
+      h35 h45 hrb hK
     refine
       trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2
-        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hr0 hr1 hr2 hr3 hr4 hr5 ?_ ?_
+        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb ?_ ?_
     · -- around again, one trip fewer
       intro E' S' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 ha hm hF _
       exact
         ih (k + 1) _ S' E' g1 g2 (by omega) hn hF g3 g4 g5 g6 g7 g8 g9 g10 hb0 hb1 hb2 hb3 hb4 hb5
-          h01 h02 h12 h34 h35 h45 hr0 hr1 hr2 hr3 hr4 hr5
+          h01 h02 h12 h34 h35 h45 hrb
           (fun E'' S'' f1 f2 f3 f4 f5 f6 => hK E'' S'' f1 f2 f3 f4 (f5.trans ha) (f6.trans hm))
     · -- leaving: impossible, the counter is below `n`
       intro _ _ _ _ _ _ _ _ hbr
@@ -329,8 +321,6 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     step_loop using
       fd_ed25519_point_dbln.loop r a n v87 v88 v89 v90 v91 v92 S₀.alloc.nextFreeBlock _ _
         (n.toNat - 2) 1 ⟨u03, u14, u25⟩
-    · dsimp only [fd_ed25519_point_dbln.LoopEnv]
-      env_reads
     · exact Quad.foldUnsignedC_lt _hu
     · intro hR' hwf' hr' hal hm
       block_init

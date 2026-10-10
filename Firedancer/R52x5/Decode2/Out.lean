@@ -130,9 +130,9 @@ theorem is_nonzero_01 (a : Wwl) :
 theorem ofBool_setWidth_01 (b : Bool) :
     (BitVec.ofBool b).setWidth 32 = 0 ∨ (BitVec.ofBool b).setWidth 32 = 1 := by cases b <;> decide
 
--- 156 instructions, ten callee states with their read facts, two `FD_R52X5_QUAD_PACK`s whose
--- arrays' sixteen lifetime markers each carry the points' and field elements' facts
-set_option maxHeartbeats 800000 in
+-- 156 instructions, ten callee states with their read facts, two `FD_R52X5_QUAD_PACK`s with
+-- sixteen lifetime markers: about 500000 heartbeats
+set_option maxHeartbeats 600000 in
 /-- `^bb12`: both encodings decode: `x` times `√-1` where `t1` is nonzero, negated unless its sign
 is `x_0`, packed with `y`, `1`, `x y` into `Pa` and `Pb`; `0`. -/
 theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
@@ -188,102 +188,6 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   clear hG
   obtain ⟨ha0, ha1, ha2, ha3, ha4, hb0, hb1, hb2, hb3, hb4⟩ := hO
   obtain ⟨la0, la1, la2, la3, la4, lb0, lb1, lb2, lb3, lb4⟩ := hlt
-  have nPa0_196 : Pa0.id ≠ (B.slot 196).id := ne_slot la0
-  have nPa0_197 : Pa0.id ≠ (B.slot 197).id := ne_slot la0
-  have nPa0_198 : Pa0.id ≠ (B.slot 198).id := ne_slot la0
-  have nPa0_199 : Pa0.id ≠ (B.slot 199).id := ne_slot la0
-  have nPa0_29 : Pa0.id ≠ (B.slot 29).id := ne_slot la0
-  have nPa0_12 : Pa0.id ≠ (B.slot 12).id := ne_slot la0
-  have nPa0_35 : Pa0.id ≠ (B.slot 35).id := ne_slot la0
-  have nPa1_196 : Pa1.id ≠ (B.slot 196).id := ne_slot la1
-  have nPa1_197 : Pa1.id ≠ (B.slot 197).id := ne_slot la1
-  have nPa1_198 : Pa1.id ≠ (B.slot 198).id := ne_slot la1
-  have nPa1_199 : Pa1.id ≠ (B.slot 199).id := ne_slot la1
-  have nPa1_29 : Pa1.id ≠ (B.slot 29).id := ne_slot la1
-  have nPa1_12 : Pa1.id ≠ (B.slot 12).id := ne_slot la1
-  have nPa1_35 : Pa1.id ≠ (B.slot 35).id := ne_slot la1
-  have nPa2_196 : Pa2.id ≠ (B.slot 196).id := ne_slot la2
-  have nPa2_197 : Pa2.id ≠ (B.slot 197).id := ne_slot la2
-  have nPa2_198 : Pa2.id ≠ (B.slot 198).id := ne_slot la2
-  have nPa2_199 : Pa2.id ≠ (B.slot 199).id := ne_slot la2
-  have nPa2_29 : Pa2.id ≠ (B.slot 29).id := ne_slot la2
-  have nPa2_12 : Pa2.id ≠ (B.slot 12).id := ne_slot la2
-  have nPa2_35 : Pa2.id ≠ (B.slot 35).id := ne_slot la2
-  have nPa3_196 : Pa3.id ≠ (B.slot 196).id := ne_slot la3
-  have nPa3_197 : Pa3.id ≠ (B.slot 197).id := ne_slot la3
-  have nPa3_198 : Pa3.id ≠ (B.slot 198).id := ne_slot la3
-  have nPa3_199 : Pa3.id ≠ (B.slot 199).id := ne_slot la3
-  have nPa3_29 : Pa3.id ≠ (B.slot 29).id := ne_slot la3
-  have nPa3_12 : Pa3.id ≠ (B.slot 12).id := ne_slot la3
-  have nPa3_35 : Pa3.id ≠ (B.slot 35).id := ne_slot la3
-  have nPa4_196 : Pa4.id ≠ (B.slot 196).id := ne_slot la4
-  have nPa4_197 : Pa4.id ≠ (B.slot 197).id := ne_slot la4
-  have nPa4_198 : Pa4.id ≠ (B.slot 198).id := ne_slot la4
-  have nPa4_199 : Pa4.id ≠ (B.slot 199).id := ne_slot la4
-  have nPa4_29 : Pa4.id ≠ (B.slot 29).id := ne_slot la4
-  have nPa4_12 : Pa4.id ≠ (B.slot 12).id := ne_slot la4
-  have nPa4_35 : Pa4.id ≠ (B.slot 35).id := ne_slot la4
-  have nPb0_200 : Pb0.id ≠ (B.slot 200).id := ne_slot lb0
-  have nPb0_201 : Pb0.id ≠ (B.slot 201).id := ne_slot lb0
-  have nPb0_202 : Pb0.id ≠ (B.slot 202).id := ne_slot lb0
-  have nPb0_203 : Pb0.id ≠ (B.slot 203).id := ne_slot lb0
-  have nPb1_200 : Pb1.id ≠ (B.slot 200).id := ne_slot lb1
-  have nPb1_201 : Pb1.id ≠ (B.slot 201).id := ne_slot lb1
-  have nPb1_202 : Pb1.id ≠ (B.slot 202).id := ne_slot lb1
-  have nPb1_203 : Pb1.id ≠ (B.slot 203).id := ne_slot lb1
-  have nPb2_200 : Pb2.id ≠ (B.slot 200).id := ne_slot lb2
-  have nPb2_201 : Pb2.id ≠ (B.slot 201).id := ne_slot lb2
-  have nPb2_202 : Pb2.id ≠ (B.slot 202).id := ne_slot lb2
-  have nPb2_203 : Pb2.id ≠ (B.slot 203).id := ne_slot lb2
-  have nPb3_200 : Pb3.id ≠ (B.slot 200).id := ne_slot lb3
-  have nPb3_201 : Pb3.id ≠ (B.slot 201).id := ne_slot lb3
-  have nPb3_202 : Pb3.id ≠ (B.slot 202).id := ne_slot lb3
-  have nPb3_203 : Pb3.id ≠ (B.slot 203).id := ne_slot lb3
-  have nPb4_200 : Pb4.id ≠ (B.slot 200).id := ne_slot lb4
-  have nPb4_201 : Pb4.id ≠ (B.slot 201).id := ne_slot lb4
-  have nPb4_202 : Pb4.id ≠ (B.slot 202).id := ne_slot lb4
-  have nPb4_203 : Pb4.id ≠ (B.slot 203).id := ne_slot lb4
-  have nPa0_200 : Pa0.id ≠ (B.slot 200).id := ne_slot la0
-  have nPa0_201 : Pa0.id ≠ (B.slot 201).id := ne_slot la0
-  have nPa0_202 : Pa0.id ≠ (B.slot 202).id := ne_slot la0
-  have nPa0_203 : Pa0.id ≠ (B.slot 203).id := ne_slot la0
-  have nPa1_200 : Pa1.id ≠ (B.slot 200).id := ne_slot la1
-  have nPa1_201 : Pa1.id ≠ (B.slot 201).id := ne_slot la1
-  have nPa1_202 : Pa1.id ≠ (B.slot 202).id := ne_slot la1
-  have nPa1_203 : Pa1.id ≠ (B.slot 203).id := ne_slot la1
-  have nPa2_200 : Pa2.id ≠ (B.slot 200).id := ne_slot la2
-  have nPa2_201 : Pa2.id ≠ (B.slot 201).id := ne_slot la2
-  have nPa2_202 : Pa2.id ≠ (B.slot 202).id := ne_slot la2
-  have nPa2_203 : Pa2.id ≠ (B.slot 203).id := ne_slot la2
-  have nPa3_200 : Pa3.id ≠ (B.slot 200).id := ne_slot la3
-  have nPa3_201 : Pa3.id ≠ (B.slot 201).id := ne_slot la3
-  have nPa3_202 : Pa3.id ≠ (B.slot 202).id := ne_slot la3
-  have nPa3_203 : Pa3.id ≠ (B.slot 203).id := ne_slot la3
-  have nPa4_200 : Pa4.id ≠ (B.slot 200).id := ne_slot la4
-  have nPa4_201 : Pa4.id ≠ (B.slot 201).id := ne_slot la4
-  have nPa4_202 : Pa4.id ≠ (B.slot 202).id := ne_slot la4
-  have nPa4_203 : Pa4.id ≠ (B.slot 203).id := ne_slot la4
-  have nPb0_196 : Pb0.id ≠ (B.slot 196).id := ne_slot lb0
-  have nPb0_197 : Pb0.id ≠ (B.slot 197).id := ne_slot lb0
-  have nPb0_198 : Pb0.id ≠ (B.slot 198).id := ne_slot lb0
-  have nPb0_199 : Pb0.id ≠ (B.slot 199).id := ne_slot lb0
-  have nPb1_196 : Pb1.id ≠ (B.slot 196).id := ne_slot lb1
-  have nPb1_197 : Pb1.id ≠ (B.slot 197).id := ne_slot lb1
-  have nPb1_198 : Pb1.id ≠ (B.slot 198).id := ne_slot lb1
-  have nPb1_199 : Pb1.id ≠ (B.slot 199).id := ne_slot lb1
-  have nPb2_196 : Pb2.id ≠ (B.slot 196).id := ne_slot lb2
-  have nPb2_197 : Pb2.id ≠ (B.slot 197).id := ne_slot lb2
-  have nPb2_198 : Pb2.id ≠ (B.slot 198).id := ne_slot lb2
-  have nPb2_199 : Pb2.id ≠ (B.slot 199).id := ne_slot lb2
-  have nPb3_196 : Pb3.id ≠ (B.slot 196).id := ne_slot lb3
-  have nPb3_197 : Pb3.id ≠ (B.slot 197).id := ne_slot lb3
-  have nPb3_198 : Pb3.id ≠ (B.slot 198).id := ne_slot lb3
-  have nPb3_199 : Pb3.id ≠ (B.slot 199).id := ne_slot lb3
-  have nPb4_196 : Pb4.id ≠ (B.slot 196).id := ne_slot lb4
-  have nPb4_197 : Pb4.id ≠ (B.slot 197).id := ne_slot lb4
-  have nPb4_198 : Pb4.id ≠ (B.slot 198).id := ne_slot lb4
-  have nPb4_199 : Pb4.id ≠ (B.slot 199).id := ne_slot lb4
-  clear la0 la1 la2 la3 la4 lb0 lb1 lb2 lb3 lb4
   replace ha0 := hI.room ha0
   replace ha1 := hI.room ha1
   replace ha2 := hI.room ha2

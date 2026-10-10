@@ -125,12 +125,6 @@ public theorem fd_curve25519_scalar_wnaf.readAt_limb {m : MemoryState} {v : Poin
   rw [MemoryState.readAt_storeAt_add hf.inBounds hov (by omega), h8,
     show 8 * w * 8 = 64 * w by omega]
 
-/-- `n[w]` fits where `n` does. -/
-theorem fits_limb {m : MemoryState} {v : Pointer} (hf : Fits m v 320) (hv : v.offset = 0)
-    (hw : w < 5) : Fits m (v.add (BitVec.ofNat 64 (8 * w))) 64 := by
-  obtain ⟨h8, hov⟩ := limb_offset hv hw
-  exact Fits.add_of_le hov (by omega) hf
-
 /-- A store of `n[w]` into a stored `n`: `n` with limb `w` spliced. -/
 theorem storeAt_limb {m : MemoryState} {v : Pointer} {n : BitVec 320} (hv : v.offset = 0)
     (hw : w < 5) (y : BitVec 64) :
@@ -177,23 +171,6 @@ theorem storeAt_shorts {m : MemoryState} {slides v : Pointer} {t : Vector Int 25
     storeAt_storeAt_add hov (by omega), h2j, show 2 * j * 8 = 16 * j by omega, hy,
     spliceBits_packLanes hj]
   simp only [shorts, Vector.map_set]
-
-/-- `_t[j]` fits where `_t` does. -/
-theorem fits_lane {m : MemoryState} {p : Pointer} (hfits : Fits m p (8 * 512))
-    (hso : ¬p.offset.uaddOverflow 512#64) (hj : j < 256) :
-    Fits m (p.add (BitVec.ofNat 64 (2 * j))) 16 := by
-  have h2j : (BitVec.ofNat 64 (2 * j)).toNat = 2 * j := by
-    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
-  have hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 (2 * j)) := by
-    refine BitVec.not_uaddOverflow_of_le hso ?_
-    rw [h2j]
-    show 2 * j ≤ 512
-    omega
-  exact
-    Fits.add_of_le hov
-      (by
-        rw [h2j]; omega)
-      hfits
 
 /-- `_t` and `n` stored over `S`. -/
 abbrev st (slides v : Pointer) (t : Vector Int 256) (n : BitVec 320) (S : GlobalState) :
@@ -412,7 +389,6 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar v : Pointer) (bits :
     intro cw cb n E hArgs hm hcb hK
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
     have hw : cw < 5 := by omega
-    have hf := fits_limb hfv hv hw
     block_init
     seal_env
     -- `ulong o = n[cw]; n[cw] = o + (1UL<<cb);`
@@ -440,7 +416,6 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar v : Pointer) (bits :
     intro cw cb n E hArgs hm hcb hK
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
     have hw : cw < 5 := by omega
-    have hf := fits_limb hfv hv hw
     block_init
     seal_env
     step_pure [Nat.mod_eq_of_lt (show cw < 2 ^ 64 by omega), show cw * 8 = 8 * cw by omega,
@@ -539,7 +514,6 @@ theorem fd_curve25519_scalar_wnaf.store_digit (slides scalar v : Pointer) (bits 
         g) =
       K := by
   replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
-  have hf := fits_lane hfs hso hp
   have hso' : slides.offset.toNat + 512 < 2 ^ 64 := by
     have := hso
     simp [BitVec.uaddOverflow] at this
@@ -630,8 +604,6 @@ theorem fd_curve25519_scalar_wnaf.clear_window (slides scalar v : Pointer) (bits
             K) :
     (fd_curve25519_scalar_wnaf.runFrom (hdr8 v B E n w b) ^bb8 (st slides v t n Sb) >>= g) = K := by
   replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
-  have hf := fits_limb hfv hv (show w < 5 by omega)
-  have hf1 := fits_limb hfv hv (show w + 1 < 5 by omega)
   block_init
   seal_env
   -- `d = lo & mask; n[w] &= ~(mask<<b);`
@@ -718,9 +690,7 @@ theorem fd_curve25519_scalar_wnaf.read_window (slides scalar v : Pointer) (bits 
       K := by
   replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
   subst hx hbase
-  have hf := fits_limb hfv hv (show w < 5 by omega)
   have hw1 : w + 1 < 5 := by omega
-  have hf1 := fits_limb hfv hv hw1
   block_init
   seal_env
   -- `pos += find_lsb( x );`
@@ -913,7 +883,6 @@ theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : 
               K) :
     (fd_curve25519_scalar_wnaf.runFrom (hdr4 v B E w) ^bb4 (st slides v t n Sb) >>= g) = K := by
   have hw1 : w + 1 < 5 := by omega
-  have hf := fits_limb hfv hv hw1
   block_init
   seal_env
   -- `++w; x = n[w];`
@@ -1084,8 +1053,6 @@ theorem fd_curve25519_scalar_wnaf.main_loop (slides scalar v : Pointer) (bits : 
     obtain ⟨w, b0, rfl, hb0⟩ : ∃ w b0, pos = 64 * w + b0 ∧ b0 < 64 :=
       ⟨pos / 64, pos % 64, by omega, by omega⟩
     have hw : w < 4 := by omega
-    have hw5 : w < 5 := by omega
-    have hfw := fits_limb hfv hv hw5
     block_init
     seal_env
     -- `ulong w = pos>>6; ulong x = n[w]>>(pos&63UL);`
@@ -1198,31 +1165,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   step_alloca with v
   -- its lifetime starts
   step_pure
-  -- the loops run over `_t` and `n` stored over a zeroed `_t` and `n`, where both are known
-  have hwfa :
-    ({ alloc := (S₀.alloca 40 true).alloc, mem := (S₀.alloca 40 true).mem.lifetimeStart v } :
-        GlobalState).WF :=
-    hS ▸ hwf
-  have hrsa : Room ((S₀.alloca 40 true).mem.lifetimeStart v) slides (8 * 512) := by
-    rw [hS] at hslides
-    exact hslides
-  have hrva : Room ((S₀.alloca 40 true).mem.lifetimeStart v) v 320 := by
-    rw [hS] at hroom_v
-    exact hroom_v
-  have hwfb :
-    ({ alloc := (S₀.alloca 40 true).alloc,
-       mem := (((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320 } :
-        GlobalState).WF :=
-    hwfa.storeAt.storeAt
-  have hfsb :
-    Fits ((((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320) slides
-      (8 * 512) :=
-    (Fits.storeAt_self hrsa).storeAt
-  have hfvb :
-    Fits ((((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320) v
-      320 :=
-    Fits.storeAt_self hrva.storeAt
-  clear hrsa hrva hv_bounds
+  clear hv_bounds
   -- `ulong n[5] = { … };`
   step_call using fd_ulong_load_8.call_eq
   step_store
@@ -1251,8 +1194,11 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   finish_block
   clear_reads
   step_loop using
-    fd_curve25519_scalar_wnaf.main_loop slides scalar v bits B (by omega) _ hwfb hfsb hso hfvb
-      hv_off hslides_ne_v _ _ 256 0 (n0 x) (Vector.replicate 256 0) _ _ (by omega) (by omega)
+    fd_curve25519_scalar_wnaf.main_loop slides scalar v bits B (by omega)
+      { alloc := (S₀.alloca 40 true).alloc,
+        mem := (((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320 }
+      _ _ hso _ hv_off hslides_ne_v _ _ 256 0 (n0 x) (Vector.replicate 256 0) _ _ (by omega)
+      (by omega)
   -- `return`
   block_init
   step_pure

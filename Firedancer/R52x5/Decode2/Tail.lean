@@ -104,8 +104,6 @@ theorem add_mask2 (x y : Wl) :
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
   all_goals simp [Ty.wrap_vec, Operation.add, wl_add, wl_and, wl_shru, mask51_add_shr51]
 
--- a QUAD site's ten lifetime markers and `ea eb`'s ends, each an effectful step
-set_option maxHeartbeats 300000 in
 /-- `^bb7`'s last `QP_MUL` (`D = _t0 A`), its limbs `0` and `1` taken apart into `xa` and `xb`. -/
 theorem bb7b_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
     {K : PoisonOr β} {B : GlobalState} {M : MemoryState} {c : Nat} (T A : Quad5)

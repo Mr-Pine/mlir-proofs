@@ -71,13 +71,6 @@ def quadPackRun (x y zlo zhi t a b c d e f g h q03 q14 q25 : Dst Γ V)
       q25 (.val g.i g.h) (.val f.i f.h),
     .store (.arg p25 h25) (.val q25.i q25.h)]
 
-/-- A store's bits stay known past the next two stores, as `quadPackRun` leaves its first vector. -/
-@[mlir_fresh]
-theorem Fits.storeAt_storeAt_storeAt_self {m : MemoryState} {p q r : Pointer} {x : BitVec w}
-    {y : BitVec v} {z : BitVec u} (h : Room m p w) :
-    Fits (((m.storeAt p x).storeAt q y).storeAt r z) p w :=
-  (Fits.storeAt_self h).storeAt.storeAt
-
 /-- Where the body at `pos` is `quadPackRun`, `x y t` hold `X Y T`, `zlo zhi` hold `oneLo oneHi` and
 `p03 p14 p25` point at `P03 P14 P25`, each with room for a vector: running on from `pos` then `k`
 gives `K` if it does from `pos + 14` with the QUAD `(X, Y, one, T)` stored there, whatever the

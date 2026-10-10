@@ -240,30 +240,6 @@ theorem MemoryState.LimbsFit.storeLimbs_self {m : MemoryState} {p : Pointer} (h 
       (Fits.storeAt_self h3.storeAt.storeAt.storeAt).storeAt,
       Fits.storeAt_self h4.storeAt.storeAt.storeAt.storeAt⟩
 
-/-- Limbs stored where there is room stay known past later limb stores (a callee's several
-outputs), where the steps only take `storeLimbs_self` at the last store. -/
-@[mlir_fresh]
-theorem MemoryState.LimbsFit.storeLimbs_self_storeLimbs {m : MemoryState} {p : Pointer}
-    (h : m.LimbsRoom p) : ((m.storeLimbs p l).storeLimbs q₁ l₁).LimbsFit p :=
-  (storeLimbs_self h).storeLimbs
-
-@[inherit_doc storeLimbs_self_storeLimbs, mlir_fresh]
-theorem MemoryState.LimbsFit.storeLimbs_self_storeLimbs₂ {m : MemoryState} {p : Pointer}
-    (h : m.LimbsRoom p) : (((m.storeLimbs p l).storeLimbs q₁ l₁).storeLimbs q₂ l₂).LimbsFit p :=
-  (storeLimbs_self h).storeLimbs.storeLimbs
-
-@[inherit_doc storeLimbs_self_storeLimbs, mlir_fresh]
-theorem MemoryState.LimbsFit.storeLimbs_self_storeLimbs₃ {m : MemoryState} {p : Pointer}
-    (h : m.LimbsRoom p) :
-    ((((m.storeLimbs p l).storeLimbs q₁ l₁).storeLimbs q₂ l₂).storeLimbs q₃ l₃).LimbsFit p :=
-  (storeLimbs_self h).storeLimbs.storeLimbs.storeLimbs
-
-/-- A store's bits stay known past the next store, as a callee's two out-parameters leave them. -/
-@[mlir_fresh]
-theorem Fits.storeAt_storeAt_self {m : MemoryState} {p q : Pointer} {x : BitVec w} {y : BitVec v}
-    (h : Room m p w) : Fits ((m.storeAt p x).storeAt q y) p w :=
-  (Fits.storeAt_self h).storeAt
-
 /-- A 320-bit block from its start holds one field element. -/
 theorem MemoryState.LimbsFit.of_fits {m : MemoryState} (h : Fits m p 320) (ho : p.offset = 0) :
     m.LimbsFit p := by
