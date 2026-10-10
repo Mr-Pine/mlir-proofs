@@ -1,0 +1,30 @@
+[package]
+name = "agave-ed25519-verify"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# Agave e818d643: sigverify calls solana_signature::Signature::verify.
+solana-signature = { version = "=3.6.0", default-features = false, features = ["verify"] }
+# Agave's feature set for it (the crate's defaults).
+solana-ed25519 = { version = "=0.2.4", default-features = false, features = ["alloc", "precomputed-tables", "zeroize", "rand_core", "digest"] }
+# Features Agave's workspace unifies onto the crates the check runs
+# through: digest's and zeroize's from its lock's dependency lists, sha2's
+# and subtle's from dependents taking their defaults (solana-zk-sdk, blstrs).
+digest = { version = "=0.11.3", default-features = false, features = ["block-api", "oid", "mac"] }
+sha2 = { version = "=0.11.0", default-features = false, features = ["alloc", "oid"] }
+subtle = { version = "=2.6.1", default-features = false, features = ["std", "i128", "const-generics"] }
+zeroize = { version = "=1.8.2", default-features = false, features = ["alloc", "zeroize_derive"] }
+
+# Agave's release profile is opt-level 3, lto "thin", 16 codegen units, unwind.
+# One module needs fat LTO and one unit, as in Agave's release-with-lto.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "unwind"
+debug = false

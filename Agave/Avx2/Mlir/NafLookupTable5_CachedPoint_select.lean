@@ -1,0 +1,40 @@
+module
+
+-- agave-build/out/avx2-noinline/op/_RNvMNtCsh8hPzWUDumX_14solana_ed255196windowINtB2_15NafLookupTable5NtNtNtNtNtB4_7backend6vector4avx27edwards11CachedPointE6selectB4_.mlir
+-- <solana_ed25519[c79103de3f6f5451]::window::NafLookupTable5<solana_ed25519[c79103de3f6f5451]::backend::vector::avx2::edwards::CachedPoint>>::select
+
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
+public import Agave.Avx2.Mlir.anon_e79fcfe266c5706188f989b4d452749f_25
+
+meta import MLIR.Semantics.Func
+meta import Agave.Avx2.Mlir.anon_e79fcfe266c5706188f989b4d452749f_25
+
+namespace MLIR.Agave.Avx2
+
+@[expose] public section
+
+mlir_def NafLookupTable5_CachedPoint_select :=
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.dereferenceable = 160 : i64, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.nonnull, llvm.noundef, llvm.writable, llvm.writeonly}, {llvm.align = 32 : i64, llvm.dereferenceable = 1280 : i64, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.nonnull, llvm.noundef, llvm.readonly}, {llvm.noundef, llvm.range = #llvm.constant_range<i64, -128, 128>}], dso_local, function_type = !llvm.func<void (ptr, ptr, i64)>, linkage = #llvm.linkage<internal>, passthrough = ["nonlazybind", ["probe-stack", "inline-asm"], ["target-cpu", "x86-64-v2"]], sym_name = "_RNvMNtCsh8hPzWUDumX_14solana_ed255196windowINtB2_15NafLookupTable5NtNtNtNtNtB4_7backend6vector4avx27edwards11CachedPointE6selectB4_", target_cpu = "x86-64-v2", target_features = #llvm.target_features<["+avx", "+avx2", "+sse", "+sse2", "+sse3", "+sse4.1", "+sse4.2", "+crc32", "+ssse3"]>, unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64}> ({
+^bb0(%arg3: !llvm.ptr, %arg4: !llvm.ptr, %arg5: i64):
+  %43 = "llvm.mlir.constant"() <{value = 1 : i64}> : () -> i64
+  %44 = "llvm.mlir.constant"() <{value = 16 : i64}> : () -> i64
+  %45 = "llvm.mlir.constant"() <{value = 8 : i64}> : () -> i64
+  %46 = "llvm.mlir.addressof"() <{global_name = @anon.e79fcfe266c5706188f989b4d452749f.25}> : () -> !llvm.ptr
+  %47 = "llvm.mlir.constant"() <{value = 160 : i64}> : () -> i64
+  %48 = "llvm.lshr"(%arg5, %43) : (i64, i64) -> i64
+  %49 = "llvm.icmp"(%arg5, %44) <{predicate = 6 : i64}> : (i64, i64) -> i1
+  "llvm.cond_br"(%49)[^bb1, ^bb2] <{operandSegmentSizes = array<i32: 1, 0, 0>}> : (i1) -> ()
+^bb1:  // pred: ^bb0
+  %50 = "llvm.getelementptr"(%arg4, %48) <{elem_type = !llvm.struct<(struct<(array<5 x vector<4xi64>>)>)>, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+  "llvm.intr.memcpy"(%arg3, %50, %47) <{arg_attrs = [{llvm.align = 32 : i64, llvm.dereferenceable = 160 : i64, llvm.nonnull, llvm.noundef}, {llvm.align = 32 : i64, llvm.dereferenceable = 160 : i64, llvm.nonnull, llvm.noundef}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  "llvm.return"() : () -> ()
+^bb2:  // pred: ^bb0
+  "llvm.call"(%48, %45, %46) <{CConv = #llvm.cconv<fastcc>, TailCallKind = #llvm.tailcallkind<tail>, arg_attrs = [{llvm.noundef}, {llvm.noundef}, {llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.noalias, llvm.nofree, llvm.noundef, llvm.readonly}], callee = @_RNvNtCsgxBkk5gSRhY_4core9panicking18panic_bounds_check, fastmathFlags = #llvm.fastmath<none>, no_inline, noreturn, op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (i64, i64, !llvm.ptr) -> ()
+  "llvm.unreachable"() : () -> ()
+}) : () -> ()
+  with @anon.e79fcfe266c5706188f989b4d452749f.25 := anon_e79fcfe266c5706188f989b4d452749f_25
+
+end
+
+end MLIR.Agave.Avx2
