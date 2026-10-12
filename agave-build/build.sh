@@ -12,7 +12,7 @@
 # Usage: ./build.sh [variant...]   (default: serial avx2)
 # Variants: serial, avx2, <backend>-noinline (modular builds),
 # <backend>-noinline-big (modular, with big inlined callees kept apart:
-# the serial proofs' build), <backend>-noinline-all (exploration only),
+# the proofs' builds), <backend>-noinline-all (exploration only),
 # and dispatch (Agave's own flags: AVX2 picked at run time; not extractable).
 # Outputs land in out/<variant>/:
 #   full.bc         the fat-LTO module as compiled (rustc's LLVM 22)
@@ -51,11 +51,13 @@ flags() {
   esac
   case $1 in
     *-noinline) f+=' -C llvm-args=-funcspec-max-clones=0 -C llvm-args=-inline-threshold=0' ;;
-    # The noinline build, with the functions scripts/noinline-big.txt lists also kept apart: the
-    # ones it would still inline into a caller past ~300 ops.
+    # The noinline build, with the functions scripts/noinline-big.txt (serial) or
+    # noinline-big-avx2.txt lists also kept apart: the ones it would still inline into a caller
+    # past ~300 ops.
     *-noinline-big) f+=' -C llvm-args=-funcspec-max-clones=0 -C llvm-args=-inline-threshold=0'
+      local list=noinline-big.txt; [[ $1 == avx2* ]] && list=noinline-big-avx2.txt
       while read -r fn; do f+=" -C llvm-args=-force-attribute=$fn:noinline"; done \
-        < <(grep -v -E '^(#|$)' "$HERE/scripts/noinline-big.txt") ;;
+        < <(grep -v -E '^(#|$)' "$HERE/scripts/$list") ;;
     # No inlining at all: rustc's MIR inliner off, every function noinline in LLVM (alwaysinline
     # removed first). Exploration only: far from Agave's build.
     *-noinline-all) f+=' -C llvm-args=-funcspec-max-clones=0 -Z inline-mir=no'

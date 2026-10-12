@@ -5,6 +5,7 @@ target/
 !/out/serial-noinline/
 !/out/serial-noinline-big/
 !/out/avx2-noinline/
+!/out/avx2-noinline-big/
 /out/*/*
 !/out/*/op/
 !/out/*/inventory.md

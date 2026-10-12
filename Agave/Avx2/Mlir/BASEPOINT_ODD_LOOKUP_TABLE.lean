@@ -1,6 +1,6 @@
 module
 
--- agave-build/out/avx2-noinline/op/_RNvNtNtNtNtCsh8hPzWUDumX_14solana_ed255197backend6vector4avx29constants26BASEPOINT_ODD_LOOKUP_TABLE.mlir
+-- agave-build/out/avx2-noinline-big/op/_RNvNtNtNtNtCsh8hPzWUDumX_14solana_ed255197backend6vector4avx29constants26BASEPOINT_ODD_LOOKUP_TABLE.mlir
 -- solana_ed25519[c79103de3f6f5451]::backend::vector::avx2::constants::BASEPOINT_ODD_LOOKUP_TABLE
 
 public import MLIR.Semantics.GlobalInitializer
