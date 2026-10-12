@@ -156,15 +156,13 @@ end ed25519_verify
 section Proof
 
 /-- `ED25519_verify` returns `Ed25519.Boringssl.verify` of the message at `msg`, the signature
-`r ‖ S` at `sig` and the key at `pk`: `1` accepts, `0` rejects. The message's bulk past the 64
-bytes before it must be `Ok` for `SHA512_Update` (`BCM_sha512_update.BulkOk`). The memory is
-unchanged; the block counter advances by `ed25519_verify.blocks`. -/
+`r ‖ S` at `sig` and the key at `pk`: `1` accepts, `0` rejects. The memory is unchanged; the
+block counter advances by `ed25519_verify.blocks`. -/
 public theorem ED25519_verify.call_eq (msg : Pointer) (msgLen : BitVec 64) (sig pk : Pointer)
     (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgLen.toNat))
     (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
     (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
-    (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
-    (hok : msgLen.toNat < 64 ∨ BCM_sha512_update.BulkOk (msgLen - 64#64)) :
+    (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64) :
     ED25519_verify.call (ED25519_verify.args (.value msg) (.value msgLen) (.value sig) (.value pk))
         s =
       .value

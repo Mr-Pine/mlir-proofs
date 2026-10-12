@@ -123,35 +123,55 @@ private theorem leftover_absorbed {v : Sha512Ctx} {m : List (BitVec 8)} (len : B
 private theorem bulk_absorbed {v : Sha512Ctx} {m : List (BitVec 8)} (len : BitVec 64)
     (data : BitVec (8 * len.toNat)) (hm : m.length % 128 = 0)
     (hs : v.h = Sha512.compressBlocks Sha512.IV m) (hn : v.num = 0#16)
-    (hc : v.hi ++ v.lo = BitVec.ofNat 96 (m.length + len.toNat)) (hmd : v.mdLen = 64#16)
-    (hok : BulkOk len) : (bulk v len data).Absorbed (m ++ bytesLE data) := by
-  have hD : (bytesLE data).length = len.toNat := by simp
+    (hc : v.hi ++ v.lo = BitVec.ofNat 96 (m.length + len.toNat)) (hmd : v.mdLen = 64#16) :
+    (bulk v len data).Absorbed (m ++ bytesLE data) := by
   have hb := toNat_ushiftRight_7 len
+  have ht := toNat_and_127 len
   unfold bulk
   split
-  · rename_i hlt
-    have h0 : len &&& 127#64 = 0#64 := hok.resolve_left (by simpa using hlt)
-    have h0' : len.toNat % 128 = 0 := by
-      rw [← toNat_and_127, h0]; rfl
-    unfold leftover
-    rw [ite_eq_left h0]
-    have e1 : (m ++ bytesLE data).length % 128 = 0 := by
-      simp; omega
-    refine ⟨?_, ?_, ?_, ?_, ?_, hmd⟩
-    · show Firedancer.Ref.fd_sha512_core_ref.spec _ _ = _
-      rw [Firedancer.Ref.fd_sha512_core_ref.spec_eq, bytesLE_setWidth _ (by omega) (by omega),
-        Sha512.compressBlocks_append _ hm, ← hs,
+  · -- the whole blocks `B`, then the tail `T`
+    have hq : (len - (len &&& 127#64)).toNat = len.toNat - len.toNat % 128 := by
+      rw [BitVec.toNat_sub_of_le
+          (by
+            rw [BitVec.le_def, ht]; omega),
+        ht]
+    have hB :
+      bytesLE (data.setWidth (1024 * (len >>> 7).toNat)) =
+        (bytesLE data).take (len.toNat - len.toNat % 128) := by
+      rw [bytesLE_setWidth _ (by omega) (by omega), hb]
+      congr 1
+      omega
+    have hT :
+      bytesLE (data.extractLsb' (8 * (len - (len &&& 127#64)).toNat) (8 * (len &&& 127#64).toNat)) =
+        (bytesLE data).drop (len.toNat - len.toNat % 128) := by
+      rw [bytesLE_extractLsb' _ (by omega) (by omega)
+          (by
+            rw [hq, ht]; omega),
+        hq, ht,
         List.take_of_length_le
           (by
             simp; omega)]
-    · rw [e1, hn]
-      rfl
-    · rw [e1, List.take_zero, eq_comm, List.drop_eq_nil_iff]
-      simp; omega
-    · rw [e1]
-      exact Sha512Ctx.prefix_zero _
-    · show v.hi ++ v.lo = _
-      rw [hc, List.length_append, hD]
+      congr 1
+      omega
+    have :=
+      leftover_absorbed (m := m ++ bytesLE (data.setWidth (1024 * (len >>> 7).toNat))) (v :=
+        { v with
+          h :=
+            Firedancer.Ref.fd_sha512_core_ref.spec v.h (n := (len >>> 7).toNat)
+              (data.setWidth (1024 * (len >>> 7).toNat)) })
+        _ (data.extractLsb' (8 * (len - (len &&& 127#64)).toNat) (8 * (len &&& 127#64).toNat))
+        (by
+          simp; omega)
+        (by omega)
+        (by rw [Firedancer.Ref.fd_sha512_core_ref.spec_eq, Sha512.compressBlocks_append _ hm, ← hs])
+        hn
+        (by
+          rw [hc]
+          congr 1
+          simp only [List.length_append, length_bytesLE]
+          omega)
+        hmd
+    rwa [hT, hB, List.append_assoc, List.take_append_drop] at this
   · rename_i hlt
     exact
       leftover_absorbed len data hm
@@ -162,9 +182,9 @@ private theorem bulk_absorbed {v : Sha512Ctx} {m : List (BitVec 8)} (len : BitVe
 end BCM_sha512_update
 
 open BCM_sha512_update in
-/-- `update` absorbs `data`'s bytes, when its bulk is `Ok`. -/
+/-- `update` absorbs `data`'s bytes. -/
 public theorem _root_.MLIR.Sha512Ctx.Absorbed.update {v : Sha512Ctx} {m : List (BitVec 8)}
-    (h : v.Absorbed m) (len : BitVec 64) (data : BitVec (8 * len.toNat)) (hok : Ok v len) :
+    (h : v.Absorbed m) (len : BitVec 64) (data : BitVec (8 * len.toNat)) :
     (BCM_sha512_update.spec v len data).Absorbed (m ++ bytesLE data) := by
   have hD : (bytesLE data).length = len.toNat := by simp
   have hc := count_add v.hi v.lo len
@@ -180,7 +200,6 @@ public theorem _root_.MLIR.Sha512Ctx.Absorbed.update {v : Sha512Ctx} {m : List (
     rw [this, List.append_nil]
     exact h
   rename_i hlen
-  have hrok : RestOk v len := hok.resolve_left hlen
   dsimp only
   generalize (if (v.lo + len).ult len then v.hi + 1#32 else v.hi) = hi at hc ⊢
   unfold rest
@@ -189,7 +208,7 @@ public theorem _root_.MLIR.Sha512Ctx.Absorbed.update {v : Sha512Ctx} {m : List (
   · rename_i hn
     have hm : m.length % 128 = 0 := by
       rw [← hu, hn]; rfl
-    exact bulk_absorbed len data hm h.h hn hc h.mdLen (by simpa [RestOk, hn] using hrok)
+    exact bulk_absorbed len data hm h.h hn hc h.mdLen
   rename_i hn
   have hrem : (128#64 - v.num.setWidth 64).toNat = 128 - m.length % 128 := by
     rw [BitVec.toNat_sub_of_le
@@ -241,8 +260,6 @@ public theorem _root_.MLIR.Sha512Ctx.Absorbed.update {v : Sha512Ctx} {m : List (
     · exact hc.trans (by rw [List.length_append, hD])
   · rename_i hge
     simp only [BitVec.ult, decide_eq_true_eq, hrem, Nat.not_lt] at hge
-    have hok' : BulkOk (len - (128#64 - v.num.setWidth 64)) := by
-      simpa [RestOk, hn, BitVec.ult, hrem, Nat.not_lt.mpr hge] using hrok
     generalize hR : 128#64 - v.num.setWidth 64 = R at *
     have hsub : (len - R).toNat = len.toNat - (128 - m.length % 128) := by
       rw [BitVec.toNat_sub_of_le
@@ -280,7 +297,7 @@ public theorem _root_.MLIR.Sha512Ctx.Absorbed.update {v : Sha512Ctx} {m : List (
       bulk_absorbed _ _
         (by
           simp only [List.length_append, List.length_take, hD]; omega)
-        ?_ rfl ?_ h.mdLen hok'
+        ?_ rfl ?_ h.mdLen
     · show Firedancer.Ref.fd_sha512_core_ref.spec (n := 1) v.h (copy v.p _ _) = _
       rw [Firedancer.Ref.fd_sha512_core_ref.spec_one, hcopy, h.h, Sha512.compressBlocks_take m,
         show
@@ -495,49 +512,6 @@ public theorem _root_.MLIR.Sha512Ctx.Absorbed.final {v : Sha512Ctx} {m : List (B
 
 /-! ## Init, updates, final -/
 
-/-- `update`'s `Ok` from the bytes absorbed before: `k` of them, then `len` more. -/
-public def BCM_sha512_update.OkAt (k : Nat) (len : BitVec 64) : Prop :=
-  len = 0#64 ∨
-    if k % 128 = 0 then BCM_sha512_update.BulkOk len
-    else
-      len.toNat < 128 - k % 128 ∨ BCM_sha512_update.BulkOk (len - BitVec.ofNat 64 (128 - k % 128))
-
-open BCM_sha512_update in
-public theorem _root_.MLIR.Sha512Ctx.Absorbed.ok {v : Sha512Ctx} {m : List (BitVec 8)}
-    (h : v.Absorbed m) {len : BitVec 64} (hok : OkAt m.length len) : Ok v len := by
-  have hu := h.num
-  have hn : v.num.setWidth 64 = BitVec.ofNat 64 (m.length % 128) := by
-    apply BitVec.eq_of_toNat_eq
-    rw [BitVec.toNat_setWidth, hu, BitVec.toNat_ofNat]
-  have hz : v.num = 0#16 ↔ m.length % 128 = 0 := by
-    rw [← hu, BitVec.toNat_eq]
-    rfl
-  have hr : (128#64 - BitVec.ofNat 64 (m.length % 128)).toNat = 128 - m.length % 128 := by
-    rw [BitVec.toNat_sub_of_le
-        (by
-          rw [BitVec.le_def]; simp; omega)]
-    simp
-    omega
-  have hr' : 128#64 - BitVec.ofNat 64 (m.length % 128) = BitVec.ofNat 64 (128 - m.length % 128) :=
-    BitVec.eq_of_toNat_eq
-      (by
-        rw [hr]; simp; omega)
-  rcases hok with h0 | hok
-  · exact .inl h0
-  right
-  unfold RestOk
-  by_cases hk : m.length % 128 = 0
-  · rw [ite_eq_left (hz.2 hk)]
-    rw [ite_eq_left hk] at hok
-    exact hok
-  · rw [ite_eq_right (mt hz.1 hk), hn, hr']
-    rw [ite_eq_right hk] at hok
-    rcases hok with hl | hb
-    · left
-      simp only [BitVec.ult, decide_eq_true_eq, BitVec.toNat_ofNat]
-      omega
-    · exact .inr hb
-
 /-- Updates with `pieces` of `len` bytes each, in order. -/
 public def BCM_sha512_update.specs (v : Sha512Ctx) :
     List ((len : BitVec 64) × BitVec (8 * len.toNat)) → Sha512Ctx
@@ -549,42 +523,34 @@ public def BCM_sha512_update.bytes (ps : List ((len : BitVec 64) × BitVec (8 * 
     List (BitVec 8) :=
   ps.flatMap fun p => bytesLE p.2
 
-/-- Each piece's `OkAt` after the ones before it, from `k` bytes absorbed. -/
-public def BCM_sha512_update.OkAll (k : Nat) :
-    List ((len : BitVec 64) × BitVec (8 * len.toNat)) → Prop
-  | [] => True
-  | ⟨len, _⟩ :: ps => OkAt k len ∧ OkAll (k + len.toNat) ps
-
 open BCM_sha512_update in
-/-- Updates with `pieces`, each `Ok`, absorb their bytes. -/
+/-- Updates with `pieces` absorb their bytes. -/
 public theorem _root_.MLIR.Sha512Ctx.Absorbed.updates {v : Sha512Ctx} {m : List (BitVec 8)}
-    (h : v.Absorbed m) : ∀ ps, OkAll m.length ps → (specs v ps).Absorbed (m ++ bytes ps)
-  | [], _ => by simpa [BCM_sha512_update.specs, bytes] using h
-  | ⟨len, data⟩ :: ps, ⟨hok, hrest⟩ => by
-    have h' := h.update len data (h.ok hok)
-    have := h'.updates ps (by simpa using hrest)
+    (h : v.Absorbed m) : ∀ ps, (specs v ps).Absorbed (m ++ bytes ps)
+  | [] => by simpa [BCM_sha512_update.specs, bytes] using h
+  | ⟨len, data⟩ :: ps => by
+    have h' := h.update len data
+    have := h'.updates ps
     simpa [BCM_sha512_update.specs, bytes, List.append_assoc] using this
 
 open BCM_sha512_update in
 /-- `SHA512_Init`, `SHA512_Update` with each of `pieces`, `SHA512_Final`: the digest's bytes are
-SHA-512 of the pieces' bytes, for fewer than `2 ^ 96` bytes whose bulks are `Ok`; whatever the
-struct held before. -/
+SHA-512 of the pieces' bytes, for fewer than `2 ^ 96` bytes; whatever the struct held before. -/
 public theorem digest_eq (v : Sha512Ctx) (ps : List ((len : BitVec 64) × BitVec (8 * len.toNat)))
-    (hok : OkAll 0 ps) (hlen : (bytes ps).length < 2 ^ 96) :
+    (hlen : (bytes ps).length < 2 ^ 96) :
     bytesLE
         (Firedancer.Words8.bits
           ((sha512_final_impl.spec (specs (BCM_sha512_init.spec v) ps)).h.map
             Firedancer.Ref.fd_ulong_bswap.spec)) =
       Sha512.digest (bytes ps) := by
-  have := (Sha512Ctx.absorbed_init v).updates ps hok
+  have := (Sha512Ctx.absorbed_init v).updates ps
   rw [List.nil_append] at this
   exact this.final hlen
 
 open BCM_sha512_update in
-/-- `ED25519_verify`'s hash: `r`, `A` and `msg` appended, SHA-512 of `r ‖ A ‖ msg` for a message
-whose bulk is `Ok` after the 64 bytes before it. -/
+/-- `ED25519_verify`'s hash: `r`, `A` and `msg` appended, SHA-512 of `r ‖ A ‖ msg`. -/
 public theorem hash_eq (v : Sha512Ctx) (r a : BitVec 256) (msgLen : BitVec 64)
-    (msg : BitVec (8 * msgLen.toNat)) (hok : msgLen.toNat < 64 ∨ BulkOk (msgLen - 64#64)) :
+    (msg : BitVec (8 * msgLen.toNat)) :
     bytesLE
         (Firedancer.Words8.bits
           ((sha512_final_impl.spec
@@ -596,7 +562,6 @@ public theorem hash_eq (v : Sha512Ctx) (r a : BitVec 256) (msgLen : BitVec 64)
       Sha512.digest (bytesLE r ++ bytesLE a ++ bytesLE msg) := by
   have :=
     digest_eq v [⟨32#64, r⟩, ⟨32#64, a⟩, ⟨msgLen, msg⟩]
-      ⟨.inr (by simp [BulkOk]), .inr (by simp [BulkOk]), .inr (by simpa using hok), trivial⟩
       (by
         simp [bytes]; omega)
   simpa [specs, bytes, List.append_assoc] using this

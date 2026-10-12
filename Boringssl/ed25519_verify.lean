@@ -144,7 +144,7 @@ local macro "accept" : tactic =>
         (accept_run msg msgLen sig pk A t pkcopy rcopy scopy ctx h R rcheck _ hAL mv rv Sv Av PA S E
               hArgs (by env_reads) hwf hmsg hmsg_off hmsgLen hsig hsig_off hpk hpk_off hmv hrv hAv
               hA_pt hAP hfits_rcopy hread_rcopy hfits_scopy hread_scopy hctx_bounds hh_bounds
-              hR_bounds hrcheck_bounds (digits_hram rv Av msgLen mv) (digits_S htop) hok).trans
+              hR_bounds hrcheck_bounds (digits_hram rv Av msgLen mv) (digits_S htop)).trans
           ?_
       rw [hS]
       dsimp only
@@ -244,31 +244,6 @@ theorem digits_S {S : BitVec 256} (h : (S.extractLsb' 248 8).ult 32#8 = true) :
   omega
 
 end ed25519_verify
-
-/-- `Ok` past `k` buffered bytes, `0 < k < 128`: the bytes fit in the buffer, or their bulk is
-`Ok`. -/
-theorem ok_of_num {v : Sha512Ctx} {len : BitVec 64} {k : Nat} (hk : v.num.toNat = k) (hk0 : k ≠ 0)
-    (hk128 : k < 128)
-    (h : len.toNat < 128 - k ∨ BCM_sha512_update.BulkOk (len - BitVec.ofNat 64 (128 - k))) :
-    BCM_sha512_update.Ok v len := by
-  have hn : v.num ≠ 0#16 := fun h0 =>
-    hk0
-      (by
-        rw [← hk, h0]; rfl)
-  have hm : 128#64 - v.num.setWidth 64 = BitVec.ofNat 64 (128 - k) := by
-    apply BitVec.eq_of_toNat_eq
-    rw [BitVec.toNat_sub_of_le
-        (by
-          simp [BitVec.le_def]; omega)]
-    simp only [BitVec.toNat_ofNat, BitVec.toNat_setWidth, hk]
-    omega
-  refine .inr ?_
-  simp only [BCM_sha512_update.RestOk, hn, ↓reduceIte, hm]
-  rcases h with h | h
-  · left
-    simp only [BitVec.ult, decide_eq_true_eq, BitVec.toNat_ofNat]
-    omega
-  · exact .inr h
 
 /-! ### The hash object's counts -/
 
@@ -530,17 +505,15 @@ theorem accept_run (msg : Pointer) (msgLen : BitVec 64)
         scopy, %478 := ctx, %479 := h, %480 := R, %481 := rcheck])
     (hwf : S.WF) (hmsg : Fits S.mem msg (8 * msgLen.toNat))
     (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
-    (hsig : Fits S.mem sig 512)
-    (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits S.mem pk 256)
-    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hmv : S.mem.readAt msg (8 * msgLen.toNat) = mv)
-    (hrv : S.mem.readAt sig 256 = rv) (hAv : S.mem.readAt pk 256 = Av) (hA : S.mem.PointFit A)
-    (hAP : S.mem.readP3 A = negA PA) (hrc : Fits S.mem rcopy 256)
-    (hrcv : S.mem.readAt rcopy 256 = rv) (hsc : Fits S.mem scopy 256)
+    (hsig : Fits S.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
+    (hpk : Fits S.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
+    (hmv : S.mem.readAt msg (8 * msgLen.toNat) = mv) (hrv : S.mem.readAt sig 256 = rv)
+    (hAv : S.mem.readAt pk 256 = Av) (hA : S.mem.PointFit A) (hAP : S.mem.readP3 A = negA PA)
+    (hrc : Fits S.mem rcopy 256) (hrcv : S.mem.readAt rcopy 256 = rv) (hsc : Fits S.mem scopy 256)
     (hscv : S.mem.readAt scopy 256 = Sv) (hctx : InBounds S.mem ctx 1664)
     (hh : InBounds S.mem h 512) (hRb : InBounds S.mem R 960) (hrcb : InBounds S.mem rcheck 256)
     (hdh : ge_double_scalarmult_vartime.Digits (hram rv Av msgLen mv))
-    (hdS : ge_double_scalarmult_vartime.Digits Sv)
-    (hok : msgLen.toNat < 64 ∨ BCM_sha512_update.BulkOk (msgLen - 64#64)) :
+    (hdS : ge_double_scalarmult_vartime.Digits Sv) :
     (ed25519_verify.runFrom E ^bb8 S >>= fun p =>
         PoisonOr.value (p.1, ({ alloc := p.2.alloc, mem := p.2.mem.eraseFrom N } : GlobalState))) =
       .value
@@ -573,40 +546,18 @@ theorem accept_run (msg : Pointer) (msgLen : BitVec 64)
   obtain ⟨v₀, hv₀⟩ : ∃ v, S.mem.readShaCtx ctx = v := ⟨_, rfl⟩
   step_call using SHA512_Init.call_eq
   step_call using SHA512_Update.call_eq_zero
-  -- the bytes each update absorbs, and their bulks `Ok`
+  -- the bytes each update absorbs
   have ha₁ := Sha512Ctx.absorbed_init v₀
-  have hok₁ : BCM_sha512_update.Ok (BCM_sha512_init.spec v₀) 32#64 :=
-    .inr (by simp [BCM_sha512_update.RestOk, BCM_sha512_update.BulkOk, BCM_sha512_init.spec])
   have hsig32 : ¬sig.offset.uaddOverflow 32#64 := BitVec.not_uaddOverflow_of_le hsig_off (by decide)
   clear hv₀
   -- SHA512_Update(&hash_ctx, signature, 32); SHA512_Update(&hash_ctx, public_key, 32);
-  step_call using
-    (SHA512_Update.call_eq (hv := (congrArg Sha512Ctx.Valid hread_ctx).mpr ha₁.valid) (hok :=
-      (congrArg (BCM_sha512_update.Ok · 32#64) hread_ctx).mpr hok₁))
-  have ha₂ := ha₁.update 32#64 rv hok₁
-  have hok₂ :
-    BCM_sha512_update.Ok (BCM_sha512_update.spec (BCM_sha512_init.spec v₀) 32#64 rv) 32#64 :=
-    ok_of_num (k := 32)
-      (by
-        rw [ha₂.num]; simp)
-      (by decide) (by decide) (.inl (by decide))
-  step_call using
-    (SHA512_Update.call_eq (hv := (congrArg Sha512Ctx.Valid hread_ctx).mpr ha₂.valid) (hok :=
-      (congrArg (BCM_sha512_update.Ok · 32#64) hread_ctx).mpr hok₂))
-  have ha₃ := ha₂.update 32#64 Av hok₂
-  have hok₃ :
-    BCM_sha512_update.Ok
-      (BCM_sha512_update.spec (BCM_sha512_update.spec (BCM_sha512_init.spec v₀) 32#64 rv) 32#64 Av)
-      msgLen :=
-    ok_of_num (k := 64)
-      (by
-        rw [ha₃.num]; simp)
-      (by decide) (by decide) (by simpa using hok)
+  step_call using (SHA512_Update.call_eq (hv := (congrArg Sha512Ctx.Valid hread_ctx).mpr ha₁.valid))
+  have ha₂ := ha₁.update 32#64 rv
+  step_call using (SHA512_Update.call_eq (hv := (congrArg Sha512Ctx.Valid hread_ctx).mpr ha₂.valid))
+  have ha₃ := ha₂.update 32#64 Av
   -- SHA512_Update(&hash_ctx, message, message_len); SHA512_Final(h, &hash_ctx);
-  step_call using
-    (SHA512_Update.call_eq (hv := (congrArg Sha512Ctx.Valid hread_ctx).mpr ha₃.valid) (hok :=
-      (congrArg (BCM_sha512_update.Ok · msgLen) hread_ctx).mpr hok₃))
-  have ha₄ := ha₃.update msgLen mv hok₃
+  step_call using (SHA512_Update.call_eq (hv := (congrArg Sha512Ctx.Valid hread_ctx).mpr ha₃.valid))
+  have ha₄ := ha₃.update msgLen mv
   have hch : ctx.id ≠ h.id := hhc.symm
   step_pure
   have hh_w := MemoryState.Words8Room.of_room hroom_h hho
@@ -618,7 +569,7 @@ theorem accept_run (msg : Pointer) (msgLen : BitVec 64)
   -- x25519_sc_reduce(h);
   step_call using x25519_sc_reduce.call_eq
   rw [hram_eq ha₄] at hread_h
-  clear hread_ctx ha₁ ha₂ ha₃ ha₄ hok₁ hok₂ hok₃ hh_w hh_f
+  clear hread_ctx ha₁ ha₂ ha₃ ha₄ hh_w hh_f
   -- ge_double_scalarmult_vartime(&R, h, &A, scopy);
   step_pure
   have hR_f := MemoryState.Fe3Room.of_room hroom_R hRo
@@ -676,8 +627,7 @@ public theorem ed25519_verify.call_eq (msg : Pointer) (msgLen : BitVec 64) (sig 
     (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgLen.toNat))
     (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
     (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
-    (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
-    (hok : msgLen.toNat < 64 ∨ BCM_sha512_update.BulkOk (msgLen - 64#64)) :
+    (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64) :
     ed25519_verify.call
         (ed25519_verify.args (.value Pointer.null) (.value 0#64) (.value msg) (.value msgLen)
           (.value sig) (.value pk))

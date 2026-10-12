@@ -60,23 +60,6 @@ def restCores (v : Sha512Ctx) (len : BitVec 64) : Nat :=
 def cores (v : Sha512Ctx) (len : BitVec 64) : Nat :=
   if len = 0#64 then 0 else restCores v len
 
-/-- The bulk's `data += len; len %= sizeof(c->p); data -= len;` steps `data` back by `len % 128`
-bytes, a `getelementptr` with a negative index. The framework takes a dynamic index unsigned, so
-that step is poison unless it is by `0`: the bulk has no whole block, or no tail after them. -/
-def BulkOk (len : BitVec 64) : Prop :=
-  ¬(127#64).ult len ∨ len &&& 127#64 = 0#64
-
-/-- `BulkOk` of the bulk `rest` reaches, if it does. -/
-def RestOk (v : Sha512Ctx) (len : BitVec 64) : Prop :=
-  if v.num = 0#16 then BulkOk len
-  else
-    let n := 128#64 - v.num.setWidth 64
-    len.ult n ∨ BulkOk (len - n)
-
-/-- `BulkOk` of the bulk `update` reaches, if it does. -/
-def Ok (v : Sha512Ctx) (len : BitVec 64) : Prop :=
-  len = 0#64 ∨ RestOk v len
-
 end BCM_sha512_update
 
 open BCM_sha512_update in
@@ -202,11 +185,45 @@ theorem leftover_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 *
 
 theorem gep_zero {f : GepFlags} (p : Pointer) :
     Operation.gep f (.value 0#64) (.value p) = .value p := by
-  rw [gep_value (by simp [BitVec.uaddOverflow, p.offset.isLt]) (.inr (by decide)),
-    Pointer.add_zero]
+  rw [gep_value (by simp [BitVec.uaddOverflow, p.offset.isLt]) (.inr (by decide)), Pointer.add_zero]
 
 theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
   rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+
+theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
+  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+
+theorem ssubOverflow_and_127 (n : BitVec 64) : (0#64).ssubOverflow (n &&& 127#64) = false := by
+  bv_decide
+
+/-- `data -= len % 128` after `data += len`: back to the tail, in the block (`inbounds`). -/
+theorem gep_tail {d : Pointer} {n : BitVec 64} (hdo : ¬d.offset.uaddOverflow n) :
+    Operation.gepDyn { nusw := true } 0 1 (.value (d.add n)) (.value (-(n &&& 127#64))) =
+      .value (d.add (n - (n &&& 127#64))) := by
+  have ht := toNat_and_127 n
+  have hoff : (d.add n).offset.toNat = d.offset.toNat + n.toNat := by
+    simp only [Pointer.add]
+    exact BitVec.toNat_add_of_not_uaddOverflow hdo
+  by_cases h0 : n &&& 127#64 = 0#64
+  · simp [h0, gepDyn_value_idx, gep_zero]
+  · have htp : 0 < (n &&& 127#64).toNat := by
+      have := mt BitVec.toNat_eq.mpr h0
+      simp only [BitVec.toNat_ofNat] at this
+      omega
+    have hneg : (-(n &&& 127#64)).toNat = 2 ^ 64 - (n &&& 127#64).toNat := by
+      rw [BitVec.toNat_neg]
+      omega
+    have hti : (-(n &&& 127#64)).toInt = -((n &&& 127#64).toNat : Int) := by
+      rw [BitVec.toInt_eq_toNat_cond, hneg]
+      omega
+    have hofs :
+      BitVec.ofInt 64 (((0 : Nat) : Int) + (-(n &&& 127#64)).toInt * ((1 : Nat) : Int)) =
+        -(n &&& 127#64) := by
+      simp
+    rw [gepDyn_value_idx, ite_eq_left ⟨rfl, by omega⟩,
+      gepSigned_value (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
+        (by simp),
+      hofs, Pointer.add_add, ← BitVec.sub_eq_add_neg]
 
 /-- `^bb7`, the bulk of the `n` bytes at `d`. -/
 abbrev hdr7 (c d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
@@ -218,11 +235,10 @@ then the leftover. -/
 theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.toNat))
     (M : MemoryState) (v : Sha512Ctx) (S₁ : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (BCM_sha512_update.args (.value c) (.value data) (.value len)).get)
-    (hwf : S₁.WF) (hM : S₁.mem = M.storeShaCtx c v) (hMf : M.ShaCtxFit c) (hok : BulkOk n)
+    (hwf : S₁.WF) (hM : S₁.mem = M.storeShaCtx c v) (hMf : M.ShaCtxFit c)
     (hd : Fits S₁.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ c.id)
-    (hn63 : n.toNat < 2 ^ 63)
-    (hD : S₁.mem.readAt d (8 * n.toNat) = D) (g : Vals [.bv 32] × GlobalState → PoisonOr β)
-    (K : PoisonOr β)
+    (hn63 : n.toNat < 2 ^ 63) (hD : S₁.mem.readAt d (8 * n.toNat) = D)
+    (g : Vals [.bv 32] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.cons (.value 0#32) .nil,
@@ -238,7 +254,6 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
   step_pure
   finish_block
   · -- len >= sizeof(c->p)
-    have h0 : n &&& 127#64 = 0#64 := hok.resolve_left (by simpa using hbr)
     have hnz : n >>> 7 ≠ 0#64 := by
       have := hbr
       bv_decide
@@ -251,6 +266,21 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
       rw [toNat_ushiftRight_7]
       simp [BitVec.uaddOverflow] at hdo
       omega
+    -- the tail: `len % 128` bytes at `data + (len - len % 128)`
+    have ht := toNat_and_127 n
+    have hq : (n - (n &&& 127#64)).toNat = n.toNat - n.toNat % 128 := by
+      rw [BitVec.toNat_sub_of_le
+          (by
+            rw [BitVec.le_def, ht]; omega),
+        ht]
+    have hqo : ¬d.offset.uaddOverflow (n - (n &&& 127#64)) :=
+      BitVec.not_uaddOverflow_of_le hdo (by omega)
+    have hDt :
+      S₁.mem.readAt (d.add (n - (n &&& 127#64))) (8 * (n &&& 127#64).toNat) =
+        D.extractLsb' (8 * (n - (n &&& 127#64)).toNat) (8 * (n &&& 127#64).toNat) := by
+      rw [MemoryState.readAt_add_of_readAt hd.inBounds hqo (by omega) hD]
+      congr 1
+      omega
     block_init
     -- sha512_block_data_order(c->h, data, len / sizeof(c->p));
     step_pure
@@ -259,10 +289,9 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
     have hlt : n.toNat < 18446744073709551616 := n.isLt
     step_pure [hlt]
     step_pure
-    have hs0 : (0#64).ssubOverflow 0#64 = false := by decide
-    step_pure [h0, hs0]
-    step_pure [h0, hs0, gep_zero]
-    finish_block [h0]
+    step_pure [ssubOverflow_and_127]
+    step_pure [gep_tail hdo]
+    finish_block
     have hstate : S₁.mem.readWords8 c = v.h := by
       rw [hM]
       exact MemoryState.readWords8_storeShaCtx hMf.2.1.inBounds hco
@@ -277,10 +306,17 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
     rw [hstate, hblock, hM, MemoryState.storeShaCtx_storeWords8 hco] at hS
     have hM' := congrArg GlobalState.mem hS
     clear hread_d hblock hstate
+    have hdt : Fits S.mem (d.add (n - (n &&& 127#64))) (8 * (n &&& 127#64).toNat) :=
+      Fits.add_of_le hqo (by omega) hd
+    have htl : (n &&& 127#64).toNat < 128 := by omega
+    -- the tail opaque, so the step's simp leaves its widths alone
+    clear hq ht
+    generalize hT : D.extractLsb' (8 * (n - (n &&& 127#64)).toNat) (8 * (n &&& 127#64).toNat) =
+      T at hDt
     step_loop using
-      leftover_block c data (d.add n) len 0#64 (S.mem.readAt (d.add n) (8 * (0#64).toNat)) M _
-        (hD := rfl) (hK := ?_)
-    simp [bulk, bulkCores, hbr, h0, leftover]
+      leftover_block c data _ len _ T M _ (hn := htl) (hd := hdt) (hD := hDt) (hK := ?_)
+    subst hT
+    simp only [bulk, bulkCores, hbr, ↓reduceIte, Nat.mul_one]
   · have hn : n.toNat < 128 := by
       have := hbr
       simp [BitVec.ult] at this
@@ -300,8 +336,8 @@ theorem rest_block (c data : Pointer) (len : BitVec 64) (D : BitVec (8 * len.toN
     (M : MemoryState) (v : Sha512Ctx) (S₁ : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (BCM_sha512_update.args (.value c) (.value data) (.value len)).get)
     (hwf : S₁.WF) (hM : S₁.mem = M.storeShaCtx c v) (hMf : M.ShaCtxFit c) (hv : v.Valid)
-    (hok : RestOk v len) (hd : Fits S₁.mem data (8 * len.toNat))
-    (hdo : ¬data.offset.uaddOverflow len) (hsep : data.id ≠ c.id) (hlen63 : len.toNat < 2 ^ 63)
+    (hd : Fits S₁.mem data (8 * len.toNat)) (hdo : ¬data.offset.uaddOverflow len)
+    (hsep : data.id ≠ c.id) (hlen63 : len.toNat < 2 ^ 63)
     (hD : S₁.mem.readAt data (8 * len.toNat) = D) (g : Vals [.bv 32] × GlobalState → PoisonOr β)
     (K : PoisonOr β)
     (hK :
@@ -321,7 +357,6 @@ theorem rest_block (c data : Pointer) (len : BitVec 64) (D : BitVec (8 * len.toN
   step_pure
   finish_block
   · -- c->num == 0
-    have hok' : BulkOk len := by simpa [RestOk, hbr] using hok
     step_loop using bulk_block c data data len len D M v (hK := ?_)
     simp [rest, restCores, hbr]
   · have hnz : v.num ≠ 0#16 := hbr
@@ -438,8 +473,6 @@ theorem rest_block (c data : Pointer) (len : BitVec 64) (D : BitVec (8 * len.toN
         rw [MemoryState.readAt_add_of_readAt hd.inBounds hov' (by omega) hD]
         congr 1
         omega
-      have hok' : BulkOk (len - (128#64 - v.num.setWidth 64)) := by
-        simpa [RestOk, hnz, hbr] using hok
       -- `n` and the length left as variables, so the step's simp keeps their `toNat`s folded
       have hn63 : (len - (128#64 - v.num.setWidth 64)).toNat < 2 ^ 63 := by
         rw [hsub]; omega
@@ -457,12 +490,11 @@ end BCM_sha512_update
 open BCM_sha512_update in
 /-- `BCM_sha512_update` appends the `len` bytes at `data` to the struct at `c` and returns `0`
 (`approved`). Each `sha512_block_data_order` call leaves two blocks counted; `data` is in another
-block. `Ok` rules out the bulk's step back by a nonzero tail (poison in the framework). -/
+block. -/
 public theorem BCM_sha512_update.call_eq (c data : Pointer) (len : BitVec 64) (s : GlobalState)
     (hwf : s.WF) (hc : s.mem.ShaCtxFit c) (hv : (s.mem.readShaCtx c).Valid)
-    (hok : Ok (s.mem.readShaCtx c) len) (hdata : Fits s.mem data (8 * len.toNat))
-    (hdo : ¬data.offset.uaddOverflow len) (hsep : data.id ≠ c.id)
-    (hlen63 : len.toNat < 2 ^ 63) :
+    (hdata : Fits s.mem data (8 * len.toNat)) (hdo : ¬data.offset.uaddOverflow len)
+    (hsep : data.id ≠ c.id) (hlen63 : len.toNat < 2 ^ 63) :
     BCM_sha512_update.call (BCM_sha512_update.args (.value c) (.value data) (.value len)) s =
       .value
         (.cons (.value 0#32) .nil,
@@ -475,10 +507,9 @@ public theorem BCM_sha512_update.call_eq (c data : Pointer) (len : BitVec 64) (s
   have hc₀ : S₀.mem.ShaCtxFit c := hS ▸ hc
   have hco : ¬c.offset.uaddOverflow 208#64 := hc.1
   have hv₀ : (S₀.mem.readShaCtx c).Valid := hS ▸ hv
-  have hok₀ : Ok (S₀.mem.readShaCtx c) len := hS ▸ hok
-  clear hv hok
+  clear hv
   obtain ⟨v₀, hv₀e⟩ : ∃ v, S₀.mem.readShaCtx c = v := ⟨_, rfl⟩
-  rw [hv₀e] at hv₀ hok₀ ⊢
+  rw [hv₀e] at hv₀ ⊢
   block_init
   iterate 10 step_pure
   finish_block
@@ -489,7 +520,6 @@ public theorem BCM_sha512_update.call_eq (c data : Pointer) (len : BitVec 64) (s
     simp only [BCM_sha512_update.spec, cores, ↓reduceIte, Nat.mul_zero, Nat.add_zero,
       hwf₀.eraseFrom, ← hv₀e, MemoryState.storeShaCtx_readShaCtx_self hc₀]
   · have hlen : len ≠ 0#64 := hbr
-    have hrok : RestOk v₀ len := hok₀.resolve_left hlen
     block_init
     -- c->bytes_so_far_low += len;
     step_pure
@@ -512,16 +542,14 @@ public theorem BCM_sha512_update.call_eq (c data : Pointer) (len : BitVec 64) (s
       have hM := congrArg GlobalState.mem hS
       dsimp only at hM
       finish_block
-      step_loop using
-        rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hok := hrok) (hD := hD) (hK := ?_)
+      step_loop using rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hD := hD) (hK := ?_)
       rw [MemoryState.eraseFrom_storeShaCtx, hwf₀.eraseFrom]
       simp only [BCM_sha512_update.spec, cores, hlen, hcarry, ↓reduceIte, restCores_counts,
         and_self]
     · have hcarry := hbr
       have hM := congrArg GlobalState.mem hS
       dsimp only at hM
-      step_loop using
-        rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hok := hrok) (hD := hD) (hK := ?_)
+      step_loop using rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hD := hD) (hK := ?_)
       rw [MemoryState.eraseFrom_storeShaCtx, hwf₀.eraseFrom]
       simp only [BCM_sha512_update.spec, cores, hlen, hcarry, ↓reduceIte, Bool.false_eq_true,
         restCores_counts, and_self]
@@ -529,9 +557,6 @@ public theorem BCM_sha512_update.call_eq (c data : Pointer) (len : BitVec 64) (s
 /-! ## What callers chain -/
 
 namespace BCM_sha512_update
-
-theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
 
 theorem leftover_valid {v : Sha512Ctx} (hv : v.Valid) (len : BitVec 64)
     (data : BitVec (8 * len.toNat)) (hl : len.toNat < 128) : (leftover v len data).Valid := by
@@ -629,22 +654,6 @@ public theorem BCM_sha512_update.spec_num_of_lt {v : Sha512Ctx} {len : BitVec 64
   · rw [ite_eq_left
         (by
           simp only [BitVec.ult, hrem, decide_eq_true_eq]; omega)]
-
-/-- A short update's bulk is `Ok`. -/
-public theorem BCM_sha512_update.ok_of_lt {v : Sha512Ctx} {len : BitVec 64}
-    (h : v.num.toNat + len.toNat < 128) : BCM_sha512_update.Ok v len := by
-  have hrem := BCM_sha512_update.toNat_sub_num (x := v.num) (by omega)
-  right
-  unfold BCM_sha512_update.RestOk
-  split
-  · exact
-      .inl
-        (by
-          simp [BitVec.ult]; omega)
-  · exact
-      .inl
-        (by
-          simp only [BitVec.ult, hrem, decide_eq_true_eq]; omega)
 
 end Proof
 

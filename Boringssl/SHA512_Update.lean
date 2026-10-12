@@ -15,9 +15,8 @@ open BCM_sha512_update in
 does and returns `1`. -/
 public theorem SHA512_Update.call_eq (c data : Pointer) (len : BitVec 64) (s : GlobalState)
     (hwf : s.WF) (hc : s.mem.ShaCtxFit c) (hv : (s.mem.readShaCtx c).Valid)
-    (hok : Ok (s.mem.readShaCtx c) len) (hdata : Fits s.mem data (8 * len.toNat))
-    (hdo : ¬data.offset.uaddOverflow len) (hsep : data.id ≠ c.id)
-    (hlen63 : len.toNat < 2 ^ 63) :
+    (hdata : Fits s.mem data (8 * len.toNat)) (hdo : ¬data.offset.uaddOverflow len)
+    (hsep : data.id ≠ c.id) (hlen63 : len.toNat < 2 ^ 63) :
     SHA512_Update.call (SHA512_Update.args (.value c) (.value data) (.value len)) s =
       .value
         (.cons (.value 1#32) .nil,
@@ -29,7 +28,7 @@ public theorem SHA512_Update.call_eq (c data : Pointer) (len : BitVec 64) (s : G
   func_init
   block_init
   step_pure
-  step_call using BCM_sha512_update.call_eq consuming hv hok
+  step_call using BCM_sha512_update.call_eq consuming hv
   finish_block
   subst hS
   erase_frame
