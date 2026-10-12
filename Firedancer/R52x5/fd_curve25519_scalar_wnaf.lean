@@ -1366,11 +1366,13 @@ theorem readAt_byte_store {m : MemoryState} {slides scalar : Pointer} {u d : Bit
 def unpackBitRun (j b c c3 cm : Dst Γ (.bv 64)) (a f g h k c7 c1 : Dst Γ (.bv 16))
     (e : Dst Γ (.bv 8)) (d l : Dst Γ .ptr) (sl sc : Reg Γ .ptr) : List (Instr Γ) :=
   [.unop (.trunc {}) a (.val j.i j.h), .binop (.lshr false) b (.val j.i j.h) (.val c3.i c3.h),
-    .binop .and c (.val b.i b.h) (.val cm.i cm.h), .binop (.gepDyn 0 1) d sc (.val c.i c.h),
+    .binop .and c (.val b.i b.h) (.val cm.i cm.h),
+    .binop (.gepDyn { nusw := true, nuw := true } 0 1) d sc (.val c.i c.h),
     .load e (.val d.i d.h), .unop (.zext false) f (.val e.i e.h),
     .binop .and g (.val a.i a.h) (.val c7.i c7.h),
     .binop (.lshr false) h (.val f.i f.h) (.val g.i g.h),
-    .binop .and k (.val h.i h.h) (.val c1.i c1.h), .binop (.gepDyn 0 2) l sl (.val j.i j.h),
+    .binop .and k (.val h.i h.h) (.val c1.i c1.h),
+    .binop (.gepDyn { nusw := true, nuw := true } 0 2) l sl (.val j.i j.h),
     .store (.val l.i l.h) (.val k.i k.h)]
 
 /-- Where the body at `pos` is `unpackBitRun` with `j` holding `jn`: running on from `pos` then

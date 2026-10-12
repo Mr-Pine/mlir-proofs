@@ -152,9 +152,12 @@ def qpMulLoadRun (z0 z1 z2 z3 z4 : Dst Γ .ptr) (p : Reg Γ .ptr) (g1 g2 g3 g4 :
     (x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 q0 q1 q2 q3 q4 : Dst Γ Ty4x64) : List (Instr Γ) :=
   [.lifetimeStart (.val z0.i z0.h) 32, .lifetimeStart (.val z1.i z1.h) 32,
     .lifetimeStart (.val z2.i z2.h) 32, .lifetimeStart (.val z3.i z3.h) 32,
-    .lifetimeStart (.val z4.i z4.h) 32, .load y0 p, .unop (.gepConst 32) g1 p,
-    .load y1 (.val g1.i g1.h), .unop (.gepConst 64) g2 p, .load y2 (.val g2.i g2.h),
-    .unop (.gepConst 96) g3 p, .load y3 (.val g3.i g3.h), .unop (.gepConst 128) g4 p,
+    .lifetimeStart (.val z4.i z4.h) 32, .load y0 p,
+    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p,
+    .load y1 (.val g1.i g1.h), .unop (.gepConst { nusw := true, nuw := true } 64) g2 p,
+    .load y2 (.val g2.i g2.h),
+    .unop (.gepConst { nusw := true, nuw := true } 96) g3 p, .load y3 (.val g3.i g3.h),
+    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p,
     .load y4 (.val g4.i g4.h),
     .call fd_r52x5_quad_mul_fast.call
       (.cons (.val z0.i z0.h)

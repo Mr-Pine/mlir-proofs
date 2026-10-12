@@ -142,9 +142,9 @@ local macro "accept" : tactic =>
   `(tactic|
     ( refine
         (accept_run msg msgLen sig pk A t pkcopy rcopy scopy ctx h R rcheck _ hAL mv rv Sv Av PA S E
-              hArgs (by env_reads) hwf hmsg hmsg_off hsig hsig_off hpk hpk_off hmv hrv hAv hA_pt hAP
-              hfits_rcopy hread_rcopy hfits_scopy hread_scopy hctx_bounds hh_bounds hR_bounds
-              hrcheck_bounds (digits_hram rv Av msgLen mv) (digits_S htop) hok).trans
+              hArgs (by env_reads) hwf hmsg hmsg_off hmsgLen hsig hsig_off hpk hpk_off hmv hrv hAv
+              hA_pt hAP hfits_rcopy hread_rcopy hfits_scopy hread_scopy hctx_bounds hh_bounds
+              hR_bounds hrcheck_bounds (digits_hram rv Av msgLen mv) (digits_S htop) hok).trans
           ?_
       rw [hS]
       dsimp only
@@ -529,7 +529,8 @@ theorem accept_run (msg : Pointer) (msgLen : BitVec 64)
       E ⊨ [%467 := 0#32, %468 := 32#64, %473 := A, %474 := t, %475 := pkcopy, %476 := rcopy, %477 :=
         scopy, %478 := ctx, %479 := h, %480 := R, %481 := rcheck])
     (hwf : S.WF) (hmsg : Fits S.mem msg (8 * msgLen.toNat))
-    (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hsig : Fits S.mem sig 512)
+    (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
+    (hsig : Fits S.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits S.mem pk 256)
     (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hmv : S.mem.readAt msg (8 * msgLen.toNat) = mv)
     (hrv : S.mem.readAt sig 256 = rv) (hAv : S.mem.readAt pk 256 = Av) (hA : S.mem.PointFit A)
@@ -673,9 +674,9 @@ set_option maxHeartbeats 400000 in
 `sig` and the key at `pk`; its frame is freed, the memory unchanged. -/
 public theorem ed25519_verify.call_eq (msg : Pointer) (msgLen : BitVec 64) (sig pk : Pointer)
     (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgLen.toNat))
-    (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hsig : Fits s.mem sig 512)
-    (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits s.mem pk 256)
-    (hpk_off : ¬pk.offset.uaddOverflow 32#64)
+    (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
+    (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
+    (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
     (hok : msgLen.toNat < 64 ∨ BCM_sha512_update.BulkOk (msgLen - 64#64)) :
     ed25519_verify.call
         (ed25519_verify.args (.value Pointer.null) (.value 0#64) (.value msg) (.value msgLen)

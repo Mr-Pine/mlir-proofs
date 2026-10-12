@@ -1220,10 +1220,12 @@ def foldUnsignedStoreRun
     .binop (.vector (.add { nsw := true, nuw := true })) r03 (.val c.i c.h) (.val l03.i l03.h),
     .store q (.val r03.i r03.h), .binop (.vector .and) l14 (.val x14.i x14.h) (.val mk43.i mk43.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r14 (.val l14.i l14.h) (.val h03.i h03.h),
-    .unop (.gepConst 64) g1 q, .store (.val g1.i g1.h) (.val r14.i r14.h),
+    .unop (.gepConst { nusw := true, nuw := true } 64) g1 q,
+    .store (.val g1.i g1.h) (.val r14.i r14.h),
     .binop (.vector .and) l25 (.val x25.i x25.h) (.val mk4340.i mk4340.h),
     .binop (.vector (.add { nsw := true, nuw := true })) r25 (.val l25.i l25.h) (.val h14.i h14.h),
-    .unop (.gepConst 128) g2 q, .store (.val g2.i g2.h) (.val r25.i r25.h)]
+    .unop (.gepConst { nusw := true, nuw := true } 128) g2 q,
+    .store (.val g2.i g2.h) (.val r25.i r25.h)]
 
 /-- Where the body at `pos` is `foldUnsignedStoreRun`, `x03 x14 x25` hold `X`, `q` the point `Q`
 and the others the constants: running on from `pos` then `g` gives `K` if it does from `pos + 16`

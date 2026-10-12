@@ -441,17 +441,17 @@ theorem mod16_mul8_lt (m : Nat) : m % 16 * 8 < 18446744073709551616 := by omega
 
 /-- `getelementptr` to slot `m % 16` of `X`. -/
 theorem gep_slot {X : Pointer} (hX : X.offset = 0) (m : Nat) :
-    Operation.gep (.value (BitVec.ofNat 64 (m % 16 * 8))) (.value X) =
+    Operation.gep { nuw := true } (.value (BitVec.ofNat 64 (m % 16 * 8))) (.value X) =
       .value (X.add (BitVec.ofNat 64 (m % 16 * 8))) := by
-  rw [gep_value]
+  rw [gep_value _ (.inl rfl)]
   simp [BitVec.uaddOverflow, hX]
   omega
 
 /-- `getelementptr` by `8 * i` from a block's start. -/
 theorem gep_of_offset_zero {p : Pointer} (hp : p.offset = 0) (i : Nat) :
-    Operation.gep (.value (BitVec.ofNat 64 (i * 8))) (.value p) =
+    Operation.gep { nuw := true } (.value (BitVec.ofNat 64 (i * 8))) (.value p) =
       .value (p.add (BitVec.ofNat 64 (i * 8))) := by
-  rw [gep_value]
+  rw [gep_value _ (.inl rfl)]
   simp [BitVec.uaddOverflow, hp]
   omega
 

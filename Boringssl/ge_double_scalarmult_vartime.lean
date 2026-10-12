@@ -1126,7 +1126,7 @@ theorem GlobalState.WF.tableStep {s : GlobalState} (h : s.WF) :
 /-- One step of the table: `k = ai + off`, `x25519_ge_p3_to_cached(k, u)`,
 `x25519_ge_add(t, a2, k)`, `x25519_ge_p1p1_to_p3(u, t)`. -/
 def tableRun (ai u t a2 k : Dst Γ .ptr) (off : Nat) : List (Instr Γ) :=
-  [.unop (.gepConst (Int.ofNat off)) k (.val ai.i ai.h),
+  [.unop (.gepConst { nusw := true, nuw := true } (Int.ofNat off)) k (.val ai.i ai.h),
     .call x25519_ge_p3_to_cached.call (.cons (.val k.i k.h) (.cons (.val u.i u.h) .nil)) .nil,
     .call x25519_ge_add.call
       (.cons (.val t.i t.h) (.cons (.val a2.i a2.h) (.cons (.val k.i k.h) .nil))) .nil,

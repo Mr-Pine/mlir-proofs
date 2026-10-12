@@ -979,8 +979,7 @@ theorem bb3_run (state blkp tmp Sp : Pointer) (H : Vector (BitVec 64) 8) (b : Bi
     (hM : S.mem = iterMem M0 tmp Sp H b 80 80) (hSR : Room M0 Sp 512)
     (hSpov : ¬Sp.offset.uaddOverflow 64#64) (ho : tmp.offset.toNat + 640 < 2 ^ 64)
     (hSpo : Sp.offset.toNat + 64 < 2 ^ 64) (hst : M0.Words8Fit state) (hH : M0.readWords8 state = H)
-    (hsep : tmp.id ≠ state.id) (hsepS : Sp.id ≠ state.id)
-    (hsov : ¬state.offset.uaddOverflow 64#64) :
+    (hsep : tmp.id ≠ state.id) (hsepS : Sp.id ≠ state.id) :
     (SHA512_Transform.runFrom E 3 S >>= g) =
       g (.nil, { alloc := S.alloc, mem := S.mem.storeWords8 state (spec H b) }) := by
   have hp (q : Pointer) (hq : q.id ≠ tmp.id) (hq' : q.id ≠ Sp.id) (w : Nat) :
@@ -1349,8 +1348,7 @@ public theorem SHA512_Transform.call_eq (state block tmp : Pointer) (s : GlobalS
         simp [BitVec.uaddOverflow]; omega)
       (by omega) hSpo hst0 ?_ hsep
       (by
-        rw [hSpid]; exact hsep)
-      hsto]
+        rw [hSpid]; exact hsep)]
   swap
   · obtain ⟨-, h0, h1, h2, h3, h4, h5, h6, h7⟩ := words8Fit_of_fits hst₀ hsto
     simp only [MemoryState.readWords8, MemoryState.readAt_addBlock hwf₀ h0.inBounds,

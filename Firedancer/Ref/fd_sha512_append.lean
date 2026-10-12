@@ -536,6 +536,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
     (hArgs : E.args = (fd_sha512_append.args (.value sha) (.value data) (.value sz)).get)
     (hwf : S.WF) (hM : S.mem = M.storeSha sha v) (hMf : M.ShaFit sha)
     (hd : Fits S.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id)
+    (hn : n.toNat < 2 ^ 63)
     (hD : S.mem.readAt d (8 * n.toNat) = D) (g : Vals [.ptr] × GlobalState → PoisonOr β)
     (K : PoisonOr β)
     (hK :
@@ -581,6 +582,9 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
     -- fd_memcpy( buf, data + (block_cnt << FD_SHA512_PRIVATE_LG_BUF_MAX), buf_used );
     have hlt : n.toNat &&& 18446744073709551488 < 18446744073709551616 :=
       Nat.lt_of_le_of_lt Nat.and_le_left n.isLt
+    have hlt63 : (n &&& 18446744073709551488#64).toNat < 2 ^ 63 := by
+      rw [BitVec.toNat_and]
+      exact Nat.lt_of_le_of_lt Nat.and_le_left hn
     step_pure
     step_pure [hlt, gep_value hoff]
     step_call using fd_memcpy.call_eq
@@ -608,6 +612,7 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
     (hArgs : E.args = (fd_sha512_append.args (.value sha) (.value data) (.value sz)).get)
     (hwf : S₁.WF) (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha)
     (hd : Fits S₁.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id)
+    (hn : n.toNat < 2 ^ 63)
     (hD : S₁.mem.readAt d (8 * n.toNat) = D) (g : Vals [.ptr] × GlobalState → PoisonOr β)
     (K : PoisonOr β)
     (hK :
@@ -671,7 +676,7 @@ Each `fd_sha512_core` call it makes leaves two blocks counted; `data` is in anot
 public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s : GlobalState)
     (hwf : s.WF) (hsha : s.mem.ShaFit sha) (hu : (s.mem.readSha sha).bufUsed.toNat < 128)
     (hdata : Fits s.mem data (8 * sz.toNat)) (hdo : ¬data.offset.uaddOverflow sz)
-    (hsep : data.id ≠ sha.id) :
+    (hsep : data.id ≠ sha.id) (hsz : sz.toNat < 2 ^ 63) :
     fd_sha512_append.call (fd_sha512_append.args (.value sha) (.value data) (.value sz)) s =
       .value
         (.cons (.value sha) .nil,
@@ -856,6 +861,8 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
             (S₀.mem.readAt data (8 * sz.toNat)).setWidth _ :=
           MemoryState.readAt_of_readAt_le (by omega) rfl
         -- `buf_rem` and the size left as variables, so the step's simp keeps their `toNat`s folded
+        have hn63 : (sz - (128#64 - S₀.mem.readAt (sha.add 200#64) 64)).toNat < 2 ^ 63 := by
+          rw [hsub]; omega
         clear hrem hge hlt' hov' h1o h1d hsub
         generalize hr : 128#64 - S₀.mem.readAt (sha.add 200#64) 64 = rem at *
         generalize hn : sz - rem = n at *

@@ -708,9 +708,12 @@ def qpMulGepRun (z0 z1 z2 z3 z4 : Dst Γ .ptr) (x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 : 
                               (.cons (.val y2.i y2.h)
                                 (.cons (.val y3.i y3.h) (.cons (.val y4.i y4.h) .nil)))))))))))))))
       .nil,
-    .load q0 (.val z0.i z0.h), .load q1 (.val z1.i z1.h), .unop (.gepConst 32) g1 p,
-    .load q2 (.val z2.i z2.h), .unop (.gepConst 64) g2 p, .load q3 (.val z3.i z3.h),
-    .unop (.gepConst 96) g3 p, .load q4 (.val z4.i z4.h), .unop (.gepConst 128) g4 p,
+    .load q0 (.val z0.i z0.h), .load q1 (.val z1.i z1.h),
+    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p,
+    .load q2 (.val z2.i z2.h), .unop (.gepConst { nusw := true, nuw := true } 64) g2 p,
+    .load q3 (.val z3.i z3.h),
+    .unop (.gepConst { nusw := true, nuw := true } 96) g3 p, .load q4 (.val z4.i z4.h),
+    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p,
     .lifetimeEnd (.val z4.i z4.h) 32, .lifetimeEnd (.val z3.i z3.h) 32,
     .lifetimeEnd (.val z2.i z2.h) 32, .lifetimeEnd (.val z1.i z1.h) 32,
     .lifetimeEnd (.val z0.i z0.h) 32]
@@ -904,9 +907,11 @@ the `long[8]` arrays `tx ty tz tt`: a `<4 x i64>` load at `tx + 8k` (through `gx
 def packLimbRun (o : Int) (tx ty tz tt : Reg Γ .ptr) (n1 n2 n3 : Reg Γ (.bv 64))
     (gx gy gz gt : Dst Γ .ptr) (vx : Dst Γ Ty4x64) (vy vz vt : Dst Γ (.bv 64))
     (w1 w2 w3 : Dst Γ Ty4x64) : List (Instr Γ) :=
-  [.unop (.gepConst o) gx tx, .load vx (.val gx.i gx.h), .unop (.gepConst o) gy ty,
-    .load vy (.val gy.i gy.h), .unop (.gepConst o) gz tz, .load vz (.val gz.i gz.h),
-    .unop (.gepConst o) gt tt, .load vt (.val gt.i gt.h),
+  [.unop (.gepConst { nusw := true, nuw := true } o) gx tx, .load vx (.val gx.i gx.h),
+    .unop (.gepConst { nusw := true, nuw := true } o) gy ty,
+    .load vy (.val gy.i gy.h), .unop (.gepConst { nusw := true, nuw := true } o) gz tz,
+    .load vz (.val gz.i gz.h),
+    .unop (.gepConst { nusw := true, nuw := true } o) gt tt, .load vt (.val gt.i gt.h),
     .ternop .insertelement w1 (.val vx.i vx.h) (.val vy.i vy.h) n1,
     .ternop .insertelement w2 (.val w1.i w1.h) (.val vz.i vz.h) n2,
     .ternop .insertelement w3 (.val w2.i w2.h) (.val vt.i vt.h) n3]
@@ -1099,16 +1104,16 @@ def permuteLoadRun (c0 c1 c2 c3 : Reg Γ (.bv 32)) (p : Reg Γ .ptr) (g1 g2 g3 g
   [.load x0 p,
     .call wl_permute.call (.cons (.val x0.i x0.h) (.cons c0 (.cons c1 (.cons c2 (.cons c3 .nil)))))
       (.cons r0 .nil),
-    .unop (.gepConst 32) g1 p, .load x1 (.val g1.i g1.h),
+    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p, .load x1 (.val g1.i g1.h),
     .call wl_permute.call (.cons (.val x1.i x1.h) (.cons c0 (.cons c1 (.cons c2 (.cons c3 .nil)))))
       (.cons r1 .nil),
-    .unop (.gepConst 64) g2 p, .load x2 (.val g2.i g2.h),
+    .unop (.gepConst { nusw := true, nuw := true } 64) g2 p, .load x2 (.val g2.i g2.h),
     .call wl_permute.call (.cons (.val x2.i x2.h) (.cons c0 (.cons c1 (.cons c2 (.cons c3 .nil)))))
       (.cons r2 .nil),
-    .unop (.gepConst 96) g3 p, .load x3 (.val g3.i g3.h),
+    .unop (.gepConst { nusw := true, nuw := true } 96) g3 p, .load x3 (.val g3.i g3.h),
     .call wl_permute.call (.cons (.val x3.i x3.h) (.cons c0 (.cons c1 (.cons c2 (.cons c3 .nil)))))
       (.cons r3 .nil),
-    .unop (.gepConst 128) g4 p, .load x4 (.val g4.i g4.h),
+    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p, .load x4 (.val g4.i g4.h),
     .call wl_permute.call (.cons (.val x4.i x4.h) (.cons c0 (.cons c1 (.cons c2 (.cons c3 .nil)))))
       (.cons r4 .nil)]
 

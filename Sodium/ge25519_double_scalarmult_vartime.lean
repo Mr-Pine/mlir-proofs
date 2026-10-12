@@ -919,7 +919,7 @@ theorem add_neg_two32 {i : Nat} (h2 : 2 ≤ i) (h : i < 2 ^ 32) :
 /-- `^bb1`, the zero-digit search at `i` and `i - 1`, `i` odd: on to the main loop at a non-zero
 digit, out after `0`, else around at `i - 2`. -/
 theorem skip_iter (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vector (BitVec 8) 256)
-    (hao : aslide.offset = 0) (hbo : bslide.offset = 0) (g : Vals [] × GlobalState → PoisonOr β)
+    (g : Vals [] × GlobalState → PoisonOr β)
     (K : PoisonOr β) (i : Nat) (hi : i < 256) (hodd : i % 2 = 1) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value a) (.value A) (.value b)).get)
     (hR : LoopRegs aslide bslide ai bi t u a2 E) (hRi : E ⊨ [%2690 := BitVec.ofNat 32 i])
@@ -1045,7 +1045,7 @@ open ge25519_double_scalarmult_vartime in
 /-- The zero-digit search from `^bb1` at `2 m + 1`: the main loop from `start`, or out without
 one. -/
 theorem skip_loop (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vector (BitVec 8) 256)
-    (hao : aslide.offset = 0) (hbo : bslide.offset = 0) (S : GlobalState)
+    (S : GlobalState)
     (hsa : SlidesAt S.mem aslide as) (hsb : SlidesAt S.mem bslide bs)
     (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) :
     ∀ m (hm : 2 * m + 1 < 256) (E : ⟪Γ⟫),
@@ -1070,7 +1070,7 @@ theorem skip_loop (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vector
   | zero =>
     intro hm E hArgs hR hRi hfound hnone
     refine
-      skip_iter r a A b aslide bslide ai bi t u a2 as bs hao hbo g K 1 hm rfl S E hArgs hR hRi hsa
+      skip_iter r a A b aslide bslide ai bi t u a2 as bs g K 1 hm rfl S E hArgs hR hRi hsa
         hsb (fun j hj hji hnz => ?_) (fun h1 h0 _ => hnone ?_) fun _ _ h => absurd h (by omega)
     · rcases hji with rfl | ⟨hj1, h1⟩
       · exact hfound ⟨1, hj⟩ (start_succ_ne (i := 0) hj hnz)
@@ -1084,7 +1084,7 @@ theorem skip_loop (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vector
   | succ m ih =>
     intro hm E hArgs hR hRi hfound hnone
     refine
-      skip_iter r a A b aslide bslide ai bi t u a2 as bs hao hbo g K _ hm (by omega) S E hArgs hR
+      skip_iter r a A b aslide bslide ai bi t u a2 as bs g K _ hm (by omega) S E hArgs hR
         hRi hsa hsb (fun j hj hji hnz => ?_) (fun _ _ h => absurd h (by omega))
         fun h1 h0 _ E' h₁ h₂ h₃ => ?_
     · rcases hji with rfl | ⟨hj1, h1⟩
@@ -1113,7 +1113,7 @@ theorem GlobalState.WF.tableStep {s : GlobalState} (h : s.WF) :
 /-- One step of the table: `k = ai + off`, `ge25519_p3_to_cached(k, u)`,
 `ge25519_add(t, a2, k)`, `ge25519_p1p1_to_p3(u, t)`. -/
 def tableRun (ai u t a2 k : Dst Γ .ptr) (off : Nat) : List (Instr Γ) :=
-  [.unop (.gepConst (Int.ofNat off)) k (.val ai.i ai.h),
+  [.unop (.gepConst { nusw := true, nuw := true } (Int.ofNat off)) k (.val ai.i ai.h),
     .call ge25519_p3_to_cached.call (.cons (.val k.i k.h) (.cons (.val u.i u.h) .nil)) .nil,
     .call ge25519_add.call
       (.cons (.val t.i t.h) (.cons (.val a2.i a2.h) (.cons (.val k.i k.h) .nil))) .nil,
@@ -1581,8 +1581,8 @@ public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s 
     hread_u hai7 htbl hai7₀ hM₇ herase halloc
   -- for (i = 255; i >= 0; --i) if (aslide[i] || bslide[i]) break;
   refine
-    skip_loop r a A b aslide bslide ai bi t u a2 _ _ haslide_off hbslide_off S hF.slidesA hF.slidesB
-      _ _ 127 (by decide) E hArgs (by env_reads) (by env_reads) ?_ ?_
+    skip_loop r a A b aslide bslide ai bi t u a2 _ _ S hF.slidesA hF.slidesB _ _ 127 (by decide) E
+      hArgs (by env_reads) (by env_reads) ?_ ?_
   · -- the main loop from the first non-zero digit
     intro j hj E₂ h₁ h₂ h₃
     refine

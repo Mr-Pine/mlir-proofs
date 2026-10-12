@@ -180,7 +180,7 @@ and back. -/
 theorem loop_iter (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (Sha512_update.args (.value d) (.value b) (.value n)).get)
-    (hoffn : off ≤ n.toNat) (hn : n.toNat + 128 < 2 ^ 64) (hwf : S.WF) (hdf : Fits S.mem d 640)
+    (hoffn : off ≤ n.toNat) (hn : n.toNat + 128 < 2 ^ 63) (hwf : S.WF) (hdf : Fits S.mem d 640)
     (hdo : d.offset.toNat + 80 < 2 ^ 64) (hbf : Fits S.mem b (8 * n.toNat))
     (hbo : b.offset.toNat + n.toNat < 2 ^ 64)
     (hexit :
@@ -228,7 +228,7 @@ theorem loop_iter (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) 
 
 /-- `bb4`/`bb5` from offset `off`, `c` whole blocks left: their rounds, then `bb6`. -/
 theorem loop (d b : Pointer) (n : BitVec 64) (R : PoisonOr (Vals [] × GlobalState))
-    (hn : n.toNat + 128 < 2 ^ 64) (hdo : d.offset.toNat + 80 < 2 ^ 64)
+    (hn : n.toNat + 128 < 2 ^ 63) (hdo : d.offset.toNat + 80 < 2 ^ 64)
     (hbo : b.offset.toNat + n.toNat < 2 ^ 64) :
     ∀ c off (S : GlobalState) (E : ⟪Γ⟫),
       n.toNat < off + 128 * (c + 1) →
@@ -263,7 +263,7 @@ theorem loop (d b : Pointer) (n : BitVec 64) (R : PoisonOr (Vals [] × GlobalSta
 theorem tail (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (Sha512_update.args (.value d) (.value b) (.value n)).get)
-    (hoffn : off ≤ n.toNat) (hoff : n.toNat < off + 128) (hn : n.toNat + 128 < 2 ^ 64) (hwf : S.WF)
+    (hoffn : off ≤ n.toNat) (hoff : n.toNat < off + 128) (hn : n.toNat + 128 < 2 ^ 63) (hwf : S.WF)
     (hdr : Room S.mem d 1792) (hdf : Fits S.mem d 640) (hf208 : Fits S.mem (d.add 208#64) 8)
     (hdo : d.offset.toNat + 224 < 2 ^ 64) (hbf : Fits S.mem b (8 * n.toNat))
     (hbo : b.offset.toNat + n.toNat < 2 ^ 64) (bl : BitVec 8)
@@ -421,7 +421,7 @@ public theorem disjoint_totalLen {d : Pointer} (hdo : d.offset.toNat + 224 < 2 ^
 theorem fromBB3 (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (Sha512_update.args (.value d) (.value b) (.value n)).get)
-    (hoffn : off ≤ n.toNat) (hn : n.toNat + 128 < 2 ^ 64) (hwf : S.WF) (hdr : Room S.mem d 1792)
+    (hoffn : off ≤ n.toNat) (hn : n.toNat + 128 < 2 ^ 63) (hwf : S.WF) (hdr : Room S.mem d 1792)
     (hdf : Fits S.mem d 640) (hf208 : Fits S.mem (d.add 208#64) 8)
     (hdo : d.offset.toNat + 224 < 2 ^ 64) (hbf : Fits S.mem b (8 * n.toNat))
     (hbo : b.offset.toNat + n.toNat < 2 ^ 64)
@@ -549,7 +549,7 @@ public theorem call_eq (d b : Pointer) (n : BitVec 64) (s : GlobalState) (hwf : 
     (hd : Sha512Obj.Fit s.mem d)
     (hbuf : Fits s.mem (d.add 80#64) (8 * (Sha512Obj.bufLen s.mem d).toNat))
     (hbf : Fits s.mem b (8 * n.toNat)) (hbo : b.offset.toNat + n.toNat < 2 ^ 64)
-    (hsep : (Range.of d 1792).Disjoint (Range.of b (8 * n.toNat))) (hn : n.toNat + 128 < 2 ^ 64)
+    (hsep : (Range.of d 1792).Disjoint (Range.of b (8 * n.toNat))) (hn : n.toNat + 128 < 2 ^ 63)
     (hbl : (Sha512Obj.bufLen s.mem d).toNat < 128)
     (hT : (Sha512Obj.totalLen s.mem d).toNat + n.toNat < 2 ^ 128) :
     Sha512_update.call (Sha512_update.args (.value d) (.value b) (.value n)) s =

@@ -16,7 +16,8 @@ does and returns `1`. -/
 public theorem SHA512_Update.call_eq (c data : Pointer) (len : BitVec 64) (s : GlobalState)
     (hwf : s.WF) (hc : s.mem.ShaCtxFit c) (hv : (s.mem.readShaCtx c).Valid)
     (hok : Ok (s.mem.readShaCtx c) len) (hdata : Fits s.mem data (8 * len.toNat))
-    (hdo : ¬data.offset.uaddOverflow len) (hsep : data.id ≠ c.id) :
+    (hdo : ¬data.offset.uaddOverflow len) (hsep : data.id ≠ c.id)
+    (hlen63 : len.toNat < 2 ^ 63) :
     SHA512_Update.call (SHA512_Update.args (.value c) (.value data) (.value len)) s =
       .value
         (.cons (.value 1#32) .nil,

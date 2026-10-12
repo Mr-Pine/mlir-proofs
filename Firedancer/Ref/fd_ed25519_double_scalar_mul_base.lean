@@ -931,8 +931,7 @@ theorem table_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (A2 P : PointLimbs
     (hR : EntryRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1611 := BitVec.ofNat 64 i]) (hwf : S.WF)
     (ha2 : S.mem.PointFit a2) (htp : S.mem.PointRoom tp)
     (hP : S.mem.PointFit (ai.add (BitVec.ofNat 64 (160 * (i - 1)))))
-    (hQ : S.mem.PointRoom (ai.add (BitVec.ofNat 64 (160 * i))))
-    (haio : ai.offset.toNat + 160 * 8 < 2 ^ 64) (htai : tp.id ≠ ai.id)
+    (hQ : S.mem.PointRoom (ai.add (BitVec.ofNat 64 (160 * i)))) (htai : tp.id ≠ ai.id)
     (ha2v : S.mem.readPoint a2 = A2)
     (hPv : S.mem.readPoint (ai.add (BitVec.ofNat 64 (160 * (i - 1)))) = P)
     (hexit :
@@ -1087,8 +1086,7 @@ theorem table_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector In
     refine
       table_iter r n1 a n2 tbl n1s n2s ai a2 tp A2 (aiTable A2 AI0 (i - 1)) g K i hi1 hi S E hArgs
         hR hRi hF.wf hF.fitA2 hF.roomT (hF.tblA (i - 1) (by omega)).1
-        (PointRoom.entry hF.roomAI hL.aio hi) hL.aio hL.ta hF.a2v (hF.tblA (i - 1) (by omega)).2 ?_
-        ?_
+        (PointRoom.entry hF.roomAI hL.aio hi) hL.ta hF.a2v (hF.tblA (i - 1) (by omega)).2 ?_ ?_
     · intro h8 E' S' h₁ h₂ hS'
       subst hS'
       obtain rfl : m = 0 := by omega

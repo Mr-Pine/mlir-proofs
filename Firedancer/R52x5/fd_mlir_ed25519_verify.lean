@@ -51,7 +51,8 @@ attribute [local mlir_erase] MemoryState.eraseFrom_resultMem
 /-- `fd_mlir_ed25519_verify` is `fd_ed25519_verify`. -/
 public theorem fd_mlir_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64)
     (sig pk sha : Pointer) (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgSz.toNat))
-    (hmsg_off : ¬msg.offset.uaddOverflow msgSz) (hsig : Fits s.mem sig (8 * 64))
+    (hmsg_off : ¬msg.offset.uaddOverflow msgSz) (hmsgSz : msgSz.toNat < 2 ^ 63)
+    (hsig : Fits s.mem sig (8 * 64))
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits s.mem pk (8 * 32))
     (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsha : s.mem.ShaFit sha) (hmsg_sha : msg.id ≠ sha.id)
     (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id) :

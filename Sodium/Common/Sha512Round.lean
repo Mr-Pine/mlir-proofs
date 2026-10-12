@@ -242,8 +242,8 @@ def roundRun (sw : Bool) (ra rb rc rd re rf rg rh : Dst Γ (.bv 64))
     .binop .and c1 (.val re.i re.h) (.val c0.i c0.h),
     .binop .xor ch (.val c1.i c1.h) (.val rg.i rg.h),
     .binop (.or true) idx (.val ri.i ri.h) (.val kj.i kj.h),
-    .binop (.gepDyn 0 8) pw w (.val idx.i idx.h), .load wt (.val pw.i pw.h),
-    .binop (.gepDyn 0 8) pk kp (.val idx.i idx.h), .load kt (.val pk.i pk.h),
+    .binop (.gepDyn {} 0 8) pw w (.val idx.i idx.h), .load wt (.val pw.i pw.h),
+    .binop (.gepDyn {} 0 8) pk kp (.val idx.i idx.h), .load kt (.val pk.i pk.h),
     .binop (.add {}) t0 (.val ch.i ch.h) (.val rh.i rh.h),
     .binop (.add {}) t1 (.val t0.i t0.h) (.val s1.i s1.h),
     .binop (.add {}) t2 (.val t1.i t1.h) (.val wt.i wt.h),
@@ -294,7 +294,6 @@ theorem runBodyFrom_roundRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
     (hW : S.mem.readAt (Wp.add (BitVec.ofNat 64 (8 * (i + k)))) 64 = Wt)
     (hfK : Fits S.mem (Kp.add (BitVec.ofNat 64 (8 * (i + k)))) 64)
     (hKt : S.mem.readAt (Kp.add (BitVec.ofNat 64 (8 * (i + k)))) 64 = Sha512.K[i + k]!)
-    (hWo : Wp.offset.toNat + 640 < 2 ^ 64) (hKo : Kp.offset.toNat + 640 < 2 ^ 64)
     (hrd : Room S.mem PD 64) (hrh : Room S.mem PH 64)
     (hK :
       ∀ (vs1a vs1b vs1x vs1c vs1 vc0 vc1 vch vidx : ⟦.bv 64⟧) (vwt : ⟦.bv 64⟧) (vpk : ⟦.ptr⟧)

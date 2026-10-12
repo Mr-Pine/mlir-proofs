@@ -915,8 +915,9 @@ into `x03 x14 x25` (through `g1 g2`, `p + 64` and `p + 128`), then shuffled by `
 def permuteLoadRun (m : Vector (Option (Fin (2 * 8))) 8) (p : Reg Γ .ptr)
     (x03 r03 x14 r14 x25 r25 pz : Dst Γ (.vec 8 64)) (g1 g2 : Dst Γ .ptr) : List (Instr Γ) :=
   [.load x03 p, .binop (.shufflevector m) r03 (.val x03.i x03.h) (.val pz.i pz.h),
-    .unop (.gepConst 64) g1 p, .load x14 (.val g1.i g1.h),
-    .binop (.shufflevector m) r14 (.val x14.i x14.h) (.val pz.i pz.h), .unop (.gepConst 128) g2 p,
+    .unop (.gepConst { nusw := true, nuw := true } 64) g1 p, .load x14 (.val g1.i g1.h),
+    .binop (.shufflevector m) r14 (.val x14.i x14.h) (.val pz.i pz.h),
+    .unop (.gepConst { nusw := true, nuw := true } 128) g2 p,
     .load x25 (.val g2.i g2.h), .binop (.shufflevector m) r25 (.val x25.i x25.h) (.val pz.i pz.h)]
 
 /-- Where the body at `pos` is `permuteLoadRun` by `permMask imm` and `p` holds the point `P`:
@@ -1186,7 +1187,8 @@ theorem runBodyFrom_permSubAddRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
 /-- The point at `p` loaded into `x03 x14 x25`, through `g1 g2` (`p + 64` and `p + 128`). -/
 def quadLoadRun (p : Reg Γ .ptr) (x03 x14 x25 : Dst Γ (.vec 8 64)) (g1 g2 : Dst Γ .ptr) :
     List (Instr Γ) :=
-  [.load x03 p, .unop (.gepConst 64) g1 p, .load x14 (.val g1.i g1.h), .unop (.gepConst 128) g2 p,
+  [.load x03 p, .unop (.gepConst { nusw := true, nuw := true } 64) g1 p, .load x14 (.val g1.i g1.h),
+    .unop (.gepConst { nusw := true, nuw := true } 128) g2 p,
     .load x25 (.val g2.i g2.h)]
 
 /-- Where the body at `pos` is `quadLoadRun` and `p` holds the point `P`: running on from `pos`

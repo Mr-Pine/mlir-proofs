@@ -220,7 +220,8 @@ abbrev exit3 (len : BitVec 64) (E : ⟪Γ⟫) (acc0 acc1 : Vector (BitVec 32) 4)
 theorem vec_loop (a b : Pointer) (len : BitVec 64) (S : GlobalState)
     (g : Vals [.bv 32] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (ha : Fits S.mem a (8 * len.toNat)) (hb : Fits S.mem b (8 * len.toNat))
-    (ha_off : ¬a.offset.uaddOverflow len) (hb_off : ¬b.offset.uaddOverflow len) :
+    (ha_off : ¬a.offset.uaddOverflow len) (hb_off : ¬b.offset.uaddOverflow len)
+    (hlen : len.toNat < 2 ^ 63) :
     ∀ n k,
       8 * (k + n + 1) ≤ len.toNat →
         8 * (k + n + 1) = (len &&& 18446744073709551608#64).toNat →
@@ -298,7 +299,8 @@ the loop exits to `^bb6`. -/
 theorem tail_loop (a b : Pointer) (len : BitVec 64) (S : GlobalState)
     (g : Vals [.bv 32] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (ha : Fits S.mem a (8 * len.toNat)) (hb : Fits S.mem b (8 * len.toNat))
-    (ha_off : ¬a.offset.uaddOverflow len) (hb_off : ¬b.offset.uaddOverflow len) :
+    (ha_off : ¬a.offset.uaddOverflow len) (hb_off : ¬b.offset.uaddOverflow len)
+    (hlen : len.toNat < 2 ^ 63) :
     ∀ n i,
       i + n + 1 = len.toNat →
         ∀ E : ⟪Γ⟫,
@@ -353,7 +355,8 @@ open CRYPTO_memcmp in
 /-- `CRYPTO_memcmp` returns `spec` of the `len` bytes at `a` and at `b`; memory is unchanged. -/
 public theorem CRYPTO_memcmp.call_eq (a b : Pointer) (len : BitVec 64) (s : GlobalState)
     (hwf : s.WF) (ha : Fits s.mem a (8 * len.toNat)) (hb : Fits s.mem b (8 * len.toNat))
-    (ha_off : ¬a.offset.uaddOverflow len) (hb_off : ¬b.offset.uaddOverflow len) :
+    (ha_off : ¬a.offset.uaddOverflow len) (hb_off : ¬b.offset.uaddOverflow len)
+    (hlen : len.toNat < 2 ^ 63) :
     CRYPTO_memcmp.call (CRYPTO_memcmp.args (.value a) (.value b) (.value len)) s =
       .value
         (.cons
@@ -379,7 +382,7 @@ public theorem CRYPTO_memcmp.call_eq (a b : Pointer) (len : BitVec 64) (s : Glob
       block_init
       finish_block
       rw [← bind_pure (CRYPTO_memcmp.runFrom E 7 S)]
-      step_loop using tail_loop a b len _ _ _ ha hb ha_off hb_off (len.toNat - 1) 0 (by omega)
+      step_loop using tail_loop a b len _ _ _ ha hb ha_off hb_off hlen (len.toNat - 1) 0 (by omega)
       block_init
       finish_block
       subst hS
@@ -393,7 +396,7 @@ public theorem CRYPTO_memcmp.call_eq (a b : Pointer) (len : BitVec 64) (s : Glob
       have hm := toNat_and_neg8 len
       rw [← bind_pure (CRYPTO_memcmp.runFrom E 3 S)]
       step_loop using
-        vec_loop a b len _ _ _ ha hb ha_off hb_off (len.toNat / 8 - 1) 0 (by omega) (by omega)
+        vec_loop a b len _ _ _ ha hb ha_off hb_off hlen (len.toNat / 8 - 1) 0 (by omega) (by omega)
       -- `^bb4`: the lanes or-ed
       block_init
       step_pure with acc
@@ -414,7 +417,8 @@ public theorem CRYPTO_memcmp.call_eq (a b : Pointer) (len : BitVec 64) (s : Glob
         finish_block
         have hne : m.toNat ≠ len.toNat := fun h => hbr (BitVec.eq_of_toNat_eq h).symm
         step_loop using
-          tail_loop a b len _ _ _ ha hb ha_off hb_off (len.toNat - m.toNat - 1) m.toNat (by omega)
+          tail_loop a b len _ _ _ ha hb ha_off hb_off hlen (len.toNat - m.toNat - 1) m.toNat
+            (by omega)
         · apply BitVec.eq_of_toNat_eq
           simp only [BitVec.toNat_ofNat]
           omega
