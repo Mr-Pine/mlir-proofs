@@ -343,7 +343,7 @@ public theorem fiat_25519_from_bytes.call_eq (out1 arg1 : Pointer) (s : GlobalSt
   rw [x71_eq hx63] at hx71
   -- out1[0] = x39; … out1[4] = x71;
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

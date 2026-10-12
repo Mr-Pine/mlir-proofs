@@ -77,7 +77,7 @@ public theorem Fe_add.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
   step_load
   step_pure [h4]
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

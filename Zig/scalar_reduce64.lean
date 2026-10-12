@@ -2415,7 +2415,7 @@ public theorem scalar_reduce64.call_eq (out p : Pointer) (s : GlobalState) (hwf 
   clear hp hp63 hread_lw_8 hread_lw_16 hread_lw_24 hread_lw_32 hread_lw_40 hread_lw_48 hread_lw_56
     hread_lw_64 hread_lw hread_buf
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   -- the five stores as one `storeLimbs`: the limbs fit and read back

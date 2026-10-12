@@ -40,11 +40,11 @@ public theorem BCM_sha512_init.call_eq (c : Pointer) (s : GlobalState) (hwf : s.
   iterate 12 step_pure
   -- sha->h[0 … 7] = …;
   step_store
-  iterate 7 
+  iterate 7
     step_pure
     step_store
   -- sha->bytes_so_far_low = 0; sha->bytes_so_far_high = 0; sha->num = 0; sha->md_len = 64;
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

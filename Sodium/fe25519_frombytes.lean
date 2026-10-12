@@ -55,14 +55,14 @@ public theorem fe25519_frombytes.call_eq (h s : Pointer) (st : GlobalState) (hwf
   -- h0 = (LOAD64_LE(s) ) & mask; … h4 = (LOAD64_LE(s + 24) >> 12) & mask;
   step_call using load64_le.call_eq
   step_pure
-  iterate 4 
+  iterate 4
     step_pure
     step_call using load64_le.call_eq
     step_pure
     step_pure
   -- h[0] = h0; … h[4] = h4;
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

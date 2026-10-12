@@ -100,7 +100,7 @@ public theorem Fe_carry128.call_eq (out r : Pointer) (s : GlobalState) (hwf : s.
   step_pure
   step_pure [ult_two115 b0]
   step_assume
-  iterate 3 
+  iterate 3
     step_pure [o1.1, o1.2, o2.1, o2.2, o3.1, o3.2]
     step_store
     iterate 3 step_pure
@@ -123,7 +123,7 @@ public theorem Fe_carry128.call_eq (out r : Pointer) (s : GlobalState) (hwf : s.
   step_pure
   step_pure [shr51_mask_overflow]
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

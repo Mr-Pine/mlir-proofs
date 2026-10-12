@@ -94,7 +94,7 @@ public theorem store64_be.call_eq (dst : Pointer) (w : BitVec 64) (s : GlobalSta
   step_pure
   step_pure
   step_store
-  iterate 6 
+  iterate 6
     step_pure
     step_pure
     step_pure

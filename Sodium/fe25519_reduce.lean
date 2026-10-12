@@ -260,7 +260,7 @@ public theorem fe25519_reduce.call_eq (h f : Pointer) (s : GlobalState) (hwf : s
   -- t[0] = f[0]; … t[4] = f[4];
   step_load
   step_pure
-  iterate 4 
+  iterate 4
     step_pure
     step_load
     step_pure
@@ -268,7 +268,7 @@ public theorem fe25519_reduce.call_eq (h f : Pointer) (s : GlobalState) (hwf : s
   -- h[0] = t[0]; … h[4] = t[4];
   iterate 2 step_pure
   step_store
-  iterate 4 
+  iterate 4
     iterate 3 step_pure
     step_store
   finish_block

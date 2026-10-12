@@ -56,19 +56,19 @@ public theorem Fe_cMov.call_eq (fe a : Pointer) (c : BitVec 64) (s : GlobalState
   step_pure
   step_pure [hc']
   step_load
-  iterate 4 
+  iterate 4
     step_pure
     step_load
   step_load
   step_pure
-  iterate 4 
+  iterate 4
     step_pure
     step_load
     step_pure
   iterate 5 step_pure
   step_pure
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

@@ -745,7 +745,7 @@ theorem block5 (d V W : Pointer) (Wf : Nat → BitVec 64) (a b c dd e f g h : Bi
   have hw3 : S.mem.readAt (W.add 24#64) 64 = Wf 3 := hw 3 (by decide)
   have hf3 : Fits S.mem (W.add 24#64) 64 := hf 3 (by decide)
   block_init
-  iterate 8 
+  iterate 8
     step_pure
     step_load
   iterate 8 step_pure
@@ -795,7 +795,7 @@ theorem block5 (d V W : Pointer) (Wf : Nat → BitVec 64) (a b c dd e f g h : Bi
   round_sites 4 79
   clear hw hf
   step_store
-  iterate 7 
+  iterate 7
     step_pure
     step_store
   rw [BasicBlock.runBodyFrom_done bb5_done]

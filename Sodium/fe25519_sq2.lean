@@ -134,7 +134,7 @@ public theorem fe25519_sq2.call_eq (h f : Pointer) (s : GlobalState) (hwf : s.WF
   step_pure [hr02] with r02'
   -- h[0] = r00; … h[4] = r04;
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

@@ -105,7 +105,7 @@ public theorem fe25519_sub.call_eq (h f g : Pointer) (s : GlobalState) (hwf : s.
   iterate 11 step_pure
   -- h0 = g[0]; … h4 = g[4];
   step_load
-  iterate 4 
+  iterate 4
     step_pure
     step_load
   iterate 2 step_pure

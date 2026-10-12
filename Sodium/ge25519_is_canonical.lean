@@ -41,7 +41,7 @@ public theorem ge25519_is_canonical.call_eq (s : Pointer) (st : GlobalState) (hw
   -- c = (s[31] & 0x7f) ^ 0x7f; for (i = 30; i > 0; i--) c |= s[i] ^ 0xff;
   step_load
   iterate 3 step_pure
-  iterate 4 
+  iterate 4
     step_load
     step_pure
   step_load

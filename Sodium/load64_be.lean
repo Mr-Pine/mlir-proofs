@@ -88,7 +88,7 @@ public theorem load64_be.call_eq (src : Pointer) (s : GlobalState) (hwf : s.WF)
   step_pure
   step_load
   step_pure
-  iterate 6 
+  iterate 6
     step_pure
     step_load
     step_pure

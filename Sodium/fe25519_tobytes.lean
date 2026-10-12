@@ -67,7 +67,7 @@ public theorem fe25519_tobytes.call_eq (s h : Pointer) (st : GlobalState) (hwf :
   step_pure
   step_load
   iterate 3 step_pure
-  iterate 2 
+  iterate 2
     step_pure
     step_load
     iterate 3 step_pure
@@ -76,7 +76,7 @@ public theorem fe25519_tobytes.call_eq (s h : Pointer) (st : GlobalState) (hwf :
   iterate 2 step_pure
   -- STORE64_LE(s + 0, t0); … STORE64_LE(s + 24, t3);
   step_call using store64_le.call_eq
-  iterate 3 
+  iterate 3
     step_pure
     step_call using store64_le.call_eq
   step_pure

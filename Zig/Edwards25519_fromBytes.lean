@@ -454,7 +454,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   step_memcpy
   step_load
   step_pure
-  iterate 4 
+  iterate 4
     step_pure
     step_load
     step_pure

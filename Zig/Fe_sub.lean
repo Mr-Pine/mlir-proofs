@@ -80,7 +80,7 @@ public theorem Fe_sub.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
   block_init
   iterate 5 step_pure
   step_load
-  iterate 4 
+  iterate 4
     step_pure
     step_load
   step_pure
@@ -100,7 +100,7 @@ public theorem Fe_sub.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
   step_load
   step_pure [shr51_smulOverflow]
   iterate 3 step_pure
-  iterate 3 
+  iterate 3
     step_pure
     step_load
     step_pure
@@ -110,7 +110,7 @@ public theorem Fe_sub.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
   step_pure [uaddOverflow_twoP, ha4]
   step_pure [usubOverflow_twoP, ha4]
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

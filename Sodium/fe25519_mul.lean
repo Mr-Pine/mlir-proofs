@@ -133,7 +133,7 @@ public theorem fe25519_mul.call_eq (h f g : Pointer) (s : GlobalState) (hwf : s.
   step_pure [hr02] with r02'
   -- h[0] = r00; … h[4] = r04;
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

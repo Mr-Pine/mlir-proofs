@@ -51,7 +51,7 @@ public theorem Fe_isZero.call_eq (a : Pointer) (s : GlobalState) (hwf : s.WF)
   dsimp only at hcopy₀
   step_call using Fe_reduce.call_eq consuming ht' hcopy
   step_load
-  iterate 4 
+  iterate 4
     step_pure
     step_load
     step_pure
