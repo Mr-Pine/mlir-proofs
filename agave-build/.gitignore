@@ -3,8 +3,9 @@ target/
 # build outputs, but the op files the lifts quote
 /out/*
 !/out/serial-noinline/
+!/out/serial-noinline-big/
 !/out/avx2-noinline/
-/out/*-noinline/*
-!/out/*-noinline/op/
-!/out/*-noinline/inventory.md
-!/out/*-noinline/versions.txt
+/out/*/*
+!/out/*/op/
+!/out/*/inventory.md
+!/out/*/versions.txt
