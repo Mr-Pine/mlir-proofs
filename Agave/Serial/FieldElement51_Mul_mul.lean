@@ -131,7 +131,7 @@ public theorem FieldElement51_Mul_mul.call_eq (out a b : Pointer) (s : GlobalSta
   step_pure
   -- the stores
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

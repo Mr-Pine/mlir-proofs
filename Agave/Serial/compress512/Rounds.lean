@@ -18,48 +18,48 @@ namespace compress512
 
 /-- `^bb0`'s constants and pointers, as `^bb1` and `^bb2` read them. -/
 abbrev Statics (st Kp En : Pointer) (E : ⟪Γ⟫) : Prop :=
-  E ⊨ [%1446 := 6#64, %1447 := 3#64, %1448 := 45#64, %1449 := 63#64, %1450 := 7#64, %1451 := 56#64,
-    %1452 := 50#64, %1453 := 46#64, %1454 := 23#64, %1455 := 18446744073709551615#64, %1456 := Kp,
-    %1457 := 36#64, %1458 := 30#64, %1459 := 25#64, %1460 := Kp.add 8#64, %1461 := Kp.add 16#64,
-    %1462 := Kp.add 24#64, %1463 := Kp.add 32#64, %1464 := Kp.add 40#64, %1465 := Kp.add 48#64,
-    %1466 := Kp.add 56#64, %1467 := Kp.add 64#64, %1468 := Kp.add 72#64, %1469 := Kp.add 80#64,
-    %1470 := Kp.add 88#64, %1471 := Kp.add 96#64, %1472 := Kp.add 104#64, %1473 := Kp.add 112#64,
-    %1474 := Kp.add 120#64, %1475 := Kp.add 128#64, %1476 := Kp.add 136#64, %1477 := Kp.add 144#64,
-    %1478 := Kp.add 152#64, %1479 := Kp.add 160#64, %1480 := Kp.add 168#64, %1481 := Kp.add 176#64,
-    %1482 := Kp.add 184#64, %1483 := Kp.add 192#64, %1484 := Kp.add 200#64, %1485 := Kp.add 208#64,
-    %1486 := Kp.add 216#64, %1487 := Kp.add 224#64, %1488 := Kp.add 232#64, %1489 := Kp.add 240#64,
-    %1490 := Kp.add 248#64, %1491 := Kp.add 256#64, %1492 := Kp.add 264#64, %1493 := Kp.add 272#64,
-    %1494 := Kp.add 280#64, %1495 := Kp.add 288#64, %1496 := Kp.add 296#64, %1497 := Kp.add 304#64,
-    %1498 := Kp.add 312#64, %1499 := Kp.add 320#64, %1500 := Kp.add 328#64, %1501 := Kp.add 336#64,
-    %1502 := Kp.add 344#64, %1503 := Kp.add 352#64, %1504 := Kp.add 360#64, %1505 := Kp.add 368#64,
-    %1506 := Kp.add 376#64, %1507 := Kp.add 384#64, %1508 := Kp.add 392#64, %1509 := Kp.add 400#64,
-    %1510 := Kp.add 408#64, %1511 := Kp.add 416#64, %1512 := Kp.add 424#64, %1513 := Kp.add 432#64,
-    %1514 := Kp.add 440#64, %1515 := Kp.add 448#64, %1516 := Kp.add 456#64, %1517 := Kp.add 464#64,
-    %1518 := Kp.add 472#64, %1519 := Kp.add 480#64, %1520 := Kp.add 488#64, %1521 := Kp.add 496#64,
-    %1522 := Kp.add 504#64, %1523 := Kp.add 512#64, %1524 := Kp.add 520#64, %1525 := Kp.add 528#64,
-    %1526 := Kp.add 536#64, %1527 := Kp.add 544#64, %1528 := Kp.add 552#64, %1529 := Kp.add 560#64,
-    %1530 := Kp.add 568#64, %1531 := Kp.add 576#64, %1532 := Kp.add 584#64, %1533 := Kp.add 592#64,
-    %1534 := Kp.add 600#64, %1535 := Kp.add 608#64, %1536 := Kp.add 616#64, %1537 := Kp.add 624#64,
-    %1538 := Kp.add 632#64, %1540 := En, %1542 := st.add 8#64, %1543 := st.add 16#64, %1544 :=
-    st.add 24#64, %1545 := st.add 32#64, %1546 := st.add 40#64, %1547 := st.add 48#64, %1548 :=
+  E ⊨ [%2381 := 6#64, %2382 := 3#64, %2383 := 45#64, %2384 := 63#64, %2385 := 7#64, %2386 := 56#64,
+    %2387 := 50#64, %2388 := 46#64, %2389 := 23#64, %2390 := 18446744073709551615#64, %2391 := Kp,
+    %2392 := 36#64, %2393 := 30#64, %2394 := 25#64, %2395 := Kp.add 8#64, %2396 := Kp.add 16#64,
+    %2397 := Kp.add 24#64, %2398 := Kp.add 32#64, %2399 := Kp.add 40#64, %2400 := Kp.add 48#64,
+    %2401 := Kp.add 56#64, %2402 := Kp.add 64#64, %2403 := Kp.add 72#64, %2404 := Kp.add 80#64,
+    %2405 := Kp.add 88#64, %2406 := Kp.add 96#64, %2407 := Kp.add 104#64, %2408 := Kp.add 112#64,
+    %2409 := Kp.add 120#64, %2410 := Kp.add 128#64, %2411 := Kp.add 136#64, %2412 := Kp.add 144#64,
+    %2413 := Kp.add 152#64, %2414 := Kp.add 160#64, %2415 := Kp.add 168#64, %2416 := Kp.add 176#64,
+    %2417 := Kp.add 184#64, %2418 := Kp.add 192#64, %2419 := Kp.add 200#64, %2420 := Kp.add 208#64,
+    %2421 := Kp.add 216#64, %2422 := Kp.add 224#64, %2423 := Kp.add 232#64, %2424 := Kp.add 240#64,
+    %2425 := Kp.add 248#64, %2426 := Kp.add 256#64, %2427 := Kp.add 264#64, %2428 := Kp.add 272#64,
+    %2429 := Kp.add 280#64, %2430 := Kp.add 288#64, %2431 := Kp.add 296#64, %2432 := Kp.add 304#64,
+    %2433 := Kp.add 312#64, %2434 := Kp.add 320#64, %2435 := Kp.add 328#64, %2436 := Kp.add 336#64,
+    %2437 := Kp.add 344#64, %2438 := Kp.add 352#64, %2439 := Kp.add 360#64, %2440 := Kp.add 368#64,
+    %2441 := Kp.add 376#64, %2442 := Kp.add 384#64, %2443 := Kp.add 392#64, %2444 := Kp.add 400#64,
+    %2445 := Kp.add 408#64, %2446 := Kp.add 416#64, %2447 := Kp.add 424#64, %2448 := Kp.add 432#64,
+    %2449 := Kp.add 440#64, %2450 := Kp.add 448#64, %2451 := Kp.add 456#64, %2452 := Kp.add 464#64,
+    %2453 := Kp.add 472#64, %2454 := Kp.add 480#64, %2455 := Kp.add 488#64, %2456 := Kp.add 496#64,
+    %2457 := Kp.add 504#64, %2458 := Kp.add 512#64, %2459 := Kp.add 520#64, %2460 := Kp.add 528#64,
+    %2461 := Kp.add 536#64, %2462 := Kp.add 544#64, %2463 := Kp.add 552#64, %2464 := Kp.add 560#64,
+    %2465 := Kp.add 568#64, %2466 := Kp.add 576#64, %2467 := Kp.add 584#64, %2468 := Kp.add 592#64,
+    %2469 := Kp.add 600#64, %2470 := Kp.add 608#64, %2471 := Kp.add 616#64, %2472 := Kp.add 624#64,
+    %2473 := Kp.add 632#64, %2475 := En, %2477 := st.add 8#64, %2478 := st.add 16#64, %2479 :=
+    st.add 24#64, %2480 := st.add 32#64, %2481 := st.add 40#64, %2482 := st.add 48#64, %2483 :=
     st.add 56#64]
 
 /-- `^bb1`'s env at block `P`, state words `H`. -/
 abbrev hdr (P : Pointer) (H : Vector (BitVec 64) 8) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
-  E[%1556 := .value H[7], %1557 := .value H[6], %1558 := .value H[5], %1559 := .value H[4], %1560 :=
-    .value H[3], %1561 := .value H[2], %1562 := .value H[1], %1563 := .value P, %1564 :=
+  E[%2491 := .value H[7], %2492 := .value H[6], %2493 := .value H[5], %2494 := .value H[4], %2495 :=
+    .value H[3], %2496 := .value H[2], %2497 := .value H[1], %2498 := .value P, %2499 :=
     .value H[0]]
 
 /-- The block's registers: its state words `H` and the next block's pointer. -/
 abbrev Params (P : Pointer) (H : Vector (BitVec 64) 8) (E : ⟪Γ⟫) : Prop :=
-  E ⊨ [%1556 := H[7], %1557 := H[6], %1558 := H[5], %1559 := H[4], %1560 := H[3], %1561 := H[2],
-    %1562 := H[1], %1564 := H[0], %1565 := P.add 128#64]
+  E ⊨ [%2491 := H[7], %2492 := H[6], %2493 := H[5], %2494 := H[4], %2495 := H[3], %2496 := H[2],
+    %2497 := H[1], %2499 := H[0], %2500 := P.add 128#64]
 
 /-- The registers live into round 20, besides `^bb0`'s and the block's. -/
 abbrev Live20 (Wf : Nat → BitVec 64) (a20 a19 a18 a17 e20 e19 e18 e17 : BitVec 64) (E : ⟪Γ⟫) :
     Prop :=
-  E ⊨ [%1582 := Wf 5, %1585 := Wf 6, %1588 := Wf 7, %1591 := Wf 8, %1594 := Wf 9, %1597 := Wf 10,
-    %1600 := Wf 11, %1603 := Wf 12, %1606 := Wf 13, %1609 := Wf 14, %1612 := Wf 15,
+  E ⊨ [%2517 := Wf 5, %2520 := Wf 6, %2523 := Wf 7, %2526 := Wf 8, %2529 := Wf 9, %2532 := Wf 10,
+    %2535 := Wf 11, %2538 := Wf 12, %2541 := Wf 13, %2544 := Wf 14, %2547 := Wf 15,
     rir_reg% compress512.hty 596 := Wf 16, rir_reg% compress512.hty 621 := e17,
     rir_reg% compress512.hty 622 := a17, rir_reg% compress512.hty 635 := Wf 17,
     rir_reg% compress512.hty 660 := e18, rir_reg% compress512.hty 661 := a18,
@@ -464,7 +464,7 @@ public theorem rounds60 (st Kp En P : Pointer) (A : Vals compress512.Γ.args)
               (rounds Wf 80 #v[H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]]) →
           E'.args = A.get →
           Statics st Kp En E' →
-          (E' ⊨ [%1565 := P.add 128#64, rir_reg% compress512.hty 3078 := N[0],
+          (E' ⊨ [%2500 := P.add 128#64, rir_reg% compress512.hty 3078 := N[0],
             rir_reg% compress512.hty 3079 := N[1], rir_reg% compress512.hty 3080 := N[2],
             rir_reg% compress512.hty 3081 := N[3], rir_reg% compress512.hty 3083 := N[4],
             rir_reg% compress512.hty 3084 := N[5], rir_reg% compress512.hty 3085 := N[6],
@@ -548,7 +548,7 @@ theorem bb1_done : 2969 ≥ compress512.bb1.body.length := by decide +kernel
 public theorem exit_eq (En P : Pointer) (N : Vector (BitVec 64) 8) (E : ⟪Γ⟫) (S : GlobalState)
     (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hR :
-      E ⊨ [%1565 := P.add 128#64, rir_reg% compress512.hty 3078 := N[0],
+      E ⊨ [%2500 := P.add 128#64, rir_reg% compress512.hty 3078 := N[0],
         rir_reg% compress512.hty 3079 := N[1], rir_reg% compress512.hty 3080 := N[2],
         rir_reg% compress512.hty 3081 := N[3], rir_reg% compress512.hty 3083 := N[4],
         rir_reg% compress512.hty 3084 := N[5], rir_reg% compress512.hty 3085 := N[6],

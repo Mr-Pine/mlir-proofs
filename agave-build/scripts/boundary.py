@@ -4,7 +4,10 @@
 Walks the call graph of an .ll file from the entry through every defined
 function outside the runtime crates (std, core, alloc, panic_*), and
 prints, comma-separated, the defined runtime functions it reaches: the
-panic entry points.  Any defined personality function is included too.
+panic entry points.  A runtime generic instantiated in another crate
+(core's copy_from_slice_impl::<u8> in solana_ed25519, say) is that
+crate's code and is walked.  Any defined personality function is
+included too.
 """
 import re
 import sys
@@ -18,6 +21,13 @@ def crate(name):
   return name[m.end():m.end() + int(m.group(1))] if m else None
 
 
+def instantiated_in(name):
+  """The crate a v0-mangled generic instance was instantiated in, or None."""
+  m = re.match(r'.*Cs[0-9A-Za-z]+_(\d+)([A-Za-z0-9_]+)$', name)
+  return m.group(2) if name.startswith('_RI') and m and len(m.group(2)) == int(m.group(1)) \
+    else None
+
+
 def main(path, entry):
   text = open(path).read()
   funcs = {m.group(1).strip('"'): m.group(2) for m in re.finditer(
@@ -27,7 +37,8 @@ def main(path, entry):
     f = todo.pop()
     if f in seen or f not in funcs: continue
     seen.add(f)
-    if crate(f) in RUNTIME or f == 'rust_eh_personality':
+    if crate(f) in RUNTIME and instantiated_in(f) in RUNTIME | {None} \
+        or f == 'rust_eh_personality':
       cut.append(f)
       continue
     todo += [c.strip('"') for c in re.findall(r'@("?[A-Za-z0-9_.$]+"?)', funcs[f])]

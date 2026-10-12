@@ -245,7 +245,7 @@ public theorem FieldElement51_to_bytes.call_eq (out a : Pointer) (s : GlobalStat
   block_init
   iterate 37 step_pure
   step_load
-  iterate 4 
+  iterate 4
     step_pure
     step_load
   -- let mut limbs = FieldElement51::reduce(self.0).0;

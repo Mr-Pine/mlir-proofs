@@ -1,6 +1,6 @@
 module
 
--- agave-build/out/serial-noinline/op/_RNvXs5_NtNtNtNtCs2JGgYtL0Fal_14solana_ed255197backend6serial3u645fieldRNtB5_14FieldElement51NtNtNtCsgxBkk5gSRhY_4core3ops5arith3Mul3mul.mlir
+-- agave-build/out/serial-noinline-big/op/_RNvXs5_NtNtNtNtCs2JGgYtL0Fal_14solana_ed255197backend6serial3u645fieldRNtB5_14FieldElement51NtNtNtCsgxBkk5gSRhY_4core3ops5arith3Mul3mul.mlir
 -- <&solana_ed25519[1fe0933b11699477]::backend::serial::u64::field::FieldElement51 as core[c0acaeba6ab4c2e0]::ops::arith::Mul>::mul
 
 public import MLIR.Semantics.Func
@@ -14,131 +14,131 @@ namespace MLIR.Agave.Serial
 
 mlir_def FieldElement51_Mul_mul :=
 "llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.dereferenceable = 40 : i64, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.nonnull, llvm.noundef, llvm.writable, llvm.writeonly}, {llvm.align = 8 : i64, llvm.dereferenceable = 40 : i64, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}, {llvm.align = 8 : i64, llvm.dereferenceable = 40 : i64, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.noundef, llvm.readonly}], dso_local, function_type = !llvm.func<void (ptr, ptr, ptr)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = readwrite, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", "nonlazybind", ["probe-stack", "inline-asm"], ["target-cpu", "x86-64-v2"]], sym_name = "_RNvXs5_NtNtNtNtCs2JGgYtL0Fal_14solana_ed255197backend6serial3u645fieldRNtB5_14FieldElement51NtNtNtCsgxBkk5gSRhY_4core3ops5arith3Mul3mul", target_cpu = "x86-64-v2", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
-^bb0(%arg50: !llvm.ptr, %arg51: !llvm.ptr, %arg52: !llvm.ptr):
-  %1284 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
-  %1285 = "llvm.mlir.constant"() <{value = 51 : i128}> : () -> i128
-  %1286 = "llvm.mlir.constant"() <{value = 18446744073709551615 : i128}> : () -> i128
-  %1287 = "llvm.mlir.constant"() <{value = 2251799813685247 : i64}> : () -> i64
-  %1288 = "llvm.mlir.constant"() <{value = 51 : i64}> : () -> i64
-  %1289 = "llvm.getelementptr"(%arg52) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-  %1290 = "llvm.load"(%1289) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1291 = "llvm.mul"(%1290, %1284) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
-  %1292 = "llvm.getelementptr"(%arg52) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-  %1293 = "llvm.load"(%1292) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1294 = "llvm.mul"(%1293, %1284) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
-  %1295 = "llvm.getelementptr"(%arg52) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-  %1296 = "llvm.load"(%1295) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1297 = "llvm.mul"(%1296, %1284) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
-  %1298 = "llvm.getelementptr"(%arg52) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-  %1299 = "llvm.load"(%1298) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1300 = "llvm.mul"(%1299, %1284) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
-  %1301 = "llvm.load"(%arg51) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1302 = "llvm.load"(%arg52) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1303 = "llvm.zext"(%1301) : (i64) -> i128
-  %1304 = "llvm.zext"(%1302) : (i64) -> i128
-  %1305 = "llvm.mul"(%1304, %1303) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1306 = "llvm.getelementptr"(%arg51) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-  %1307 = "llvm.load"(%1306) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1308 = "llvm.zext"(%1307) : (i64) -> i128
-  %1309 = "llvm.zext"(%1291) : (i64) -> i128
-  %1310 = "llvm.mul"(%1308, %1309) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1311 = "llvm.add"(%1310, %1305) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1312 = "llvm.getelementptr"(%arg51) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-  %1313 = "llvm.load"(%1312) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1314 = "llvm.zext"(%1313) : (i64) -> i128
-  %1315 = "llvm.zext"(%1294) : (i64) -> i128
-  %1316 = "llvm.mul"(%1314, %1315) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1317 = "llvm.add"(%1311, %1316) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1318 = "llvm.getelementptr"(%arg51) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-  %1319 = "llvm.load"(%1318) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1320 = "llvm.zext"(%1319) : (i64) -> i128
-  %1321 = "llvm.zext"(%1297) : (i64) -> i128
-  %1322 = "llvm.mul"(%1320, %1321) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1323 = "llvm.add"(%1317, %1322) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1324 = "llvm.getelementptr"(%arg51) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-  %1325 = "llvm.load"(%1324) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
-  %1326 = "llvm.zext"(%1325) : (i64) -> i128
-  %1327 = "llvm.zext"(%1300) : (i64) -> i128
-  %1328 = "llvm.mul"(%1326, %1327) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1329 = "llvm.add"(%1323, %1328) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1330 = "llvm.mul"(%1326, %1304) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1331 = "llvm.zext"(%1290) : (i64) -> i128
-  %1332 = "llvm.mul"(%1303, %1331) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1333 = "llvm.mul"(%1308, %1315) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1334 = "llvm.mul"(%1314, %1321) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1335 = "llvm.mul"(%1320, %1327) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1336 = "llvm.mul"(%1320, %1304) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1337 = "llvm.mul"(%1326, %1331) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1338 = "llvm.zext"(%1293) : (i64) -> i128
-  %1339 = "llvm.mul"(%1303, %1338) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1340 = "llvm.mul"(%1308, %1321) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1341 = "llvm.mul"(%1314, %1327) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1342 = "llvm.mul"(%1314, %1304) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1343 = "llvm.mul"(%1320, %1331) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1344 = "llvm.mul"(%1326, %1338) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1345 = "llvm.zext"(%1296) : (i64) -> i128
-  %1346 = "llvm.mul"(%1303, %1345) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1347 = "llvm.mul"(%1308, %1327) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1348 = "llvm.mul"(%1308, %1304) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1349 = "llvm.mul"(%1314, %1331) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1350 = "llvm.mul"(%1320, %1338) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1351 = "llvm.mul"(%1326, %1345) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1352 = "llvm.zext"(%1299) : (i64) -> i128
-  %1353 = "llvm.mul"(%1303, %1352) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
-  %1354 = "llvm.lshr"(%1329, %1285) : (i128, i128) -> i128
-  %1355 = "llvm.and"(%1354, %1286) : (i128, i128) -> i128
-  %1356 = "llvm.add"(%1333, %1332) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1357 = "llvm.add"(%1356, %1334) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1358 = "llvm.add"(%1357, %1335) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1359 = "llvm.add"(%1358, %1330) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1360 = "llvm.add"(%1359, %1355) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1361 = "llvm.trunc"(%1329) <{overflowFlags = 0 : i32}> : (i128) -> i64
-  %1362 = "llvm.and"(%1361, %1287) : (i64, i64) -> i64
-  %1363 = "llvm.lshr"(%1360, %1285) : (i128, i128) -> i128
-  %1364 = "llvm.and"(%1363, %1286) : (i128, i128) -> i128
-  %1365 = "llvm.add"(%1340, %1339) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1366 = "llvm.add"(%1365, %1341) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1367 = "llvm.add"(%1366, %1336) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1368 = "llvm.add"(%1367, %1337) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1369 = "llvm.add"(%1368, %1364) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1370 = "llvm.trunc"(%1360) <{overflowFlags = 0 : i32}> : (i128) -> i64
-  %1371 = "llvm.and"(%1370, %1287) : (i64, i64) -> i64
-  %1372 = "llvm.lshr"(%1369, %1285) : (i128, i128) -> i128
-  %1373 = "llvm.and"(%1372, %1286) : (i128, i128) -> i128
-  %1374 = "llvm.add"(%1347, %1346) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1375 = "llvm.add"(%1374, %1342) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1376 = "llvm.add"(%1375, %1343) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1377 = "llvm.add"(%1376, %1344) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1378 = "llvm.add"(%1377, %1373) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1379 = "llvm.trunc"(%1369) <{overflowFlags = 0 : i32}> : (i128) -> i64
-  %1380 = "llvm.and"(%1379, %1287) : (i64, i64) -> i64
-  %1381 = "llvm.lshr"(%1378, %1285) : (i128, i128) -> i128
-  %1382 = "llvm.and"(%1381, %1286) : (i128, i128) -> i128
-  %1383 = "llvm.add"(%1348, %1353) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1384 = "llvm.add"(%1383, %1349) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1385 = "llvm.add"(%1384, %1350) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1386 = "llvm.add"(%1385, %1351) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1387 = "llvm.add"(%1386, %1382) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
-  %1388 = "llvm.trunc"(%1378) <{overflowFlags = 0 : i32}> : (i128) -> i64
-  %1389 = "llvm.and"(%1388, %1287) : (i64, i64) -> i64
-  %1390 = "llvm.lshr"(%1387, %1285) : (i128, i128) -> i128
-  %1391 = "llvm.trunc"(%1390) <{overflowFlags = 0 : i32}> : (i128) -> i64
-  %1392 = "llvm.trunc"(%1387) <{overflowFlags = 0 : i32}> : (i128) -> i64
-  %1393 = "llvm.and"(%1392, %1287) : (i64, i64) -> i64
-  %1394 = "llvm.mul"(%1391, %1284) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
-  %1395 = "llvm.add"(%1394, %1362) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
-  %1396 = "llvm.lshr"(%1395, %1288) : (i64, i64) -> i64
-  %1397 = "llvm.add"(%1396, %1371) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
-  %1398 = "llvm.and"(%1395, %1287) : (i64, i64) -> i64
-  "llvm.store"(%1398, %arg50) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
-  %1399 = "llvm.getelementptr"(%arg50) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
-  "llvm.store"(%1397, %1399) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
-  %1400 = "llvm.getelementptr"(%arg50) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
-  "llvm.store"(%1380, %1400) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
-  %1401 = "llvm.getelementptr"(%arg50) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
-  "llvm.store"(%1389, %1401) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
-  %1402 = "llvm.getelementptr"(%arg50) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
-  "llvm.store"(%1393, %1402) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+^bb0(%arg92: !llvm.ptr, %arg93: !llvm.ptr, %arg94: !llvm.ptr):
+  %2219 = "llvm.mlir.constant"() <{value = 19 : i64}> : () -> i64
+  %2220 = "llvm.mlir.constant"() <{value = 51 : i128}> : () -> i128
+  %2221 = "llvm.mlir.constant"() <{value = 18446744073709551615 : i128}> : () -> i128
+  %2222 = "llvm.mlir.constant"() <{value = 2251799813685247 : i64}> : () -> i64
+  %2223 = "llvm.mlir.constant"() <{value = 51 : i64}> : () -> i64
+  %2224 = "llvm.getelementptr"(%arg94) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %2225 = "llvm.load"(%2224) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2226 = "llvm.mul"(%2225, %2219) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %2227 = "llvm.getelementptr"(%arg94) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %2228 = "llvm.load"(%2227) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2229 = "llvm.mul"(%2228, %2219) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %2230 = "llvm.getelementptr"(%arg94) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %2231 = "llvm.load"(%2230) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2232 = "llvm.mul"(%2231, %2219) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %2233 = "llvm.getelementptr"(%arg94) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %2234 = "llvm.load"(%2233) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2235 = "llvm.mul"(%2234, %2219) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %2236 = "llvm.load"(%arg93) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2237 = "llvm.load"(%arg94) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2238 = "llvm.zext"(%2236) : (i64) -> i128
+  %2239 = "llvm.zext"(%2237) : (i64) -> i128
+  %2240 = "llvm.mul"(%2239, %2238) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2241 = "llvm.getelementptr"(%arg93) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  %2242 = "llvm.load"(%2241) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2243 = "llvm.zext"(%2242) : (i64) -> i128
+  %2244 = "llvm.zext"(%2226) : (i64) -> i128
+  %2245 = "llvm.mul"(%2243, %2244) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2246 = "llvm.add"(%2245, %2240) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2247 = "llvm.getelementptr"(%arg93) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  %2248 = "llvm.load"(%2247) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2249 = "llvm.zext"(%2248) : (i64) -> i128
+  %2250 = "llvm.zext"(%2229) : (i64) -> i128
+  %2251 = "llvm.mul"(%2249, %2250) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2252 = "llvm.add"(%2246, %2251) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2253 = "llvm.getelementptr"(%arg93) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  %2254 = "llvm.load"(%2253) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2255 = "llvm.zext"(%2254) : (i64) -> i128
+  %2256 = "llvm.zext"(%2232) : (i64) -> i128
+  %2257 = "llvm.mul"(%2255, %2256) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2258 = "llvm.add"(%2252, %2257) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2259 = "llvm.getelementptr"(%arg93) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  %2260 = "llvm.load"(%2259) <{alignment = 8 : i64, ordering = 0 : i64}> : (!llvm.ptr) -> i64
+  %2261 = "llvm.zext"(%2260) : (i64) -> i128
+  %2262 = "llvm.zext"(%2235) : (i64) -> i128
+  %2263 = "llvm.mul"(%2261, %2262) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2264 = "llvm.add"(%2258, %2263) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2265 = "llvm.mul"(%2261, %2239) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2266 = "llvm.zext"(%2225) : (i64) -> i128
+  %2267 = "llvm.mul"(%2238, %2266) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2268 = "llvm.mul"(%2243, %2250) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2269 = "llvm.mul"(%2249, %2256) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2270 = "llvm.mul"(%2255, %2262) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2271 = "llvm.mul"(%2255, %2239) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2272 = "llvm.mul"(%2261, %2266) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2273 = "llvm.zext"(%2228) : (i64) -> i128
+  %2274 = "llvm.mul"(%2238, %2273) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2275 = "llvm.mul"(%2243, %2256) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2276 = "llvm.mul"(%2249, %2262) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2277 = "llvm.mul"(%2249, %2239) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2278 = "llvm.mul"(%2255, %2266) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2279 = "llvm.mul"(%2261, %2273) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2280 = "llvm.zext"(%2231) : (i64) -> i128
+  %2281 = "llvm.mul"(%2238, %2280) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2282 = "llvm.mul"(%2243, %2262) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2283 = "llvm.mul"(%2243, %2239) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2284 = "llvm.mul"(%2249, %2266) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2285 = "llvm.mul"(%2255, %2273) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2286 = "llvm.mul"(%2261, %2280) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2287 = "llvm.zext"(%2234) : (i64) -> i128
+  %2288 = "llvm.mul"(%2238, %2287) <{overflowFlags = 2 : i32}> : (i128, i128) -> i128
+  %2289 = "llvm.lshr"(%2264, %2220) : (i128, i128) -> i128
+  %2290 = "llvm.and"(%2289, %2221) : (i128, i128) -> i128
+  %2291 = "llvm.add"(%2268, %2267) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2292 = "llvm.add"(%2291, %2269) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2293 = "llvm.add"(%2292, %2270) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2294 = "llvm.add"(%2293, %2265) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2295 = "llvm.add"(%2294, %2290) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2296 = "llvm.trunc"(%2264) <{overflowFlags = 0 : i32}> : (i128) -> i64
+  %2297 = "llvm.and"(%2296, %2222) : (i64, i64) -> i64
+  %2298 = "llvm.lshr"(%2295, %2220) : (i128, i128) -> i128
+  %2299 = "llvm.and"(%2298, %2221) : (i128, i128) -> i128
+  %2300 = "llvm.add"(%2275, %2274) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2301 = "llvm.add"(%2300, %2276) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2302 = "llvm.add"(%2301, %2271) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2303 = "llvm.add"(%2302, %2272) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2304 = "llvm.add"(%2303, %2299) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2305 = "llvm.trunc"(%2295) <{overflowFlags = 0 : i32}> : (i128) -> i64
+  %2306 = "llvm.and"(%2305, %2222) : (i64, i64) -> i64
+  %2307 = "llvm.lshr"(%2304, %2220) : (i128, i128) -> i128
+  %2308 = "llvm.and"(%2307, %2221) : (i128, i128) -> i128
+  %2309 = "llvm.add"(%2282, %2281) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2310 = "llvm.add"(%2309, %2277) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2311 = "llvm.add"(%2310, %2278) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2312 = "llvm.add"(%2311, %2279) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2313 = "llvm.add"(%2312, %2308) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2314 = "llvm.trunc"(%2304) <{overflowFlags = 0 : i32}> : (i128) -> i64
+  %2315 = "llvm.and"(%2314, %2222) : (i64, i64) -> i64
+  %2316 = "llvm.lshr"(%2313, %2220) : (i128, i128) -> i128
+  %2317 = "llvm.and"(%2316, %2221) : (i128, i128) -> i128
+  %2318 = "llvm.add"(%2283, %2288) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2319 = "llvm.add"(%2318, %2284) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2320 = "llvm.add"(%2319, %2285) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2321 = "llvm.add"(%2320, %2286) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2322 = "llvm.add"(%2321, %2317) <{overflowFlags = 0 : i32}> : (i128, i128) -> i128
+  %2323 = "llvm.trunc"(%2313) <{overflowFlags = 0 : i32}> : (i128) -> i64
+  %2324 = "llvm.and"(%2323, %2222) : (i64, i64) -> i64
+  %2325 = "llvm.lshr"(%2322, %2220) : (i128, i128) -> i128
+  %2326 = "llvm.trunc"(%2325) <{overflowFlags = 0 : i32}> : (i128) -> i64
+  %2327 = "llvm.trunc"(%2322) <{overflowFlags = 0 : i32}> : (i128) -> i64
+  %2328 = "llvm.and"(%2327, %2222) : (i64, i64) -> i64
+  %2329 = "llvm.mul"(%2326, %2219) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %2330 = "llvm.add"(%2329, %2297) <{overflowFlags = 0 : i32}> : (i64, i64) -> i64
+  %2331 = "llvm.lshr"(%2330, %2223) : (i64, i64) -> i64
+  %2332 = "llvm.add"(%2331, %2306) <{overflowFlags = 3 : i32}> : (i64, i64) -> i64
+  %2333 = "llvm.and"(%2330, %2222) : (i64, i64) -> i64
+  "llvm.store"(%2333, %arg92) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+  %2334 = "llvm.getelementptr"(%arg92) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 8>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%2332, %2334) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+  %2335 = "llvm.getelementptr"(%arg92) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 16>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%2315, %2335) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+  %2336 = "llvm.getelementptr"(%arg92) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 24>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%2324, %2336) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
+  %2337 = "llvm.getelementptr"(%arg92) <{elem_type = i8, noWrapFlags = 7 : i32, rawConstantIndices = array<i32: 32>}> : (!llvm.ptr) -> !llvm.ptr
+  "llvm.store"(%2328, %2337) <{alignment = 8 : i64, ordering = 0 : i64}> : (i64, !llvm.ptr) -> ()
   "llvm.return"() : () -> ()
 }) : () -> ()
 

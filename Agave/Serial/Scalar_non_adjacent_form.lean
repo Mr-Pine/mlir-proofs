@@ -43,20 +43,20 @@ theorem sub_w_flags {w : BitVec 64} (h : w.toNat ≤ 8) :
 /-- The registers live in the loop: `bb0`'s constants and the ones `w` gives. -/
 abbrev consts (xu : Pointer) (W : Nat) (w : BitVec 64) (E : ⟪Scalar_non_adjacent_form.Γ⟫) :
     ⟪Scalar_non_adjacent_form.Γ⟫ :=
-  E[%121 := .value 0#8, %122 := .value 256#64, %124 := .value 1#64, %127 := .value 0#64, %128 :=
-    .value 6#64, %129 := .value 63#64, %130 := .value xu, %136 := .value (mask W), %137 :=
-    .value (64#64 - w), %138 := .value (1#64 <<< W >>> 1), %139 := .value (1#8 <<< W)]
+  E[%503 := .value 0#8, %504 := .value 256#64, %506 := .value 1#64, %509 := .value 0#64, %510 :=
+    .value 6#64, %511 := .value 63#64, %512 := .value xu, %518 := .value (mask W), %519 :=
+    .value (64#64 - w), %520 := .value (1#64 <<< W >>> 1), %521 := .value (1#8 <<< W)]
 
 /-- The registers at `^bb3`, the window at `pos` with `carry`. -/
 abbrev hdr3 (xu : Pointer) (W : Nat) (w : BitVec 64) (E : ⟪Scalar_non_adjacent_form.Γ⟫)
     (pos c : Nat) : ⟪Scalar_non_adjacent_form.Γ⟫ :=
-  (consts xu W w E)[%141 := .value (BitVec.ofNat 64 c), %142 := .value (BitVec.ofNat 64 pos)]
+  (consts xu W w E)[%523 := .value (BitVec.ofNat 64 c), %524 := .value (BitVec.ofNat 64 pos)]
 
 /-- The registers at `^bb5`: `bit_buf` read. -/
 abbrev hdr5 (xu : Pointer) (W : Nat) (w : BitVec 64) (E : ⟪Scalar_non_adjacent_form.Γ⟫)
     (pos c : Nat) (bb : BitVec 64) : ⟪Scalar_non_adjacent_form.Γ⟫ :=
-  (consts xu W w E)[%141 := .value (BitVec.ofNat 64 c), %142 := .value (BitVec.ofNat 64 pos),
-    %155 := .value bb]
+  (consts xu W w E)[%523 := .value (BitVec.ofNat 64 c), %524 := .value (BitVec.ofNat 64 pos),
+    %537 := .value bb]
 
 /-- The digits and `x_u64` stored over `Sb`. -/
 abbrev st (naf xu : Pointer) (t : Vector ℤ 256) (X : BitVec 320) (Sb : GlobalState) : GlobalState :=

@@ -119,7 +119,7 @@ def Scalar52_montgomery_mul.spec (a b : Fin 5 → BitVec 64) : Fin 5 → BitVec 
   Scalar52_montgomery_reduce.spec (Scalar52_mul_internal.spec a b)
 
 /-- `Scalar52::to_bytes(self)`'s bytes `s[0] … s[31]`: `s[6]` and `s[19]` straddle two limbs. -/
-def Scalar52_pack.bytes (l : Fin 5 → BitVec 64) : Fin 32 → BitVec 8
+def Scalar52_to_bytes.bytes (l : Fin 5 → BitVec 64) : Fin 32 → BitVec 8
   | ⟨0, _⟩ => (l 0 >>> 0).setWidth 8
   | ⟨1, _⟩ => (l 0 >>> 8).setWidth 8
   | ⟨2, _⟩ => (l 0 >>> 16).setWidth 8
@@ -154,9 +154,9 @@ def Scalar52_pack.bytes (l : Fin 5 → BitVec 64) : Fin 32 → BitVec 8
   | ⟨31, _⟩ => (l 4 >>> 40).setWidth 8
   | ⟨_ + 32, h⟩ => absurd h (by omega)
 
-/-- `Scalar52::pack(self)`: the 32 bytes of `to_bytes`, `s[0]` lowest. -/
-def Scalar52_pack.spec (l : Fin 5 → BitVec 64) : BitVec 256 :=
-  let s := Scalar52_pack.bytes l
+/-- `Scalar52::to_bytes(self)`: its 32 bytes, `s[0]` lowest. -/
+def Scalar52_to_bytes.spec (l : Fin 5 → BitVec 64) : BitVec 256 :=
+  let s := Scalar52_to_bytes.bytes l
   s 31 ++
     (s 30 ++
       (s 29 ++
@@ -189,6 +189,10 @@ def Scalar52_pack.spec (l : Fin 5 → BitVec 64) : BitVec 256 :=
                                                             (s 2 ++
                                                               (s 1 ++
                                                                 s 0))))))))))))))))))))))))))))))
+
+/-- `Scalar52::pack(self)`: `to_bytes`. -/
+def Scalar52_pack.spec (l : Fin 5 → BitVec 64) : BitVec 256 :=
+  Scalar52_to_bytes.spec l
 
 end
 
@@ -802,9 +806,9 @@ public theorem spec_bounded (a b : Fin 5 → BitVec 64) : Bounded (spec a b) :=
 
 end Scalar52_montgomery_mul
 
-/-! ### `pack` -/
+/-! ### `to_bytes` and `pack` -/
 
-namespace Scalar52_pack
+namespace Scalar52_to_bytes
 
 /-- The bytes, widened, are the limbs' `bits` when those fit 256 bits. -/
 theorem setWidth_spec {l : Fin 5 → BitVec 64} (h : Scalar52.Bounded l) (h4 : (l 4).toNat < 2 ^ 48) :
@@ -828,6 +832,15 @@ theorem setWidth_spec {l : Fin 5 → BitVec 64} (h : Scalar52.Bounded l) (h4 : (
 public theorem toNat_spec {l : Fin 5 → BitVec 64} (h : Scalar52.Bounded l)
     (h4 : (l 4).toNat < 2 ^ 48) : (spec l).toNat = Scalar52.nat l := by
   rw [← Scalar52.toNat_bits h, ← setWidth_spec h h4, BitVec.toNat_setWidth_of_le (by decide)]
+
+end Scalar52_to_bytes
+
+namespace Scalar52_pack
+
+/-- `Scalar52_to_bytes.toNat_spec` for `pack`. -/
+public theorem toNat_spec {l : Fin 5 → BitVec 64} (h : Scalar52.Bounded l)
+    (h4 : (l 4).toNat < 2 ^ 48) : (spec l).toNat = Scalar52.nat l :=
+  Scalar52_to_bytes.toNat_spec h h4
 
 /-- A number below `ℓ` has its top limb below `2^48`. -/
 public theorem top_lt {l : Fin 5 → BitVec 64} (h : Scalar52.nat l < ell) :

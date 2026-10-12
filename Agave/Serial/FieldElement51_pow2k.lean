@@ -56,20 +56,20 @@ end
 
 section Proof
 
-/-- `^bb1`'s env: the constants, the limbs `a` (`%1160` is `a[0]`) and the counter `k`. -/
+/-- `^bb1`'s env: the constants, the limbs `a` (`%2095` is `a[0]`) and the counter `k`. -/
 abbrev FieldElement51_pow2k.hdr (E : ⟪FieldElement51_pow2k.Γ⟫) (a : Fin 5 → BitVec 64) (k : Nat) :
     ⟪FieldElement51_pow2k.Γ⟫ :=
-  E[%1139 := .value 19#64, %1140 := .value 1#128, %1141 := .value 51#128, %1142 :=
-    .value 18446744073709551615#128, %1143 := .value 2251799813685247#64, %1144 := .value 51#64,
-    %1145 := .value 4294967295#32, %1146 := .value 0#32, %1156 := .value (a 4), %1157 :=
-    .value (a 3), %1158 := .value (a 2), %1159 := .value (a 1), %1160 := .value (a 0), %1161 :=
+  E[%2074 := .value 19#64, %2075 := .value 1#128, %2076 := .value 51#128, %2077 :=
+    .value 18446744073709551615#128, %2078 := .value 2251799813685247#64, %2079 := .value 51#64,
+    %2080 := .value 4294967295#32, %2081 := .value 0#32, %2091 := .value (a 4), %2092 :=
+    .value (a 3), %2093 := .value (a 2), %2094 := .value (a 1), %2095 := .value (a 0), %2096 :=
     .value (BitVec.ofNat 32 k)]
 
-/-- `^bb2`'s env on leaving the loop: the limbs `a` (`%1236` is `a[0]`). -/
+/-- `^bb2`'s env on leaving the loop: the limbs `a` (`%2171` is `a[0]`). -/
 abbrev FieldElement51_pow2k.exit (E : ⟪FieldElement51_pow2k.Γ⟫) (a : Fin 5 → BitVec 64) :
     ⟪FieldElement51_pow2k.Γ⟫ :=
-  E[%1232 := .value (a 2), %1233 := .value (a 3), %1234 := .value (a 4), %1235 := .value (a 1),
-    %1236 := .value (a 0)]
+  E[%2167 := .value (a 2), %2168 := .value (a 3), %2169 := .value (a 4), %2170 := .value (a 1),
+    %2171 := .value (a 0)]
 
 /-- The counter's `k - 1` (`add nsw k, -1`) does not overflow. -/
 theorem dec_nsw (k : Nat) (h0 : 0 < k) (h : k < 2 ^ 31) :
@@ -137,14 +137,14 @@ public theorem FieldElement51_pow2k.call_eq (out a : Pointer) (k : BitVec 32) (s
   iterate 8 step_pure
   -- let mut a: [u64; 5] = self.0;
   step_load
-  iterate 4 
+  iterate 4
     step_pure
     step_load
   finish_block
   step_loop using FieldElement51_pow2k.loop _ _ k.toNat (S₀.mem.readLimbs a)
   block_init
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

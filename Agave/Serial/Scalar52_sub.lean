@@ -102,7 +102,7 @@ public theorem Scalar52_sub.call_eq (out a : Pointer) (s : GlobalState) (hwf : s
   step_call using black_box_u8.call_eq with condition
   iterate 23 step_pure
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   finish_block

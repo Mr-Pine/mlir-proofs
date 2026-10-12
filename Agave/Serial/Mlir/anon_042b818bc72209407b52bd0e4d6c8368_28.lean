@@ -1,6 +1,6 @@
 module
 
--- agave-build/out/serial-noinline/op/anon.042b818bc72209407b52bd0e4d6c8368.28.mlir
+-- agave-build/out/serial-noinline-big/op/anon.042b818bc72209407b52bd0e4d6c8368.28.mlir
 
 public import MLIR.Semantics.GlobalInitializer
 public import MLIR.Syntax.Elab

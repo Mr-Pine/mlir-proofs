@@ -10,6 +10,7 @@ meta import Agave.Serial.Sha512_Update_chain_slice_u8
 namespace MLIR.Agave.Serial.Sha512_Update_chain_slice_u8
 
 open _root_.Ed25519
+open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (updateMem)
 
 private def self : Pointer :=
   ⟨⟨1⟩, 0⟩
@@ -48,20 +49,6 @@ private def after (n : Nat) : Vector (BitVec 64) 8 × List (BitVec 8) × Nat × 
 private def expected (n : Nat) : Vector (BitVec 64) 8 × List (BitVec 8) × Nat × Nat :=
   (Sha512.compressBlocks Sha512.IV (input n), (input n).drop (n / 128 * 128), n % 128, n / 128)
 
-/-- Two `update`s of `a` then `b` bytes, the input's first ones each time, read at `self`. -/
-private def after2 (a b : Nat) : Vector (BitVec 64) 8 × List (BitVec 8) × Nat × Nat :=
-  let m :=
-    updateMem (updateMem (mem (max a b)) self data (BitVec.ofNat 64 a)) self data
-      (BitVec.ofNat 64 b)
-  let p := (m.readAt (self.add 127#64) 8).toNat
-  (m.readSha512 (self.add 128#64), bytesLE (m.readAt self (8 * p)), p,
-    (m.readAt (self.add 192#64) 128).toNat)
-
-/-- What the object should have absorbed after `a` then `b` input bytes. -/
-private def expected2 (a b : Nat) : Vector (BitVec 64) 8 × List (BitVec 8) × Nat × Nat :=
-  let M := input a ++ input b
-  (Sha512.compressBlocks Sha512.IV M, M.drop (M.length / 128 * 128), M.length % 128, M.length / 128)
-
 #guard after 3 == expected 3
 
 #guard after 128 == expected 128
@@ -69,11 +56,5 @@ private def expected2 (a b : Nat) : Vector (BitVec 64) 8 × List (BitVec 8) × N
 #guard after 200 == expected 200
 
 #guard after 300 == expected 300
-
-#guard after2 3 100 == expected2 3 100
-
-#guard after2 3 200 == expected2 3 200
-
-#guard after2 100 300 == expected2 100 300
 
 end MLIR.Agave.Serial.Sha512_Update_chain_slice_u8

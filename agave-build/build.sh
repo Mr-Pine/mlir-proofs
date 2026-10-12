@@ -10,8 +10,10 @@
 # Firedancer's make-mlir (config/everything.mk).
 #
 # Usage: ./build.sh [variant...]   (default: serial avx2)
-# Variants: serial, avx2, <backend>-noinline (modular builds), and
-# dispatch (Agave's own flags: AVX2 picked at run time; not extractable).
+# Variants: serial, avx2, <backend>-noinline (modular builds),
+# <backend>-noinline-big (modular, with big inlined callees kept apart:
+# the serial proofs' build), <backend>-noinline-all (exploration only),
+# and dispatch (Agave's own flags: AVX2 picked at run time; not extractable).
 # Outputs land in out/<variant>/:
 #   full.bc         the fat-LTO module as compiled (rustc's LLVM 22)
 #   full.ll         the same, disassembled by LLVM 23
@@ -28,7 +30,8 @@ RUSTUP=${RUSTUP:-$HOME/.local/rustup-nix/bin/rustup}
 LLVM_BIN=${LLVM_BIN:-$(dirname "$(readlink -f "$HOME/.local/llvm-23/bin/opt")")}
 MLIR_BIN=${MLIR_BIN:-$(dirname "$(readlink -f "$HOME/.local/llvm-23/bin/mlir-opt")")}
 FIREDANCER=${FIREDANCER:-$HOME/firedancer}
-EXTRACT=$FIREDANCER/src/ballet/ed25519/conformance_verification/mlir_extract_region.py
+# Firedancer's extractor, copied: long Rust symbols get hashed file names.
+EXTRACT=$HERE/scripts/mlir_extract_region.py
 ENTRY=agave_ed25519_verify
 export CARGO_HOME=${CARGO_HOME:-$HERE/.cargo}
 # rustup's cargo proxy does not put rustc on PATH here.
@@ -48,6 +51,15 @@ flags() {
   esac
   case $1 in
     *-noinline) f+=' -C llvm-args=-funcspec-max-clones=0 -C llvm-args=-inline-threshold=0' ;;
+    # The noinline build, with the functions scripts/noinline-big.txt lists also kept apart: the
+    # ones it would still inline into a caller past ~300 ops.
+    *-noinline-big) f+=' -C llvm-args=-funcspec-max-clones=0 -C llvm-args=-inline-threshold=0'
+      while read -r fn; do f+=" -C llvm-args=-force-attribute=$fn:noinline"; done \
+        < <(grep -v -E '^(#|$)' "$HERE/scripts/noinline-big.txt") ;;
+    # No inlining at all: rustc's MIR inliner off, every function noinline in LLVM (alwaysinline
+    # removed first). Exploration only: far from Agave's build.
+    *-noinline-all) f+=' -C llvm-args=-funcspec-max-clones=0 -Z inline-mir=no'
+      f+=' -C llvm-args=-force-remove-attribute=alwaysinline -C llvm-args=-force-attribute=noinline' ;;
   esac
   echo "$f"
 }
@@ -59,7 +71,9 @@ build() {
   # The fat-LTO step runs in the wrapper's rustc; rerun it every time.
   cargo clean --manifest-path "$HERE/wrapper/Cargo.toml" --release --target-dir "$tgt" \
     -p agave-ed25519-verify
-  RUSTFLAGS=$(flags "$v") cargo rustc --manifest-path "$HERE/wrapper/Cargo.toml" \
+  # -Z inline-mir needs a nightly flag.
+  RUSTC_BOOTSTRAP=$([[ $v == *-noinline-all ]] && echo 1) RUSTFLAGS=$(flags "$v") \
+    cargo rustc --manifest-path "$HERE/wrapper/Cargo.toml" \
     --release --locked --offline --target-dir "$tgt" -- --emit=llvm-bc="$out/full.bc"
   "$LLVM_BIN/llvm-dis" "$out/full.bc" -o "$out/full.ll"
 
@@ -95,7 +109,7 @@ build() {
     rustc -vV | grep -E '^(rustc|LLVM)'
     "$LLVM_BIN/opt" --version | grep 'LLVM version'
     "$MLIR_BIN/mlir-opt" --version | grep 'LLVM version' | sed 's/^/mlir-opt /'
-    echo "extractor: firedancer $(git -C "$FIREDANCER" rev-parse --short HEAD)"
+    echo "extractor: scripts/mlir_extract_region.py (firedancer $(git -C "$FIREDANCER" rev-parse --short HEAD)'s, long names hashed)"
   } > "$out/versions.txt"
 }
 

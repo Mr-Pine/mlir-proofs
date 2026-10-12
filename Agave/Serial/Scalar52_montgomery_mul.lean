@@ -231,7 +231,7 @@ public theorem Scalar52_montgomery_mul.call_eq (out a b : Pointer) (s : GlobalSt
   -- `Scalar52::sub(&Scalar52([r0, r1, r2, r3, r4]), l)`
   step_pure
   step_store
-  iterate 4 
+  iterate 4
     step_pure
     step_store
   have hr_limbs : S.mem.LimbsFit r :=
