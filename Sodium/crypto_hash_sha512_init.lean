@@ -73,8 +73,8 @@ public theorem crypto_hash_sha512_init.call_eq (st : Pointer) (s : GlobalState) 
   congr 3
   generalize hx : S₀.mem.readAt st 1664 = X
   generalize hd : S₀.mem.definedAt st 1664 = D
-  have hm : S₀.mem = S₀.mem.storeDef st X D := by
-    rw [← hx, ← hd, MemoryState.storeDef_readAt_definedAt hroom₀.inBounds]
+  have hm : S₀.mem = S₀.mem.overlay st X D := by
+    rw [← hx, ← hd, MemoryState.overlay_readAt_definedAt hroom₀.inBounds]
   have e (m' : MemoryState) (x : BitVec 512) : m'.storeAt st x = m'.storeAt (st.add 0#64) x := by
     rw [Pointer.add_zero]
   rw [MemoryState.readHashState, hx, hd, MemoryState.storeHashState]
@@ -85,7 +85,7 @@ public theorem crypto_hash_sha512_init.call_eq (st : Pointer) (s : GlobalState) 
     |
       exact
         Pointer.not_uaddOverflow_of_hashState hsto
-          (by decide)) only [MemoryState.storeDef_storeAt_add]
+          (by decide)) only [MemoryState.overlay_storeAt_add]
   congr 1 <;>
     simp only [crypto_hash_sha512_init.spec, HashState.ofBits, HashState.bits, HashState.low,
       HashState.defs, Firedancer.Ref.sha512IV, spliceBits_eq, BitVec.toNat_ofNat,

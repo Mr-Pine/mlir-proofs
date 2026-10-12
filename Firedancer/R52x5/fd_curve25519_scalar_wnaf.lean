@@ -122,7 +122,7 @@ local macro "unpack_bit " j:term : tactic =>
       have hfb := fits_byte hfs hco hj
       step_pattern using runBodyFrom_unpackBitRun (jn := $j) (x := x)
       clear hb hfb
-      rw [storeDef_shorts hso hj (v := if x.getLsbD $j then 1 else 0) rfl] at hS))
+      rw [overlay_shorts hso hj (v := if x.getLsbD $j then 1 else 0) rfl] at hS))
 
 set_option hygiene false in
 /-- `i + k`, a later bit of the unrolled iteration at `i`. -/
@@ -252,7 +252,7 @@ abbrev withT (slides : Pointer) (t : Vector Int 256) (S : GlobalState) : GlobalS
 /-- `_t` stored at `slides` over `S`, defined where `d` is: partly written by the unpack loop. -/
 abbrev withTD (slides : Pointer) (t : Vector Int 256) (d : BitVec (16 * 256)) (S : GlobalState) :
     GlobalState :=
-  { S with mem := S.mem.storeDef slides (shorts t) d }
+  { S with mem := S.mem.overlay slides (shorts t) d }
 
 /-- `d` with the `short`s `i … i + n - 1` defined, one at a time as the unpack loop stores them. -/
 def defFrom (d : BitVec (16 * 256)) (i : Nat) : Nat → BitVec (16 * 256)
@@ -330,16 +330,16 @@ public theorem fd_curve25519_scalar_wnaf.readAt_shorts {m : MemoryState} {p : Po
     BitVec.extractLsb'_packLanes _ _ hj, Vector.getElem_map]
 
 /-- A store into `_t[j]` of a partly defined `_t`: the whole `_t`, `_t[j]` set and defined. -/
-theorem storeDef_storeAt_lane {m : MemoryState} {p : Pointer} {u d : BitVec (16 * 256)}
+theorem overlay_storeAt_lane {m : MemoryState} {p : Pointer} {u d : BitVec (16 * 256)}
     (hso : ¬p.offset.uaddOverflow 512#64) (hj : j < 256) (y : BitVec 16) :
-    (m.storeDef p u d).storeAt (p.add (BitVec.ofNat 64 (2 * j))) y =
-      m.storeDef p (Memory.spliceBits u (16 * j) y)
+    (m.overlay p u d).storeAt (p.add (BitVec.ofNat 64 (2 * j))) y =
+      m.overlay p (Memory.spliceBits u (16 * j) y)
         (Memory.spliceBits d (16 * j) (BitVec.allOnes 16)) := by
   obtain ⟨h2j, hov⟩ := lane_offset hso hj
   have ho : (p.add (BitVec.ofNat 64 (2 * j))).offsetInBits = p.offsetInBits + 16 * j := by
     rw [Pointer.offsetInBits_add hov, h2j]
     omega
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -358,7 +358,7 @@ theorem storeAt_storeAt_lane {m : MemoryState} {p : Pointer} {u : BitVec (16 * 2
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  rw [MemoryState.storeAt_eq_storeDef (p := p), storeDef_storeAt_lane hso hj, hones]
+  rw [← MemoryState.overlay_allOnes (p := p), overlay_storeAt_lane hso hj, hones]
   rfl
 
 /-- A store of `_t[j]` into a stored `_t`: `_t[j]` set. -/
@@ -371,12 +371,12 @@ theorem storeAt_shorts {m : MemoryState} {p : Pointer} {t : Vector Int 256}
   simp only [shorts, Vector.map_set]
 
 /-- A store of `_t[j]` into a partly defined `_t`: `_t[j]` set and defined. -/
-theorem storeDef_shorts {m : MemoryState} {p : Pointer} {t : Vector Int 256} {d : BitVec (16 * 256)}
+theorem overlay_shorts {m : MemoryState} {p : Pointer} {t : Vector Int 256} {d : BitVec (16 * 256)}
     (hso : ¬p.offset.uaddOverflow 512#64) (hj : j < 256) {y : BitVec 16} {v : Int}
     (hy : y = BitVec.ofInt 16 v) :
-    (m.storeDef p (shorts t) d).storeAt (p.add (BitVec.ofNat 64 (2 * j))) y =
-      m.storeDef p (shorts (t.set j v)) (Memory.spliceBits d (16 * j) (BitVec.allOnes 16)) := by
-  rw [storeDef_storeAt_lane hso hj, hy, spliceBits_packLanes hj]
+    (m.overlay p (shorts t) d).storeAt (p.add (BitVec.ofNat 64 (2 * j))) y =
+      m.overlay p (shorts (t.set j v)) (Memory.spliceBits d (16 * j) (BitVec.allOnes 16)) := by
+  rw [overlay_storeAt_lane hso hj, hy, spliceBits_packLanes hj]
   simp only [shorts, Vector.map_set]
 
 /-! ### Find first non-zero -/
@@ -1355,9 +1355,9 @@ theorem unpackFrom_five {t : Vector Int 256} (hi : i + 5 ≤ 256) :
 theorem readAt_byte_store {m : MemoryState} {slides scalar : Pointer} {u d : BitVec w}
     (hsep : slides.id ≠ scalar.id) (hfs : Fits m scalar (8 * 32))
     (hco : ¬scalar.offset.uaddOverflow 32#64) (hx : m.readAt scalar 256 = x) (hj : j < 256) :
-    (m.storeDef slides u d).readAt (scalar.add (BitVec.ofNat 64 (j / 8))) 8 =
+    (m.overlay slides u d).readAt (scalar.add (BitVec.ofNat 64 (j / 8))) 8 =
       x.extractLsb' (j / 8 * 8) 8 := by
-  rw [MemoryState.readAt_storeDef_disjoint (Range.disjoint_of_id_ne (by simpa using hsep)),
+  rw [MemoryState.readAt_overlay_disjoint (Range.disjoint_of_id_ne (by simpa using hsep)),
     readAt_byte hfs hco hx hj]
 
 /-- `_t[j] = ((short)_s[j>>3] >> (j&7)) & 1;` as compiled: `(short)j` into `a`, the byte index
@@ -1474,7 +1474,7 @@ theorem fd_curve25519_scalar_wnaf.unpack_loop (slides scalar : Pointer) (w : Bit
     have hfb := fits_byte hfs hco hj
     step_pattern using runBodyFrom_unpackBitRun (jn := i) (x := x)
     clear hb hfb
-    rw [storeDef_shorts hso hj (v := if x.getLsbD i then 1 else 0) rfl] at hS
+    rw [overlay_shorts hso hj (v := if x.getLsbD i then 1 else 0) rfl] at hS
     next_bit 1
     next_bit 2
     next_bit 3
@@ -1550,7 +1550,7 @@ theorem shorts_tOf {m : MemoryState} {p : Pointer} : shorts (tOf m p) = m.readAt
 /-- `_t`'s old bytes, stored as `tOf` with their defined bits: the same state. -/
 theorem withTD_tOf {S : GlobalState} {slides : Pointer} (h : InBounds S.mem slides (8 * 512)) :
     withTD slides (tOf S.mem slides) (S.mem.definedAt slides (16 * 256)) S = S := by
-  rw [withTD, shorts_tOf, MemoryState.storeDef_readAt_definedAt h]
+  rw [withTD, shorts_tOf, MemoryState.overlay_readAt_definedAt h]
 
 /-! ### `max` -/
 
@@ -1642,8 +1642,8 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   -- `_t[255] = 0;`
   step_pure
   step_store
-  rw [storeDef_shorts hso (j := 255) (by decide) (y := 0#16) (v := 0) (by decide),
-    unpackFrom_set_255, defFrom_255, ← MemoryState.storeAt_eq_storeDef] at hS
+  rw [overlay_shorts hso (j := 255) (by decide) (y := 0#16) (v := 0) (by decide),
+    unpackFrom_set_255, defFrom_255, MemoryState.overlay_allOnes] at hS
   finish_block
   -- "find first non-zero t"
   step_loop using nonzero _ 32 0

@@ -52,8 +52,8 @@ public theorem BCM_sha512_init.call_eq (c : Pointer) (s : GlobalState) (hwf : s.
   congr 3
   generalize hx : S₀.mem.readAt c 1664 = X
   generalize hd : S₀.mem.definedAt c 1664 = D
-  have hm : S₀.mem = S₀.mem.storeDef c X D := by
-    rw [← hx, ← hd, MemoryState.storeDef_readAt_definedAt hroom₀.inBounds]
+  have hm : S₀.mem = S₀.mem.overlay c X D := by
+    rw [← hx, ← hd, MemoryState.overlay_readAt_definedAt hroom₀.inBounds]
   have e (m' : MemoryState) (x : BitVec 64) : m'.storeAt c x = m'.storeAt (c.add 0#64) x := by
     rw [Pointer.add_zero]
   rw [MemoryState.readShaCtx, hx, hd, MemoryState.storeShaCtx]
@@ -61,7 +61,7 @@ public theorem BCM_sha512_init.call_eq (c : Pointer) (s : GlobalState) (hwf : s.
   simp (disch :=
     first
     | decide
-    | exact Pointer.not_uaddOverflow_of_ctx hco (by decide)) only [MemoryState.storeDef_storeAt_add]
+    | exact Pointer.not_uaddOverflow_of_ctx hco (by decide)) only [MemoryState.overlay_storeAt_add]
   congr 1 <;>
     simp only [BCM_sha512_init.spec, Sha512Ctx.ofBits, Sha512Ctx.bits, Sha512Ctx.low,
       Sha512Ctx.defs, Firedancer.Ref.sha512IV, spliceBits_eq, BitVec.toNat_ofNat,

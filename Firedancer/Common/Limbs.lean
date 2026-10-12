@@ -75,7 +75,7 @@ open Memory in
 /-- Storing limbs twice at the same place keeps the second: the limbs don't overlap. -/
 theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer} :
     (m.storeLimbs p l).storeLimbs p l' = m.storeLimbs p l' := by
-  simp only [MemoryState.storeLimbs, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk

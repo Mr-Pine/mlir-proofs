@@ -13,7 +13,8 @@ private def c : Pointer :=
 private def state : GlobalState :=
   ⟨⟨2⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨208, (0xaa#8).replicate 208, (BitVec.allOnes 1152).setWidth 1664, true⟩)]⟩⟩
+        [(⟨1⟩, ⟨208, (0xaa#8).replicate 208, (BitVec.allOnes 1152).setWidth 1664, true,
+          fun _ => none⟩)]⟩⟩
 
 /-- The struct's bytes and their definedness after `SHA512_Init`, with its return value. -/
 private def run : Option (PoisonOr (BitVec 32) × BitVec 1664 × BitVec 1664) :=

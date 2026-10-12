@@ -23,7 +23,7 @@ theorem MemoryState.storeAt_of_width_zero {m : MemoryState} {p : Pointer} {x : B
       first
       | rfl
       | omega
-  simp only [MemoryState.storeAt, MemoryState.storeDef, MemoryState.modifyBlock, hs]
+  simp only [MemoryState.storeAt, MemoryState.modifyBlock, hs]
   congr 1
   apply Std.ExtHashMap.ext_getElem?
   intro k

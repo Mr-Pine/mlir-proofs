@@ -435,7 +435,7 @@ theorem MemoryState.readP3_storeWords8_of_id_ne {m : MemoryState} {p q : Pointer
 /-- The hash object stored in the frame is gone once it is erased. -/
 theorem MemoryState.eraseFrom_storeShaCtx_of_le {m : MemoryState} {c : Pointer} {v : Sha512Ctx}
     (h : n ≤ c.id.id) : (m.storeShaCtx c v).eraseFrom n = m.eraseFrom n :=
-  MemoryState.eraseFrom_storeDef_of_le h
+  MemoryState.eraseFrom_overlay_of_le h
 
 attribute [local mlir_erase high] MemoryState.eraseFrom_storeShaCtx_of_le
   MemoryState.eraseFrom_storeWords8_of_le

@@ -23,8 +23,7 @@ theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {x : Bit
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (spliceBits x (off.toNat * 8) y) := by
   have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
     simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits, ho, MemoryBlock.mk.injEq, true_and,

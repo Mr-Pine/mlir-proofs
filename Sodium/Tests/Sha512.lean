@@ -35,9 +35,11 @@ private def bitsOf (l : List (BitVec 8)) : BitVec (8 * l.length) :=
 private def state (n : Nat) : GlobalState :=
   ⟨⟨4⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨208, (0xaa#8).replicate 208, (BitVec.allOnes 640).setWidth 1664, true⟩),
-          (⟨2⟩, ⟨n, (bitsOf (msg n)).cast (by simp [msg]), BitVec.allOnes (8 * n), true⟩),
-          (⟨3⟩, ⟨64, 0#512, 0#512, true⟩)]⟩⟩
+        [(⟨1⟩, ⟨208, (0xaa#8).replicate 208, (BitVec.allOnes 640).setWidth 1664, true,
+            fun _ => none⟩),
+          (⟨2⟩, ⟨n, (bitsOf (msg n)).cast (by simp [msg]), BitVec.allOnes (8 * n), true,
+            fun _ => none⟩),
+          (⟨3⟩, ⟨64, 0#512, 0#512, true, fun _ => none⟩)]⟩⟩
 
 /-- `init`, `update` with the `n` bytes in pieces of `lens`, `final`: the digest's bytes. -/
 private def run (n : Nat) (lens : List Nat) : Option (List (BitVec 8)) := do

@@ -42,8 +42,7 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
@@ -1276,16 +1275,16 @@ abbrev lowMask (j : Nat) : BitVec 2048 :=
 /-- `r` after the bit loop's first `j` stores over `Sb`: the bytes of `B` below `j`, `Sb`'s above,
 defined as stored. -/
 abbrev fill (Sb : GlobalState) (r : Pointer) (B : BitVec 2048) (j : Nat) : MemoryState :=
-  Sb.mem.storeDef r (B &&& lowMask j ||| Sb.mem.readAt r 2048 &&& ~~~lowMask j)
+  Sb.mem.overlay r (B &&& lowMask j ||| Sb.mem.readAt r 2048 &&& ~~~lowMask j)
     (lowMask j ||| Sb.mem.definedAt r 2048 &&& ~~~lowMask j)
 
 /-- A store inside a range stored with definedness: one such store, both spliced. -/
-theorem storeDef_storeAt_add {m : MemoryState} {p : Pointer} {u d : BitVec wu} {off : BitVec 64}
+theorem overlay_storeAt_add {m : MemoryState} {p : Pointer} {u d : BitVec wu} {off : BitVec 64}
     (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
-    (m.storeDef p u d).storeAt (p.add off) y =
-      m.storeDef p (Memory.spliceBits u (off.toNat * 8) y)
+    (m.overlay p u d).storeAt (p.add off) y =
+      m.overlay p (Memory.spliceBits u (off.toNat * 8) y)
         (Memory.spliceBits d (off.toNat * 8) (BitVec.allOnes wy)) := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -1300,7 +1299,7 @@ theorem fill_zero {Sb : GlobalState} {r : Pointer} (hr : InBounds Sb.mem r 2048)
     intro k hk
     simp [BitVec.getLsbD_ushiftRight]
   simp only [fill, h0, BitVec.and_zero, BitVec.zero_or, BitVec.not_zero, BitVec.and_allOnes]
-  exact MemoryState.storeDef_readAt_definedAt hr
+  exact MemoryState.overlay_readAt_definedAt hr
 
 /-- After it: `B` stored. -/
 theorem fill_full {Sb : GlobalState} {r : Pointer} (B : BitVec 2048) :
@@ -1315,7 +1314,7 @@ theorem fill_step {Sb : GlobalState} {r : Pointer} {B : BitVec 2048}
     (fill Sb r B j).storeAt (r.add (BitVec.ofNat 64 j)) (B.extractLsb' (j * 8) 8) =
       fill Sb r B (j + 1) := by
   obtain ⟨h8, hov'⟩ := byte_offset hov hj
-  rw [storeDef_storeAt_add hov'
+  rw [overlay_storeAt_add hov'
       (by
         rw [h8]; omega),
     h8]

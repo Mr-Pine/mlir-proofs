@@ -99,7 +99,7 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk

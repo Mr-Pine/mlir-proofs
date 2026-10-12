@@ -33,7 +33,7 @@ open Memory in
 /-- A second store to the same range overwrites the first. -/
 theorem MemoryState.storeAt_storeAt_self {m : MemoryState} {p : Pointer} {x y : BitVec w} :
     (m.storeAt p x).storeAt p y = m.storeAt p y := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
   simp only [Function.comp_apply, spliceBits_spliceBits_self]
@@ -58,7 +58,7 @@ theorem MemoryState.storeAt_storeAt_append {m : MemoryState} {p : Pointer} {x : 
     intro i hi
     simp only [BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
     split <;> simp <;> omega
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk

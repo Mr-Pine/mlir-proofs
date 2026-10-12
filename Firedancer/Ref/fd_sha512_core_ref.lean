@@ -200,7 +200,7 @@ open Memory in
 /-- Storing eight words twice at the same place keeps the second. -/
 theorem MemoryState.storeWords8_storeWords8_self {m : MemoryState} {p : Pointer} :
     (m.storeWords8 p v).storeWords8 p v' = m.storeWords8 p v' := by
-  simp only [MemoryState.storeWords8, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeWords8, MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -1578,8 +1578,6 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
     step_loop using
       blocks_loop st data X Kp n n.toNat _ _ hX_off hKp_off hdo hXK hdata_ne_X.symm hst_ne_Kp.symm
         hst_ne_X hsep (n.toNat - 1) 0 (S₀.mem.readWords8 st)
-    · rw [← hKp, ← hS]
-      exact hread_Kp
     block_init
     finish_block
     rfl

@@ -128,8 +128,8 @@ attribute [mlir_read] MemoryState.definedAt_storeDef_disjoint
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.definedAt_storeAt_disjoint {v w : Nat} {m : MemoryState}
     {p q : Pointer} (h : (Range.of p v).Disjoint (Range.of q w)) (x : BitVec v) :
-    (m.storeAt p x).definedAt q w = m.definedAt q w :=
-  MemoryState.definedAt_storeDef_disjoint h x _
+    (m.storeAt p x).definedAt q w = m.definedAt q w := by
+  rw [MemoryState.storeAt_eq_storeDef]; exact MemoryState.definedAt_storeDef_disjoint h x _
 
 /-- A point's stores leave other blocks alone. -/
 theorem getElem?_storeLimbs_ne {m : MemoryState} {p q : Pointer} (h : q.id ≠ p.id) :

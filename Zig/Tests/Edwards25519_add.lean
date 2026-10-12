@@ -31,7 +31,8 @@ private def pt2 : ZPt :=
 /-- `out`'s point and `is_base` after `add` of `P`, `Q`, or `none` for UB / out of fuel. -/
 private def out (P Q : ZPt) : Option (List (BitVec 64) × BitVec 1) :=
   let s : GlobalState :=
-    ⟨⟨4⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨168, 0, 0, true⟩), (⟨2⟩, ptBlock P), (⟨3⟩, ptBlock Q)]⟩⟩
+    ⟨⟨4⟩, ⟨Std.ExtHashMap.ofList
+      [(⟨1⟩, ⟨168, 0, 0, true, fun _ => none⟩), (⟨2⟩, ptBlock P), (⟨3⟩, ptBlock Q)]⟩⟩
   match
     Edwards25519_add.eval 1000
       (Edwards25519_add.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩) (.value ⟨⟨3⟩, 0⟩)) s with

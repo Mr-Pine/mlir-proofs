@@ -94,7 +94,7 @@ theorem MemoryState.storeAt_pair {m : MemoryState} {p : Pointer} (hov : ¬p.offs
     (x : BitVec 128) :
     m.storeAt p x =
       (m.storeAt p (x.extractLsb' 0 64)).storeAt (p.add 8#64) (x.extractLsb' 64 64) := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -162,7 +162,7 @@ theorem MemoryState.LimbsFit.extractVecElem_one_hi {m : MemoryState} (h : m.Limb
 theorem MemoryState.storeAt_append {m : MemoryState} {p : Pointer} {off : BitVec 64} {x : BitVec v}
     {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     m.storeAt p (y ++ x) = (m.storeAt p x).storeAt (p.add off) y := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -251,7 +251,7 @@ theorem MemoryState.storeLimbs_storeAt_self {m : MemoryState} {p : Pointer}
         | 2 => l 2
         | 3 => l 3
         | 4 => l 4 := by
-  simp only [MemoryState.storeLimbs, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk

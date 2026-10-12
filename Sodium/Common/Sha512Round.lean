@@ -132,7 +132,7 @@ theorem readAt_storeWords8_lane {m : MemoryState} {p : Pointer} (hm : InBounds m
     rw [Nat.mod_eq_of_lt (by omega)]; omega
   obtain ⟨blk, hblk, hsz⟩ := hm
   simp only [MemoryBlock.lengthInBits] at hsz
-  simp only [MemoryState.storeWords8, MemoryState.readAt, MemoryState.storeAt, MemoryState.storeDef,
+  simp only [MemoryState.storeWords8, MemoryState.readAt, MemoryState.storeAt,
     Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self, MemoryState.getElem?_modifyBlock_self,
     hblk, Option.map_some, Function.comp_apply]
   apply BitVec.eq_of_getLsbD_eq
@@ -153,7 +153,7 @@ theorem storeWords8_storeAt_lane {m : MemoryState} {p : Pointer} (hp : p.offset.
     simp only [Pointer.offsetInBits, Pointer.add, BitVec.toNat_add]
     rw [Nat.mod_eq_of_lt (by omega)]; omega
   interval_cases k <;>
-    · simp only [MemoryState.storeWords8, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+    · simp only [MemoryState.storeWords8, MemoryState.storeAt, Pointer.add_id,
         MemoryState.modifyBlock_modifyBlock_self]
       congr 1
       funext blk

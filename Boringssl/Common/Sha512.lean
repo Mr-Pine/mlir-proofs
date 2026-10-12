@@ -19,15 +19,15 @@ open Memory
 /-! ### Masked stores -/
 
 /-- A store inside a masked store's range: one masked store, the new bits spliced in, defined. -/
-theorem MemoryState.storeDef_storeAt_add {m : MemoryState} {p : Pointer} {x d : BitVec v}
+theorem MemoryState.overlay_storeAt_add {m : MemoryState} {p : Pointer} {x d : BitVec v}
     {y : BitVec w} {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off)
     (hw : off.toNat * 8 + w ≤ v) :
-    (m.storeDef p x d).storeAt (p.add off) y =
-      m.storeDef p (spliceBits x (off.toNat * 8) y)
+    (m.overlay p x d).storeAt (p.add off) y =
+      m.overlay p (spliceBits x (off.toNat * 8) y)
         (spliceBits d (off.toNat * 8) (BitVec.allOnes w)) := by
   have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
     simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -84,7 +84,7 @@ def MemoryState.readShaCtx (m : MemoryState) (c : Pointer) : Sha512Ctx :=
 
 /-- Store a `SHA512_CTX` at `c`, `p` defined where `pDef` says. -/
 def MemoryState.storeShaCtx (m : MemoryState) (c : Pointer) (v : Sha512Ctx) : MemoryState :=
-  m.storeDef c v.bits v.defs
+  m.overlay c v.bits v.defs
 
 /-- Room for the struct at `c`, its fields but `p` known, and its offsets do not wrap. -/
 abbrev MemoryState.ShaCtxFit (m : MemoryState) (c : Pointer) : Prop :=
@@ -117,7 +117,7 @@ theorem MemoryState.storeShaCtx_storeAt {m : MemoryState} {c : Pointer} {v v' : 
     (hd : spliceBits v.defs (off.toNat * 8) (BitVec.allOnes w) = v'.defs) :
     (m.storeShaCtx c v).storeAt (c.add off) x = m.storeShaCtx c v' := by
   rw [MemoryState.storeShaCtx,
-    MemoryState.storeDef_storeAt_add (Pointer.not_uaddOverflow_of_ctx hc (by omega)) hw, hv, hd]
+    MemoryState.overlay_storeAt_add (Pointer.not_uaddOverflow_of_ctx hc (by omega)) hw, hv, hd]
   rfl
 
 /-- A read inside the struct: its bits. -/
@@ -125,12 +125,12 @@ theorem MemoryState.readAt_storeShaCtx {m : MemoryState} {c : Pointer} {v : Sha5
     {off : BitVec 64} (hm : InBounds m c 1664) (hc : ¬c.offset.uaddOverflow 208#64)
     (hw : off.toNat * 8 + w ≤ 1664) :
     (m.storeShaCtx c v).readAt (c.add off) w = v.bits.extractLsb' (off.toNat * 8) w :=
-  MemoryState.readAt_storeDef_add hm (Pointer.not_uaddOverflow_of_ctx hc (by omega)) hw _ _
+  MemoryState.readAt_overlay_add hm (Pointer.not_uaddOverflow_of_ctx hc (by omega)) hw _ _
 
 theorem MemoryState.readShaCtx_storeShaCtx_self {m : MemoryState} (hm : InBounds m c 1664) :
     (m.storeShaCtx c v).readShaCtx c = v := by
-  rw [MemoryState.readShaCtx, MemoryState.storeShaCtx, MemoryState.readAt_storeDef_self hm,
-    MemoryState.definedAt_storeDef_self hm, Sha512Ctx.ofBits_bits_defs]
+  rw [MemoryState.readShaCtx, MemoryState.storeShaCtx, MemoryState.readAt_overlay_self hm,
+    MemoryState.definedAt_overlay_self hm, Sha512Ctx.ofBits_bits_defs]
 
 /-- Storing the struct that is there changes nothing. -/
 theorem MemoryState.storeShaCtx_readShaCtx_self {m : MemoryState} (h : m.ShaCtxFit c) :
@@ -151,7 +151,7 @@ theorem MemoryState.storeShaCtx_readShaCtx_self {m : MemoryState} (h : m.ShaCtxF
     generalize m.definedAt c 1664 = x
     intro hd
     bv_decide
-  rw [MemoryState.storeShaCtx, hb, hdd, MemoryState.storeDef_readAt_definedAt h.2.1.inBounds]
+  rw [MemoryState.storeShaCtx, hb, hdd, MemoryState.overlay_readAt_definedAt h.2.1.inBounds]
 
 /-- The state words of a stored struct. -/
 theorem MemoryState.readWords8_storeShaCtx {m : MemoryState} (hm : InBounds m c 1664)
@@ -189,7 +189,7 @@ theorem Fits.storeShaCtx_p {m : MemoryState} (hm : Room m c 1664)
       Bool.true_and, Nat.zero_add]
     rw [ite_eq_right (by omega), Nat.add_sub_cancel_left]
   exact
-    Fits.storeDef_of_mask hm (Pointer.not_uaddOverflow_of_ctx hc (by decide))
+    Fits.overlay_of_mask hm (Pointer.not_uaddOverflow_of_ctx hc (by decide))
       (by
         simp; omega)
       (e.trans hd)
@@ -337,7 +337,7 @@ theorem MemoryState.storeShaCtx_storeWords8 (hc : ¬c.offset.uaddOverflow 208#64
   simp (disch :=
     first
     | decide
-    | exact Pointer.not_uaddOverflow_of_ctx hc (by decide)) only [MemoryState.storeDef_storeAt_add]
+    | exact Pointer.not_uaddOverflow_of_ctx hc (by decide)) only [MemoryState.overlay_storeAt_add]
   congr 1 <;> splice_bits
 
 @[simp]
@@ -360,7 +360,7 @@ theorem Sha512Ctx.low_lo (v : Sha512Ctx) : v.low.extractLsb' 576 64 = v.lo := by
 @[mlir_read]
 theorem MemoryState.readAt_storeShaCtx_low (hm : InBounds m c 1664) :
     (m.storeShaCtx c v).readAt c 640 = v.low := by
-  rw [MemoryState.storeShaCtx, MemoryState.readAt_storeDef_le hm (by decide), Sha512Ctx.bits]
+  rw [MemoryState.storeShaCtx, MemoryState.readAt_overlay_le hm (by decide), Sha512Ctx.bits]
   bv_decide
 
 @[mlir_read]
@@ -447,7 +447,7 @@ theorem MemoryState.ShaCtxFit.storeWords8 {m : MemoryState} (h : m.ShaCtxFit c) 
 @[mlir_fresh, mlir_mem]
 theorem MemoryState.ShaCtxFit.storeShaCtx_self {m : MemoryState} (h : Room m c 1664)
     (hco : ¬c.offset.uaddOverflow 208#64) : (m.storeShaCtx c v).ShaCtxFit c := by
-  refine ⟨hco, Room.storeDef h, Fits.storeDef_of_mask_self h (by decide) ?_⟩
+  refine ⟨hco, Room.overlay h, Fits.overlay_of_mask_self h (by decide) ?_⟩
   simp only [Sha512Ctx.defs]
   bv_decide
 
@@ -461,7 +461,7 @@ theorem MemoryState.ShaCtxFit.storeShaCtx {m : MemoryState} (h : m.ShaCtxFit c) 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.ShaCtxFit.storeShaCtx_of_id_ne {m : MemoryState} (h : m.ShaCtxFit c)
     (hne : c.id ≠ c'.id) : (m.storeShaCtx c' v).ShaCtxFit c :=
-  ⟨h.1, Room.storeDef h.2.1, Fits.storeDef_of_disjoint h.2.2 (Range.disjoint_of_id_ne hne.symm)⟩
+  ⟨h.1, Room.overlay h.2.1, Fits.overlay_of_disjoint h.2.2 (Range.disjoint_of_id_ne hne.symm)⟩
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.ShaCtxFit.alloca {s : GlobalState} (hwf : s.WF) (h : s.mem.ShaCtxFit c) :
@@ -487,16 +487,16 @@ theorem MemoryState.ShaCtxFit.lifetimeEnd {m : MemoryState} (h : m.ShaCtxFit c)
 @[mlir_transport]
 theorem Fits.storeShaCtx {m : MemoryState} (h : Fits m p w) (hne : p.id ≠ c.id) :
     Fits (m.storeShaCtx c v) p w :=
-  Fits.storeDef_of_disjoint h (Range.disjoint_of_id_ne hne.symm)
+  Fits.overlay_of_disjoint h (Range.disjoint_of_id_ne hne.symm)
 
 /-- `storeShaCtx` keeps every block, its length and lifetime. -/
 @[simp]
 theorem Room.storeShaCtx_iff {m : MemoryState} : Room (m.storeShaCtx c v) p w ↔ Room m p w :=
-  Room.storeDef_iff
+  Room.overlay_iff
 
 @[mlir_transport]
 theorem Room.storeShaCtx {m : MemoryState} (h : Room m p w) : Room (m.storeShaCtx c v) p w :=
-  Room.storeDef h
+  Room.overlay h
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Words8Room.storeShaCtx {m : MemoryState} (h : m.Words8Room p) :
@@ -514,19 +514,19 @@ theorem MemoryState.Words8Fit.storeShaCtx {m : MemoryState} (h : m.Words8Fit p)
 @[mlir_transport]
 theorem InBounds.storeShaCtx {m : MemoryState} (h : InBounds m p w) :
     InBounds (m.storeShaCtx c v) p w :=
-  InBounds.storeDef h
+  InBounds.overlay h
 
 @[mlir_transport]
 theorem GlobalState.WF.storeShaCtx {s : GlobalState} (h : s.WF) :
     ({ s with mem := s.mem.storeShaCtx c v } : GlobalState).WF :=
-  h.storeDef
+  h.overlay
 
 /-- `storeShaCtx` keeps the set of blocks, so `WF` does not depend on it. -/
 @[simp, mlir_mem]
 theorem GlobalState.WF_storeShaCtx {s : GlobalState} :
     ({ s with mem := m.storeShaCtx c v } : GlobalState).WF ↔
       ({ s with mem := m } : GlobalState).WF :=
-  GlobalState.WF_storeDef
+  GlobalState.WF_overlay
 
 /-- A callee's result state: blocks counted, the struct stored. -/
 @[mlir_transport]
@@ -544,13 +544,13 @@ theorem GlobalState.WF.add_blocks_storeShaCtx_storeWords8 {s : GlobalState} (h :
 @[mlir_read]
 theorem MemoryState.readAt_storeShaCtx_of_id_ne {m : MemoryState} (h : q.id ≠ c.id) :
     (m.storeShaCtx c v).readAt q w = m.readAt q w :=
-  MemoryState.readAt_storeDef_disjoint (Range.disjoint_of_id_ne h.symm) _ _
+  MemoryState.readAt_overlay_disjoint (Range.disjoint_of_id_ne h.symm) _ _
 
 /-- Erasing a frame commutes with storing the struct. -/
 @[mlir_frame, mlir_erase]
 theorem MemoryState.eraseFrom_storeShaCtx {m : MemoryState} :
     (m.storeShaCtx c v).eraseFrom n = (m.eraseFrom n).storeShaCtx c v :=
-  MemoryState.eraseFrom_storeDef
+  MemoryState.eraseFrom_overlay
 
 end
 

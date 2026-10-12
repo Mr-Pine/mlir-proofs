@@ -136,7 +136,7 @@ public theorem _root_.MLIR.MemoryState.storeLimbs_eq_storeAt {m : MemoryState} {
   have o (k : Nat) (hk : k ≤ 32) :
     (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + 8 * k :=
     hp ▸ Pointer.offsetInBits_add_limb h hk
-  simp only [MemoryState.storeLimbs, MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk

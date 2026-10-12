@@ -352,9 +352,7 @@ theorem Fe.fromBytes.spec_lt (b : BitVec 256) : Fe.Lt (Fe.fromBytes.spec b) (2 ^
   intro i; fin_cases i <;> exact mask_lt _
 
 -- 39 slots and globals, 45 calls, 38 lifetime markers in one block, each step carrying the facts
-set_option maxHeartbeats 4000000 in
--- the invalid-encoding global's 1408-bit literal
-set_option exponentiation.threshold 1408 in
+set_option maxHeartbeats 4500000 in
 /-- `Edwards25519.fromBytes` stores `spec` of the 32 bytes at `buf` at `out` (`storeFromBytes`):
 the error union, 176 bytes. `buf` is read before `out` is written, so they may alias. -/
 public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalState) (hwf : s.WF)

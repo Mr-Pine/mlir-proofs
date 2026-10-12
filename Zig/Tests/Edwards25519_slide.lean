@@ -8,7 +8,7 @@ namespace MLIR.Zig
 
 /-- `out` undefined, the scalar's 32 bytes at `sp`. -/
 private def state (x : BitVec 256) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, 0, 0, true⟩), (⟨2⟩, .ofBytes 32 x)]⟩⟩
+  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, 0, 0, true, fun _ => none⟩), (⟨2⟩, .ofBytes 32 x)]⟩⟩
 
 /-- The 64 bytes at `out` after the call, or `none` for UB / out of fuel. -/
 private def out (x : BitVec 256) : Option (BitVec 512) :=

@@ -1052,7 +1052,7 @@ theorem MemoryState.storeAt_swap {m : MemoryState} {p q : Pointer} {x : BitVec v
     (m.storeAt p x).storeAt q y = (m.storeAt q y).storeAt p x := by
   by_cases hid : p.id = q.id
   · simp only [Range.Disjoint, Range.of, hid, ne_eq, not_true_eq_false, false_or] at h
-    simp only [MemoryState.storeAt, MemoryState.storeDef, hid,
+    simp only [MemoryState.storeAt, hid,
       MemoryState.modifyBlock_modifyBlock_self]
     congr 1
     funext blk

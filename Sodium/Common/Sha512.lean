@@ -71,7 +71,7 @@ def MemoryState.readHashState (m : MemoryState) (c : Pointer) : HashState :=
 
 /-- Store a `crypto_hash_sha512_state` at `c`, `buf` defined where `bufDef` says. -/
 def MemoryState.storeHashState (m : MemoryState) (c : Pointer) (v : HashState) : MemoryState :=
-  m.storeDef c v.bits v.defs
+  m.overlay c v.bits v.defs
 
 /-- Room for the struct at `c`, its fields but `buf` known, and its offsets do not wrap. -/
 abbrev MemoryState.HashStateFit (m : MemoryState) (c : Pointer) : Prop :=
@@ -211,7 +211,7 @@ theorem MemoryState.storeHashState_storeAt {v' : HashState} {off : BitVec 64} {x
     (hd : spliceBits v.defs (off.toNat * 8) (BitVec.allOnes w) = v'.defs) :
     (m.storeHashState c v).storeAt (c.add off) x = m.storeHashState c v' := by
   rw [MemoryState.storeHashState,
-    MemoryState.storeDef_storeAt_add (Pointer.not_uaddOverflow_of_hashState hc (by omega)) hw, hv,
+    MemoryState.overlay_storeAt_add (Pointer.not_uaddOverflow_of_hashState hc (by omega)) hw, hv,
     hd]
   rfl
 
@@ -219,12 +219,12 @@ theorem MemoryState.storeHashState_storeAt {v' : HashState} {off : BitVec 64} {x
 theorem MemoryState.readAt_storeHashState {off : BitVec 64} (hm : InBounds m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) (hw : off.toNat * 8 + w ≤ 1664) :
     (m.storeHashState c v).readAt (c.add off) w = v.bits.extractLsb' (off.toNat * 8) w :=
-  MemoryState.readAt_storeDef_add hm (Pointer.not_uaddOverflow_of_hashState hc (by omega)) hw _ _
+  MemoryState.readAt_overlay_add hm (Pointer.not_uaddOverflow_of_hashState hc (by omega)) hw _ _
 
 theorem MemoryState.readHashState_storeHashState_self (hm : InBounds m c 1664) :
     (m.storeHashState c v).readHashState c = v := by
-  rw [MemoryState.readHashState, MemoryState.storeHashState, MemoryState.readAt_storeDef_self hm,
-    MemoryState.definedAt_storeDef_self hm, HashState.ofBits_bits_defs]
+  rw [MemoryState.readHashState, MemoryState.storeHashState, MemoryState.readAt_overlay_self hm,
+    MemoryState.definedAt_overlay_self hm, HashState.ofBits_bits_defs]
 
 /-- Storing the struct that is there changes nothing. -/
 theorem MemoryState.storeHashState_readHashState_self (h : m.HashStateFit c) :
@@ -245,7 +245,7 @@ theorem MemoryState.storeHashState_readHashState_self (h : m.HashStateFit c) :
     generalize m.definedAt c 1664 = x
     intro hd
     bv_decide
-  rw [MemoryState.storeHashState, hb, hdd, MemoryState.storeDef_readAt_definedAt h.2.1.inBounds]
+  rw [MemoryState.storeHashState, hb, hdd, MemoryState.overlay_readAt_definedAt h.2.1.inBounds]
 
 /-- The state words of a stored struct. -/
 theorem MemoryState.readWords8_storeHashState (hm : InBounds m c 1664)
@@ -275,7 +275,7 @@ theorem MemoryState.readAt_storeHashState_buf (hm : InBounds m c 1664)
 /-- The state words of a stored struct, as one read. -/
 theorem MemoryState.readAt_storeHashState_state (hm : InBounds m c 1664) :
     (m.storeHashState c v).readAt c 512 = (v.low.setWidth 512) := by
-  rw [MemoryState.storeHashState, MemoryState.readAt_storeDef_le hm (by decide), HashState.bits]
+  rw [MemoryState.storeHashState, MemoryState.readAt_overlay_le hm (by decide), HashState.bits]
   bv_decide
 
 /-- `buf`'s first `8 k` bits known, when `bufDef` says so. -/
@@ -289,7 +289,7 @@ theorem Fits.storeHashState_buf (hm : Room m c 1664) (hc : ¬c.offset.uaddOverfl
       Bool.true_and, Nat.zero_add]
     rw [ite_eq_right (by omega), Nat.add_sub_cancel_left]
   exact
-    Fits.storeDef_of_mask hm (Pointer.not_uaddOverflow_of_hashState hc (by decide))
+    Fits.overlay_of_mask hm (Pointer.not_uaddOverflow_of_hashState hc (by decide))
       (by
         simp; omega)
       (e.trans hd)
@@ -344,7 +344,7 @@ theorem MemoryState.storeHashState_storeWords8 (hc : ¬c.offset.uaddOverflow 208
     |
       exact
         Pointer.not_uaddOverflow_of_hashState hc
-          (by decide)) only [MemoryState.storeDef_storeAt_add]
+          (by decide)) only [MemoryState.overlay_storeAt_add]
   congr 1 <;> splice_bits
 
 /-- State word `i` of a stored struct. -/
@@ -370,7 +370,7 @@ theorem MemoryState.readAt_storeHashState_word (hm : InBounds m c 1664)
 theorem MemoryState.storeHashState_storeAt_self {y : BitVec w} (hw : w = 1664) :
     (m.storeHashState c v).storeAt c y = m.storeAt c y := by
   subst hw
-  simp only [MemoryState.storeHashState, MemoryState.storeAt, MemoryState.storeDef,
+  simp only [MemoryState.storeHashState, MemoryState.storeAt, MemoryState.overlay,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -380,7 +380,7 @@ theorem MemoryState.storeHashState_storeAt_self {y : BitVec w} (hw : w = 1664) :
 @[mlir_read]
 theorem MemoryState.readAt_storeHashState_low (hm : InBounds m c 1664) :
     (m.storeHashState c v).readAt c 640 = v.low := by
-  rw [MemoryState.storeHashState, MemoryState.readAt_storeDef_le hm (by decide), HashState.bits]
+  rw [MemoryState.storeHashState, MemoryState.readAt_overlay_le hm (by decide), HashState.bits]
   bv_decide
 
 @[mlir_read]
@@ -464,7 +464,7 @@ theorem MemoryState.HashStateFit.storeWords (h : m.HashStateFit c) :
 @[mlir_fresh, mlir_mem]
 theorem MemoryState.HashStateFit.storeHashState_self (h : Room m c 1664)
     (hco : ¬c.offset.uaddOverflow 208#64) : (m.storeHashState c v).HashStateFit c := by
-  refine ⟨hco, Room.storeDef h, Fits.storeDef_of_mask_self h (by decide) ?_⟩
+  refine ⟨hco, Room.overlay h, Fits.overlay_of_mask_self h (by decide) ?_⟩
   simp only [HashState.defs]
   bv_decide
 
@@ -498,32 +498,32 @@ theorem MemoryState.HashStateFit.lifetimeEnd (h : m.HashStateFit c) (hne : c.id 
 @[mlir_transport]
 theorem Fits.storeHashState (h : Fits m p w) (hne : p.id ≠ c.id) :
     Fits (m.storeHashState c v) p w :=
-  Fits.storeDef_of_disjoint h (Range.disjoint_of_id_ne hne.symm)
+  Fits.overlay_of_disjoint h (Range.disjoint_of_id_ne hne.symm)
 
 /-- `storeHashState` keeps every block, its length and lifetime. -/
 @[simp]
 theorem Room.storeHashState_iff : Room (m.storeHashState c v) p w ↔ Room m p w :=
-  Room.storeDef_iff
+  Room.overlay_iff
 
 @[mlir_transport]
 theorem Room.storeHashState (h : Room m p w) : Room (m.storeHashState c v) p w :=
-  Room.storeDef h
+  Room.overlay h
 
 @[mlir_transport]
 theorem InBounds.storeHashState (h : InBounds m p w) : InBounds (m.storeHashState c v) p w :=
-  InBounds.storeDef h
+  InBounds.overlay h
 
 @[mlir_transport]
 theorem GlobalState.WF.storeHashState {s : GlobalState} (h : s.WF) :
     ({ s with mem := s.mem.storeHashState c v } : GlobalState).WF :=
-  h.storeDef
+  h.overlay
 
 /-- `storeHashState` keeps the set of blocks, so `WF` does not depend on it. -/
 @[simp, mlir_mem]
 theorem GlobalState.WF_storeHashState {s : GlobalState} :
     ({ s with mem := m.storeHashState c v } : GlobalState).WF ↔
       ({ s with mem := m } : GlobalState).WF :=
-  GlobalState.WF_storeDef
+  GlobalState.WF_overlay
 
 /-- `SHA512_Transform`'s result state: a block counted, `tmp64` and the state words stored. -/
 @[mlir_transport]
@@ -545,7 +545,7 @@ theorem GlobalState.WF.add_blocks_storeAt_storeHashState {s : GlobalState} {x : 
 @[mlir_read]
 theorem MemoryState.readAt_storeHashState_of_id_ne (h : q.id ≠ c.id) :
     (m.storeHashState c v).readAt q w = m.readAt q w :=
-  MemoryState.readAt_storeDef_disjoint (Range.disjoint_of_id_ne h.symm) _ _
+  MemoryState.readAt_overlay_disjoint (Range.disjoint_of_id_ne h.symm) _ _
 
 /-- The struct depends only on its block. -/
 theorem MemoryState.readHashState_of_getElem?_eq {m' : MemoryState} (h : m'[c.id]? = m[c.id]?) :
@@ -567,12 +567,12 @@ theorem MemoryState.readHashState_addBlock_of_id_ne {b : BlockId} {x : BitVec w}
 @[mlir_frame, mlir_erase]
 theorem MemoryState.eraseFrom_storeHashState :
     (m.storeHashState c v).eraseFrom n = (m.eraseFrom n).storeHashState c v :=
-  MemoryState.eraseFrom_storeDef
+  MemoryState.eraseFrom_overlay
 
 /-- A store to another block commutes with storing the struct. -/
 theorem MemoryState.storeHashState_storeAt_comm {x : BitVec w} (hne : q.id ≠ c.id) :
     (m.storeHashState c v).storeAt q x = (m.storeAt q x).storeHashState c v := by
-  simp only [MemoryState.storeHashState, MemoryState.storeAt, MemoryState.storeDef]
+  simp only [MemoryState.storeHashState, MemoryState.storeAt, MemoryState.overlay]
   exact MemoryState.modifyBlock_comm hne.symm
 
 end Transport

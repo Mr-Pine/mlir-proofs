@@ -26,7 +26,7 @@ theorem spliceBits_comm {n w v : Nat} (b : BitVec n) {o₁ o₂ : Nat} (x : BitV
 theorem MemoryState.storeAt_comm {m : MemoryState} {p q : Pointer} {x : BitVec v} {y : BitVec w}
     (h : (Range.of p v).Disjoint (Range.of q w)) :
     (m.storeAt p x).storeAt q y = (m.storeAt q y).storeAt p x := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef]
+  simp only [MemoryState.storeAt]
   by_cases hid : p.id = q.id
   · simp only [Range.Disjoint, Range.of, hid, ne_eq, not_true_eq_false, false_or] at h
     rw [hid, modifyBlock_modifyBlock_self, modifyBlock_modifyBlock_self]
@@ -45,7 +45,7 @@ theorem MemoryState.storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
   obtain ⟨blk, hblk, -, hsz, hd⟩ := h
   have hb : m.mem[p.id]? = some blk := hblk
   unfold MemoryBlock.lengthInBits at hsz
-  simp only [MemoryState.storeAt, MemoryState.storeDef, MemoryState.readAt, hblk,
+  simp only [MemoryState.storeAt, MemoryState.readAt, hblk,
     MemoryState.modifyBlock]
   refine MemoryState.ext ?_ rfl
   apply Std.ExtHashMap.ext_getElem?

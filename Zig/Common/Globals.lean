@@ -17,10 +17,9 @@ import all MLIR.Ty
 /-! The globals' values (`step_addressof`'s input) and what their blocks hold (the base point's
 table in `BasePointPc`). Five have undefined members: the points' padding, `Sha512.iv`'s `buf` and
 padding, the error unions' payloads. Their
-`step_addressof` stores the defined bits only, gives `Fits` of each run of them from a byte (with
-`exponentiation.threshold` above the global's width, so the mask's literal is decided), and reads
-the block back as a literal: the `…_of_readAt` lemmas take that read through
-`hread.trans (by decide +kernel)`. -/
+`step_addressof` stores the defined bits only, gives `Fits` of each run of them from a byte (the
+mask's literal decided by the kernel), and reads the block back as a literal: the `…_of_readAt`
+lemmas take that read through `hread.trans (by decide +kernel)`. -/
 
 namespace MLIR.Zig
 

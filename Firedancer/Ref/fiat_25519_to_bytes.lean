@@ -157,7 +157,7 @@ local macro "store_byte" : tactic =>
 private theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {off : BitVec 64}
     {x : BitVec v} {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk

@@ -54,7 +54,7 @@ public theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec w
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -155,7 +155,7 @@ public theorem storeAt_digit {m : MemoryState} {naf v : Pointer} {t : Vector ℤ
 /-- A store and a lifetime marker of different blocks commute. -/
 public theorem storeAt_lifetimeStart {m : MemoryState} {p q : Pointer} {x : BitVec w}
     (h : p.id ≠ q.id) : (m.storeAt p x).lifetimeStart q = (m.lifetimeStart q).storeAt p x := by
-  simp only [MemoryState.storeAt, MemoryState.storeDef, MemoryState.lifetimeStart,
+  simp only [MemoryState.storeAt, MemoryState.lifetimeStart,
     MemoryState.setLifetime]
   exact MemoryState.modifyBlock_comm h
 

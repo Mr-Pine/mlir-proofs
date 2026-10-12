@@ -261,7 +261,7 @@ theorem hashBlocks_eq {v₁ v₂ v₃ v₄ : HashState} {rv Av : BitVec 256} {ml
 /-- The struct stored into a block of an erased frame is lost. -/
 theorem MemoryState.eraseFrom_storeHashState_of_le {m : MemoryState} {c : Pointer} {v : HashState}
     (h : n ≤ c.id.id) : (m.storeHashState c v).eraseFrom n = m.eraseFrom n :=
-  MemoryState.eraseFrom_storeDef_of_le h
+  MemoryState.eraseFrom_overlay_of_le h
 
 attribute [local mlir_erase high] MemoryState.eraseFrom_storeHashState_of_le
 

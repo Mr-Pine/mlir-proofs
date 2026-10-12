@@ -25,7 +25,8 @@ private def inputs : List ZPt :=
 
 /-- `out`'s point and `is_base` after `dbl` of `P`, or `none` for UB / out of fuel. -/
 private def out (P : ZPt) : Option (List (BitVec 64) × BitVec 1) :=
-  let s : GlobalState := ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨168, 0, 0, true⟩), (⟨2⟩, ptBlock P)]⟩⟩
+  let s : GlobalState :=
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨168, 0, 0, true, fun _ => none⟩), (⟨2⟩, ptBlock P)]⟩⟩
   match
     Edwards25519_dbl.eval 1000 (Edwards25519_dbl.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩)) s with
   | .value (some .nil, s') => some (flat (s'.mem.readPt ⟨⟨1⟩, 0⟩), s'.mem.readBase ⟨⟨1⟩, 0⟩)

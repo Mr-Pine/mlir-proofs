@@ -21,7 +21,8 @@ private def pt (l : Nat → Nat) : ZPt :=
 private def state (P : ZPt) : GlobalState :=
   ⟨⟨3⟩,
     ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, ⟨168, 0, 0, true⟩), (⟨2⟩, .ofBytes 168 ((0#63 ++ 1#1 ++ P.bits).cast (by decide)))]⟩⟩
+        [(⟨1⟩, ⟨168, 0, 0, true, fun _ => none⟩),
+          (⟨2⟩, .ofBytes 168 ((0#63 ++ 1#1 ++ P.bits).cast (by decide)))]⟩⟩
 
 /-- `out`'s point and `is_base` after the call, or `none` for UB / out of fuel. -/
 private def out (P : ZPt) : Option (List (BitVec 64) × BitVec 1) :=

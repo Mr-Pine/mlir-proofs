@@ -56,7 +56,7 @@ abbrev withE (e : Pointer) (v : Vector (BitVec 8) 64) (S : GlobalState) : Global
 /-- The digits `v` stored at `e` over `S`, defined where `d` is set. -/
 abbrev withED (e : Pointer) (v : Vector (BitVec 8) 64) (d : BitVec 512) (S : GlobalState) :
     GlobalState :=
-  { S with mem := S.mem.storeDef e (BitVec.packLanes v) d }
+  { S with mem := S.mem.overlay e (BitVec.packLanes v) d }
 
 /-- The mask of lanes `0 … k - 1`. -/
 def laneMask (k : Nat) : BitVec 512 :=
@@ -144,15 +144,15 @@ theorem spliceBits_spliceBits_inside {n : Nat} (bs : BitVec n) (x : BitVec 512) 
   grind
 
 /-- A store into lane `j` of digits stored with definedness `d`: lane `j` set and defined. -/
-theorem storeDef_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64} {d : BitVec 512}
+theorem overlay_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64} {d : BitVec 512}
     (ho : p.offset = 0) (hj : j < 64) (y : BitVec 8) :
-    (m.storeDef p (BitVec.packLanes v) d).storeAt (p.add (BitVec.ofNat 64 j)) y =
-      m.storeDef p (BitVec.packLanes (v.set j y))
+    (m.overlay p (BitVec.packLanes v) d).storeAt (p.add (BitVec.ofNat 64 j)) y =
+      m.overlay p (BitVec.packLanes (v.set j y))
         (Memory.spliceBits d (j * 8) (BitVec.allOnes 8)) := by
   have h0 : p.offsetInBits = 0 := by simp [Pointer.offsetInBits, ho]
   have hj8 : (p.add (BitVec.ofNat 64 j)).offsetInBits = j * 8 := by
     rw [Pointer.offsetInBits_add (lane_ov ho hj).2, h0, (lane_ov ho hj).1]; omega
-  simp only [MemoryState.storeAt, MemoryState.storeDef, Pointer.add_id,
+  simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
     MemoryState.modifyBlock_modifyBlock_self]
   congr 1
   funext blk
@@ -172,9 +172,9 @@ theorem storeAt_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64} 
     split
     · simp; omega
     · simp
-  rw [show m.storeAt p (BitVec.packLanes v) = m.storeDef p (BitVec.packLanes v) (BitVec.allOnes 512)
+  rw [show m.storeAt p (BitVec.packLanes v) = m.overlay p (BitVec.packLanes v) (BitVec.allOnes 512)
       from rfl,
-    storeDef_lane ho hj y, hm]
+    overlay_lane ho hj y, hm]
   rfl
 
 /-- No digits packed: zero. -/
@@ -191,7 +191,7 @@ theorem withED_fresh {S : GlobalState} {e : Pointer} (h : InBounds S.mem e 512)
   have h1 : BitVec.packLanes (Vector.replicate 64 (0#8)) = S.mem.readAt e (8 * 64) :=
     packLanes_zero.trans hz.symm
   have h2 : laneMask 0 = S.mem.definedAt e (8 * 64) := laneMask_zero.trans hzd.symm
-  simp only [withED, h1, h2, MemoryState.storeDef_readAt_definedAt h]
+  simp only [withED, h1, h2, MemoryState.overlay_readAt_definedAt h]
 
 /-- The top byte below `128` takes the unreduced branch. -/
 theorem slt_top {x : BitVec 256} (h : x.msb = false) :
@@ -299,18 +299,18 @@ theorem unpack_loop (out sp e : Pointer) (x : BitVec 256) (g : Vals [] × Global
       step_pure [Nat.mod_lt (2 * i) (by decide : 0 < 18446744073709551616)]
       step_pure
       have hf0 :=
-        (room_lane hef he (j := 2 * i) (by omega)).storeDef (q := e) (x := BitVec.packLanes v) (d :=
+        (room_lane hef he (j := 2 * i) (by omega)).overlay (q := e) (x := BitVec.packLanes v) (d :=
           laneMask (2 * i))
       have hf1 :=
-        (room_lane hef he (j := 2 * i + 1) (by omega)).storeDef (q := e) (x := BitVec.packLanes v)
+        (room_lane hef he (j := 2 * i + 1) (by omega)).overlay (q := e) (x := BitVec.packLanes v)
           (d := laneMask (2 * i))
       step_store consuming hf0
-      rw [storeDef_lane he (by omega), spliceBits_laneMask (by omega)] at hS
+      rw [overlay_lane he (by omega), spliceBits_laneMask (by omega)] at hS
       step_pure [h5, h4]
       step_pure [Nat.mod_lt (2 * i + 1) (by decide : 0 < 18446744073709551616)]
       step_pure
       step_store consuming hf1
-      rw [storeDef_lane he (by omega), spliceBits_laneMask (by omega),
+      rw [overlay_lane he (by omega), spliceBits_laneMask (by omega),
         show 2 * i + 1 + 1 = 2 * (i + 1) by omega] at hS
       step_pure [h6, h7, ← BitVec.ofNat_add]
       finish_block

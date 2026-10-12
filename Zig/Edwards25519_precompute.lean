@@ -299,8 +299,6 @@ theorem precompute_defs_eq (D : BitVec 1344) :
 
 -- nine entries, seven calls in four blocks, each step carrying the facts
 set_option maxHeartbeats 3000000 in
--- the identity global's 1344-bit literal
-set_option exponentiation.threshold 1344 in
 /-- `Edwards25519.precompute` copies the table of `spec P` to `out`: entry `0` the identity global's
 bytes, `1` `p`'s, the others as fresh slots hold them; for limbs below `2^53`. -/
 public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalState) (hwf : s.WF)
