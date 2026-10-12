@@ -1,6 +1,7 @@
 module
 
 public import Sodium.crypto_sign_ed25519_verify_detached
+public import Sodium.crypto_verify_32
 public import Sodium.Math.Point
 public import Sodium.Math.Dsmb
 public import Sodium.Math.Verify
@@ -10,8 +11,8 @@ meta import Std.Tactic.BVDecide.Reflect
 
 /-! `crypto_sign_ed25519_verify_detached` returns `Sodium.verify`: its checks are the byte
 predicates, `S < ℓ` and `decode`; `h` is SHA-512 of `r ‖ A ‖ msg` mod `ℓ`; the double scalar
-multiplication computes `[h](-A) + [S] B` and `ge25519_tobytes` encodes it. Its `crypto_verify_32`
-call is taken as `crypto_verify_32.Spec` states it. -/
+multiplication computes `[h](-A) + [S] B` and `ge25519_tobytes` encodes it; `crypto_verify_32`
+compares it with `r`. -/
 
 namespace MLIR.Sodium
 
@@ -138,8 +139,35 @@ public theorem crypto_sign_ed25519_verify_detached.call_eq_verify (sig m pk : Po
                     (s.mem.readAt sig 256) (s.mem.readAt (sig.add 32#64) 256)
                     (s.mem.readAt pk 256)⟩,
             mem := s.mem }) := by
-  rw [crypto_sign_ed25519_verify_detached.call_eq sig m pk mlen s hwf hsig hsig_off hm hm_off hpk
-      hpk_off hv32 (hram_digits _ _ _ _) digits_of_lt_ell,
+  rw [crypto_sign_ed25519_verify_detached.call_eq_spec sig m pk mlen s hwf hsig hsig_off hm hm_off
+      hpk hpk_off hv32 (hram_digits _ _ _ _) digits_of_lt_ell,
     _crypto_sign_ed25519_verify_detached.spec_eq]
+
+/-- `crypto_sign_ed25519_verify_detached(sig, m, mlen, pk)` returns `Sodium.verify` of the `mlen`
+bytes at `m`, the signature `r ‖ S` at `sig` and the key at `pk`: `0` accepts, `-1` rejects.
+Memory is unchanged. -/
+public theorem crypto_sign_ed25519_verify_detached.call_eq (sig m pk : Pointer) (mlen : BitVec 64)
+    (s : GlobalState) (hwf : s.WF) (hsig : Fits s.mem sig 512)
+    (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hm : Fits s.mem m (8 * mlen.toNat))
+    (hm_off : ¬m.offset.uaddOverflow mlen) (hpk : Fits s.mem pk 256)
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) :
+    crypto_sign_ed25519_verify_detached.call
+        (crypto_sign_ed25519_verify_detached.args (.value sig) (.value m) (.value mlen) (.value pk))
+        s =
+      .value
+        (.cons
+            (.value
+              (_root_.Ed25519.Sodium.verify (bytesLE (s.mem.readAt m (8 * mlen.toNat)))
+                (s.mem.readAt sig 256) (s.mem.readAt (sig.add 32#64) 256) (s.mem.readAt pk 256)))
+            .nil,
+          {
+            alloc :=
+              ⟨s.alloc.nextFreeBlock +
+                  _crypto_sign_ed25519_verify_detached.blocks mlen (s.mem.readAt m (8 * mlen.toNat))
+                    (s.mem.readAt sig 256) (s.mem.readAt (sig.add 32#64) 256)
+                    (s.mem.readAt pk 256)⟩,
+            mem := s.mem }) :=
+  crypto_sign_ed25519_verify_detached.call_eq_verify sig m pk mlen s hwf hsig hsig_off hm hm_off hpk
+    hpk_off crypto_verify_32.call_eq
 
 end MLIR.Sodium
