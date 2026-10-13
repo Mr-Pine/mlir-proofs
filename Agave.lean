@@ -18,3 +18,5 @@ public import Agave.Math.Ladder
 public import Agave.Math.NafLookupTable5
 public import Agave.Math.Prehashed
 public import Agave.Math.ScalarReduce
+public import Agave.Math.LadderAvx2
+public import Agave.Math.PrehashedAvx2
