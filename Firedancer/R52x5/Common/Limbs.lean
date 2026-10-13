@@ -74,7 +74,7 @@ theorem Fits.storeWv_self {m : MemoryState} (h : Room m p 256) : Fits (m.storeWv
 
 /-- A read of the stored lanes. -/
 @[mlir_mem, mlir_read]
-theorem MemoryState.readAt_storeWv_self {m : MemoryState} (h : InBounds m p 256) :
+theorem MemoryState.readAt_storeWv_self {m : MemoryState} (h : Room m p 256) :
     (m.storeWv p v).readAt p 256 = BitVec.packLanes v :=
   readAt_storeAt_self h _
 
@@ -84,9 +84,9 @@ theorem MemoryState.readAt_storeWv_disjoint {m : MemoryState}
     (h : (Range.of p 256).Disjoint (Range.of q w)) : (m.storeWv p v).readAt q w = m.readAt q w :=
   readAt_storeAt_disjoint h _
 
-/-- Lanes stored in bounds read back. -/
+/-- Lanes stored where there is room read back. -/
 @[mlir_state, mlir_frame, mlir_read]
-theorem MemoryState.readWv_storeWv_self {m : MemoryState} (h : InBounds m p 256) :
+theorem MemoryState.readWv_storeWv_self {m : MemoryState} (h : Room m p 256) :
     (m.storeWv p v).readWv p = v :=
   readWv_packLanes (readAt_storeWv_self h)
 
@@ -197,8 +197,9 @@ theorem MemoryState.readWv_add_of_readAt {m : MemoryState} {p : Pointer} {x : Bi
 /-- The five limbs at `p` lie in one live block: room for 320 bits there. -/
 theorem MemoryState.LimbsRoom.room320 {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
     Room m p 320 := by
-  obtain ⟨ho, -, -, -, -, ⟨blk, hblk, hl, hsz⟩⟩ := h
-  refine ⟨blk, hblk, hl, ?_⟩
+  obtain ⟨ho, -, -, -, -, h4⟩ := h
+  obtain ⟨blk, hblk, hl, hsz, hwr⟩ := h4.block
+  refine Room.of_block (by simpa [Pointer.add_id] using hblk) hl ?_ hwr
   rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
     Pointer.offsetInBits_add_limb ho (by omega)] at hsz
   unfold Pointer.offsetInBits
@@ -258,7 +259,7 @@ theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsRoom p) :
 /-- Limbs 0-3 stored and read back as one `<4 x i64>`. -/
 theorem MemoryState.readAt_storeLimbs_wv {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
     (m.storeLimbs p l).readAt p 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
-  have hf : InBounds m p 256 := h.room320.inBounds.mono (by omega)
+  have hf : Room m p 256 := h.room320.mono (by omega)
   rw [← MemoryState.storeLimbsV_eq h, MemoryState.storeLimbsV, MemoryState.readAt_storeAt_disjoint,
     MemoryState.readAt_storeWv_self hf]
   simp only [Range.Disjoint, Range.of]

@@ -26,11 +26,12 @@ private def inputs : List ZPt :=
 /-- The result of `isIdentity` of `P`, or `none` for UB / out of fuel. -/
 private def out (P : ZPt) : Option (BitVec 1) :=
   let s : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ptBlock P)]⟩⟩
-  match Verifier_isIdentity.eval 1000 (Verifier_isIdentity.args (.value ⟨⟨1⟩, 0⟩)) s with
+  match
+    Verifier_isIdentity.eval 1000 (Verifier_isIdentity.args (.value ⟨⟨1⟩, 0⟩))
+      (s.withGlobals Verifier_isIdentity.globals) with
   | .value (some (.cons (.value r) .nil), _) => some r
   | _ => none
 
--- `spec`'s bit; the identity `(0, 1, 1, 0)` is one.
 #guard inputs.all fun P => out P == some (Verifier.isIdentity.spec P)
 
 #guard out (pt fun i => if i = 5 ∨ i = 10 then 1 else 0) == some 1#1

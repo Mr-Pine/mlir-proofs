@@ -24,10 +24,11 @@ private def b : Pointer :=
 `aBytes`, `ABytes` and `bBytes`. -/
 private def state (aBytes : BitVec 256) (ABytes : BitVec 1280) (bBytes : BitVec 256) :
     GlobalState :=
-  ⟨⟨5⟩,
-    ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 aBytes), (⟨3⟩, .ofBytes 160 ABytes),
-          (⟨4⟩, .ofBytes 32 bBytes)]⟩⟩
+  GlobalState.withGlobals mul.globals
+    ⟨⟨5⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 aBytes), (⟨3⟩, .ofBytes 160 ABytes),
+            (⟨4⟩, .ofBytes 32 bBytes)]⟩⟩
 
 /-- A field element from its limbs, lowest first. -/
 private def fe (l0 l1 l2 l3 l4 : Nat) : BitVec 320 :=
@@ -137,14 +138,15 @@ private def eqE (P Q : EdwardsPoint) : Bool :=
 
 /-! ### Tests -/
 
-/-- The run on scalars `x`, `y` and the point bits `P` stores `E` at `out` and counts
-`5 + blocks`. -/
+/-- The run on scalars `x`, `y` and the point bits `P` stores `E` at `out` and counts `blocks`
+more. -/
 private def agrees (x : Nat) (P : BitVec 1280) (y : Nat)
     (E : BitVec 256 → EdwardsPoint → BitVec 256 → EdwardsPoint) : Bool :=
   let s := state (BitVec.ofNat 256 x) P (BitVec.ofNat 256 y)
   match mul.eval 1000 (mul.args (.value out) (.value a) (.value A) (.value b)) s with
   | .value (some .nil, s') =>
-    s'.alloc.nextFreeBlock == 5 + mul.blocks (BitVec.ofNat 256 x) (BitVec.ofNat 256 y) &&
+    s'.alloc.nextFreeBlock ==
+        s.alloc.nextFreeBlock + mul.blocks (BitVec.ofNat 256 x) (BitVec.ofNat 256 y) &&
       eqE (s'.mem.readEdwards out)
         (E (BitVec.ofNat 256 x) (s.mem.readEdwards A) (BitVec.ofNat 256 y))
   | _ => false

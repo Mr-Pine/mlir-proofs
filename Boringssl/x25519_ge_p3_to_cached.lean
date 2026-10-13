@@ -27,14 +27,14 @@ end
 
 section Proof
 
-/-- `x25519_ge_p3_to_cached` stores `spec` of the `ge_p3` at `p` at `r`, in another block. The
-global `d2`'s block is freed again: only the counter moves on. -/
+/-- `x25519_ge_p3_to_cached` stores `spec` of the `ge_p3` at `p` at `r`, in another block. -/
 public theorem x25519_ge_p3_to_cached.call_eq (r p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointRoom r) (hp : s.mem.PointFit p) (hsep : r.id ≠ p.id) :
+    (hg : s.mem.Globals x25519_ge_p3_to_cached.globals) (hr : s.mem.PointRoom r)
+    (hp : s.mem.PointFit p) (hsep : r.id ≠ p.id) :
     x25519_ge_p3_to_cached.call (x25519_ge_p3_to_cached.args (.value r) (.value p)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
+          { s with
             mem := s.mem.storeCached r (x25519_ge_p3_to_cached.spec (s.mem.readP3 p)) }) := by
   func_init
   have hp₀ : S₀.mem.PointFit p := hS ▸ hp
@@ -57,7 +57,6 @@ public theorem x25519_ge_p3_to_cached.call_eq (r p : Pointer) (s : GlobalState) 
   step_call using fe_mul_ltt.call_eq
   finish_block
   subst hS
-  erase_frame
   rfl
 
 end Proof

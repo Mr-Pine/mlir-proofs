@@ -14,7 +14,8 @@ private def bytes : Pointer :=
 
 /-- Two blocks after the null block: `out` (40 bytes) zeroed, `bytes` holding `b`. -/
 private def state (b : BitVec 512) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 40 0), (⟨2⟩, .ofBytes 64 b)]⟩⟩
+  GlobalState.withGlobals Scalar52_from_bytes_wide.globals
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 40 0), (⟨2⟩, .ofBytes 64 b)]⟩⟩
 
 /-- The run stores `spec`'s limbs, the bytes' number mod `ℓ`. -/
 private def agrees (b : BitVec 512) : Bool :=

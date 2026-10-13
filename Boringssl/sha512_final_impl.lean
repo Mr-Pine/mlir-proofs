@@ -108,7 +108,7 @@ theorem storeOut_eight (m : MemoryState) (out : Pointer) (H : Vector (BitVec 64)
   simp [storeOut, MemoryState.storeWords8]
 
 /-- The state words of a stored struct, at the offsets the loop reads them. -/
-theorem readAt_storeShaCtx_h {m : MemoryState} (hm : InBounds m c 1664)
+theorem readAt_storeShaCtx_h {m : MemoryState} (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) {k : Nat} (hk : k < 8) :
     (m.storeShaCtx c v).readAt (c.add (BitVec.ofNat 64 (k * 8))) 64 = v.h[k]! := by
   have hw := MemoryState.readWords8_storeShaCtx (v := v) hm hc
@@ -366,8 +366,8 @@ theorem last_block (out c : Pointer) (n : BitVec 64) (M : MemoryState) (v : Sha5
       BitVec.uaddOverflow] at hco ⊢
     omega
   step_call using sha512_block_data_order.call_eq consuming hst hp hpo' hpd
-  rw [MemoryState.readWords8_storeShaCtx hMf.2.1.inBounds hco,
-    MemoryState.readAt_storeShaCtx_p hMf.2.1.inBounds hco,
+  rw [MemoryState.readWords8_storeShaCtx hMf.2.1 hco,
+    MemoryState.readAt_storeShaCtx_p hMf.2.1 hco,
     MemoryState.storeShaCtx_storeWords8 hco] at hS
   replace hS :
     S = { alloc := ⟨S₁.alloc.nextFreeBlock + 1 + 1 + 2⟩, mem := M.storeShaCtx c (last v n) } := hS
@@ -403,7 +403,7 @@ theorem last_block (out c : Pointer) (n : BitVec 64) (M : MemoryState) (v : Sha5
   have hst := hMf.storeShaCtx (v := vF)
   step_loop using
     out_loop out c (M.storeShaCtx c vF) (fun k => vF.h[k]!)
-      (fun k hk => readAt_storeShaCtx_h hMf.2.1.inBounds hco hk)
+      (fun k hk => readAt_storeShaCtx_h hMf.2.1 hco hk)
       (fun k hk => fits_h hst.words8Fit hk) hco hoo hsep g _ 7 0 S
 
 end sha512_final_impl
@@ -501,8 +501,8 @@ public theorem sha512_final_impl.call_eq (out c : Pointer) (s : GlobalState) (hw
         BitVec.uaddOverflow] at hco ⊢
       omega
     step_call using sha512_block_data_order.call_eq consuming hst hp hpo' hpd
-    rw [MemoryState.readWords8_storeShaCtx hc₀.2.1.inBounds hco,
-      MemoryState.readAt_storeShaCtx_p hc₀.2.1.inBounds hco,
+    rw [MemoryState.readWords8_storeShaCtx hc₀.2.1 hco,
+      MemoryState.readAt_storeShaCtx_p hc₀.2.1 hco,
       MemoryState.storeShaCtx_storeWords8 hco] at hS
     have hM := congrArg GlobalState.mem hS
     dsimp only at hM

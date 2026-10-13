@@ -100,11 +100,11 @@ theorem readW {m M0 : MemoryState} {tmp Sp : Pointer} {f : Nat → BitVec 64} {n
       m.readAt (tmp.add (BitVec.ofNat 64 (8 * t))) 64 = f t := by
   subst hm
   have hR' : Room M0 tmp (64 * n) := by
-    obtain ⟨blk, hblk, hl, hsz⟩ := hR
-    exact ⟨blk, hblk, hl, by omega⟩
+    obtain ⟨⟨blk, hblk, hl, hsz⟩, hw⟩ := hR
+    exact ⟨⟨blk, hblk, hl, by omega⟩, hw⟩
   refine ⟨(Fits.storeWords_self hR' (by omega) ht).storeWords8, ?_⟩
   rw [MemoryState.readAt_storeWords8_of_disjoint (by omega),
-    MemoryState.readAt_storeWords_self hR'.inBounds (by omega) ht]
+    MemoryState.readAt_storeWords_self hR' (by omega) ht]
   simp only [Range.Disjoint, Range.of, Pointer.add_id,
     Pointer.offsetInBits_word (n := 80) (by omega) (show t ≤ 80 by omega)] at hWS ⊢
   rcases hWS with h | h | h
@@ -215,7 +215,7 @@ theorem bb1_run (state blkp tmp Sp Kp : Pointer) (H : Vector (BitVec 64) 8) (b :
     ∀ k (hk : k < 8),
       S.mem.readAt (Sp.add (BitVec.ofNat 64 (8 * k))) 64 = (rounds H b (16 * j))[k] :=
     fun k hk => by
-    rw [hM]; exact readAt_storeWords8_lane hSR.inBounds.storeWords (by omega) _ hk
+    rw [hM]; exact readAt_storeWords8_lane hSR.storeWords (by omega) _ hk
   have hSF : S.mem.Words8Fit Sp := by
     rw [hM]
     have := hSR.storeWords (p := tmp) (f := W b) (n := 16 + 16 * j)
@@ -977,8 +977,8 @@ theorem bb3_run (state blkp tmp Sp : Pointer) (H : Vector (BitVec 64) 8) (b : Bi
     (hE3 : Hdr3 Sp E) (h915 : E ⊨ [rir_reg% hty 507 := (rounds H b 80)[0]]) (hwf : S.WF)
     (hM : S.mem = iterMem M0 tmp Sp H b 80 80) (hSR : Room M0 Sp 512)
     (hSpov : ¬Sp.offset.uaddOverflow 64#64) (ho : tmp.offset.toNat + 640 < 2 ^ 64)
-    (hSpo : Sp.offset.toNat + 64 < 2 ^ 64) (hst : M0.Words8Fit state) (hH : M0.readWords8 state = H)
-    (hsep : tmp.id ≠ state.id) (hsepS : Sp.id ≠ state.id) :
+    (hSpo : Sp.offset.toNat + 64 < 2 ^ 64) (hst : M0.Words8Fit state) (hstw : Writable M0 state)
+    (hH : M0.readWords8 state = H) (hsep : tmp.id ≠ state.id) (hsepS : Sp.id ≠ state.id) :
     (SHA512_Transform.runFrom E 3 S >>= g) =
       g (.nil, { alloc := S.alloc, mem := S.mem.storeWords8 state (spec H b) }) := by
   have hp (q : Pointer) (hq : q.id ≠ tmp.id) (hq' : q.id ≠ Sp.id) (w : Nat) :
@@ -987,10 +987,12 @@ theorem bb3_run (state blkp tmp Sp : Pointer) (H : Vector (BitVec 64) 8) (b : Bi
       MemoryState.readAt_storeWords8_of_disjoint (by omega) (Range.disjoint_of_id_ne (Ne.symm hq')),
       MemoryState.readAt_storeWords_of_disjoint (by omega) (Range.disjoint_of_id_ne (Ne.symm hq))]
   have hHk (k : Nat) (hk : k < 8) := congrArg (·[k]'hk) hH
+  have hstwS : Writable S.mem state := by rw [hM]; exact hstw.storeWords.storeWords8
+  clear hstw
   simp only [MemoryState.readWords8] at hHk
   have hV (k : Nat) (hk : k < 8) :
     S.mem.readAt (Sp.add (BitVec.ofNat 64 (8 * k))) 64 = (rounds H b 80)[k] := by
-    rw [hM]; exact readAt_storeWords8_lane hSR.inBounds.storeWords (by omega) _ hk
+    rw [hM]; exact readAt_storeWords8_lane hSR.storeWords (by omega) _ hk
   have hSF : S.mem.Words8Fit Sp := by
     rw [hM]
     have := hSR.storeWords (p := tmp) (f := W b) (n := 80)
@@ -1091,43 +1093,43 @@ theorem bb3_run (state blkp tmp Sp : Pointer) (H : Vector (BitVec 64) 8) (b : Bi
   step_pure
   step_load [hs1] consuming hs1
   step_pure with u1
-  have hr1 : Room S.mem (state.add 8#64) 64 := hf1.room
+  have hr1 : Room S.mem (state.add 8#64) 64 := hf1.room (by mem_fact)
   step_store consuming hr1
   step_load consuming hv2 hg2
   step_pure
   step_load [hs2] consuming hs2
   step_pure with u2
-  have hr2 : Room S.mem (state.add 16#64) 64 := hf2.room
+  have hr2 : Room S.mem (state.add 16#64) 64 := hf2.room (by mem_fact)
   step_store consuming hr2
   step_load consuming hv3 hg3
   step_pure
   step_load [hs3] consuming hs3
   step_pure with u3
-  have hr3 : Room S.mem (state.add 24#64) 64 := hf3.room
+  have hr3 : Room S.mem (state.add 24#64) 64 := hf3.room (by mem_fact)
   step_store consuming hr3
   step_load consuming hv4 hg4
   step_pure
   step_load [hs4] consuming hs4
   step_pure with u4
-  have hr4 : Room S.mem (state.add 32#64) 64 := hf4.room
+  have hr4 : Room S.mem (state.add 32#64) 64 := hf4.room (by mem_fact)
   step_store consuming hr4
   step_load consuming hv5 hg5
   step_pure
   step_load [hs5] consuming hs5
   step_pure with u5
-  have hr5 : Room S.mem (state.add 40#64) 64 := hf5.room
+  have hr5 : Room S.mem (state.add 40#64) 64 := hf5.room (by mem_fact)
   step_store consuming hr5
   step_load consuming hv6 hg6
   step_pure
   step_load [hs6] consuming hs6
   step_pure with u6
-  have hr6 : Room S.mem (state.add 48#64) 64 := hf6.room
+  have hr6 : Room S.mem (state.add 48#64) 64 := hf6.room (by mem_fact)
   step_store consuming hr6
   step_load consuming hv7 hg7
   step_pure
   step_load [hs7] consuming hs7
   step_pure with u7
-  have hr7 : Room S.mem (state.add 56#64) 64 := hf7.room
+  have hr7 : Room S.mem (state.add 56#64) 64 := hf7.room (by mem_fact)
   step_store consuming hr7
   finish_block
   rw [hS]
@@ -1277,10 +1279,10 @@ public theorem Krnd.value_eq (s : GlobalState) : Krnd.value s = .value (Ty.wrap 
 open SHA512_Transform in
 /-- `SHA512_Transform(state, block, W, S)` with `W = tmp`, `S = tmp + 640` stores the block's
 compression into the eight words at `state` and leaves `SHA512_Transform.tmp` at `tmp`. `state`
-and `block` may share a block (they are read before anything is written); `tmp` may not. The
-block counter advances by one (`Krnd`). -/
+and `block` may share a block (they are read before anything is written); `tmp` may not. -/
 public theorem SHA512_Transform.call_eq (state block tmp : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hst : Fits s.mem state 512) (hsto : ¬state.offset.uaddOverflow 64#64)
+    (hg : s.mem.Globals SHA512_Transform.globals) (hst : Fits s.mem state 512)
+    (hstw : Writable s.mem state) (hsto : ¬state.offset.uaddOverflow 64#64)
     (hblk : Fits s.mem block 1024) (hblko : ¬block.offset.uaddOverflow 128#64)
     (htmp : Room s.mem tmp 5632) (htmpo : ¬tmp.offset.uaddOverflow 704#64)
     (hsep : tmp.id ≠ state.id) (hsep' : tmp.id ≠ block.id) :
@@ -1289,7 +1291,7 @@ public theorem SHA512_Transform.call_eq (state block tmp : Pointer) (s : GlobalS
         s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩
+          { s with
             mem :=
               (s.mem.storeAt tmp
                     (SHA512_Transform.tmp (s.mem.readWords8 state)
@@ -1316,6 +1318,7 @@ public theorem SHA512_Transform.call_eq (state block tmp : Pointer) (s : GlobalS
     simp only [BitVec.uaddOverflow, decide_eq_true_eq] at htmpo; simp at htmpo; omega
   generalize hSp : tmp.add 640#64 = Sp at hSpR hSpo hSpS hWS hSpid
   func_init
+  clear hstw
   block_init
   iterate 7 step_pure
   step_addressof Krnd.value_eq with Kp
@@ -1345,22 +1348,14 @@ public theorem SHA512_Transform.call_eq (state block tmp : Pointer) (s : GlobalS
   rw [SHA512_Transform.bb3_run state block tmp Sp _ _ _ S' E' _ h1 h2 h3 h5 (by rw [h4]) hSR0
       (by
         simp [BitVec.uaddOverflow]; omega)
-      (by omega) hSpo hst0 ?_ hsep
+      (by omega) hSpo hst0 hstw₀ rfl hsep
       (by
         rw [hSpid]; exact hsep)]
-  swap
-  · obtain ⟨-, h0, h1, h2, h3, h4, h5, h6, h7⟩ := words8Fit_of_fits hst₀ hsto
-    simp only [MemoryState.readWords8, MemoryState.readAt_addBlock hwf₀ h0.inBounds,
-      MemoryState.readAt_addBlock hwf₀ h1.inBounds, MemoryState.readAt_addBlock hwf₀ h2.inBounds,
-      MemoryState.readAt_addBlock hwf₀ h3.inBounds, MemoryState.readAt_addBlock hwf₀ h4.inBounds,
-      MemoryState.readAt_addBlock hwf₀ h5.inBounds, MemoryState.readAt_addBlock hwf₀ h6.inBounds,
-      MemoryState.readAt_addBlock hwf₀ h7.inBounds]
   subst h4
   rw [hS]
   dsimp only [iterMem]
   rw [MemoryState.eraseFrom_storeWords8, MemoryState.eraseFrom_storeWords8,
-    MemoryState.eraseFrom_storeWords, MemoryState.eraseFrom_addBlock_of_le (Nat.le_refl _),
-    hwf₀.eraseFrom, storeWords8_eq_storeWords (p := Sp),
+    MemoryState.eraseFrom_storeWords, hwf₀.eraseFrom, storeWords8_eq_storeWords (p := Sp),
     MemoryState.storeWords_eq_storeAt (p := Sp) (by omega),
     MemoryState.storeWords_eq_storeAt (p := tmp) (by omega), ← hSp,
     MemoryState.storeAt_storeAt_append (k := 640) h640 (by decide) (by decide)]

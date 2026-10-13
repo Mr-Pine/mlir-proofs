@@ -25,21 +25,21 @@ section Proof
 
 /-- `crypto_hash_sha512_final(state, out)` stores the digest (`spec`) at `out` and zeroes the
 struct; it returns `0`. The buffer's first `r` bytes must be known; `out` must not share the
-struct's block. The block counter advances by `tmp64`'s and `SHA512_Pad`'s. -/
+struct's block. The block counter advances by `tmp64`'s. -/
 public theorem crypto_hash_sha512_final.call_eq (st out : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals crypto_hash_sha512_final.globals)
     (hst : s.mem.HashStateFit st)
     (hpre : (s.mem.readHashState st).Prefix (SHA512_Pad.r (s.mem.readHashState st)))
     (hout : Room s.mem out 512) (houto : out.offset.toNat + 64 < 2 ^ 64) (hsep : out.id ≠ st.id) :
     crypto_hash_sha512_final.call (crypto_hash_sha512_final.args (.value st) (.value out)) s =
       .value
         (.cons (.value 0#32) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1 + SHA512_Pad.blocks (s.mem.readHashState st)⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem :=
               (s.mem.storeAt out (crypto_hash_sha512_final.spec (s.mem.readHashState st))).storeAt
                 st (0 : BitVec (8 * (208#64).toNat)) }) := by
   generalize hv : s.mem.readHashState st = v at hpre ⊢
   generalize hres : crypto_hash_sha512_final.spec v = res
-  generalize hk : SHA512_Pad.blocks v = k
   func_init
   have hv₀ : S₀.mem.readHashState st = v := hS ▸ hv
   clear hv
@@ -76,7 +76,7 @@ public theorem crypto_hash_sha512_final.call_eq (st out : Pointer) (s : GlobalSt
     (Range.of out (64 * (64#64 >>> 3).toNat)).Disjoint (Range.of st (64 * (64#64 >>> 3).toNat)) :=
     .inl hsep
   -- be64enc_vect(out, state->state, 64);
-  step_call using be64enc_vect.call_eq consuming hstw hsto' hout' houto' hdisj
+  step_call using be64enc_vect.call_eq consuming hstw hsto' hout' houto' hdisj hwritable_tmp
   have hz1 : Room S.mem tmp (8 * (704#64).toNat) := hroom_tmp
   -- sodium_memzero((void *) tmp64, sizeof tmp64);
   step_call using sodium_memzero.call_eq consuming hz1
@@ -87,13 +87,13 @@ public theorem crypto_hash_sha512_final.call_eq (st out : Pointer) (s : GlobalSt
   finish_block
   subst hS
   erase_frame
-  subst hres hk
+  subst hres
   have hin :
-    InBounds
+    Room
       (((S₀.alloca 704 true).mem.lifetimeStart tmp).storeAt tmp
         (SHA512_Pad.tailTmp (SHA512_Pad.head v)))
       st 1664 :=
-    ((hst₀.inBounds.alloca hwf₀).lifetimeStart).storeAt
+    ((hst₀.alloca hwf₀).lifetimeStart').storeAt
   have hw :
     ∀ i < 8,
       be64enc_vect.spec

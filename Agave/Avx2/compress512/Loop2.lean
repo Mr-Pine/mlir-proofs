@@ -508,6 +508,7 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
       m + n + 1 = 32 →
         Live2 st Kp ms t2 ms2 H b c E →
         Fits S.mem ms2 1024 →
+        Writable S.mem ms2 →
         Room S.mem t2 5120 →
         Fits S.mem Kp 5120 →
         KPairs S.mem Kp →
@@ -526,7 +527,7 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
               12 S >>=
             g) =
           K := by
-  have hw (S : GlobalState) (m : Nat) (hf : Fits S.mem ms2 1024)
+  have hw (S : GlobalState) (m : Nat) (hf : Fits S.mem ms2 1024) (hfw : Writable S.mem ms2)
     (hR : HoldsR S.mem ms2 W₀ (2 * m) (2 * m + 16)) :
     (Fits S.mem (ms2.add (BitVec.ofNat 64 (m % 8 * 16))) 64 ∧
         S.mem.readAt (ms2.add (BitVec.ofNat 64 (m % 8 * 16))) 64 = wk W₀ (2 * m)) ∧
@@ -537,7 +538,7 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
     have e1 := hR (2 * m + 1) (by omega) (by omega)
     rw [show 2 * m % 16 * 8 = m % 8 * 16 by omega] at e0
     rw [show (2 * m + 1) % 16 * 8 = m % 8 * 16 + 8 by omega, BitVec.ofNat_add] at e1
-    refine ⟨⟨Fits.add_of_le ?_ ?_ hf, e0⟩, ⟨?_, e1⟩, Room.add_of_le ?_ ?_ hf.room⟩
+    refine ⟨⟨Fits.add_of_le ?_ ?_ hf, e0⟩, ⟨?_, e1⟩, Room.add_of_le ?_ ?_ (hf.room hfw)⟩
     · simp [BitVec.uaddOverflow, hmo]; omega
     · simp; omega
     · rw [← BitVec.ofNat_add]
@@ -551,7 +552,8 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
     · simp [BitVec.uaddOverflow, hmo]; omega
     · simp; omega
   have hst (S : GlobalState) (m : Nat) (hm : m < 32) (hf : Fits S.mem ms2 1024)
-    (ht : Room S.mem t2 5120) (hKf : Fits S.mem Kp 5120) (hK : KPairs S.mem Kp)
+    (hfw : Writable S.mem ms2) (ht : Room S.mem t2 5120) (hKf : Fits S.mem Kp 5120)
+    (hK : KPairs S.mem Kp)
     (hR : HoldsR S.mem ms2 W₀ (2 * m) (2 * m + 16)) :
       let mem :=
       (S.mem.storeAt (ms2.add (BitVec.ofNat 64 (m % 8 * 16)))
@@ -559,14 +561,15 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
         (t2.add (BitVec.ofNat 64 ((m + 8) * 16)))
         (BitVec.packLanes #v[wk W₁ (2 * m + 16), wk W₁ (2 * m + 17)])
       Fits mem ms2 1024 ∧
+      Writable mem ms2 ∧
       Room mem t2 5120 ∧
       Fits mem Kp 5120 ∧ KPairs mem Kp ∧ HoldsR mem ms2 W₀ (2 * (m + 1)) (2 * (m + 1) + 16) := by
     intro mem
     refine
-      ⟨hf.storeAt.storeAt, ht.storeAt.storeAt, hKf.storeAt.storeAt,
+      ⟨hf.storeAt.storeAt, hfw.storeAt.storeAt, ht.storeAt.storeAt, hKf.storeAt.storeAt,
         (hK.storeAt (by simpa using hne)).storeAt (by simpa using hne'), fun t h1 h2 => ?_⟩
     have :=
-      HoldsR.pairsMem (p := m + 8) (n := 1) (lo := 2 * m) hmo hf.inBounds (by omega) (by omega)
+      HoldsR.pairsMem (p := m + 8) (n := 1) (lo := 2 * m) hmo (hf.room hfw) (by omega) (by omega)
         (fun t h1 h2 => hR t h1 (by omega))
     rw [show max (2 * m) (2 * (m + 8 + 1) - 16) = 2 * (m + 1) by omega,
       show 2 * (m + 8 + 1) = 2 * (m + 1) + 16 by omega] at this
@@ -577,8 +580,8 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
   intro n
   induction n with
   | zero =>
-    intro m S E hm hL hf ht hKf hK hR hcont
-    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hR
+    intro m S E hm hL hf hfw ht hKf hK hR hcont
+    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hfw hR
     refine
       iter12 st Kp ms t2 ms2 H b c (m / 8 + 1) (m % 8) (16 + 2 * m) (by omega) (by omega) (by omega)
         (by omega) _ _ _ _ _ _ _ _ _ _ _ _ _ S E g K hL hmo hto hKo
@@ -603,9 +606,9 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
     rw [pairMem2_succ hne''] at this
     simpa [pairMem2, tMem, pairsMem, show (m + 8) % 8 = m % 8 by omega] using this
   | succ n ih =>
-    intro m S E hm hL hf ht hKf hK hR hcont
-    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hR
-    obtain ⟨hf', ht', hKf', hK', hR'⟩ := hst S m (by omega) hf ht hKf hK hR
+    intro m S E hm hL hf hfw ht hKf hK hR hcont
+    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hfw hR
+    obtain ⟨hf', hfw', ht', hKf', hK', hR'⟩ := hst S m (by omega) hf hfw ht hKf hK hR
     refine
       iter12 st Kp ms t2 ms2 H b c (m / 8 + 1) (m % 8) (16 + 2 * m) (by omega) (by omega) (by omega)
         (by omega) _ _ _ _ _ _ _ _ _ _ _ _ _ S E g K hL hmo hto hKo
@@ -635,7 +638,7 @@ public theorem loop12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b 
                     (BitVec.packLanes #v[wk W₀ (2 * m + 16), wk W₀ (2 * m + 17)])).storeAt
                 (t2.add (BitVec.ofNat 64 ((m + 8) * 16)))
                 (BitVec.packLanes #v[wk W₁ (2 * m + 16), wk W₁ (2 * m + 17)]) }
-          E' (by omega) hL' hf' ht' hKf' hK' hR'
+          E' (by omega) hL' hf' hfw' ht' hKf' hK' hR'
           (fun E'' hE'' hL'' => by
             have := hcont E'' (hE''.trans hE') hL''
             rw [pairMem2_succ hne'', show m + 8 + 1 = m + 1 + 8 by omega,

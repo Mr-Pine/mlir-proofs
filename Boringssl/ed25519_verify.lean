@@ -142,9 +142,10 @@ local macro "accept" : tactic =>
   `(tactic|
     ( refine
         (accept_run msg msgLen sig pk A t pkcopy rcopy scopy ctx h R rcheck _ hAL mv rv Sv Av PA S E
-              hArgs (by env_reads) hwf hmsg hmsg_off hmsgLen hsig hsig_off hpk hpk_off hmv hrv hAv
-              hA_pt hAP hfits_rcopy hread_rcopy hfits_scopy hread_scopy hctx_bounds hh_bounds
-              hR_bounds hrcheck_bounds (digits_hram rv Av msgLen mv) (digits_S htop)).trans
+              hArgs (by env_reads) hwf hg hmsg hmsg_off hmsgLen hsig hsig_off hpk hpk_off hmv hrv
+              hAv hA_pt hAP hfits_rcopy hread_rcopy hfits_scopy hread_scopy (by mem_fact)
+              hctx_bounds (by mem_fact) hh_bounds (by mem_fact) hR_bounds (by mem_fact)
+              hrcheck_bounds (by mem_fact) (digits_hram rv Av msgLen mv) (digits_S htop)).trans
           ?_
       rw [hS]
       dsimp only
@@ -345,7 +346,8 @@ theorem fe_neg_of (h f : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.mem.Lim
   rw [fe_neg.call_eq h f s hwf hh hf, hv]
 
 /-- `x25519_ge_frombytes_vartime.call_eq` where decoding fails. -/
-theorem frombytes_none (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.mem.PointRoom h)
+theorem frombytes_none (h buf : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals x25519_ge_frombytes_vartime.globals) (hh : s.mem.PointRoom h)
     (hbuf : Fits s.mem buf (8 * 32)) (hbuf_off : ¬buf.offset.uaddOverflow 32#64)
     (hsep : h.id ≠ buf.id) (hd : x25519_ge_frombytes_vartime.spec (s.mem.readAt buf 256) = none) :
     x25519_ge_frombytes_vartime.call (x25519_ge_frombytes_vartime.args (.value h) (.value buf)) s =
@@ -358,11 +360,12 @@ theorem frombytes_none (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.
               s.mem.storeP2 h
                 ⟨x25519_ge_frombytes_vartime.x (s.mem.readAt buf 256),
                   x25519_ge_frombytes_vartime.y (s.mem.readAt buf 256), fe_1.spec⟩ }) := by
-  rw [x25519_ge_frombytes_vartime.call_eq h buf s hwf hh hbuf hbuf_off hsep, hd]
+  rw [x25519_ge_frombytes_vartime.call_eq h buf s hwf hg hh hbuf hbuf_off hsep, hd]
   rfl
 
 /-- `x25519_ge_frombytes_vartime.call_eq` where it decodes `P`. -/
-theorem frombytes_some (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.mem.PointRoom h)
+theorem frombytes_some (h buf : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals x25519_ge_frombytes_vartime.globals) (hh : s.mem.PointRoom h)
     (hbuf : Fits s.mem buf (8 * 32)) (hbuf_off : ¬buf.offset.uaddOverflow 32#64)
     (hsep : h.id ≠ buf.id) {P : GeP3}
     (hd : x25519_ge_frombytes_vartime.spec (s.mem.readAt buf 256) = some P) :
@@ -373,7 +376,7 @@ theorem frombytes_some (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.
             alloc :=
               ⟨s.alloc.nextFreeBlock + x25519_ge_frombytes_vartime.blocks (s.mem.readAt buf 256)⟩,
             mem := s.mem.storeP3 h P }) := by
-  rw [x25519_ge_frombytes_vartime.call_eq h buf s hwf hh hbuf hbuf_off hsep, hd]
+  rw [x25519_ge_frombytes_vartime.call_eq h buf s hwf hg hh hbuf hbuf_off hsep, hd]
   rfl
 
 attribute [local mlir_read] MemoryState.readShaCtx_storeShaCtx_self
@@ -503,15 +506,18 @@ theorem accept_run (msg : Pointer) (msgLen : BitVec 64)
     (hR :
       E ⊨ [%467 := 0#32, %468 := 32#64, %473 := A, %474 := t, %475 := pkcopy, %476 := rcopy, %477 :=
         scopy, %478 := ctx, %479 := h, %480 := R, %481 := rcheck])
-    (hwf : S.WF) (hmsg : Fits S.mem msg (8 * msgLen.toNat))
-    (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
-    (hsig : Fits S.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
-    (hpk : Fits S.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
-    (hmv : S.mem.readAt msg (8 * msgLen.toNat) = mv) (hrv : S.mem.readAt sig 256 = rv)
-    (hAv : S.mem.readAt pk 256 = Av) (hA : S.mem.PointFit A) (hAP : S.mem.readP3 A = negA PA)
-    (hrc : Fits S.mem rcopy 256) (hrcv : S.mem.readAt rcopy 256 = rv) (hsc : Fits S.mem scopy 256)
-    (hscv : S.mem.readAt scopy 256 = Sv) (hctx : InBounds S.mem ctx 1664)
-    (hh : InBounds S.mem h 512) (hRb : InBounds S.mem R 960) (hrcb : InBounds S.mem rcheck 256)
+    (hwf : S.WF) (hg : S.mem.Globals ed25519_verify.globals)
+    (hmsg : Fits S.mem msg (8 * msgLen.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgLen)
+    (hmsgLen : msgLen.toNat < 2 ^ 63) (hsig : Fits S.mem sig 512)
+    (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits S.mem pk 256)
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hmv : S.mem.readAt msg (8 * msgLen.toNat) = mv)
+    (hrv : S.mem.readAt sig 256 = rv) (hAv : S.mem.readAt pk 256 = Av) (hA : S.mem.PointFit A)
+    (hAP : S.mem.readP3 A = negA PA) (hrc : Fits S.mem rcopy 256)
+    (hrcv : S.mem.readAt rcopy 256 = rv) (hsc : Fits S.mem scopy 256)
+    (hscv : S.mem.readAt scopy 256 = Sv) (hAw : Writable S.mem A) (hctx : InBounds S.mem ctx 1664)
+    (hctxw : Writable S.mem ctx) (hh : InBounds S.mem h 512) (hhw : Writable S.mem h)
+    (hRb : InBounds S.mem R 960) (hRw : Writable S.mem R) (hrcb : InBounds S.mem rcheck 256)
+    (hrcw : Writable S.mem rcheck)
     (hdh : ge_double_scalarmult_vartime.Digits (hram rv Av msgLen mv))
     (hdS : ge_double_scalarmult_vartime.Digits Sv) :
     (ed25519_verify.runFrom E ^bb8 S >>= fun p =>
@@ -624,7 +630,8 @@ set_option maxHeartbeats 400000 in
 /-- `ed25519_verify` on an empty prefix returns `spec` of the message, the signature `r ‖ S` at
 `sig` and the key at `pk`; its frame is freed, the memory unchanged. -/
 public theorem ed25519_verify.call_eq (msg : Pointer) (msgLen : BitVec 64) (sig pk : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgLen.toNat))
+    (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals ed25519_verify.globals) (hmsg : Fits s.mem msg (8 * msgLen.toNat))
     (hmsg_off : ¬msg.offset.uaddOverflow msgLen) (hmsgLen : msgLen.toNat < 2 ^ 63)
     (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
     (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64) :
@@ -735,7 +742,7 @@ public theorem ed25519_verify.call_eq (msg : Pointer) (msgLen : BitVec 64) (sig 
   step_call using
     (frombytes_some (s := S) (hd := by
       rw [hAv]; exact hfb))
-  have hA_room : S.mem.PointRoom A := hA_pt.room
+  have hA_room : S.mem.PointRoom A := hA_pt.room (by mem_fact)
   step_pure
   finish_block
   -- fe_neg(&t, &A.X); fe_carry(&A.X, &t); fe_neg(&t, &A.T); fe_carry(&A.T, &t);

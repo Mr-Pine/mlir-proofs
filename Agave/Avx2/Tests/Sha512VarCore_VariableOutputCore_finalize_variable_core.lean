@@ -33,13 +33,15 @@ private def msg (n : Nat) : List (BitVec 8) :=
 private def bits (l : List (BitVec 8)) : BitVec (8 * l.length) :=
   (BitVec.ofNat (8 * l.length) (l.foldr (fun b acc => b.toNat + 256 * acc) 0))
 
-/-- sha2's `Sha512` at `d` having absorbed `msg n` (by `update`'s memory), room at `out`. -/
+/-- sha2's `Sha512` at `d` having absorbed `msg n` (by `update`'s memory), room at `out`;
+then the globals'. -/
 private def state' (n : Nat) : GlobalState :=
   let m : MemoryState :=
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩, .ofBytes 208 0), (⟨2⟩, .ofBytes n ((bits (msg n)).cast (by simp [msg]))),
           (⟨3⟩, .ofBytes 64 0)]⟩
-  ⟨⟨4⟩, updateMem (m.storeSha512 (d.add 128#64) Sha512.IV) d data (BitVec.ofNat 64 n)⟩
+  GlobalState.withGlobals Sha512VarCore_VariableOutputCore_finalize_variable_core.globals
+    ⟨⟨4⟩, updateMem (m.storeSha512 (d.add 128#64) Sha512.IV) d data (BitVec.ofNat 64 n)⟩
 
 /-- The lift's output bytes, state words and position agree with SHA-512 and `call_eq`. -/
 private def agrees (n : Nat) : Bool :=

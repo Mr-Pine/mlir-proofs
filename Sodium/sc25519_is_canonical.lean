@@ -202,14 +202,12 @@ theorem run_loop (p Lp : Pointer) (S : GlobalState) (g : Vals [.bv 32] × Global
 
 end sc25519_is_canonical
 
-/-- `sc25519_is_canonical` returns `spec` of the 32 bytes at `p` (`1` iff `S < ℓ`, `spec_eq`);
-`L`'s block is freed again, only the counter moves on. -/
+/-- `sc25519_is_canonical` returns `spec` of the 32 bytes at `p` (`1` iff `S < ℓ`, `spec_eq`). -/
 public theorem sc25519_is_canonical.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hp : Fits s.mem p 256) (hp_off : ¬p.offset.uaddOverflow 32#64) :
+    (hg : s.mem.Globals sc25519_is_canonical.globals) (hp : Fits s.mem p 256)
+    (hp_off : ¬p.offset.uaddOverflow 32#64) :
     sc25519_is_canonical.call (sc25519_is_canonical.args (.value p)) s =
-      .value
-        (.cons (.value (sc25519_is_canonical.spec (s.mem.readAt p 256))) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem }) := by
+      .value (.cons (.value (sc25519_is_canonical.spec (s.mem.readAt p 256))) .nil, s) := by
   func_init
   block_init
   iterate 4 step_pure
@@ -226,7 +224,6 @@ public theorem sc25519_is_canonical.call_eq (p : Pointer) (s : GlobalState) (hwf
   iterate 2 step_pure
   finish_block
   subst hS
-  erase_frame
   rfl
 
 end Proof

@@ -143,10 +143,10 @@ public theorem storeOptEdwards_some (h : m.OptEdwardsRoom p) :
 public theorem readAt_storeOptEdwards_tag (h : m.OptEdwardsRoom p) :
     (m.storeOptEdwards p P?).readAt p 64 = if P?.isSome then 1#64 else 0#64 := by
   cases P? with
-  | none => exact MemoryState.readAt_storeAt_self h.2.1.inBounds _
+  | none => exact MemoryState.readAt_storeAt_self h.2.1 _
   | some P =>
     rw [MemoryState.storeOptEdwards]
-    exact MemoryState.readAt_storeAt_self (h.2.1.inBounds.storeEdwards) _
+    exact MemoryState.readAt_storeAt_self (h.2.1.storeEdwards) _
 
 /-- The point read back. -/
 @[mlir_read]
@@ -162,7 +162,7 @@ public theorem readAt_storeOptEdwards_point (h : m.OptEdwardsRoom p) :
   have ho : (p.add 8#64).offset.toNat + 160 ≤ 2 ^ 64 := (optEdwardsRoom_pointRoom h).1
   rw [MemoryState.storeOptEdwards, ← storeAt_edwardsBits ho,
     MemoryState.storeAt_comm (optEdwardsRoom_disjoint h)]
-  exact MemoryState.readAt_storeAt_self (h.2.2.inBounds.storeAt) _
+  exact MemoryState.readAt_storeAt_self (h.2.2.storeAt) _
 
 /-- The tag is known. -/
 @[mlir_fresh]
@@ -190,6 +190,29 @@ public theorem room_storeOptEdwards (h : Room m q w) : Room (m.storeOptEdwards p
   cases P? <;> simp only [MemoryState.storeOptEdwards]
   · exact h.storeAt
   · exact h.storeEdwards.storeAt
+
+@[mlir_transport]
+public theorem live_storeOptEdwards (h : Live m q w) : Live (m.storeOptEdwards p P?) q w := by
+  cases P? <;>
+    simp only [MemoryState.storeOptEdwards, MemoryState.storeEdwards, MemoryState.storeFe4,
+      MemoryState.storeLimbs] <;>
+    (repeat apply Live.storeAt) <;>
+    exact h
+
+/-- `decompress`'s stores keep every block's writability (the steps do not see through the
+`match`). -/
+public theorem _root_.MLIR.Writable.storeOptEdwards (h : Writable m q) :
+    Writable (m.storeOptEdwards p P?) q := by
+  cases P? <;>
+    simp only [MemoryState.storeOptEdwards, MemoryState.storeEdwards, MemoryState.storeFe4,
+      MemoryState.storeLimbs] <;>
+    (repeat apply Writable.storeAt) <;>
+    exact h
+
+/-- `decompress`'s stores keep the globals table. -/
+public theorem _root_.MLIR.MemoryState.globals_storeOptEdwards :
+    (m.storeOptEdwards p P?).globals = m.globals := by
+  cases P? <;> rfl
 
 @[mlir_transport]
 public theorem inBounds_storeOptEdwards (h : InBounds m q w) :

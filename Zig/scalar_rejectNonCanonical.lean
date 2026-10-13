@@ -202,26 +202,22 @@ end scalar_rejectNonCanonical
 
 /-- `scalar.rejectNonCanonical` returns `spec s`, for the 32 bytes `s` at `p`. -/
 public theorem scalar_rejectNonCanonical.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hp : Fits s.mem p 256) (hpo : p.offset.toNat + 32 < 2 ^ 64) :
+    (hg : s.mem.Globals scalar_rejectNonCanonical.globals) (hp : Fits s.mem p 256)
+    (hpo : p.offset.toNat + 32 < 2 ^ 64) :
     scalar_rejectNonCanonical.call (scalar_rejectNonCanonical.args (.value p)) s =
-      .value
-        (.cons (.value (scalar.rejectNonCanonical.spec (s.mem.readAt p 256))) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem }) := by
+      .value (.cons (.value (scalar.rejectNonCanonical.spec (s.mem.readAt p 256))) .nil, s) := by
   func_init
   block_init
   iterate 4 step_pure
   step_addressof scalar_field_order_s.value_eq with o
   iterate 3 step_pure
   finish_block
-  have hB : S.mem.readAt p 256 = S₀.mem.readAt p 256 := by
-    rw [hS]; exact MemoryState.readAt_addBlock hwf₀ hp₀.inBounds
+  rw [← bind_pure (scalar_rejectNonCanonical.runFrom E _ S)]
   refine
-    scalar_rejectNonCanonical.loop p o _ _ _ _ 31 0#8 1#8 S E hArgs ?_ (by omega) hp hpo hB ho_fits
+    scalar_rejectNonCanonical.loop p o _ _ _ _ 31 0#8 1#8 S E hArgs ?_ (by omega) hp hpo rfl ho_fits
       ho_off hread_o ?_
   · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> env_reads
   · rw [ltScan_congr _ _ _ fun j hj => field_order_bytes j (by omega), hS]
-    dsimp only
-    erase_frame
     rfl
 
 /-! ## Meaning -/

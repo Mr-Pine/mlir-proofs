@@ -65,9 +65,9 @@ abbrev MemoryState.ProjectiveRoom (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 120 ≤ 2 ^ 64 ∧
     m.LimbsRoom p ∧ m.LimbsRoom (p.add 40#64) ∧ m.LimbsRoom (p.add 80#64)
 
-theorem MemoryState.ProjectiveFit.room {m : MemoryState} (h : m.ProjectiveFit p) :
-    m.ProjectiveRoom p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.room⟩
+theorem MemoryState.ProjectiveFit.room {m : MemoryState} (h : m.ProjectiveFit p)
+    (hw : Writable m p) : m.ProjectiveRoom p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.room (hw.of_id_eq rfl)⟩
 
 /-! ### Field elements of one object -/
 

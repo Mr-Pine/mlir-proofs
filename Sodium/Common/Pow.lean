@@ -35,6 +35,7 @@ public theorem runBodyFrom_sqRun {blk : BasicBlock Γ tRets bp} {t : Dst Γ .ptr
         E ⊨ [t := T] →
         S.WF →
         S.mem.LimbsFit T →
+        Writable S.mem T →
         (blk.runBodyFrom E (pos + (n + 1))
               { S with mem := S.mem.storeLimbs T (sqrN (n + 1) (S.mem.readLimbs T)) } >>=
             g) =
@@ -43,19 +44,20 @@ public theorem runBodyFrom_sqRun {blk : BasicBlock Γ tRets bp} {t : Dst Γ .ptr
   intro n
   induction n with
   | zero =>
-    intro E pos S hbody hR hwf hT hK
+    intro E pos S hbody hR hwf hT hTw hK
     simp only [sqRun, List.cons_append, List.nil_append] at hbody
     step_call using fe25519_sq.call_eq
     rw [hS]
     exact hK
   | succ n ih =>
-    intro E pos S hbody hR hwf hT hK
+    intro E pos S hbody hR hwf hT hTw hK
     simp only [sqRun, List.cons_append] at hbody
     step_call using fe25519_sq.call_eq
-    refine ih hbody hR hwf hT ?_
+    refine ih hbody hR hwf hT hTw ?_
     subst hS
     dsimp only
-    rw [MemoryState.readLimbs_storeLimbs_self (MemoryState.limbsRoom_storeLimbs_iff.mp hT.room),
+    rw [MemoryState.readLimbs_storeLimbs_self
+      (MemoryState.limbsRoom_storeLimbs_iff.mp (hT.room hTw)),
       MemoryState.storeLimbs_storeLimbs_self, Nat.add_right_comm pos 1 (n + 1)]
     exact hK
 

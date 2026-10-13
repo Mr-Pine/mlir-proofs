@@ -71,7 +71,7 @@ local macro "tbl_pre " j:num : tactic =>
   `(tactic|
     ( checkpoint hck
       have hT := fun x d (m' : MemoryState) hm =>
-        tbl_storeDef (m' := m') hc_room.inBounds hc_off hA hD (j := $j) (by omega) x d hm
+        tbl_storeDef (m' := m') hc_room hc_off hA hD (j := $j) (by omega) x d hm
       have hdst :=
         Room.add_of_le (entry_ov hc_off (j := $j) (by omega)).2
           (by
@@ -97,7 +97,7 @@ local macro "entry " j:num Q:term:max : tactic =>
   `(tactic|
     ( obtain ⟨hER, hEb, hEd⟩ := tbl_entry hc_room hc_off hA hD (j := $j) (by omega)
       have hEf :=
-        MemoryState.PtLimbsFit.of_definedAt hER
+        MemoryState.PtLimbsFit.of_definedAt hER.ptLive
           (by
             rw [hEd];
             simp only [Vector.getElem_set, Vector.getElem_replicate, Nat.reduceEqDiff, ↓reduceIte]
@@ -174,12 +174,12 @@ theorem entry_ov {c : Pointer} (ho : c.offset = 0) (hj : j < 9) :
   omega
 
 /-- A read over a masked store inside it: the bits read before, the stored ones spliced in. -/
-theorem readAt_add_storeDef {m : MemoryState} {p : Pointer} {off : BitVec 64} (h : InBounds m p v)
+theorem readAt_add_storeDef {m : MemoryState} {p : Pointer} {off : BitVec 64} (h : Room m p v)
     (hov : ¬p.offset.uaddOverflow off) (_hw : off.toNat * 8 + w ≤ v) (x d : BitVec w) :
     (m.storeDef (p.add off) x d).readAt p v =
       Memory.spliceBits (m.readAt p v) (off.toNat * 8) x := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk
+  obtain ⟨blk, hblk, -, hsz, hwr⟩ := h.block
+  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk hwr
   simp only [Pointer.add_id] at hs
   simp only [MemoryState.readAt, hs, hblk]
   unfold MemoryBlock.lengthInBits at hsz
@@ -191,12 +191,12 @@ theorem readAt_add_storeDef {m : MemoryState} {p : Pointer} {off : BitVec 64} (h
 
 /-- Definedness over a masked store inside it: `d` spliced in. -/
 theorem definedAt_add_storeDef {m : MemoryState} {p : Pointer} {off : BitVec 64}
-    (h : InBounds m p v) (hov : ¬p.offset.uaddOverflow off) (_hw : off.toNat * 8 + w ≤ v)
+    (h : Room m p v) (hov : ¬p.offset.uaddOverflow off) (_hw : off.toNat * 8 + w ≤ v)
     (x d : BitVec w) :
     (m.storeDef (p.add off) x d).definedAt p v =
       Memory.spliceBits (m.definedAt p v) (off.toNat * 8) d := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk
+  obtain ⟨blk, hblk, -, hsz, hwr⟩ := h.block
+  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk hwr
   simp only [Pointer.add_id] at hs
   simp only [MemoryState.definedAt, hs, hblk]
   unfold MemoryBlock.lengthInBits at hsz
@@ -208,7 +208,7 @@ theorem definedAt_add_storeDef {m : MemoryState} {p : Pointer} {off : BitVec 64}
 
 /-- A copy into entry `j` of the table at `c`: lane `j` set, in the bits and their definedness. -/
 theorem tbl_storeDef {m m' : MemoryState} {c : Pointer} {v dv : Vector (BitVec 1344) 9}
-    (hf : InBounds m c 12096) (ho : c.offset = 0) (hA : m.readAt c 12096 = BitVec.packLanes v)
+    (hf : Room m c 12096) (ho : c.offset = 0) (hA : m.readAt c 12096 = BitVec.packLanes v)
     (hD : m.definedAt c 12096 = BitVec.packLanes dv) (hj : j < 9) (x d : BitVec 1344)
     (hm : m' = m.storeDef (c.add (BitVec.ofNat 64 (j * 168))) x d) :
     m'.readAt c 12096 = BitVec.packLanes (v.set j x) ∧
@@ -239,7 +239,7 @@ theorem tbl_entry {m : MemoryState} {c : Pointer} {v dv : Vector (BitVec 1344) 9
     rw [Nat.mod_eq_of_lt (by omega)]; omega
   · rw [MemoryState.readAt_add_of_readAt hf.inBounds (entry_ov ho hj).2 hw hA, (entry_ov ho hj).1,
       show j * 168 * 8 = j * 1344 by omega, BitVec.extractLsb'_packLanes _ _ hj]
-  · obtain ⟨blk, hblk, -, hsz⟩ := hf
+  · obtain ⟨blk, hblk, -, hsz, -⟩ := hf.block
     have hb : m[(c.add (BitVec.ofNat 64 (j * 168))).id]? = some blk := hblk
     have hD' := hD
     simp only [MemoryState.definedAt, hblk] at hD'
@@ -302,11 +302,12 @@ set_option maxHeartbeats 3000000 in
 /-- `Edwards25519.precompute` copies the table of `spec P` to `out`: entry `0` the identity global's
 bytes, `1` `p`'s, the others as fresh slots hold them; for limbs below `2^53`. -/
 public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals Edwards25519_precompute.globals)
     (hout : Room s.mem out 12096) (hp : s.mem.PtLimbsFit p) (hP : (s.mem.readPt p).Lt (2 ^ 53)) :
     Edwards25519_precompute.call (Edwards25519_precompute.args (.value out) (.value p)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 230⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 226⟩,
             mem :=
               s.mem.storeDef out
                 (Edwards25519.precompute.bits (s.mem.readPt p) (s.mem.readAt p 1344))
@@ -323,11 +324,9 @@ public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalStat
   step_pure
   step_addressof Edwards25519_identityElement.value_eq with g
   have hgb : S.mem.readAt g 1344 = Edwards25519.identityBits := hread_g.trans (by decide +kernel)
-  have hgd : S.mem.definedAt g 1344 = Edwards25519.identityDef := by
-    rw [hS, hg, ← GlobalState.allocaPtr_eq_slot,
-      MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega))]
-    decide +kernel
-  clear hread_g
+  have hgd : S.mem.definedAt g 1344 = Edwards25519.identityDef :=
+    hdefined_g.trans (by decide +kernel)
+  clear hread_g hdefined_g
   checkpoint hck0
   rename' S => S₁
   iterate 7 step_pure

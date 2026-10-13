@@ -124,19 +124,20 @@ public theorem anon_042b818bc72209407b52bd0e4d6c8368_28.value_eq (s : GlobalStat
 
 -- a long chain of calls: the state cut from the entry state every so often (`rir.stateDepth`)
 set_option rir.stateDepth 64 in
--- about 120 steps over a frame of 19 blocks and 27 calls: past the default heartbeats
+-- about 120 steps over a frame of 18 blocks and 27 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
 /-- `FieldElement::sqrt_ratio_i(u, v)` stores `spec u v`'s `Choice` at `out` and its `r` at
-`out + 8`; the loads all come before those stores. The temporaries', the global's and the callees'
-blocks are freed again: only the counter moves on. -/
+`out + 8`; the loads all come before those stores. The temporaries' and the callees' blocks are
+freed again: only the counter moves on. -/
 public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : Room s.mem out 8) (hout_off : ¬out.offset.uaddOverflow 48#64)
+    (hwf : s.WF) (hg : s.mem.Globals FieldElement51_sqrt_ratio_i.globals) (hout : Room s.mem out 8)
+    (hout_off : ¬out.offset.uaddOverflow 48#64)
     (hout8 : s.mem.LimbsRoom (out.add 8#64)) (hu : s.mem.LimbsFit u) (hv : s.mem.LimbsFit v) :
     FieldElement51_sqrt_ratio_i.call
         (FieldElement51_sqrt_ratio_i.args (.value out) (.value u) (.value v)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 148⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + 147⟩
             mem :=
               (s.mem.storeAt out
                     (FieldElement51_sqrt_ratio_i.spec (s.mem.readLimbs u)

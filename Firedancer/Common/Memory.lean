@@ -9,15 +9,20 @@ namespace MLIR
 
 @[expose] public section
 
-/-- Two changes of one block: their composition. -/
+/-- Two changes of one block, the first keeping its writability: their composition. -/
 theorem MemoryState.modifyBlock_modifyBlock_self {m : MemoryState} {i : BlockId}
-    {f g : MemoryBlock → MemoryBlock} :
+    {f g : MemoryBlock → MemoryBlock} (hf : ∀ b, (f b).writable = b.writable) :
     (m.modifyBlock i f).modifyBlock i g = m.modifyBlock i (g ∘ f) := by
   simp only [modifyBlock, MemoryState.mk.injEq, and_true]
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
-  split <;> simp_all [Option.map_map]
+  split
+  · rename_i h; subst h
+    cases m.mem[i]? with
+    | none => simp
+    | some b => by_cases hw : b.writable <;> simp [MemoryBlock.update, hw, hf]
+  · rfl
 
 /-- Changes of two blocks commute. -/
 theorem MemoryState.modifyBlock_comm {m : MemoryState} {i j : BlockId}
@@ -33,7 +38,7 @@ open Memory in
 /-- A second store to the same range overwrites the first. -/
 theorem MemoryState.storeAt_storeAt_self {m : MemoryState} {p : Pointer} {x y : BitVec w} :
     (m.storeAt p x).storeAt p y = m.storeAt p y := by
-  simp only [MemoryState.storeAt, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, spliceBits_spliceBits_self]
@@ -59,7 +64,7 @@ theorem MemoryState.storeAt_storeAt_append {m : MemoryState} {p : Pointer} {x : 
     simp only [BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
     split <;> simp <;> omega
   simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, hoff, happ, hones]

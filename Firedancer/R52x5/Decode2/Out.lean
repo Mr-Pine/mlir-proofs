@@ -137,11 +137,11 @@ set_option maxHeartbeats 600000 in
 is `x_0`, packed with `y`, `1`, `x y` into `Pa` and `Pb`; `0`. -/
 theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
     {g : Vals [.bv 32] × GlobalState → PoisonOr β} {K : PoisonOr β} {B : GlobalState}
-    {M : MemoryState} {c : Nat} (DA DB : Dec)
+    {M : MemoryState} {c : Nat} {gsq gone gd : Pointer} (DA DB : Dec)
     (hArgs : Ein.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get)
     (hR :
       Ein ⊨ [rir_reg% hty 1228 := DA.x0, rir_reg% hty 1230 := DB.x0, rir_reg% hty 1335 := DA.t1nz,
-        rir_reg% hty 1337 := DB.t1nz, rir_reg% hty 1 := B.slot 0, rir_reg% hty 16 := B.slot 1,
+        rir_reg% hty 1337 := DB.t1nz, rir_reg% hty 1 := gsq, rir_reg% hty 16 := gone,
         rir_reg% hty 0 := (wwl 1 0 0 0 0 0 0 0 : Wwl), rir_reg% hty 46 := B.slot 3,
         rir_reg% hty 55 := B.slot 12, rir_reg% hty 64 := B.slot 21, rir_reg% hty 69 := B.slot 26,
         rir_reg% hty 70 := B.slot 27, rir_reg% hty 71 := B.slot 28, rir_reg% hty 72 := B.slot 29,
@@ -152,7 +152,7 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
         B.slot 203, rir_reg% hty 20 := 1#64, rir_reg% hty 21 := 2#64, rir_reg% hty 22 := 3#64,
         rir_reg% hty 33 := 0#32])
     (ht1a : DA.t1nz = 0 ∨ DA.t1nz = 1) (ht1b : DB.t1nz = 0 ∨ DB.t1nz = 1) (hI : Inv B M c S)
-    (hG : Globals B M)
+    (hG : Globals B gsq gone gd M)
     (hO :
       Room M Pa0 256 ∧
         Room M Pa1 256 ∧
@@ -183,8 +183,11 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
     (fd_r52x5_ge_decode2.runFrom Ein 12 S >>= g) = K := by
   have hg0 := hI.fits hG.sqrtm1_fits
   have hg1 := hI.fits hG.one_fits
-  have hsq := (hI.readVec (p := B.slot 0) (by simp [GlobalState.slot])).trans hG.sqrtm1
-  have hone := (hI.readVec (p := B.slot 1) (by simp [GlobalState.slot])).trans hG.one
+  have hsq := (hI.readVec hG.sqrtm1_lt).trans hG.sqrtm1
+  have hone := (hI.readVec hG.one_lt).trans hG.one
+  -- the globals below the frame, for their facts past its slots' writes
+  have hsq_lt := hG.sqrtm1_lt
+  have hone_lt := hG.one_lt
   clear hG
   obtain ⟨ha0, ha1, ha2, ha3, ha4, hb0, hb1, hb2, hb3, hb4⟩ := hO
   obtain ⟨la0, la1, la2, la3, la4, lb0, lb1, lb2, lb3, lb4⟩ := hlt
@@ -203,6 +206,8 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
     readAt_eq_packLanes_readVec.trans (by rw [hy])
   have hyb' : S.mem.readAt (B.slot 12) 512 = BitVec.packLanes DB.y :=
     readAt_eq_packLanes_readVec.trans (by rw [hyb])
+  have w21 := hF.wr 21
+  have w29 := hF.wr 29
   have f26 := hF.vec 26
   have f27 := hF.vec 27
   have f28 := hF.vec 28
@@ -245,6 +250,10 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   have f197 := hF.arr 197
   have f198 := hF.arr 198
   have f199 := hF.arr 199
+  have w196 := hF.wr 196
+  have w197 := hF.wr 197
+  have w198 := hF.wr 198
+  have w199 := hF.wr 199
   -- `FD_R52X5_QUAD_PACK( *_Pa, xa, ya, one, xya )`
   step_pure
   step_load [ofFn_extractVecElem_readAt_512]
@@ -274,6 +283,10 @@ theorem bb12_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
   have f201 := hF.arr 201
   have f202 := hF.arr 202
   have f203 := hF.arr 203
+  have w200 := hF.wr 200
+  have w201 := hF.wr 201
+  have w202 := hF.wr 202
+  have w203 := hF.wr 203
   step_pure
   step_load [ofFn_extractVecElem_readAt_512]
   step_call using wwl_st.call_eq

@@ -16,7 +16,7 @@ private def s0 : GlobalState :=
   ⟨⟨2⟩,
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩, ⟨16, 0x00112233445566778899aabbccddeeff#128, BitVec.allOnes 128, true,
-          fun _ => none⟩)]⟩⟩
+          fun _ => none, true⟩)]⟩⟩
 
 #guard
   match load64_be.eval 1 (load64_be.args (.value p)) s0 with

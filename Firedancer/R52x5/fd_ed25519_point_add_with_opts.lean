@@ -61,6 +61,9 @@ theorem table_run0 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       InBounds S.mem z0 256 ∧
         InBounds S.mem z1 256 ∧
         InBounds S.mem z2 256 ∧ InBounds S.mem z3 256 ∧ InBounds S.mem z4 256)
+    (hzw :
+      Writable S.mem z0 ∧
+        Writable S.mem z1 ∧ Writable S.mem z2 ∧ Writable S.mem z3 ∧ Writable S.mem z4)
     (hne :
       z1.id ≠ z0.id ∧
         z2.id ≠ z0.id ∧
@@ -87,6 +90,7 @@ theorem table_run0 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
             K) :
     (blk.runBodyFrom E 0 S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hz
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hzw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   obtain ⟨hb0, hb1, hb2, hb3, hb4⟩ := hbz
   generalize hA : S.mem.readQuad5 a = A at hK
@@ -123,6 +127,9 @@ theorem table_run107 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       InBounds S.mem z5 256 ∧
         InBounds S.mem z6 256 ∧
         InBounds S.mem z7 256 ∧ InBounds S.mem z8 256 ∧ InBounds S.mem z9 256)
+    (hzw :
+      Writable S.mem z5 ∧
+        Writable S.mem z6 ∧ Writable S.mem z7 ∧ Writable S.mem z8 ∧ Writable S.mem z9)
     (hne :
       z6.id ≠ z5.id ∧
         z7.id ≠ z5.id ∧
@@ -142,6 +149,7 @@ theorem table_run107 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
             K) :
     (blk.runBodyFrom E 107 S >>= g) = K := by
   obtain ⟨hz5, hz6, hz7, hz8, hz9⟩ := hz
+  obtain ⟨hw5, hw6, hw7, hw8, hw9⟩ := hzw
   obtain ⟨h65, h75, h85, h95, h76, h86, h96, h87, h97, h98⟩ := hne
   obtain ⟨hr5, hr6, hr7, hr8, hr9⟩ := hrz
   -- FD_R52X5_QUAD_PERMUTE( _ta, 0,1,3,2, _ta ); FD_R52X5_QUAD_DIFF_SUM( _ta, _ta )
@@ -219,6 +227,9 @@ theorem add_run145 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       InBounds S.mem z0 256 ∧
         InBounds S.mem z1 256 ∧
         InBounds S.mem z2 256 ∧ InBounds S.mem z3 256 ∧ InBounds S.mem z4 256)
+    (hzw :
+      Writable S.mem z0 ∧
+        Writable S.mem z1 ∧ Writable S.mem z2 ∧ Writable S.mem z3 ∧ Writable S.mem z4)
     (hne :
       z1.id ≠ z0.id ∧
         z2.id ≠ z0.id ∧
@@ -244,6 +255,7 @@ theorem add_run145 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
             K) :
     (blk.runBodyFrom E 145 S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hz
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hzw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   generalize hA : S.mem.readQuad5 a = A at hK
   -- FD_R52X5_QUAD_DIFF_SUM( _ta, P1 )
@@ -279,6 +291,9 @@ theorem add_run240 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
       InBounds S.mem z5 256 ∧
         InBounds S.mem z6 256 ∧
         InBounds S.mem z7 256 ∧ InBounds S.mem z8 256 ∧ InBounds S.mem z9 256)
+    (hzw :
+      Writable S.mem z5 ∧
+        Writable S.mem z6 ∧ Writable S.mem z7 ∧ Writable S.mem z8 ∧ Writable S.mem z9)
     (hne :
       z6.id ≠ z5.id ∧
         z7.id ≠ z5.id ∧
@@ -298,6 +313,7 @@ theorem add_run240 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
             K) :
     (blk.runBodyFrom E 240 S >>= g) = K := by
   obtain ⟨hz5, hz6, hz7, hz8, hz9⟩ := hz
+  obtain ⟨hw5, hw6, hw7, hw8, hw9⟩ := hzw
   obtain ⟨h65, h75, h85, h95, h76, h86, h96, h87, h97, h98⟩ := hne
   obtain ⟨hr5, hr6, hr7, hr8, hr9⟩ := hrz
   -- FD_R52X5_QUAD_PERMUTE( _ta, 0,1,3,2, _ta ); FD_R52X5_QUAD_DIFF_SUM( _ta, _ta )
@@ -316,6 +332,9 @@ theorem add_run240 {β : Type} {blk : BasicBlock Γ [Ty.ptr] blockTys}
 
 end fd_ed25519_point_add_with_opts
 
+-- the twenty slots' facts, `Writable` ones among them, through both branches: over 200000
+-- heartbeats
+set_option maxHeartbeats 400000 in
 /-- `fd_ed25519_point_add_with_opts` stores `spec` of the points at `a` and `b` at `r` and returns
 `r`; `r` may be `a` or `b`. Its twenty product slots and `wl_permute`'s unions are freed. -/
 public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer) (pre : BitVec 32)

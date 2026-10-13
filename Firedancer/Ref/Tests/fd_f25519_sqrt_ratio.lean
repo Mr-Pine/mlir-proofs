@@ -15,13 +15,15 @@ private def u : Pointer :=
 private def v : Pointer :=
   ⟨⟨2⟩, 0⟩
 
-/-- Three 40-byte blocks: `r` zeroed, `u` and `v` holding the limbs `ub` and `vb`. -/
+/-- Three 40-byte blocks: `r` zeroed, `u` and `v` holding the limbs `ub` and `vb`; then the
+global's. -/
 private def state (ub vb : BitVec 320) : GlobalState :=
-  ⟨⟨3⟩,
-    ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 ub), (⟨2⟩, .ofBytes 40 vb)]⟩⟩
+  GlobalState.withGlobals fd_f25519_sqrt_ratio.globals
+    ⟨⟨3⟩,
+      ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 40 0), (⟨1⟩, .ofBytes 40 ub), (⟨2⟩, .ofBytes 40 vb)]⟩⟩
 
 /-- The returned flag and `r`'s canonical encoding after `sqrt_ratio r u q`, if the inputs are
-unchanged and the counter moved on by 50 blocks; else `none`. `spec` itself is not evaluated: its
+unchanged and the counter moved on by 49 blocks; else `none`. `spec` itself is not evaluated: its
 `pow22523` chain re-evaluates its closures exponentially often. -/
 private def out (ub vb : BitVec 320) (q : Pointer := v) : Option (BitVec 32 × BitVec 256) :=
   let s := state ub vb
@@ -30,7 +32,7 @@ private def out (ub vb : BitVec 320) (q : Pointer := v) : Option (BitVec 32 × B
   | .value (.cons (.value ret) .nil, s') =>
     if
         s'.mem.readAt u 320 == ub && s'.mem.readAt v 320 == vb && s'.alloc.nextFreeBlock == 53 &&
-          s'.mem.mem.size == 3 then
+          s'.mem.mem.size == 4 then
       some (ret, fd_f25519_tobytes.spec (s'.mem.readLimbs r))
     else none
   | _ => none

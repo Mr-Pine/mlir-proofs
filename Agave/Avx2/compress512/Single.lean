@@ -23,9 +23,10 @@ public theorem single (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Ve
     (B : BitVec 1024) (S₀ : GlobalState) (E : ⟪Γ⟫) (g : Vals [] × GlobalState → PoisonOr β)
     (K : PoisonOr β)
     (hArgs : E.args = (compress512.args (.value st) (.value blocks) (.value n)).get) (hC : Consts E)
-    (hP : Ptrs Kp ms t2 ms2 E) (hst : S₀.mem.Sha512Fit st) (hH : S₀.mem.readSha512 st = H)
-    (hB : Fits S₀.mem blocks 1024) (hBr : S₀.mem.readAt blocks 1024 = B)
-    (hbo : blocks.offset.toNat + 128 < 2 ^ 64) (hms : InBounds S₀.mem ms 1024) (hmo : ms.offset = 0)
+    (hP : Ptrs Kp ms t2 ms2 E) (hst : S₀.mem.Sha512Fit st) (hstw : Writable S₀.mem st)
+    (hH : S₀.mem.readSha512 st = H) (hB : Fits S₀.mem blocks 1024)
+    (hBr : S₀.mem.readAt blocks 1024 = B) (hbo : blocks.offset.toNat + 128 < 2 ^ 64)
+    (hms : InBounds S₀.mem ms 1024) (hmsw : Writable S₀.mem ms) (hmo : ms.offset = 0)
     (hKf : Fits S₀.mem Kp 5120) (hKo : Kp.offset = 0) (hK : KPairs S₀.mem Kp)
     (hst_ms : st.id ≠ ms.id) (hb_ms : blocks.id ≠ ms.id) (hms_K : ms.id ≠ Kp.id)
     (hK' :
@@ -210,7 +211,7 @@ public theorem single (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Ve
   have hR : HoldsR S.mem ms (bsched B) 0 16 := by
     have :=
       HoldsR.pairsMem (W := bsched B) (p := 0) (n := 8) (lo := 0) hmo
-        (InBounds.pairsMem_iff.1 (hmem ▸ hms)) (Nat.le_refl _) (by decide)
+        (Room.pairsMem_iff.1 (hmem ▸ hF.room (by mem_fact))) (Nat.le_refl _) (by decide)
         (fun _ _ h => absurd h (Nat.not_lt_zero _))
     rw [hmem]; simpa using this
   clear hfits_ms hfits_ms_16 hfits_ms_32 hfits_ms_48 hfits_ms_64 hfits_ms_80 hfits_ms_96
@@ -224,12 +225,18 @@ public theorem single (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Ve
   have hR6 : HoldsR S.mem ms (bsched B) 64 80 := by
     have :=
       HoldsR.pairsMem (W := bsched B) (p := 8) (n := 32) (lo := 0) hmo
-        (InBounds.pairsMem_iff.1 (hS ▸ hms)) (by decide) (by decide) hR
+        (Room.pairsMem_iff.1 (hS ▸ hF.room (by mem_fact))) (by decide) (by decide) hR
     rw [hS]; simpa using this
   clear hR
   step_loop using loop6 st Kp ms t2 ms2 H (bsched B) H S g K hmo hF hR6 15 64
   intro hL
   clear hK hR6 hKf hF
+  -- `state`'s block through the pairs' stores, which the steps do not unfold
+  have hstw' : Writable S.mem st := by
+    rw [hS]
+    first
+    | exact Writable.pairsMem hstw
+    | exact Writable.pairsMem (Writable.pairsMem hstw)
   -- accumulate_state(state, &current_state);
   block_init
   step_pure [rounds_add H B (show 0 < 8 by decide)]

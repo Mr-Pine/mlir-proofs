@@ -217,8 +217,8 @@ theorem Fe.sq2.noOverflow {a : Fin 5 → BitVec 64} (ha : Fe.Lt a (2 ^ 54)) :
 
 /-- `_carry128` on the columns `R` read at `r`. -/
 theorem Fe_carry128.call_eq_of (out r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsRoom out) (hr : s.mem.WideFit r) (hR : s.mem.readWide r = R)
-    (hpre : Fe.carry128.Pre R) :
+    (hout : s.mem.LimbsRoom out) (hr : s.mem.WideFit r) (hrw : Writable s.mem r)
+    (hR : s.mem.readWide r = R) (hpre : Fe.carry128.Pre R) :
     Fe_carry128.call (Fe_carry128.args (.value out) (.value r)) s =
       .value
         (.nil,
@@ -227,7 +227,7 @@ theorem Fe_carry128.call_eq_of (out r : Pointer) (s : GlobalState) (hwf : s.WF)
               (s.mem.storeWideTail r (Fe.carry128.wide R)).storeLimbs out
                 (Fe.carry128.spec R) }) := by
   subst hR
-  exact Fe_carry128.call_eq out r s hwf hout hr hpre
+  exact Fe_carry128.call_eq out r s hwf hout hr hrw hpre
 
 -- one 140-instruction block: 14 slots, 13 calls, 15 loads, each step carrying the facts
 set_option maxHeartbeats 3000000 in

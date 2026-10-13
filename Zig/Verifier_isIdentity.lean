@@ -55,7 +55,7 @@ public theorem Verifier_isIdentity.call_eq (p : Pointer) (s : GlobalState) (hwf 
     have hYd : S.mem.readLimbs (c.add 40#64) = S₀.mem.readLimbs (p.add 40#64) := by
       rw [hS]
       dsimp only
-      rw [MemoryState.readLimbs_copy_of (a := 40) hcA hpA.room (by omega) hbits]
+      rw [MemoryState.readLimbs_copy_of (a := 40) hcA hpA.ptLive (by omega) hbits]
       simp (disch := mem_fact) only [MemoryState.readLimbs_alloca]
     have hZd : S.mem.readLimbs (p.add 80#64) = S₀.mem.readLimbs (p.add 80#64) := by
       rw [hS]

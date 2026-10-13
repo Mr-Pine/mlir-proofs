@@ -89,7 +89,7 @@ theorem Fits.storeVec_self {m : MemoryState} (h : Room m p 512) : Fits (m.storeV
 
 /-- A read of the stored lanes. -/
 @[mlir_mem, mlir_read]
-theorem MemoryState.readAt_storeVec_self {m : MemoryState} (h : InBounds m p 512) :
+theorem MemoryState.readAt_storeVec_self {m : MemoryState} (h : Room m p 512) :
     (m.storeVec p v).readAt p 512 = BitVec.packLanes v :=
   readAt_storeAt_self h _
 
@@ -99,9 +99,9 @@ theorem MemoryState.readAt_storeVec_disjoint {m : MemoryState}
     (h : (Range.of p 512).Disjoint (Range.of q w)) : (m.storeVec p v).readAt q w = m.readAt q w :=
   readAt_storeAt_disjoint h _
 
-/-- Lanes stored in bounds read back. -/
+/-- Lanes stored where there is room read back. -/
 @[mlir_state, mlir_frame, mlir_read]
-theorem MemoryState.readVec_storeVec_self {m : MemoryState} (h : InBounds m p 512) :
+theorem MemoryState.readVec_storeVec_self {m : MemoryState} (h : Room m p 512) :
     (m.storeVec p v).readVec p = v :=
   readVec_packLanes (readAt_storeVec_self h)
 

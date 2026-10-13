@@ -3,6 +3,7 @@ module
 public import Agave.Common.Decompress
 public import Agave.Serial.mul.Spec
 public import MLIR.Run.Tactic
+import Firedancer.Common.Writable
 import Std.Data.ExtHashMap.Lemmas
 
 /-! `vartime_double_base::mul`'s objects in memory: facts past a partly defined global's block, the
@@ -74,48 +75,66 @@ public theorem eraseFrom_eraseFrom_of_le {m : MemoryState} {n k : Nat} (h : n �
 /-! ### The main loop's slots -/
 
 /-- The main loop's temporaries from `B`'s counter on are in bounds: field elements at slots
-`1 … 19`, points at `20 … 24`. -/
+`0 … 18`, points at `19 … 23`; they and `r` (slot `24`) are writable. -/
 @[expose]
 public def SlotsIn (m : MemoryState) (B : GlobalState) : Prop :=
-  ∀ k, 1 ≤ k → k ≤ 24 → InBounds m (B.slot k) (if k ≤ 19 then 320 else 1280)
+  (∀ k, k ≤ 23 → InBounds m (B.slot k) (if k ≤ 18 then 320 else 1280)) ∧
+    ∀ k, k ≤ 24 → Writable m (B.slot k)
 
 section Slots
 
 variable {m : MemoryState} {B : GlobalState}
 
 /-- A field element's slot. -/
-public theorem SlotsIn.fe (h : SlotsIn m B) (k : Nat) (h1 : 1 ≤ k := by decide)
-    (h19 : k ≤ 19 := by decide) : InBounds m (B.slot k) 320 := by
-  simpa [h19] using h k h1 (by omega)
+public theorem SlotsIn.fe (h : SlotsIn m B) (k : Nat) (h18 : k ≤ 18 := by decide) :
+    InBounds m (B.slot k) 320 := by
+  simpa [h18] using h.1 k (by omega)
 
 /-- A point's slot. -/
-public theorem SlotsIn.pt (h : SlotsIn m B) (k : Nat) (h20 : 20 ≤ k := by decide)
-    (h24 : k ≤ 24 := by decide) : InBounds m (B.slot k) 1280 := by
-  simpa [show ¬k ≤ 19 by omega] using h k (by omega) h24
+public theorem SlotsIn.pt (h : SlotsIn m B) (k : Nat) (h19 : 19 ≤ k := by decide)
+    (h23 : k ≤ 23 := by decide) : InBounds m (B.slot k) 1280 := by
+  simpa [show ¬k ≤ 18 by omega] using h.1 k h23
+
+/-- A writable slot. -/
+public theorem SlotsIn.writable (h : SlotsIn m B) (k : Nat) (h24 : k ≤ 24 := by decide) :
+    Writable m (B.slot k) :=
+  h.2 k h24
+
+/-- A point's stores keep every block's writability. -/
+theorem _root_.MLIR.Writable.storeCompleted (h : Writable m q) :
+    Writable (m.storeCompleted p P) q :=
+  h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+theorem _root_.MLIR.Writable.storeEdwards (h : Writable m q) : Writable (m.storeEdwards p P) q :=
+  h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+theorem _root_.MLIR.Writable.storeProjective (h : Writable m q) :
+    Writable (m.storeProjective p P) q :=
+  h.storeLimbs.storeLimbs.storeLimbs
 
 @[mlir_transport]
 public theorem SlotsIn.lifetimeStart (h : SlotsIn m B) : SlotsIn (m.lifetimeStart q) B :=
-  fun k h1 h2 => (h k h1 h2).lifetimeStart
+  ⟨fun k hk => (h.1 k hk).lifetimeStart, fun k hk => (h.2 k hk).lifetimeStart⟩
 
 @[mlir_transport]
-public theorem SlotsIn.lifetimeEnd (h : SlotsIn m B) : SlotsIn (m.lifetimeEnd q) B := fun k h1 h2 =>
-  (h k h1 h2).lifetimeEnd
+public theorem SlotsIn.lifetimeEnd (h : SlotsIn m B) : SlotsIn (m.lifetimeEnd q) B :=
+  ⟨fun k hk => (h.1 k hk).lifetimeEnd, fun k hk => (h.2 k hk).lifetimeEnd⟩
 
 @[mlir_transport]
-public theorem SlotsIn.storeLimbs (h : SlotsIn m B) : SlotsIn (m.storeLimbs q l) B := fun k h1 h2 =>
-  (h k h1 h2).storeLimbs
+public theorem SlotsIn.storeLimbs (h : SlotsIn m B) : SlotsIn (m.storeLimbs q l) B :=
+  ⟨fun k hk => (h.1 k hk).storeLimbs, fun k hk => (h.2 k hk).storeLimbs⟩
 
 @[mlir_transport]
 public theorem SlotsIn.storeCompleted (h : SlotsIn m B) : SlotsIn (m.storeCompleted q P) B :=
-  fun k h1 h2 => (h k h1 h2).storeCompleted
+  ⟨fun k hk => (h.1 k hk).storeCompleted, fun k hk => (h.2 k hk).storeCompleted⟩
 
 @[mlir_transport]
 public theorem SlotsIn.storeEdwards (h : SlotsIn m B) : SlotsIn (m.storeEdwards q P) B :=
-  fun k h1 h2 => (h k h1 h2).storeEdwards
+  ⟨fun k hk => (h.1 k hk).storeEdwards, fun k hk => (h.2 k hk).storeEdwards⟩
 
 @[mlir_transport]
 public theorem SlotsIn.storeProjective (h : SlotsIn m B) : SlotsIn (m.storeProjective q P) B :=
-  fun k h1 h2 => (h k h1 h2).storeProjective
+  ⟨fun k hk => (h.1 k hk).storeProjective, fun k hk => (h.2 k hk).storeProjective⟩
 
 end Slots
 
@@ -212,11 +231,20 @@ theorem pointRoom_of_room {m : MemoryState} {p : Pointer} (h : Room m p 1280)
 theorem readNiels_of_readAt {m : MemoryState} {p : Pointer} {P : ProjectiveNielsPoint}
     (hf : Fits m p 1280) (ho : p.offset.toNat + 160 ≤ 2 ^ 64) (h : m.readAt p 1280 = nielsBits P) :
     m.readNiels p = P := by
-  have hr := pointRoom_of_room hf.room ho
-  have hs : m.storeAt p (nielsBits P) = m.storeNiels p P :=
+  -- in a copy of `m` with `p`'s block writable, which reads the same
+  have hr (q : Pointer) (w : Nat) : (m.makeWritable p.id).readAt q w = m.readAt q w :=
+    MemoryState.readAt_makeWritable
+  have hl (q : Pointer) : (m.makeWritable p.id).readLimbs q = m.readLimbs q := by
+    funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
+  have hn : (m.makeWritable p.id).readNiels p = m.readNiels p := by
+    simp only [MemoryState.readNiels, hl]
+  have hfw : Fits (m.makeWritable p.id) p 1280 := hf.makeWritable
+  have hs :
+      (m.makeWritable p.id).storeAt p (nielsBits P) = (m.makeWritable p.id).storeNiels p P :=
     storeAt_edwardsBits (P := ⟨P.Y_plus_X, P.Y_minus_X, P.Z, P.T2d⟩) ho
-  rw [← MemoryState.storeAt_readAt_self hf, h, hs]
-  exact MemoryState.readNiels_storeNiels_self hr
+  rw [← hn, ← MemoryState.storeAt_readAt_self hfw, hr, h, hs]
+  exact
+    MemoryState.readNiels_storeNiels_self (pointRoom_of_room (Room.makeWritable_self hf.live) ho)
 
 /-! ### `table_A` -/
 
@@ -277,19 +305,20 @@ public theorem tableA_coords {m : MemoryState} {p : Pointer} {T : Fin 8 → Proj
 /-- `NafLookupTable5::from`'s `call_eq`, its store spelled as the store of its bits, past which the
 facts carry. -/
 public theorem tableA_call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.globals)
     (hout : Room s.mem out 10240) (ha : s.mem.PointFit a) :
     NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.call
         (NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.args (.value out) (.value a))
         s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 72⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + 64⟩
             mem :=
               s.mem.storeAt out
                 (nafBits
                   (NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.spec
                     (s.mem.readEdwards a))) }) :=
-  NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.call_eq out a s hwf hout ha
+  NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.call_eq out a s hwf hg hout ha
 
 /-! ### `table_B` -/
 

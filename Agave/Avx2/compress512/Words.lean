@@ -117,7 +117,7 @@ public theorem readAt_storeWords_of_disjoint {m : MemoryState} {p q : Pointer}
 
 /-- The state words stored, read back. -/
 public theorem readSha512_storeWords_self {m : MemoryState} {p : Pointer} {v : Vector (BitVec 64) 8}
-    (hp : p.offset.toNat + 56 < 2 ^ 64) (h : InBounds m p 512) :
+    (hp : p.offset.toNat + 56 < 2 ^ 64) (h : Room m p 512) :
     (storeWords m p v).readSha512 p = v := by
   rw [← storeSha512_eq_storeWords hp, MemoryState.readSha512_storeSha512_self hp h]
 

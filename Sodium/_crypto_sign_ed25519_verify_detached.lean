@@ -53,11 +53,9 @@ noncomputable def hram (r A : BitVec 256) (mlen : BitVec 64) (msg : BitVec (8 * 
     (BitVec.ofNat 512
       (natLE (_root_.Ed25519.Sha512.digest (bytesLE r ++ bytesLE A ++ bytesLE msg))))
 
-/-- The blocks the hash calls allocate: `hinit`'s two, one per update and compressed block, the
-final's one and its padding's. They depend on the lengths only. -/
-def hashBlocks (mlen : BitVec 64) : Nat :=
-  2 + 1 + 1 + (1 + if mlen.toNat < 64 then 0 else 1 + (mlen.toNat - 64) / 128) +
-    (1 + if (64 + mlen.toNat) % 128 < 112 then 2 else 3)
+/-- The blocks the hash calls allocate: each update's and the final's `tmp64`. -/
+def hashBlocks : Nat :=
+  1 + 1 + 1 + 1
 
 end _crypto_sign_ed25519_verify_detached
 
@@ -83,11 +81,11 @@ noncomputable def _crypto_sign_ed25519_verify_detached.spec (mlen : BitVec 64)
 
 open _crypto_sign_ed25519_verify_detached in
 /-- The blocks `_crypto_sign_ed25519_verify_detached` allocates, its callees' included: its five
-locals and `sc25519_is_canonical`'s, then each call's on the path taken (`17`: `ge25519_tobytes`'s
-ten, `crypto_verify_32`'s six, `sodium_memcmp`'s one). -/
+locals, then each call's on the path taken (`17`: `ge25519_tobytes`'s ten, `crypto_verify_32`'s
+six, `sodium_memcmp`'s one). -/
 noncomputable def _crypto_sign_ed25519_verify_detached.blocks (mlen : BitVec 64)
     (msg : BitVec (8 * mlen.toNat)) (r S A : BitVec 256) : Nat :=
-  6 +
+  5 +
     if
         sc25519_is_canonical.spec S = 0#32 ∨
           ge25519_has_small_order.spec r ≠ 0#32 ∨
@@ -98,7 +96,7 @@ noncomputable def _crypto_sign_ed25519_verify_detached.blocks (mlen : BitVec 64)
         match ge25519_frombytes_negate_vartime.spec A with
         | none => 0
         | some _ =>
-          hashBlocks mlen + ge25519_double_scalarmult_vartime.blocks (hram r A mlen msg) S + 17
+          hashBlocks + ge25519_double_scalarmult_vartime.blocks (hram r A mlen msg) S + 17
 
 end
 
@@ -181,49 +179,51 @@ attribute [local mlir_transport] MemoryState.PointFit.storeHashState
 
 /-- `crypto_hash_sha512_update.call_eq` with the struct `v` and the bytes `D` read given. -/
 theorem update_of (st inp : Pointer) (inlen : BitVec 64) (s : GlobalState) (hwf : s.WF)
-    (hst : s.mem.HashStateFit st) {v : HashState} {D : BitVec (8 * inlen.toNat)}
-    (hv : s.mem.readHashState st = v) (hpre : v.Prefix (v.count1.toNat / 8 % 128))
-    (hin : Fits s.mem inp (8 * inlen.toNat)) (hino : ¬inp.offset.uaddOverflow inlen)
-    (hsep : inp.id ≠ st.id) (hD : s.mem.readAt inp (8 * inlen.toNat) = D) :
+    (hg : s.mem.Globals crypto_hash_sha512_update.globals) (hst : s.mem.HashStateFit st)
+    {v : HashState} {D : BitVec (8 * inlen.toNat)} (hv : s.mem.readHashState st = v)
+    (hpre : v.Prefix (v.count1.toNat / 8 % 128)) (hin : Fits s.mem inp (8 * inlen.toNat))
+    (hino : ¬inp.offset.uaddOverflow inlen) (hsep : inp.id ≠ st.id)
+    (hD : s.mem.readAt inp (8 * inlen.toNat) = D) :
     crypto_hash_sha512_update.call
         (crypto_hash_sha512_update.args (.value st) (.value inp) (.value inlen)) s =
       .value
         (.cons (.value 0#32) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1 + crypto_hash_sha512_update.cores v inlen⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem := s.mem.storeHashState st (crypto_hash_sha512_update.spec v inlen D) }) := by
   subst hv hD
-  exact crypto_hash_sha512_update.call_eq st inp inlen s hwf hst hpre hin hino hsep
+  exact crypto_hash_sha512_update.call_eq st inp inlen s hwf hg hst hpre hin hino hsep
 
 /-- `crypto_hash_sha512_final.call_eq` with the struct `v` read given. -/
-theorem final_of (st out : Pointer) (s : GlobalState) (hwf : s.WF) (hst : s.mem.HashStateFit st)
+theorem final_of (st out : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals crypto_hash_sha512_final.globals) (hst : s.mem.HashStateFit st)
     {v : HashState} (hv : s.mem.readHashState st = v) (hpre : v.Prefix (SHA512_Pad.r v))
     (hout : Room s.mem out 512) (houto : out.offset.toNat + 64 < 2 ^ 64) (hsep : out.id ≠ st.id) :
     crypto_hash_sha512_final.call (crypto_hash_sha512_final.args (.value st) (.value out)) s =
       .value
         (.cons (.value 0#32) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1 + SHA512_Pad.blocks v⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem :=
               (s.mem.storeAt out (crypto_hash_sha512_final.spec v)).storeAt st
                 (0 : BitVec (8 * (208#64).toNat)) }) := by
   subst hv
-  exact crypto_hash_sha512_final.call_eq st out s hwf hst hpre hout houto hsep
+  exact crypto_hash_sha512_final.call_eq st out s hwf hg hst hpre hout houto hsep
 
-/-- `WF` past an update: the counter advanced twice, the struct stored. -/
-theorem GlobalState.WF.storeHashState_mk₂ {s : GlobalState} (h : s.WF) :
-    (⟨⟨s.alloc.nextFreeBlock + j + k⟩, s.mem.storeHashState c v⟩ : GlobalState).WF :=
-  GlobalState.WF.storeHashState (s := ⟨⟨s.alloc.nextFreeBlock + j + k⟩, s.mem⟩)
-    (GlobalState.WF.add_blocks₂ h)
+/-- `WF` past an update: the counter advanced, the struct stored. -/
+theorem GlobalState.WF.storeHashState_mk {s : GlobalState} (h : s.WF) :
+    (⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem.storeHashState c v⟩ : GlobalState).WF :=
+  GlobalState.WF.storeHashState (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem⟩)
+    (GlobalState.WF.add_blocks h)
 
-/-- `WF` past `final`: the counter advanced twice, the digest and the zeroed struct stored. -/
-theorem GlobalState.WF.storeAt_storeAt_mk₂ {s : GlobalState} {x : BitVec u} {y : BitVec w}
+/-- `WF` past `final`: the counter advanced, the digest and the zeroed struct stored. -/
+theorem GlobalState.WF.storeAt_storeAt_mk {s : GlobalState} {x : BitVec u} {y : BitVec w}
     (h : s.WF) :
-    (⟨⟨s.alloc.nextFreeBlock + j + k⟩, (s.mem.storeAt p x).storeAt q y⟩ : GlobalState).WF :=
+    (⟨⟨s.alloc.nextFreeBlock + k⟩, (s.mem.storeAt p x).storeAt q y⟩ : GlobalState).WF :=
   GlobalState.WF.storeAt (s := ⟨_, s.mem.storeAt p x⟩)
-    (GlobalState.WF.storeAt (s := ⟨⟨s.alloc.nextFreeBlock + j + k⟩, s.mem⟩)
-      (GlobalState.WF.add_blocks₂ h))
+    (GlobalState.WF.storeAt (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem⟩)
+      (GlobalState.WF.add_blocks h))
 
-attribute [local mlir_transport] GlobalState.WF.storeHashState_mk₂
-  GlobalState.WF.storeAt_storeAt_mk₂
+attribute [local mlir_transport] GlobalState.WF.storeHashState_mk
+  GlobalState.WF.storeAt_storeAt_mk
 
 /-- The digest's bits, reduced, of a struct that absorbed `r ‖ A ‖ msg`: `hram`. -/
 theorem hram_eq {v : HashState} {rv Av : BitVec 256} {mlen : BitVec 64}
@@ -236,28 +236,6 @@ theorem hram_eq {v : HashState} {rv Av : BitVec 256} {mlen : BitVec 64}
   congr 1
   rw [← e, _root_.Ed25519.natLE_bytesLE (n := 64), BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
-/-- The hash calls' blocks, from the lengths absorbed: `hashBlocks`. -/
-theorem hashBlocks_eq {v₁ v₂ v₃ v₄ : HashState} {rv Av : BitVec 256} {mlen : BitVec 64}
-    {mv : BitVec (8 * mlen.toNat)} (h₁ : v₁.Absorbed []) (h₂ : v₂.Absorbed ([] ++ bytesLE rv))
-    (h₃ : v₃.Absorbed ([] ++ bytesLE rv ++ bytesLE Av))
-    (h₄ : v₄.Absorbed ([] ++ bytesLE rv ++ bytesLE Av ++ bytesLE mv)) :
-    2 + 1 + crypto_hash_sha512_update.cores v₁ 32#64 + 1 +
-        crypto_hash_sha512_update.cores v₂ 32#64 +
-        1 +
-        crypto_hash_sha512_update.cores v₃ mlen +
-        1 +
-        SHA512_Pad.blocks v₄ =
-      _crypto_sign_ed25519_verify_detached.hashBlocks mlen := by
-  have e₁ := h₁.r_eq
-  have e₂ := h₂.r_eq
-  have e₃ := h₃.r_eq
-  have e₄ := h₄.r_eq
-  simp only [List.length_append, List.length_nil, _root_.Ed25519.length_bytesLE] at e₁ e₂ e₃ e₄
-  simp only [crypto_hash_sha512_update.cores, SHA512_Pad.blocks, SHA512_Pad.r,
-    _crypto_sign_ed25519_verify_detached.hashBlocks, e₁, e₂, e₃, e₄, BitVec.toNat_eq,
-    BitVec.toNat_ofNat]
-  split_ifs <;> omega
-
 /-- The struct stored into a block of an erased frame is lost. -/
 theorem MemoryState.eraseFrom_storeHashState_of_le {m : MemoryState} {c : Pointer} {v : HashState}
     (h : n ≤ c.id.id) : (m.storeHashState c v).eraseFrom n = m.eraseFrom n :=
@@ -266,7 +244,8 @@ theorem MemoryState.eraseFrom_storeHashState_of_le {m : MemoryState} {c : Pointe
 attribute [local mlir_erase high] MemoryState.eraseFrom_storeHashState_of_le
 
 /-- `ge25519_frombytes_negate_vartime.call_eq` where decoding the bytes `x` fails. -/
-theorem frombytes_none (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.mem.PointRoom h)
+theorem frombytes_none (h buf : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals ge25519_frombytes_negate_vartime.globals) (hh : s.mem.PointRoom h)
     (hbuf : Fits s.mem buf 256) (hbuf_off : buf.offset.toNat + 32 < 2 ^ 64) (hsep : h.id ≠ buf.id)
     {x : BitVec 256} (hx : s.mem.readAt buf 256 = x)
     (hd : ge25519_frombytes_negate_vartime.spec x = none) :
@@ -279,11 +258,12 @@ theorem frombytes_none (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.
               s.mem.storeP2 h
                 ⟨ge25519_frombytes_negate_vartime.x x, ge25519_frombytes_negate_vartime.y x,
                   Boringssl.fe_1.spec⟩ }) := by
-  rw [ge25519_frombytes_negate_vartime.call_eq h buf s hwf hh hbuf hbuf_off hsep, hx, hd]
+  rw [ge25519_frombytes_negate_vartime.call_eq h buf s hwf hg hh hbuf hbuf_off hsep, hx, hd]
   rfl
 
 /-- `ge25519_frombytes_negate_vartime.call_eq` where the bytes `x` decode to `P`. -/
-theorem frombytes_some (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.mem.PointRoom h)
+theorem frombytes_some (h buf : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals ge25519_frombytes_negate_vartime.globals) (hh : s.mem.PointRoom h)
     (hbuf : Fits s.mem buf 256) (hbuf_off : buf.offset.toNat + 32 < 2 ^ 64) (hsep : h.id ≠ buf.id)
     {x : BitVec 256} {P : GeP3} (hx : s.mem.readAt buf 256 = x)
     (hd : ge25519_frombytes_negate_vartime.spec x = some P) :
@@ -293,7 +273,7 @@ theorem frombytes_some (h buf : Pointer) (s : GlobalState) (hwf : s.WF) (hh : s.
         (.cons (.value 0#32) .nil,
           { alloc := ⟨s.alloc.nextFreeBlock + ge25519_frombytes_negate_vartime.blocks x⟩,
             mem := s.mem.storeP3 h P }) := by
-  rw [ge25519_frombytes_negate_vartime.call_eq h buf s hwf hh hbuf hbuf_off hsep, hx, hd]
+  rw [ge25519_frombytes_negate_vartime.call_eq h buf s hwf hg hh hbuf hbuf_off hsep, hx, hd]
   rfl
 
 open _crypto_sign_ed25519_verify_detached in
@@ -302,7 +282,8 @@ at `m` and of the signature `r ‖ S` at `sig` and the key at `pk`, `crypto_veri
 `crypto_verify_32.Spec` states it; memory is unchanged and the counter advances by `blocks`. The
 inputs may alias. -/
 public theorem _crypto_sign_ed25519_verify_detached.call_eq (sig m pk : Pointer) (mlen : BitVec 64)
-    (s : GlobalState) (hwf : s.WF) (hsig : Fits s.mem sig 512)
+    (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals _crypto_sign_ed25519_verify_detached.globals) (hsig : Fits s.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hm : Fits s.mem m (8 * mlen.toNat))
     (hm_off : ¬m.offset.uaddOverflow mlen) (hpk : Fits s.mem pk 256)
     (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hv32 : crypto_verify_32.Spec)
@@ -490,10 +471,8 @@ public theorem _crypto_sign_ed25519_verify_detached.call_eq (sig m pk : Pointer)
             rw [hS]; erase_frame)).trans
       ?_
   have hrs : (rcheck == sig) = false := beq_false_of_ne fun e => hsig_ne_rcheck (by rw [e])
-  have hhb := hashBlocks_eq ha₁ ha₂ ha₃ ha₄
   rw [← hres, ← hk, hS]
-  simp [spec, blocks, hc1, hc2, hc3, hc4, hP, hSv₀, hrs, GlobalState.alloca]
-  rw [← hhb]
+  simp [spec, blocks, hashBlocks, hc1, hc2, hc3, hc4, hP, hSv₀, hrs, GlobalState.alloca]
   simp +arith
 
 end Proof

@@ -14,11 +14,14 @@ private def inp : Pointer :=
 
 /-- `out` undefined, the 64 bytes `b` at `inp`. -/
 private def state (b : BitVec 512) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨32, 0, 0, true, fun _ => none⟩), (⟨2⟩, .ofBytes 64 b)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨32, 0, 0, true, fun _ => none, true⟩), (⟨2⟩, .ofBytes 64 b)]⟩⟩
 
 /-- `out` after the call, or `none` for UB / out of fuel. -/
 private def out (b : BitVec 512) : Option (BitVec 256) :=
-  match scalar_reduce64.eval 100000 (scalar_reduce64.args (.value outp) (.value inp)) (state b) with
+  match
+    scalar_reduce64.eval 100000 (scalar_reduce64.args (.value outp) (.value inp))
+      ((state b).withGlobals scalar_reduce64.globals) with
   | .value (some .nil, s') => some (s'.mem.readAt outp 256)
   | _ => none
 

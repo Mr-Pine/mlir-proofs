@@ -29,12 +29,14 @@ private def input (n : Nat) : List (BitVec 8) :=
 private def bits (l : List (BitVec 8)) : BitVec (8 * l.length) :=
   (BitVec.ofNat (8 * l.length) (l.foldr (fun b acc => b.toNat + 256 * acc) 0))
 
-/-- sha2's `Sha512::new()` at `self`, the `n` input bytes at `data`. -/
+/-- sha2's `Sha512::new()` at `self`, the `n` input bytes at `data`; then the globals'. -/
 private def state (n : Nat) : GlobalState :=
   let m : MemoryState :=
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩, .ofBytes 208 0), (⟨2⟩, .ofBytes n ((bits (input n)).cast (by simp [input])))]⟩
-  ⟨⟨3⟩, m.storeSha512 (self.add 128#64) Sha512.IV⟩
+  GlobalState.withGlobals
+    BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.globals
+    ⟨⟨3⟩, m.storeSha512 (self.add 128#64) Sha512.IV⟩
 
 /-- The lift's `update` of `len` bytes at `data`. -/
 private def run (s : GlobalState) (len : Nat) : Option GlobalState :=
@@ -51,13 +53,13 @@ private def obj (m : MemoryState) : Vector (BitVec 64) 8 × List (BitVec 8) × N
   (m.readSha512 (self.add 128#64), bytesLE (m.readAt self (8 * p)), p,
     (m.readAt (self.add 192#64) 128).toNat)
 
-/-- `run` agrees with `updateMem` and `4 * updateCalls` frames. -/
+/-- `run` agrees with `updateMem` and `3 * updateCalls` frames. -/
 private def agrees (s : GlobalState) (len : Nat) : Bool :=
   match run s len with
   | some s' =>
     obj s'.mem == obj (updateMem s.mem self data (BitVec.ofNat 64 len)) &&
       s'.alloc.nextFreeBlock ==
-        s.alloc.nextFreeBlock + 4 * updateCalls s.mem self (BitVec.ofNat 64 len)
+        s.alloc.nextFreeBlock + 3 * updateCalls s.mem self (BitVec.ofNat 64 len)
   | none => false
 
 /-- What the object should have absorbed from `new()` after `M`. -/

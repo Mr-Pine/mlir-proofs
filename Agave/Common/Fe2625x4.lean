@@ -161,6 +161,24 @@ theorem Room.storeFe4x_iff {m : MemoryState} : Room (m.storeFe4x q v) p w ↔ Ro
 theorem Room.storeFe4x {m : MemoryState} (h : Room m p w) : Room (m.storeFe4x q v) p w :=
   Room.storeFe4x_iff.mpr h
 
+@[mlir_transport]
+theorem MemoryState.Fe4xRoom.storeFe4x {m : MemoryState} (h : m.Fe4xRoom p) :
+    (m.storeFe4x q v).Fe4xRoom p :=
+  ⟨h.1, h.2.1.storeFe4x, h.2.2.1.storeFe4x, h.2.2.2.1.storeFe4x, h.2.2.2.2.1.storeFe4x,
+    h.2.2.2.2.2.storeFe4x⟩
+
+@[mlir_transport]
+theorem MemoryState.Fe4xRoom.storeAt {m : MemoryState} {x : BitVec w} (h : m.Fe4xRoom p) :
+    (m.storeAt q x).Fe4xRoom p :=
+  ⟨h.1, h.2.1.storeAt, h.2.2.1.storeAt, h.2.2.2.1.storeAt, h.2.2.2.2.1.storeAt,
+    h.2.2.2.2.2.storeAt⟩
+
+@[mlir_transport]
+theorem MemoryState.Fe4xRoom.storeDef {m : MemoryState} {x d : BitVec w} (h : m.Fe4xRoom p) :
+    (m.storeDef q x d).Fe4xRoom p :=
+  ⟨h.1, h.2.1.storeDef, h.2.2.1.storeDef, h.2.2.2.1.storeDef, h.2.2.2.2.1.storeDef,
+    h.2.2.2.2.2.storeDef⟩
+
 /-- `storeFe4x` keeps known bits known. -/
 @[mlir_transport]
 theorem Fits.storeFe4x {m : MemoryState} (h : Fits m p w) : Fits (m.storeFe4x q v) p w :=

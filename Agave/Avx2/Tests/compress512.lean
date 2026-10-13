@@ -17,10 +17,11 @@ private def blocks : Pointer :=
 /-- Block 0 free (the null pointer's); the state words `H` at `st`, `n` blocks of bytes `data` at
 `blocks`. -/
 private def state (H : Vector (BitVec 64) 8) (n : Nat) (data : BitVec (1024 * n)) : GlobalState :=
-  ⟨⟨3⟩,
-    ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, .ofBytes 64 (H[7] ++ H[6] ++ H[5] ++ H[4] ++ H[3] ++ H[2] ++ H[1] ++ H[0])),
-          (⟨2⟩, .ofBytes (128 * n) (data.cast (by omega)))]⟩⟩
+  GlobalState.withGlobals compress512.globals
+    ⟨⟨3⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨1⟩, .ofBytes 64 (H[7] ++ H[6] ++ H[5] ++ H[4] ++ H[3] ++ H[2] ++ H[1] ++ H[0])),
+            (⟨2⟩, .ofBytes (128 * n) (data.cast (by omega)))]⟩⟩
 
 /-- The run stores `Serial.compress512.spec` of the state words and the blocks at `st`. -/
 private def agrees (H : Vector (BitVec 64) 8) (n : Nat) (data : BitVec (1024 * n)) : Bool :=

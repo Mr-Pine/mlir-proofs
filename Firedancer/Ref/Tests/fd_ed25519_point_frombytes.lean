@@ -12,13 +12,15 @@ private def r : Pointer :=
 private def buf : Pointer :=
   ⟨⟨2⟩, 0⟩
 
-/-- A zeroed 160-byte block for `r` and a 32-byte block holding `b`; block 0 is null's. -/
+/-- A zeroed 160-byte block for `r` and a 32-byte block holding `b`, then the globals'; block 0 is
+null's. -/
 private def state (b : BitVec 256) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 b)]⟩⟩
+  GlobalState.withGlobals fd_ed25519_point_frombytes.globals
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 b)]⟩⟩
 
 /-- The stored point's coordinates `X, Y, Z, T`, canonically encoded, if `frombytes r buf` returns
-`r`, leaves `buf` unchanged and moves the counter on by 79 blocks; `none` if it returns null,
-stores nothing and moves the counter on by 57; else `some none`. `spec` itself is not evaluated:
+`r`, leaves `buf` unchanged and moves the counter on by 76 blocks; `none` if it returns null,
+stores nothing and moves the counter on by 54; else `some none`. `spec` itself is not evaluated:
 its `pow22523` chain re-evaluates its closures exponentially often. -/
 private def out (b : BitVec 256) :
     Option (Option (BitVec 256 × BitVec 256 × BitVec 256 × BitVec 256)) :=

@@ -36,14 +36,14 @@ noncomputable def Signature_verify_verbose.spec (R S pk : BitVec 256) (A? : Opti
     VerificationKey_verify_dalek_prehashed.spec (Serial.Signature_verify_verbose.minusA A) R S
       (Serial.scalar_from_sha512.spec (bytesLE R ++ bytesLE pk ++ msg))
 
-/-- The blocks `verify_verbose` allocates: its global and 16 slots, `decompress`'s, and on a key
-the hash's (4 per `compress512` call), `scalar_from_sha512`'s and `verify_dalek_prehashed`'s. -/
+/-- The blocks `verify_verbose` allocates: its 16 slots, `decompress`'s, and on a key the hash's (3
+per `compress512` call), `scalar_from_sha512`'s and `verify_dalek_prehashed`'s. -/
 def Signature_verify_verbose.blocks (R S pk : BitVec 256) (A? : Option EdwardsPoint)
     (msg : List (BitVec 8)) (len : BitVec 64) : Nat :=
   match A? with
-  | none => 17 + 161
+  | none => 16 + 158
   | some A =>
-    17 + 162 + 4 * Serial.Signature_verify_verbose.chainCalls 64 len +
+    16 + 159 + 3 * Serial.Signature_verify_verbose.chainCalls 64 len +
       scalar_from_sha512.frames (bytesLE R ++ bytesLE pk ++ msg) +
       VerificationKey_verify_dalek_prehashed.blocks (Serial.Signature_verify_verbose.minusA A) R S
         (Serial.scalar_from_sha512.spec (bytesLE R ++ bytesLE pk ++ msg))
@@ -55,6 +55,9 @@ end
 namespace Signature_verify_verbose
 
 section Proof
+
+open Serial.BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0
+  (globals_updateMem writable_updateMem)
 
 open Serial.Signature_verify_verbose (storeAt_storeAt_below readBack fitsBack optEdwardsRoom_of
   readAt_storeOptEdwards_of_id_ne point_of_decomp decomp_some_eq edwards_of_bits limbsRoom_at
@@ -92,7 +95,8 @@ open Serial.BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_updat
     Serial.Sha512_Update_chain_slice_u8 in
 /-- `chain` on sha2's `Sha512` at `self` having absorbed `M`. -/
 theorem chain_of (out self data : Pointer) (len : BitVec 64) (M : List (BitVec 8)) (s : GlobalState)
-    (hwf : s.WF) (hA : s.mem.Sha2Absorbed self M) (hout : Room s.mem out 1664)
+    (hwf : s.WF) (hg : s.mem.Globals Sha512_Update_chain_slice_u8.globals)
+    (hA : s.mem.Sha2Absorbed self M) (hout : Room s.mem out 1664)
     (hdata : Fits s.mem data (8 * len.toNat)) (hdo : data.offset.toNat + len.toNat < 2 ^ 64)
     (hlen : len.toNat < 2 ^ 63) (hsd : self.id ≠ data.id) (hso : self.id ≠ out.id) :
     Sha512_Update_chain_slice_u8.call
@@ -100,11 +104,11 @@ theorem chain_of (out self data : Pointer) (len : BitVec 64) (M : List (BitVec 8
         s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 4 * updateCalls s.mem self len⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + 3 * updateCalls s.mem self len⟩
             mem := copyObj (updateMem s.mem self data len) out self }) := by
   have hP := hA.pos
   exact
-    Sha512_Update_chain_slice_u8.call_eq out self data len s hwf hA.room hA.off hA.posFits
+    Sha512_Update_chain_slice_u8.call_eq out self data len s hwf hg hA.room hA.off hA.posFits
       (by omega)
       (by
         rw [hP]; exact hA.bufFits)
@@ -112,6 +116,7 @@ theorem chain_of (out self data : Pointer) (len : BitVec 64) (M : List (BitVec 8
 
 /-- `verify_dalek_prehashed` on the key `P`, the signature's `R` and `s`, the challenge `H`. -/
 theorem verify_of (self sig h : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals VerificationKey_verify_dalek_prehashed.globals)
     (hself : s.mem.PointFit (self.add 32#64)) (hself_off : ¬self.offset.uaddOverflow 32#64)
     (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hh : Fits s.mem h 256)
     {P : EdwardsPoint} {R S H : BitVec 256} (hP : s.mem.readEdwards (self.add 32#64) = P)
@@ -125,20 +130,22 @@ theorem verify_of (self sig h : Pointer) (s : GlobalState) (hwf : s.WF)
             alloc :=
               ⟨s.alloc.nextFreeBlock + VerificationKey_verify_dalek_prehashed.blocks P R S H⟩,
             mem := s.mem }) := by
-  rw [VerificationKey_verify_dalek_prehashed.call_eq self sig h s hwf hself hself_off hsig hsig_off
+  rw [VerificationKey_verify_dalek_prehashed.call_eq self sig h s hwf hg hself hself_off hsig
+      hsig_off
       hh
       (by
         rw [hH]; exact hlt),
     hP, hR, hS, hH]
 
--- about 200 steps over a frame of 17 blocks and 9 calls: past the default heartbeats
+-- about 200 steps over a frame of 16 blocks and 9 calls: past the default heartbeats
 set_option maxHeartbeats 800000 in
 /-- `Signature::verify_verbose(sig, pubkey, msg)` on the 64-byte signature at `sig`, the 32-byte
 public key at `pk` and `len` bytes at `msg`: returns `spec` (`1` for a key that does not
 decompress, else `verify_dalek_prehashed`'s byte) and leaves the memory as it was; only the counter
 moves on (`blocks`). -/
 public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState) (hwf : s.WF)
-    (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
+    (hg : s.mem.Globals Signature_verify_verbose.globals) (hsig : Fits s.mem sig 512)
+    (hsig_off : ¬sig.offset.uaddOverflow 64#64)
     (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
     (hmsg : Fits s.mem msg (8 * len.toNat)) (hmo : msg.offset.toNat + len.toNat < 2 ^ 64)
     (hlen : len.toNat < 2 ^ 63) :
@@ -183,7 +190,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
   block_init
   iterate 8 step_pure
   step_addressof anon_042b818bc72209407b52bd0e4d6c8368_139.value_eq with iv
-  generalize hivb : Ty.flatBits anon_042b818bc72209407b52bd0e4d6c8368_139.lit = ivb at hS hread_iv
+  generalize hivb : Ty.flatBits anon_042b818bc72209407b52bd0e4d6c8368_139.lit = ivb at hread_iv
   iterate 3 step_pure
   step_alloca with hasher0
   step_alloca with hasher1
@@ -210,12 +217,19 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
   step_memcpy
   step_store
   rw [storeAt_storeAt_below (off := 1#64) (by simp [BitVec.uaddOverflow, hA_bytes_off]) rfl] at hS
-  have hread_pkb : S.mem.readAt A_bytes 256 = pk1 ++ pk0 := readBack hS hroom_A_bytes.inBounds
+  have hread_pkb : S.mem.readAt A_bytes 256 = pk1 ++ pk0 := readBack hS hroom_A_bytes
   clear hread_A_bytes hread_A_bytes_1 hfits_A_bytes hfits_A_bytes_1
   have hfits_pkb : Fits S.mem A_bytes 256 := fitsBack hS hroom_A_bytes
   iterate 4 step_pure
   have hdecomp_opt := optEdwardsRoom_of hroom_decomp hdecomp_off
   step_call using CompressedEdwardsY_decompress.call_eq consuming hdecomp_opt
+  -- the globals and the writable blocks past `storeOptEdwards`, which the step does not see
+  -- through
+  any_goals
+    rw [hS']
+    first
+    | exact hg.mono MemoryState.globals_storeOptEdwards fun _ h => h
+    | exact Writable.storeOptEdwards (by assumption)
   obtain ⟨Aopt, hAopt⟩ : ∃ x, Serial.CompressedEdwardsY_decompress.spec (pk1 ++ pk0) = x := ⟨_, rfl⟩
   rw [hAopt] at hS hread_decomp ⊢
   rcases Aopt with _ | Apt
@@ -274,7 +288,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
     step_memcpy
     rw [edwardsBits_Y, edwardsBits_Z, key_store hkey0_off] at hS
     clear hA_pt hA_fit hread_A hfits_A hread_key0 hfits_key0 hfits_key0_112 hfits_key0_72
-    have hvk_read : S.mem.readAt key0 1536 = _ := readBack hS hroom_key0.inBounds
+    have hvk_read : S.mem.readAt key0 1536 = _ := readBack hS hroom_key0
     have hvk_fits : Fits S.mem key0 1536 := fitsBack hS hroom_key0
     step_pure
     step_memcpy
@@ -293,15 +307,10 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
     step_memcpy
     step_pure
     step_memcpy
-    rw [(MemoryState.readAt_addBlock hwf₀
-            (Fits.add_of_le (off := 32#64) (w := 256)
-                (by
-                  simp [BitVec.uaddOverflow] at hsig_off ⊢; omega)
-                (by decide) hsig₀).inBounds).trans
-        hS_bytes₀,
+    rw [hS_bytes₀,
       storeAt_storeAt_add (off := 31#64) (by simp [BitVec.uaddOverflow, hsig_tail_off]) rfl] at hS
     clear hread_sig_tail hread_sig_tail_31 hfits_sig_tail hfits_sig_tail_31 hvk_read
-    have hst_read : S.mem.readAt sig_tail 504 = _ := readBack hS hroom_sig_tail.inBounds
+    have hst_read : S.mem.readAt sig_tail 504 = _ := readBack hS hroom_sig_tail
     have hst_fits : Fits S.mem sig_tail (8 * (63#64).toNat) := fitsBack hS hroom_sig_tail
     step_pure
     step_memcpy
@@ -328,7 +337,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
           rw [← hivb]; exact iv_words)
         hroom_hasher0 hhasher0_off
     clear hfits_hasher0_127 hread_hasher0_127 hread_hasher0_192 hread_hasher0_128 hfits_hasher0_192
-      hfits_hasher0_128 hroom_hasher0 hhasher0_bounds hiv_room hiv_fits hread_iv hkey0_bounds
+      hfits_hasher0_128 hroom_hasher0 hhasher0_bounds hiv_live hiv_fits hread_iv hkey0_bounds
       hA_bounds hdecomp_bounds hA1_bounds hA2_bounds hA_bytes_bounds hsig_tail_bounds hkey1_bounds
       hkey2_bounds hpk0 hpk_split hpk1 hsig0 hsig_split hsig1 hS_bytes hpk hsig
     -- `.chain(&signature.r_bytes()[..])`
@@ -338,6 +347,12 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
     have hsigF' : Fits m₁ signature (8 * (32#64).toNat) := hm₁ ▸ hsigF.mono (by decide)
     have hsigR' : m₁.readAt signature (8 * (32#64).toNat) = sig1 ++ sig0 := hm₁ ▸ hsigR
     step_call using (chain_of (M := []) (hA := hA0) (hdata := hsigF.mono (by decide))) consuming hA0
+    -- the globals and the writable blocks past `updateMem`, which the step does not see through
+    any_goals
+      rw [hS']
+      first
+      | exact hg.mono globals_updateMem fun _ h => h
+      | exact Writable.storeDef (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs1 :=
@@ -363,6 +378,12 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [← hm₁]; exact hkeyR
     step_call using (chain_of (hA := hAbs1) (hdata := hfits_key.mono (by decide))) consuming hAbs1
       hkeyR
+    -- the globals and the writable blocks past `updateMem`, which the step does not see through
+    any_goals
+      rw [hS']
+      first
+      | exact hg.mono globals_updateMem fun _ h => h
+      | exact Writable.storeDef (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs2 :=
@@ -379,6 +400,12 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
     have hF' : Fits m₁ msg (8 * len.toNat) := hm₁ ▸ hmsg
     have hR' : m₁.readAt msg (8 * len.toNat) = msgb := hm₁ ▸ hmsgb
     step_call using (chain_of (hA := hAbs2)) consuming hAbs2 hmsg hmsgb
+    -- the globals and the writable blocks past `updateMem`, which the step does not see through
+    any_goals
+      rw [hS']
+      first
+      | exact hg.mono globals_updateMem fun _ h => h
+      | exact Writable.storeDef (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs3 := absorbed_chain hS hA' hroom' hhasher3_off hF' hmo hlen (by mem_fact)

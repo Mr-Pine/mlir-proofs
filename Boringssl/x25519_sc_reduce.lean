@@ -6420,6 +6420,8 @@ theorem x25519_sc_reduce.run445 {β : Type} {p : Pointer}
       hbs5_14 hbs6_13 hbs7_14 hbs8_14 hbs9_14 hbs11_13 hbs10_14
 
 -- 24 stores, merged into one at the end: past the default budget
+
+-- 24 stores, merged into one at the end: past the default budget
 set_option maxHeartbeats 1000000 in
 /-- `^bb0` from instruction 486 to 587: its values named, with their forms and bounds. -/
 theorem x25519_sc_reduce.run486 {β : Type} {p : Pointer}
@@ -6428,7 +6430,8 @@ theorem x25519_sc_reduce.run486 {β : Type} {p : Pointer}
     {S : GlobalState} {g : ⟪x25519_sc_reduce.Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     {s0_6 s1_10 s2_11 s3_12 s4_13 s5_14 s6_13 s7_14 s8_14 s9_14 s11_13 s10_14 : BitVec 64}
     (hArgs : E.args = (x25519_sc_reduce.args (.value p)).get) (hp : Fits S.mem p (8 * 64))
-    (hp_off : ¬p.offset.uaddOverflow 64#64) (hc : x25519_sc_reduce.Consts E)
+    (hpw : Writable S.mem p) (hp_off : ¬p.offset.uaddOverflow 64#64)
+    (hc : x25519_sc_reduce.Consts E)
     (hR :
       E ⊨ [%976 := s0_6, %980 := s1_10, %984 := s2_11, %988 := s3_12, %992 := s4_13, %996 := s5_14,
         %1000 := s6_13, %1004 := s7_14, %1008 := s8_14, %1012 := s9_14, %1014 := s11_13, %1016 :=
@@ -6603,7 +6606,7 @@ theorem x25519_sc_reduce.run486 {β : Type} {p : Pointer}
 
 /-- `x25519_sc_reduce` stores `spec` of the 64 bytes at `p` as the 32 bytes at `p`. -/
 public theorem x25519_sc_reduce.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hp : Fits s.mem p (8 * 64)) (hp_off : ¬p.offset.uaddOverflow 64#64) :
+    (hp : Fits s.mem p (8 * 64)) (hpw : Writable s.mem p) (hp_off : ¬p.offset.uaddOverflow 64#64) :
     x25519_sc_reduce.call (x25519_sc_reduce.args (.value p)) s =
       .value
         (.nil, { s with mem := s.mem.storeAt p (x25519_sc_reduce.spec (s.mem.readAt p 512)) }) := by

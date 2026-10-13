@@ -18,9 +18,9 @@ namespace MLIR.Agave.Serial.mul
 
 /-! ### Slots, registers and facts -/
 
-/-- The function's slots in `alloca` order: `table_B`'s global block, the inlined adds'
-temporaries (affine add, affine sub, Niels sub), the four `t.as_extended()`, `t`, `r`, `table_A`
-and the NAFs. -/
+/-- The function's pointers: `table_B`'s global, then its slots in `alloca` order: the inlined
+adds' temporaries (affine add, affine sub, Niels sub), the four `t.as_extended()`, `t`, `r`,
+`table_A` and the NAFs. -/
 public structure Slots where
   table_B : Pointer
   aaZ2 : Pointer
@@ -52,37 +52,37 @@ public structure Slots where
   b_naf : Pointer
   a_naf : Pointer
 
-/-- `σ`'s slots are `B`'s, from its counter on. -/
+/-- `σ`'s slots are `B`'s, from its counter on; `table_B`'s block is below it. -/
 public structure Slots.At (σ : Slots) (B : GlobalState) : Prop where
-  table_B : σ.table_B = B.slot 0
-  aaZ2 : σ.aaZ2 = B.slot 1
-  aaTxy2d : σ.aaTxy2d = B.slot 2
-  aaMM : σ.aaMM = B.slot 3
-  aaPP : σ.aaPP = B.slot 4
-  aaYmX : σ.aaYmX = B.slot 5
-  aaYpX : σ.aaYpX = B.slot 6
-  asZ2 : σ.asZ2 = B.slot 7
-  asTxy2d : σ.asTxy2d = B.slot 8
-  asMP : σ.asMP = B.slot 9
-  asPM : σ.asPM = B.slot 10
-  asYmX : σ.asYmX = B.slot 11
-  asYpX : σ.asYpX = B.slot 12
-  nsZZ2 : σ.nsZZ2 = B.slot 13
-  nsZZ : σ.nsZZ = B.slot 14
-  nsTT2d : σ.nsTT2d = B.slot 15
-  nsMP : σ.nsMP = B.slot 16
-  nsPM : σ.nsPM = B.slot 17
-  nsYmX : σ.nsYmX = B.slot 18
-  nsYpX : σ.nsYpX = B.slot 19
-  xBm : σ.xBm = B.slot 20
-  xBp : σ.xBp = B.slot 21
-  xAm : σ.xAm = B.slot 22
-  xAp : σ.xAp = B.slot 23
-  t : σ.t = B.slot 24
-  r : σ.r = B.slot 25
-  table_A : σ.table_A = B.slot 26
-  b_naf : σ.b_naf = B.slot 27
-  a_naf : σ.a_naf = B.slot 28
+  table_B : σ.table_B.offset = 0 ∧ σ.table_B.id.id < B.alloc.nextFreeBlock
+  aaZ2 : σ.aaZ2 = B.slot 0
+  aaTxy2d : σ.aaTxy2d = B.slot 1
+  aaMM : σ.aaMM = B.slot 2
+  aaPP : σ.aaPP = B.slot 3
+  aaYmX : σ.aaYmX = B.slot 4
+  aaYpX : σ.aaYpX = B.slot 5
+  asZ2 : σ.asZ2 = B.slot 6
+  asTxy2d : σ.asTxy2d = B.slot 7
+  asMP : σ.asMP = B.slot 8
+  asPM : σ.asPM = B.slot 9
+  asYmX : σ.asYmX = B.slot 10
+  asYpX : σ.asYpX = B.slot 11
+  nsZZ2 : σ.nsZZ2 = B.slot 12
+  nsZZ : σ.nsZZ = B.slot 13
+  nsTT2d : σ.nsTT2d = B.slot 14
+  nsMP : σ.nsMP = B.slot 15
+  nsPM : σ.nsPM = B.slot 16
+  nsYmX : σ.nsYmX = B.slot 17
+  nsYpX : σ.nsYpX = B.slot 18
+  xBm : σ.xBm = B.slot 19
+  xBp : σ.xBp = B.slot 20
+  xAm : σ.xAm = B.slot 21
+  xAp : σ.xAp = B.slot 22
+  t : σ.t = B.slot 23
+  r : σ.r = B.slot 24
+  table_A : σ.table_A = B.slot 25
+  b_naf : σ.b_naf = B.slot 26
+  a_naf : σ.a_naf = B.slot 27
 
 /-- The registers the function's loops read: constants, the panics' locations and the slots. -/
 public abbrev BaseRegs (σ : Slots) (locA locB : Pointer) (E : ⟪Γ⟫) : Prop :=
@@ -151,21 +151,40 @@ local elab "tag_slots " hs:ident* : tactic =>
 
 /-- `SlotsIn` from each temporary's bounds. -/
 public theorem SlotsIn.of_bounds {m : MemoryState} {B : GlobalState}
-    (h1 : InBounds m (B.slot 1) 320) (h2 : InBounds m (B.slot 2) 320)
-    (h3 : InBounds m (B.slot 3) 320) (h4 : InBounds m (B.slot 4) 320)
-    (h5 : InBounds m (B.slot 5) 320) (h6 : InBounds m (B.slot 6) 320)
-    (h7 : InBounds m (B.slot 7) 320) (h8 : InBounds m (B.slot 8) 320)
-    (h9 : InBounds m (B.slot 9) 320) (h10 : InBounds m (B.slot 10) 320)
-    (h11 : InBounds m (B.slot 11) 320) (h12 : InBounds m (B.slot 12) 320)
-    (h13 : InBounds m (B.slot 13) 320) (h14 : InBounds m (B.slot 14) 320)
-    (h15 : InBounds m (B.slot 15) 320) (h16 : InBounds m (B.slot 16) 320)
-    (h17 : InBounds m (B.slot 17) 320) (h18 : InBounds m (B.slot 18) 320)
-    (h19 : InBounds m (B.slot 19) 320) (h20 : InBounds m (B.slot 20) 1280)
-    (h21 : InBounds m (B.slot 21) 1280) (h22 : InBounds m (B.slot 22) 1280)
-    (h23 : InBounds m (B.slot 23) 1280) (h24 : InBounds m (B.slot 24) 1280) : SlotsIn m B := by
-  unfold SlotsIn
-  intro k hk1 hk24
+    (h0 : InBounds m (B.slot 0) 320) (h1 : InBounds m (B.slot 1) 320)
+    (h2 : InBounds m (B.slot 2) 320) (h3 : InBounds m (B.slot 3) 320)
+    (h4 : InBounds m (B.slot 4) 320) (h5 : InBounds m (B.slot 5) 320)
+    (h6 : InBounds m (B.slot 6) 320) (h7 : InBounds m (B.slot 7) 320)
+    (h8 : InBounds m (B.slot 8) 320) (h9 : InBounds m (B.slot 9) 320)
+    (h10 : InBounds m (B.slot 10) 320) (h11 : InBounds m (B.slot 11) 320)
+    (h12 : InBounds m (B.slot 12) 320) (h13 : InBounds m (B.slot 13) 320)
+    (h14 : InBounds m (B.slot 14) 320) (h15 : InBounds m (B.slot 15) 320)
+    (h16 : InBounds m (B.slot 16) 320) (h17 : InBounds m (B.slot 17) 320)
+    (h18 : InBounds m (B.slot 18) 320) (h19 : InBounds m (B.slot 19) 1280)
+    (h20 : InBounds m (B.slot 20) 1280) (h21 : InBounds m (B.slot 21) 1280)
+    (h22 : InBounds m (B.slot 22) 1280) (h23 : InBounds m (B.slot 23) 1280)
+    (hw : ∀ k, k ≤ 24 → Writable m (B.slot k)) : SlotsIn m B := by
+  refine ⟨fun k hk => ?_, hw⟩
   interval_cases k <;> simpa
+
+/-- The slots `0 … 24` writable, from the named slots'. -/
+public theorem Slots.At.writable {σ : Slots} {B : GlobalState} {m : MemoryState} (hσ : σ.At B)
+    (h0 : Writable m σ.aaZ2) (h1 : Writable m σ.aaTxy2d) (h2 : Writable m σ.aaMM)
+    (h3 : Writable m σ.aaPP) (h4 : Writable m σ.aaYmX) (h5 : Writable m σ.aaYpX)
+    (h6 : Writable m σ.asZ2) (h7 : Writable m σ.asTxy2d) (h8 : Writable m σ.asMP)
+    (h9 : Writable m σ.asPM) (h10 : Writable m σ.asYmX) (h11 : Writable m σ.asYpX)
+    (h12 : Writable m σ.nsZZ2) (h13 : Writable m σ.nsZZ) (h14 : Writable m σ.nsTT2d)
+    (h15 : Writable m σ.nsMP) (h16 : Writable m σ.nsPM) (h17 : Writable m σ.nsYmX)
+    (h18 : Writable m σ.nsYpX) (h19 : Writable m σ.xBm) (h20 : Writable m σ.xBp)
+    (h21 : Writable m σ.xAm) (h22 : Writable m σ.xAp) (h23 : Writable m σ.t)
+    (h24 : Writable m σ.r) : ∀ k, k ≤ 24 → Writable m (B.slot k) := by
+  intro k hk
+  interval_cases k
+  exacts [hσ.aaZ2 ▸ h0, hσ.aaTxy2d ▸ h1, hσ.aaMM ▸ h2, hσ.aaPP ▸ h3, hσ.aaYmX ▸ h4,
+    hσ.aaYpX ▸ h5, hσ.asZ2 ▸ h6, hσ.asTxy2d ▸ h7, hσ.asMP ▸ h8, hσ.asPM ▸ h9, hσ.asYmX ▸ h10,
+    hσ.asYpX ▸ h11, hσ.nsZZ2 ▸ h12, hσ.nsZZ ▸ h13, hσ.nsTT2d ▸ h14, hσ.nsMP ▸ h15,
+    hσ.nsPM ▸ h16, hσ.nsYmX ▸ h17, hσ.nsYpX ▸ h18, hσ.xBm ▸ h19, hσ.xBp ▸ h20, hσ.xAm ▸ h21,
+    hσ.xAp ▸ h22, hσ.t ▸ h23, hσ.r ▸ h24]
 
 /-! ### Digits and indices -/
 
@@ -308,14 +327,14 @@ set_option hygiene false in
 local macro "open_slots " hσ:ident : tactic =>
   `(tactic|
     ( obtain
-        ⟨htable_B, haaZ2, haaTxy2d, haaMM, haaPP, haaYmX, haaYpX, hasZ2, hasTxy2d, hasMP, hasPM,
-          hasYmX, hasYpX, hnsZZ2, hnsZZ, hnsTT2d, hnsMP, hnsPM, hnsYmX, hnsYpX, hxBm, hxBp, hxAm,
-          hxAp, ht, hr, htable_A, hb_naf, ha_naf⟩ :=
+        ⟨⟨htable_B_off, htable_B_lt⟩, haaZ2, haaTxy2d, haaMM, haaPP, haaYmX, haaYpX, hasZ2,
+          hasTxy2d, hasMP, hasPM, hasYmX, hasYpX, hnsZZ2, hnsZZ, hnsTT2d, hnsMP, hnsPM, hnsYmX,
+          hnsYpX, hxBm, hxBp, hxAm, hxAp, ht, hr, htable_A, hb_naf, ha_naf⟩ :=
         $hσ
       dsimp only at *
-      tag_slots htable_B haaZ2 haaTxy2d haaMM haaPP haaYmX haaYpX hasZ2 hasTxy2d hasMP hasPM hasYmX
-        hasYpX hnsZZ2 hnsZZ hnsTT2d hnsMP hnsPM hnsYmX hnsYpX hxBm hxBp hxAm hxAp ht hr htable_A
-        hb_naf ha_naf))
+      tag_slots haaZ2 haaTxy2d haaMM haaPP haaYmX haaYpX hasZ2 hasTxy2d hasMP hasPM hasYmX hasYpX
+        hnsZZ2 hnsZZ hnsTT2d hnsMP hnsPM hnsYmX hnsYpX hxBm hxBp hxAm hxAp ht hr htable_A hb_naf
+        ha_naf))
 
 /-! ### The main loop's blocks -/
 
@@ -352,7 +371,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
       a_naf⟩
   obtain ⟨hwf, hout, hr', hsl, haF, haR, hbF, hbR, houtLt, htAF, htAR, htBF, htBR⟩ := hF
   open_slots hσ
-  have ht_b : InBounds S.mem t 1280 := ht ▸ hsl.pt 24
+  have ht_b : InBounds S.mem t 1280 := ht ▸ hsl.pt 23
+  have ht_w : Writable S.mem t := ht ▸ hsl.writable 23
   have ht_off : t.offset = 0 := by
     rw [ht]; rfl
   have ha_naf_off : a_naf.offset = 0 := by
@@ -374,7 +394,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_pure [hdd, hneg]
     finish_block
     switch_drop
-    have hxAm_b : InBounds S.mem xAm 1280 := hxAm ▸ hsl.pt 22
+    have hxAm_b : InBounds S.mem xAm 1280 := hxAm ▸ hsl.pt 21
+    have hxAm_w : Writable S.mem xAm := hxAm ▸ hsl.writable 21
     have hxAm_off : xAm.offset = 0 := by
       rw [hxAm]; rfl
     block_init
@@ -400,7 +421,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
       ⟨_, rfl⟩
     have hQno : ¬Q.offset.uaddOverflow 120#64 := entry_noOverflow hQ htable_A_off (by omega)
     -- let Y_plus_X = &self.Y + &self.X;
-    have h167 : InBounds S.mem nsYpX 320 := hnsYpX ▸ hsl.fe 19
+    have h167 : InBounds S.mem nsYpX 320 := hnsYpX ▸ hsl.fe 18
+    have h167w : Writable S.mem nsYpX := hnsYpX ▸ hsl.writable 18
     step_pure
     have h167l :=
       MemoryState.LimbsRoom.of_room hroom_nsYpX
@@ -409,7 +431,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Add_add.call_eq
     name_limbs Y_plus_X
     -- let Y_minus_X = &self.Y - &self.X;
-    have h166 : InBounds S.mem nsYmX 320 := hnsYmX ▸ hsl.fe 18
+    have h166 : InBounds S.mem nsYmX 320 := hnsYmX ▸ hsl.fe 17
+    have h166w : Writable S.mem nsYmX := hnsYmX ▸ hsl.writable 17
     step_pure
     have h166l :=
       MemoryState.LimbsRoom.of_room hroom_nsYmX
@@ -418,7 +441,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Sub_sub.call_eq
     name_limbs Y_minus_X
     -- let PM = &Y_plus_X * &other.Y_minus_X;
-    have h165 : InBounds S.mem nsPM 320 := hnsPM ▸ hsl.fe 17
+    have h165 : InBounds S.mem nsPM 320 := hnsPM ▸ hsl.fe 16
+    have h165w : Writable S.mem nsPM := hnsPM ▸ hsl.writable 16
     step_pure
     have h165l :=
       MemoryState.LimbsRoom.of_room hroom_nsPM
@@ -434,7 +458,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ1f hQ1
     name_limbs PM
     -- let MP = &Y_minus_X * &other.Y_plus_X;
-    have h164 : InBounds S.mem nsMP 320 := hnsMP ▸ hsl.fe 16
+    have h164 : InBounds S.mem nsMP 320 := hnsMP ▸ hsl.fe 15
+    have h164w : Writable S.mem nsMP := hnsMP ▸ hsl.writable 15
     step_pure
     have h164l :=
       MemoryState.LimbsRoom.of_room hroom_nsMP
@@ -446,7 +471,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ0f hQ0
     name_limbs MP
     -- let TT2d = &self.T * &other.T2d;
-    have h163 : InBounds S.mem nsTT2d 320 := hnsTT2d ▸ hsl.fe 15
+    have h163 : InBounds S.mem nsTT2d 320 := hnsTT2d ▸ hsl.fe 14
+    have h163w : Writable S.mem nsTT2d := hnsTT2d ▸ hsl.writable 14
     step_pure
     have h163l :=
       MemoryState.LimbsRoom.of_room hroom_nsTT2d
@@ -462,7 +488,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ3f hQ3
     name_limbs TT2d
     -- let ZZ = &self.Z * &other.Z;
-    have h162 : InBounds S.mem nsZZ 320 := hnsZZ ▸ hsl.fe 14
+    have h162 : InBounds S.mem nsZZ 320 := hnsZZ ▸ hsl.fe 13
+    have h162w : Writable S.mem nsZZ := hnsZZ ▸ hsl.writable 13
     step_pure
     have h162l :=
       MemoryState.LimbsRoom.of_room hroom_nsZZ
@@ -478,7 +505,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ2f hQ2
     name_limbs ZZ
     -- let ZZ2 = &ZZ + &ZZ;
-    have h161 : InBounds S.mem nsZZ2 320 := hnsZZ2 ▸ hsl.fe 13
+    have h161 : InBounds S.mem nsZZ2 320 := hnsZZ2 ▸ hsl.fe 12
+    have h161w : Writable S.mem nsZZ2 := hnsZZ2 ▸ hsl.writable 12
     step_pure
     have h161l :=
       MemoryState.LimbsRoom.of_room hroom_nsZZ2
@@ -526,7 +554,8 @@ theorem headA_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_pure [hdd, hpos, ne_zero_of_pos hpos, not_neg_of_pos hpos]
     finish_block
     switch_drop
-    have hxAp_b : InBounds S.mem xAp 1280 := hxAp ▸ hsl.pt 23
+    have hxAp_b : InBounds S.mem xAp 1280 := hxAp ▸ hsl.pt 22
+    have hxAp_w : Writable S.mem xAp := hxAp ▸ hsl.writable 22
     have hxAp_off : xAp.offset = 0 := by
       rw [hxAp]; rfl
     block_init
@@ -596,10 +625,9 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
       a_naf⟩
   obtain ⟨hwf, hout, hr', hsl, haF, haR, hbF, hbR, houtLt, htAF, htAR, htBF, htBR⟩ := hF
   open_slots hσ
+  have ht_w : Writable S.mem t := ht ▸ hsl.writable 23
   have hb_naf_off : b_naf.offset = 0 := by
     rw [hb_naf]; rfl
-  have htable_B_off : table_B.offset = 0 := by
-    rw [htable_B]; rfl
   -- match b_naf[i].cmp(&0)
   block_init
   step_pure
@@ -611,7 +639,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_pure [hdd, hneg]
     finish_block
     switch_drop
-    have hxBm_b : InBounds S.mem xBm 1280 := hxBm ▸ hsl.pt 20
+    have hxBm_b : InBounds S.mem xBm 1280 := hxBm ▸ hsl.pt 19
+    have hxBm_w : Writable S.mem xBm := hxBm ▸ hsl.writable 19
     have hxBm_off : xBm.offset = 0 := by
       rw [hxBm]; rfl
     block_init
@@ -632,7 +661,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
       Nat.mul_comm k 120] with Q
     have hQno : ¬Q.offset.uaddOverflow 120#64 := entry_noOverflow hQ htable_B_off (by omega)
     -- let Y_plus_X = &self.Y + &self.X;
-    have h160 : InBounds S.mem asYpX 320 := hasYpX ▸ hsl.fe 12
+    have h160 : InBounds S.mem asYpX 320 := hasYpX ▸ hsl.fe 11
+    have h160w : Writable S.mem asYpX := hasYpX ▸ hsl.writable 11
     step_pure
     have h160l :=
       MemoryState.LimbsRoom.of_room hroom_asYpX
@@ -641,7 +671,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Add_add.call_eq
     name_limbs Y_plus_X
     -- let Y_minus_X = &self.Y - &self.X;
-    have h159 : InBounds S.mem asYmX 320 := hasYmX ▸ hsl.fe 11
+    have h159 : InBounds S.mem asYmX 320 := hasYmX ▸ hsl.fe 10
+    have h159w : Writable S.mem asYmX := hasYmX ▸ hsl.writable 10
     step_pure
     have h159l :=
       MemoryState.LimbsRoom.of_room hroom_asYmX
@@ -650,7 +681,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Sub_sub.call_eq
     name_limbs Y_minus_X
     -- let PM = &Y_plus_X * &other.y_minus_x;
-    have h158 : InBounds S.mem asPM 320 := hasPM ▸ hsl.fe 10
+    have h158 : InBounds S.mem asPM 320 := hasPM ▸ hsl.fe 9
+    have h158w : Writable S.mem asPM := hasPM ▸ hsl.writable 9
     step_pure
     have h158l :=
       MemoryState.LimbsRoom.of_room hroom_asPM
@@ -665,7 +697,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ1f hQ1
     name_limbs PM
     -- let MP = &Y_minus_X * &other.y_plus_x;
-    have h157 : InBounds S.mem asMP 320 := hasMP ▸ hsl.fe 9
+    have h157 : InBounds S.mem asMP 320 := hasMP ▸ hsl.fe 8
+    have h157w : Writable S.mem asMP := hasMP ▸ hsl.writable 8
     step_pure
     have h157l :=
       MemoryState.LimbsRoom.of_room hroom_asMP
@@ -679,7 +712,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ0f hQ0
     name_limbs MP
     -- let Txy2d = &self.T * &other.xy2d;
-    have h156 : InBounds S.mem asTxy2d 320 := hasTxy2d ▸ hsl.fe 8
+    have h156 : InBounds S.mem asTxy2d 320 := hasTxy2d ▸ hsl.fe 7
+    have h156w : Writable S.mem asTxy2d := hasTxy2d ▸ hsl.writable 7
     step_pure
     have h156l :=
       MemoryState.LimbsRoom.of_room hroom_asTxy2d
@@ -694,7 +728,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ2f hQ2
     name_limbs Txy2d
     -- let Z2 = &self.Z + &self.Z;
-    have h155 : InBounds S.mem asZ2 320 := hasZ2 ▸ hsl.fe 7
+    have h155 : InBounds S.mem asZ2 320 := hasZ2 ▸ hsl.fe 6
+    have h155w : Writable S.mem asZ2 := hasZ2 ▸ hsl.writable 6
     step_pure
     have h155l :=
       MemoryState.LimbsRoom.of_room hroom_asZ2
@@ -737,7 +772,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_pure [hdd, hpos, ne_zero_of_pos hpos, not_neg_of_pos hpos]
     finish_block
     switch_drop
-    have hxBp_b : InBounds S.mem xBp 1280 := hxBp ▸ hsl.pt 21
+    have hxBp_b : InBounds S.mem xBp 1280 := hxBp ▸ hsl.pt 20
+    have hxBp_w : Writable S.mem xBp := hxBp ▸ hsl.writable 20
     have hxBp_off : xBp.offset = 0 := by
       rw [hxBp]; rfl
     block_init
@@ -757,7 +793,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
       Nat.mul_comm k 120] with Q
     have hQno : ¬Q.offset.uaddOverflow 120#64 := entry_noOverflow hQ htable_B_off (by omega)
     -- let Y_plus_X = &self.Y + &self.X;
-    have h154 : InBounds S.mem aaYpX 320 := haaYpX ▸ hsl.fe 6
+    have h154 : InBounds S.mem aaYpX 320 := haaYpX ▸ hsl.fe 5
+    have h154w : Writable S.mem aaYpX := haaYpX ▸ hsl.writable 5
     step_pure
     have h154l :=
       MemoryState.LimbsRoom.of_room hroom_aaYpX
@@ -766,7 +803,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Add_add.call_eq
     name_limbs Y_plus_X
     -- let Y_minus_X = &self.Y - &self.X;
-    have h153 : InBounds S.mem aaYmX 320 := haaYmX ▸ hsl.fe 5
+    have h153 : InBounds S.mem aaYmX 320 := haaYmX ▸ hsl.fe 4
+    have h153w : Writable S.mem aaYmX := haaYmX ▸ hsl.writable 4
     step_pure
     have h153l :=
       MemoryState.LimbsRoom.of_room hroom_aaYmX
@@ -775,7 +813,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Sub_sub.call_eq
     name_limbs Y_minus_X
     -- let PP = &Y_plus_X * &other.y_plus_x;
-    have h152 : InBounds S.mem aaPP 320 := haaPP ▸ hsl.fe 4
+    have h152 : InBounds S.mem aaPP 320 := haaPP ▸ hsl.fe 3
+    have h152w : Writable S.mem aaPP := haaPP ▸ hsl.writable 3
     step_pure
     have h152l :=
       MemoryState.LimbsRoom.of_room hroom_aaPP
@@ -789,7 +828,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ0f hQ0
     name_limbs PP
     -- let MM = &Y_minus_X * &other.y_minus_x;
-    have h151 : InBounds S.mem aaMM 320 := haaMM ▸ hsl.fe 3
+    have h151 : InBounds S.mem aaMM 320 := haaMM ▸ hsl.fe 2
+    have h151w : Writable S.mem aaMM := haaMM ▸ hsl.writable 2
     step_pure
     have h151l :=
       MemoryState.LimbsRoom.of_room hroom_aaMM
@@ -804,7 +844,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ1f hQ1
     name_limbs MM
     -- let Txy2d = &self.T * &other.xy2d;
-    have h150 : InBounds S.mem aaTxy2d 320 := haaTxy2d ▸ hsl.fe 2
+    have h150 : InBounds S.mem aaTxy2d 320 := haaTxy2d ▸ hsl.fe 1
+    have h150w : Writable S.mem aaTxy2d := haaTxy2d ▸ hsl.writable 1
     step_pure
     have h150l :=
       MemoryState.LimbsRoom.of_room hroom_aaTxy2d
@@ -819,7 +860,8 @@ theorem headB_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalStat
     step_call using FieldElement51_Mul_mul.call_eq consuming hQ2f hQ2
     name_limbs Txy2d
     -- let Z2 = &self.Z + &self.Z;
-    have h149 : InBounds S.mem aaZ2 320 := haaZ2 ▸ hsl.fe 1
+    have h149 : InBounds S.mem aaZ2 320 := haaZ2 ▸ hsl.fe 0
+    have h149w : Writable S.mem aaZ2 := haaZ2 ▸ hsl.writable 0
     step_pure
     have h149l :=
       MemoryState.LimbsRoom.of_room hroom_aaZ2
@@ -885,6 +927,7 @@ theorem tail_block (out a A b locA locB : Pointer) (σ : Slots) (B : GlobalState
       a_naf⟩
   obtain ⟨hwf, hout, hr', hsl, haF, haR, hbF, hbR, houtLt, htAF, htAR, htBF, htBR⟩ := hF
   open_slots hσ
+  have hr_w : Writable S.mem r := hr ▸ hsl.writable 24
   -- r = t.as_projective();
   block_init
   step_call using CompletedPoint_as_projective.call_eq consuming htv

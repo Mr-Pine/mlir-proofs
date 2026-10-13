@@ -74,7 +74,8 @@ section Proof
 `msg`, the signature `r ‖ S` at `sig` and the key at `pk`: `1` accepts, `0` rejects. The memory
 is left as it was; the counter moves on by `verify_verbose`'s `blocks`. -/
 public theorem call_eq (pk sig msg : Pointer) (len : BitVec 64) (s : GlobalState) (hwf : s.WF)
-    (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsig : Fits s.mem sig 512)
+    (hg : s.mem.Globals agave_ed25519_verify.globals) (hpk : Fits s.mem pk 256)
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsig : Fits s.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hmsg : Fits s.mem msg (8 * len.toNat))
     (hmo : msg.offset.toNat + len.toNat < 2 ^ 64) (hlen : len.toNat < 2 ^ 63) :
     agave_ed25519_verify.call (args (.value pk) (.value sig) (.value msg) (.value len)) s =
@@ -91,7 +92,7 @@ public theorem call_eq (pk sig msg : Pointer) (len : BitVec 64) (s : GlobalState
                   Signature_verify_verbose.blocks (s.mem.readAt sig 256)
                     (s.mem.readAt (sig.add 32#64) 256) (s.mem.readAt pk 256)
                     (CompressedEdwardsY_decompress.spec (s.mem.readAt pk 256))
-                    (bytesLE (s.mem.readAt msg (8 * len.toNat))) len⟩,
+                    (bytesLE (s.mem.readAt msg (8 * len.toNat)))⟩,
             mem := s.mem }) := by
   rw [← spec_eq]
   func_init
@@ -107,10 +108,10 @@ public theorem call_eq (pk sig msg : Pointer) (len : BitVec 64) (s : GlobalState
 /-- `call_eq` against Firedancer: `1` exactly when Firedancer's `verify` returns success and `R`'s
 `y` is below `p`. -/
 public theorem call_eq_firedancer (pk sig msg : Pointer) (len : BitVec 64) (s : GlobalState)
-    (hwf : s.WF) (hpk : Fits s.mem pk 256) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
-    (hsig : Fits s.mem sig 512) (hsig_off : ¬sig.offset.uaddOverflow 64#64)
-    (hmsg : Fits s.mem msg (8 * len.toNat)) (hmo : msg.offset.toNat + len.toNat < 2 ^ 64)
-    (hlen : len.toNat < 2 ^ 63) :
+    (hwf : s.WF) (hg : s.mem.Globals agave_ed25519_verify.globals) (hpk : Fits s.mem pk 256)
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsig : Fits s.mem sig 512)
+    (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hmsg : Fits s.mem msg (8 * len.toNat))
+    (hmo : msg.offset.toNat + len.toNat < 2 ^ 64) (hlen : len.toNat < 2 ^ 63) :
     agave_ed25519_verify.call (args (.value pk) (.value sig) (.value msg) (.value len)) s =
       .value
         (.cons
@@ -128,10 +129,10 @@ public theorem call_eq_firedancer (pk sig msg : Pointer) (len : BitVec 64) (s : 
                   Signature_verify_verbose.blocks (s.mem.readAt sig 256)
                     (s.mem.readAt (sig.add 32#64) 256) (s.mem.readAt pk 256)
                     (CompressedEdwardsY_decompress.spec (s.mem.readAt pk 256))
-                    (bytesLE (s.mem.readAt msg (8 * len.toNat))) len⟩,
+                    (bytesLE (s.mem.readAt msg (8 * len.toNat)))⟩,
             mem := s.mem }) := by
   rw [← verify_eq_firedancer]
-  exact call_eq pk sig msg len s hwf hpk hpk_off hsig hsig_off hmsg hmo hlen
+  exact call_eq pk sig msg len s hwf hg hpk hpk_off hsig hsig_off hmsg hmo hlen
 
 end Proof
 

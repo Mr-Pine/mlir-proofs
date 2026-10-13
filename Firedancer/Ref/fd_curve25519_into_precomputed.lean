@@ -28,14 +28,15 @@ end
 
 section Proof
 
-/-- `fd_curve25519_into_precomputed` stores `spec` of the point at `r` at `r`; `fd_f25519_k` and
-the two temporaries count three blocks. -/
+/-- `fd_curve25519_into_precomputed` stores `spec` of the point at `r` at `r`; the two
+temporaries count two blocks. -/
 public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointFit r) :
+    (hg : s.mem.Globals fd_curve25519_into_precomputed.globals) (hr : s.mem.PointFit r)
+    (hrw : Writable s.mem r) :
     fd_curve25519_into_precomputed.call (fd_curve25519_into_precomputed.args (.value r)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 3⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
             mem :=
               s.mem.storePoint r (fd_curve25519_into_precomputed.spec (s.mem.readPoint r)) }) := by
   func_init
@@ -53,10 +54,10 @@ public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalS
   limbs_room add
   limbs_room sub
   -- reads go through the stores over the state after the `alloca`s
-  have hr₁ := (hS ▸ hr).room
+  have hr₁ := (hS ▸ hr).room (hS ▸ hrw)
   have hadd₀ := hS ▸ hadd_limbs
   have hsub₀ := hS ▸ hsub_limbs
-  clear hread_k hk_fits hk_room
+  clear hread_k hk_fits hk_live
   -- fd_f25519_add_nr( add, r->Y, r->X );
   step_pure
   step_call using fd_f25519_add_nr.call_eq

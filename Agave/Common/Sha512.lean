@@ -227,41 +227,41 @@ theorem word_disj0 {p : Pointer} (hp : p.offset.toNat + 56 < 2 ^ 64) {b : BitVec
 
 /-- The state words stored at `p`, read back. -/
 public theorem MemoryState.readSha512_storeSha512_self {m : MemoryState}
-    (hp : p.offset.toNat + 56 < 2 ^ 64) (h : InBounds m p 512) :
+    (hp : p.offset.toNat + 56 < 2 ^ 64) (h : Room m p 512) :
     (m.storeSha512 p v).readSha512 p = v := by
-  have hb (k : BitVec 64) (hk : k.toNat ≤ 56) : InBounds m (p.add k) 64 :=
-    InBounds.add_of_le
+  have hb (k : BitVec 64) (hk : k.toNat ≤ 56) : Room m (p.add k) 64 :=
+    Room.add_of_le
       (by
         simp [BitVec.uaddOverflow]; omega)
       (by omega) h
-  have h0 : InBounds m p 64 := InBounds.mono (by decide) h
+  have h0 : Room m p 64 := Room.mono (by decide) h
   simp (disch :=
     first
     |
       exact
-        InBounds.storeAt
-          (InBounds.storeAt
-            (InBounds.storeAt
-              (InBounds.storeAt
-                (InBounds.storeAt (InBounds.storeAt (InBounds.storeAt (hb _ (by decide))))))))
+        Room.storeAt
+          (Room.storeAt
+            (Room.storeAt
+              (Room.storeAt
+                (Room.storeAt (Room.storeAt (Room.storeAt (hb _ (by decide))))))))
     | exact h0.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
     |
       exact
-        InBounds.storeAt
-          (InBounds.storeAt
-            (InBounds.storeAt
-              (InBounds.storeAt (InBounds.storeAt (InBounds.storeAt (hb _ (by decide)))))))
+        Room.storeAt
+          (Room.storeAt
+            (Room.storeAt
+              (Room.storeAt (Room.storeAt (Room.storeAt (hb _ (by decide)))))))
     |
       exact
-        InBounds.storeAt
-          (InBounds.storeAt
-            (InBounds.storeAt (InBounds.storeAt (InBounds.storeAt (hb _ (by decide))))))
+        Room.storeAt
+          (Room.storeAt
+            (Room.storeAt (Room.storeAt (Room.storeAt (hb _ (by decide))))))
     |
       exact
-        InBounds.storeAt (InBounds.storeAt (InBounds.storeAt (InBounds.storeAt (hb _ (by decide)))))
-    | exact InBounds.storeAt (InBounds.storeAt (InBounds.storeAt (hb _ (by decide))))
-    | exact InBounds.storeAt (InBounds.storeAt (hb _ (by decide)))
-    | exact InBounds.storeAt (hb _ (by decide))
+        Room.storeAt (Room.storeAt (Room.storeAt (Room.storeAt (hb _ (by decide)))))
+    | exact Room.storeAt (Room.storeAt (Room.storeAt (hb _ (by decide))))
+    | exact Room.storeAt (Room.storeAt (hb _ (by decide)))
+    | exact Room.storeAt (hb _ (by decide))
     | exact hb _ (by decide)
     | (refine word_disj0 hp ?_ ?_ <;> decide)
     | (refine (word_disj0 hp ?_ ?_).symm <;> decide)

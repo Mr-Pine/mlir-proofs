@@ -360,14 +360,15 @@ set_option maxHeartbeats 1000000 in
 /-- `compress512(state, blocks, n)` compresses the `n` 128-byte blocks at `blocks` into the eight
 state words at `state` (`compress512.spec`, SHA-512's compression of each block in order) and
 stores the result there. The words are read before and stored after the blocks are read, so the
-two may overlap; the `K` table takes one block. -/
+two may overlap. -/
 public theorem compress512.call_eq (st blocks : Pointer) (n : BitVec 64) (s : GlobalState)
-    (hwf : s.WF) (hst : s.mem.Sha512Fit st) (hn : n ≠ 0) (hn56 : n.toNat < 2 ^ 56)
+    (hwf : s.WF) (hg : s.mem.Globals compress512.globals) (hst : s.mem.Sha512Fit st)
+    (hstw : Writable s.mem st) (hn : n ≠ 0) (hn56 : n.toNat < 2 ^ 56)
     (hB : Fits s.mem blocks (1024 * n.toNat)) (hdo : blocks.offset.toNat + 128 * n.toNat < 2 ^ 64) :
     compress512.call (compress512.args (.value st) (.value blocks) (.value n)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
+          { s with
             mem :=
               s.mem.storeSha512 st
                 (compress512.spec (s.mem.readSha512 st)
@@ -389,7 +390,6 @@ public theorem compress512.call_eq (st blocks : Pointer) (n : BitVec 64) (s : Gl
   finish_block
   have hBr : S.mem.readAt blocks (1024 * n.toNat) = S₀.mem.readAt blocks (1024 * n.toNat) := by
     rw [hS]
-    exact MemoryState.readAt_addBlock hwf₀ hB₀.inBounds
   have hn0 : 0 < n.toNat := by
     rcases Nat.eq_zero_or_pos n.toNat with h | h
     · exact absurd (BitVec.eq_of_toNat_eq (by simpa using h)) hn

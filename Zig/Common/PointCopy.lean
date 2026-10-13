@@ -16,10 +16,10 @@ open Memory
 
 @[expose] public section
 
-/-- Room for the point at `p`, its field elements known; `is_base` may be undefined. -/
+/-- The point at `p` is live, its field elements known; `is_base` may be undefined. -/
 abbrev _root_.MLIR.MemoryState.PtLimbsFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 168 ≤ 2 ^ 64 ∧
-    Room m p 1344 ∧
+    Live m p 1344 ∧
     m.LimbsFit p ∧ m.LimbsFit (p.add 40#64) ∧ m.LimbsFit (p.add 80#64) ∧ m.LimbsFit (p.add 120#64)
 
 attribute [mlir_mem] MemoryState.PtLimbsFit
@@ -46,8 +46,15 @@ public theorem _root_.MLIR.MemoryState.PtLimbsFit.limbsFit_t {m : MemoryState} {
     (h : m.PtLimbsFit p) : m.LimbsFit (p.add 120#64) :=
   h.2.2.2.2.2
 
+/-- Points with known field elements in a writable block: room for them. -/
 public theorem _root_.MLIR.MemoryState.PtLimbsFit.room {m : MemoryState} {p : Pointer}
-    (h : m.PtLimbsFit p) : m.PtRoom p :=
+    (h : m.PtLimbsFit p) (hw : Writable m p) : m.PtRoom p :=
+  ⟨h.1, h.2.1, hw⟩
+
+/-- Points with known field elements are live. -/
+@[mlir_transport]
+public theorem _root_.MLIR.MemoryState.PtLimbsFit.ptLive {m : MemoryState} {p : Pointer}
+    (h : m.PtLimbsFit p) : m.PtLive p :=
   ⟨h.1, h.2.1⟩
 
 /-- A known point's field elements are known. -/
@@ -69,7 +76,7 @@ public theorem _root_.MLIR.MemoryState.PtLimbsFit.copy {m : MemoryState} {p q : 
       (by
         simp only [Pointer.add, BitVec.toNat_add]; have := hp.1; omega)
   exact
-    ⟨hp.1, hp.2.storeDef,
+    ⟨hp.1, hp.2.1.storeDef,
       .of_fits' (Fits.storeDef_definedAt_self hp.2 hq.2.2.1.fits (by omega))
         (by
           have := hp.1; omega),
@@ -79,7 +86,7 @@ public theorem _root_.MLIR.MemoryState.PtLimbsFit.copy {m : MemoryState} {p q : 
 
 /-- A coordinate of a copy of the bits `x` read at `q`: `q`'s. -/
 public theorem _root_.MLIR.MemoryState.readLimbs_copy_of {m : MemoryState} {p q : Pointer} {a : Nat}
-    {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtRoom q) (ha : a ≤ 120) (hx : m.readAt q 1344 = x)
+    {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtLive q) (ha : a ≤ 120) (hx : m.readAt q 1344 = x)
     (d : BitVec 1344) :
     (m.storeDef p x d).readLimbs (p.add (BitVec.ofNat 64 a)) =
       m.readLimbs (q.add (BitVec.ofNat 64 a)) := by
@@ -88,7 +95,7 @@ public theorem _root_.MLIR.MemoryState.readLimbs_copy_of {m : MemoryState} {p q 
 
 /-- A copy of the bits `x` read at `q`: `q`'s point. -/
 public theorem _root_.MLIR.MemoryState.readPt_copy_of {m : MemoryState} {p q : Pointer}
-    {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtRoom q) (hx : m.readAt q 1344 = x)
+    {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtLive q) (hx : m.readAt q 1344 = x)
     (d : BitVec 1344) : (m.storeDef p x d).readPt p = m.readPt q := by
   subst hx
   exact MemoryState.readPt_copy hp hq d
@@ -172,7 +179,7 @@ public theorem _root_.MLIR.MemoryState.readLimbs_of_reads {m : MemoryState} {p :
 
 /-- A read over a store at its start: the bits read before, the stored ones spliced in. -/
 public theorem _root_.MLIR.MemoryState.readAt_storeAt_over {m : MemoryState} {p : Pointer}
-    (h : InBounds m p v) (hw : w ≤ v) (x : BitVec w) :
+    (h : Room m p v) (hw : w ≤ v) (x : BitVec w) :
     (m.storeAt p x).readAt p v = spliceBits (m.readAt p v) 0 x := by
   have :=
     MemoryState.readAt_add_storeAt (off := 0#64) h (by simp [BitVec.uaddOverflow, p.offset.isLt])
@@ -181,18 +188,18 @@ public theorem _root_.MLIR.MemoryState.readAt_storeAt_over {m : MemoryState} {p 
 
 /-- Definedness over a store inside the range: the stored bits' made defined. -/
 public theorem _root_.MLIR.MemoryState.definedAt_add_storeAt {m : MemoryState} {p : Pointer}
-    {off : BitVec 64} (h : InBounds m p v) (hov : ¬p.offset.uaddOverflow off)
+    {off : BitVec 64} (h : Room m p v) (hov : ¬p.offset.uaddOverflow off)
     (_hw : off.toNat * 8 + w ≤ v) (x : BitVec w) :
     (m.storeAt (p.add off) x).definedAt p v =
       spliceBits (m.definedAt p v) (off.toNat * 8) (BitVec.allOnes w) := by
-  obtain ⟨blk, hblk, hsz⟩ := h
+  obtain ⟨blk, hblk, -, hsz, hwr⟩ := h.block
   have hs :
     (m.storeAt (p.add off) x)[p.id]? =
       some
         { blk with
           bytes := spliceBits blk.bytes (p.add off).offsetInBits x
           defined := spliceBits blk.defined (p.add off).offsetInBits (BitVec.allOnes w) } :=
-    MemoryState.getElem?_storeAt_self (p := p.add off) hblk
+    MemoryState.getElem?_storeAt_self (p := p.add off) hblk hwr
   simp only [MemoryState.definedAt, hs, hblk]
   unfold MemoryBlock.lengthInBits at hsz
   rw [Pointer.offsetInBits_add hov]
@@ -202,7 +209,7 @@ public theorem _root_.MLIR.MemoryState.definedAt_add_storeAt {m : MemoryState} {
   grind
 
 public theorem _root_.MLIR.MemoryState.definedAt_storeAt_over {m : MemoryState} {p : Pointer}
-    (h : InBounds m p v) (hw : w ≤ v) (x : BitVec w) :
+    (h : Room m p v) (hw : w ≤ v) (x : BitVec w) :
     (m.storeAt p x).definedAt p v = spliceBits (m.definedAt p v) 0 (BitVec.allOnes w) := by
   have :=
     MemoryState.definedAt_add_storeAt (off := 0#64) h (by simp [BitVec.uaddOverflow, p.offset.isLt])
@@ -247,7 +254,7 @@ end
 /-- A point's bits over its stores. -/
 public theorem _root_.MLIR.MemoryState.readAt_storePt_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) : (m.storePt p P b).readAt p 1344 = P.over (m.readAt p 1344) b := by
-  have hi : InBounds m p 1344 := h.2.inBounds
+  have hi : Room m p 1344 := h.2
   have hf (a : Nat) (ha : a ≤ 120) := Pointer.field_offset h.1 ha
   have hov (k : BitVec 64) (hk : k.toNat < 168) := p.not_uaddOverflow_of_pt h.1 hk
   simp only [MemoryState.storePt]
@@ -266,7 +273,7 @@ public theorem _root_.MLIR.MemoryState.readAt_storePt_self {m : MemoryState} {p 
 /-- Which of a point's bits are defined over its stores. -/
 public theorem _root_.MLIR.MemoryState.definedAt_storePt_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) : (m.storePt p P b).definedAt p 1344 = ZPt.overDef (m.definedAt p 1344) := by
-  have hi : InBounds m p 1344 := h.2.inBounds
+  have hi : Room m p 1344 := h.2
   have hf (a : Nat) (ha : a ≤ 120) := Pointer.field_offset h.1 ha
   have hov (k : BitVec 64) (hk : k.toNat < 168) := p.not_uaddOverflow_of_pt h.1 hk
   simp only [MemoryState.storePt]
@@ -344,12 +351,12 @@ public theorem ZPt.overDef_low (d : BitVec 1344) :
 public theorem _root_.MLIR.MemoryState.readPt_storePtCopy_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) : (m.storePtCopy p P b).readPt p = P :=
   MemoryState.readPt_of_readAt (h.2.storeDef.inBounds.mono (by omega)) h.1
-    ((MemoryState.readAt_storeDef_le h.2.inBounds (by omega) _ _).trans (ZPt.over_bits _ _ _))
+    ((MemoryState.readAt_storeDef_le h.2 (by omega) _ _).trans (ZPt.over_bits _ _ _))
 
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readBase_storePtCopy_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) : (m.storePtCopy p P b).readBase p = b :=
-  (MemoryState.readAt_storeDef_add h.2.inBounds (p.not_uaddOverflow_of_pt h.1 (by decide))
+  (MemoryState.readAt_storeDef_add h.2 (p.not_uaddOverflow_of_pt h.1 (by decide))
         (by decide) _ _).trans
     (ZPt.over_base _ _ _)
 
@@ -357,7 +364,7 @@ public theorem _root_.MLIR.MemoryState.readBase_storePtCopy_self {m : MemoryStat
 @[mlir_fresh, mlir_mem]
 public theorem _root_.MLIR.MemoryState.PtFit.storePtCopy_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) : (m.storePtCopy p P b).PtFit p :=
-  .of_fits h.2.storeDef (Fits.storeDef_of_mask_self h.2 (by omega) (ZPt.overDef_low 0)) h.1
+  .of_fits h.2.1.storeDef (Fits.storeDef_of_mask_self h.2 (by omega) (ZPt.overDef_low 0)) h.1
 
 /-- A copy out of a slot holding a point as a fresh slot does. -/
 public theorem _root_.MLIR.MemoryState.storeDef_copy_eq {m m' : MemoryState} {p q : Pointer}
@@ -366,8 +373,8 @@ public theorem _root_.MLIR.MemoryState.storeDef_copy_eq {m m' : MemoryState} {p 
 
 /-! ### Known bits from definedness -/
 
-/-- Room whose bits are all defined: known bits. -/
-public theorem Fits.of_definedAt {m : MemoryState} {p : Pointer} (hr : Room m p w)
+/-- A live range whose bits are all defined: known bits. -/
+public theorem Fits.of_definedAt {m : MemoryState} {p : Pointer} (hr : Live m p w)
     (hd : m.definedAt p w = BitVec.allOnes w) : Fits m p w := by
   obtain ⟨blk, hblk, hl, hsz⟩ := hr
   refine ⟨blk, hblk, hl, hsz, ?_⟩
@@ -385,7 +392,7 @@ public theorem _root_.MLIR.MemoryState.definedAt_le {m : MemoryState} {p : Point
 
 /-- A point whose field elements' bits are all defined, where there is room for it. -/
 public theorem _root_.MLIR.MemoryState.PtLimbsFit.of_definedAt {m : MemoryState} {p : Pointer}
-    (h : m.PtRoom p) (hd : (m.definedAt p 1344).extractLsb' 0 1280 = BitVec.allOnes 1280) :
+    (h : m.PtLive p) (hd : (m.definedAt p 1344).extractLsb' 0 1280 = BitVec.allOnes 1280) :
     m.PtLimbsFit p := by
   have hf : Fits m p 1280 :=
     Fits.of_definedAt (h.2.mono (by omega)) ((MemoryState.definedAt_le (by omega)).trans hd)
@@ -583,8 +590,8 @@ public theorem _root_.MLIR.MemoryState.PtLimbsFit.alloca {s : GlobalState} {p : 
     (hne : p.id ≠ s.allocaPtr.id) (h : s.mem.PtLimbsFit p) : (s.alloca n d).mem.PtLimbsFit p := by
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
   exact
-    ⟨h.1, (MemoryState.PtRoom.alloca hne h.room).2, h.2.2.1.alloca hne, h.2.2.2.1.alloca (hne' _),
-      h.2.2.2.2.1.alloca (hne' _), h.2.2.2.2.2.alloca (hne' _)⟩
+    ⟨h.1, h.2.1.of_getElem?_eq (GlobalState.getElem?_alloca hne), h.2.2.1.alloca hne,
+      h.2.2.2.1.alloca (hne' _), h.2.2.2.2.1.alloca (hne' _), h.2.2.2.2.2.alloca (hne' _)⟩
 
 @[mlir_transport]
 public theorem _root_.MLIR.MemoryState.PtLimbsFit.addBlock {s : GlobalState} {p : Pointer}

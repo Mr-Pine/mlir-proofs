@@ -917,8 +917,8 @@ def permuteLoadRun (m : Vector (Option (Fin (2 * 8))) 8) (p : Reg Γ .ptr)
   [.load x03 p, .binop (.shufflevector m) r03 (.val x03.i x03.h) (.val pz.i pz.h),
     .unop (.gepConst { nusw := true, nuw := true } 64) g1 p, .load x14 (.val g1.i g1.h),
     .binop (.shufflevector m) r14 (.val x14.i x14.h) (.val pz.i pz.h),
-    .unop (.gepConst { nusw := true, nuw := true } 128) g2 p,
-    .load x25 (.val g2.i g2.h), .binop (.shufflevector m) r25 (.val x25.i x25.h) (.val pz.i pz.h)]
+    .unop (.gepConst { nusw := true, nuw := true } 128) g2 p, .load x25 (.val g2.i g2.h),
+    .binop (.shufflevector m) r25 (.val x25.i x25.h) (.val pz.i pz.h)]
 
 /-- Where the body at `pos` is `permuteLoadRun` by `permMask imm` and `p` holds the point `P`:
 running on from `pos` then `g` gives `K` if it does from `pos + 8` with `P`'s vectors (as
@@ -1188,8 +1188,7 @@ theorem runBodyFrom_permSubAddRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} 
 def quadLoadRun (p : Reg Γ .ptr) (x03 x14 x25 : Dst Γ (.vec 8 64)) (g1 g2 : Dst Γ .ptr) :
     List (Instr Γ) :=
   [.load x03 p, .unop (.gepConst { nusw := true, nuw := true } 64) g1 p, .load x14 (.val g1.i g1.h),
-    .unop (.gepConst { nusw := true, nuw := true } 128) g2 p,
-    .load x25 (.val g2.i g2.h)]
+    .unop (.gepConst { nusw := true, nuw := true } 128) g2 p, .load x25 (.val g2.i g2.h)]
 
 /-- Where the body at `pos` is `quadLoadRun` and `p` holds the point `P`: running on from `pos`
 then `g` gives `K` if it does from `pos + 5` with `P`'s vectors (as `l03 l14 l25`) in
@@ -1240,8 +1239,8 @@ def mulRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 y03 y14 y25 q03 q14 q25 : Dst �
     .lifetimeEnd (.val z0.i z0.h) 64]
 
 /-- Where the body at `pos` is `mulRun`, `x03 x14 x25` hold `X`, `y03 y14 y25` hold `Y` and
-`z0 z1 z2` three distinct slots: running on from `pos` then `g` gives `K` if it does from `pos + 10`
-with `quadMul X Y` (as `m03 m14 m25`) in `q03 q14 q25` and left in the slots. -/
+`z0 z1 z2` three distinct writable slots: running on from `pos` then `g` gives `K` if it does from
+`pos + 10` with `quadMul X Y` (as `m03 m14 m25`) in `q03 q14 q25` and left in the slots. -/
 theorem runBodyFrom_mulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {z0 z1 z2 : Dst Γ .ptr} {x03 x14 x25 y03 y14 y25 q03 q14 q25 : Dst Γ (.vec 8 64)}
     {rest : List (Instr Γ)} {X03 X14 X25 Y03 Y14 Y25 : Wwl} {Z0 Z1 Z2 : Pointer} {S : GlobalState}
@@ -1251,6 +1250,7 @@ theorem runBodyFrom_mulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : 
       E ⊨ [x03 := X03, x14 := X14, x25 := X25, y03 := Y03, y14 := Y14, y25 := Y25, z0 := Z0, z1 :=
         Z1, z2 := Z2])
     (hwf : S.WF) (hZ : InBounds S.mem Z0 512 ∧ InBounds S.mem Z1 512 ∧ InBounds S.mem Z2 512)
+    (hZw : Writable S.mem Z0 ∧ Writable S.mem Z1 ∧ Writable S.mem Z2)
     (hne : Z0.id ≠ Z1.id ∧ Z0.id ≠ Z2.id ∧ Z1.id ≠ Z2.id)
     (hK :
       ∀ (m03 m14 m25 : Wwl) (_hm : quadMul ⟨X03, X14, X25⟩ ⟨Y03, Y14, Y25⟩ = ⟨m03, m14, m25⟩),
@@ -1268,6 +1268,7 @@ theorem runBodyFrom_mulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : 
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2⟩ := hZ
+  obtain ⟨hw0, hw1, hw2⟩ := hZw
   obtain ⟨h01, h02, h12⟩ := hne
   iterate 3 step_pure
   step_call using fd_r43x6_quad_mul_fast.call_eq
@@ -1297,14 +1298,15 @@ def sqrRun (z0 z1 z2 : Dst Γ .ptr) (x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64
     .lifetimeEnd (.val z0.i z0.h) 64]
 
 /-- Where the body at `pos` is `sqrRun`, `x03 x14 x25` hold `X` and `z0 z1 z2` three distinct
-slots: running on from `pos` then `g` gives `K` if it does from `pos + 10` with `quadSqr X` (as
-`m03 m14 m25`) in `q03 q14 q25` and left in the slots. -/
+writable slots: running on from `pos` then `g` gives `K` if it does from `pos + 10` with
+`quadSqr X` (as `m03 m14 m25`) in `q03 q14 q25` and left in the slots. -/
 theorem runBodyFrom_sqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {z0 z1 z2 : Dst Γ .ptr} {x03 x14 x25 q03 q14 q25 : Dst Γ (.vec 8 64)} {rest : List (Instr Γ)}
     {X03 X14 X25 : Wwl} {Z0 Z1 Z2 : Pointer} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
     {K : PoisonOr β} (hbody : blk.body.drop pos = sqrRun z0 z1 z2 x03 x14 x25 q03 q14 q25 ++ rest)
     (hR : E ⊨ [x03 := X03, x14 := X14, x25 := X25, z0 := Z0, z1 := Z1, z2 := Z2]) (hwf : S.WF)
     (hZ : InBounds S.mem Z0 512 ∧ InBounds S.mem Z1 512 ∧ InBounds S.mem Z2 512)
+    (hZw : Writable S.mem Z0 ∧ Writable S.mem Z1 ∧ Writable S.mem Z2)
     (hne : Z0.id ≠ Z1.id ∧ Z0.id ≠ Z2.id ∧ Z1.id ≠ Z2.id)
     (hK :
       ∀ (m03 m14 m25 : Wwl) (_hm : quadSqr ⟨X03, X14, X25⟩ = ⟨m03, m14, m25⟩),
@@ -1322,6 +1324,7 @@ theorem runBodyFrom_sqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : 
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2⟩ := hZ
+  obtain ⟨hw0, hw1, hw2⟩ := hZw
   obtain ⟨h01, h02, h12⟩ := hne
   iterate 3 step_pure
   step_call using fd_r43x6_quad_sqr_fast.call_eq
@@ -1448,6 +1451,9 @@ theorem runBodyFrom_dblMidRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
     (hZ :
       InBounds S.mem Z0 512 ∧ InBounds S.mem Z1 512 ∧ InBounds S.mem Z2 512 ∧
         InBounds S.mem Z3 512 ∧ InBounds S.mem Z4 512 ∧ InBounds S.mem Z5 512)
+    (hZw :
+      Writable S.mem Z0 ∧ Writable S.mem Z1 ∧ Writable S.mem Z2 ∧ Writable S.mem Z3 ∧
+        Writable S.mem Z4 ∧ Writable S.mem Z5)
     (hne :
       Z0.id ≠ Z1.id ∧ Z0.id ≠ Z2.id ∧ Z1.id ≠ Z2.id ∧ Z3.id ≠ Z4.id ∧ Z3.id ≠ Z5.id ∧
         Z4.id ≠ Z5.id)
@@ -1513,6 +1519,7 @@ theorem runBodyFrom_dblMidRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
           K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4, hz5⟩ := hZ
+  obtain ⟨hw0, hw1, hw2, hw3, hw4, hw5⟩ := hZw
   obtain ⟨h01, h02, h12, h34, h35, h45⟩ := hne
   -- FD_R43X6_QUAD_SQR_FAST( _ta, _ta )
   step_pattern using runBodyFrom_sqrRun

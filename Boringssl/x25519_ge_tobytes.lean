@@ -57,7 +57,7 @@ private theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec 
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
   simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,

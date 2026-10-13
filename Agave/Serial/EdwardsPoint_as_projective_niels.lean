@@ -37,7 +37,7 @@ public theorem anon_042b818bc72209407b52bd0e4d6c8368_50.value_eq (s : GlobalStat
       .value (Ty.wrap anon_042b818bc72209407b52bd0e4d6c8368_50.lit, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
-/-- `EDWARDS_D2`'s limbs, at the block `addressof` stores them in. -/
+/-- `EDWARDS_D2`'s limbs, in the global's block. -/
 public theorem anon_042b818bc72209407b52bd0e4d6c8368_50.readLimbs {m : MemoryState} {p : Pointer}
     {hw : (Ty.array 40 (.bv 8)).width = 320} (hf : Fits m p 320) (ho : p.offset = 0)
     (h : m.readAt p 320 = Ty.flatBits anon_042b818bc72209407b52bd0e4d6c8368_50.lit (hw := hw)) :
@@ -47,14 +47,15 @@ public theorem anon_042b818bc72209407b52bd0e4d6c8368_50.readLimbs {m : MemorySta
   fin_cases i <;> clear h hf ho <;> decide +kernel +revert
 
 /-- `P.as_projective_niels()` stores `spec P` at `out`, the `sret` slot, apart from `P`; `Z` is a
-copy. The global `EDWARDS_D2` counts one block. -/
+copy. -/
 public theorem EdwardsPoint_as_projective_niels.call_eq (out p : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : s.mem.PointRoom out) (hp : s.mem.PointFit p) (hsep : out.id ≠ p.id) :
+    (hwf : s.WF) (hg : s.mem.Globals EdwardsPoint_as_projective_niels.globals)
+    (hout : s.mem.PointRoom out) (hp : s.mem.PointFit p) (hsep : out.id ≠ p.id) :
     EdwardsPoint_as_projective_niels.call
         (EdwardsPoint_as_projective_niels.args (.value out) (.value p)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
+          { s with
             mem :=
               s.mem.storeNiels out
                 (EdwardsPoint_as_projective_niels.spec (s.mem.readEdwards p)) }) := by
@@ -91,7 +92,6 @@ public theorem EdwardsPoint_as_projective_niels.call_eq (out p : Pointer) (s : G
   finish_block
   have hoZ := hout.limbsRoom_T.1
   subst hS
-  erase_frame
   rw [← storeLimbs_eq_storeAt hoZ]
   rfl
 

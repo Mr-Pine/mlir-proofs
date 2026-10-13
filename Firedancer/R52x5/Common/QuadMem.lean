@@ -44,8 +44,11 @@ abbrev MemoryState.Quad5Room (m : MemoryState) (p : Pointer) : Prop :=
 
 attribute [mlir_mem] MemoryState.Quad5Fit MemoryState.Quad5Room
 
-theorem MemoryState.Quad5Fit.room {m : MemoryState} (h : m.Quad5Fit p) : m.Quad5Room p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.room⟩
+/-- A point known in a writable block has room. -/
+theorem MemoryState.Quad5Fit.room {m : MemoryState} (h : m.Quad5Fit p) (hw : Writable m p) :
+    m.Quad5Room p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.2.2.room (hw.of_id_eq rfl)⟩
 
 /-! ### Fit -/
 
@@ -112,8 +115,8 @@ theorem MemoryState.Quad5Fit.no_wrap {m : MemoryState} (h : m.Quad5Fit p) {off :
 /-- Room for `Q1 … Q4` together, as `memset` writes them. -/
 theorem MemoryState.Quad5Room.room_1_4 {m : MemoryState} (h : m.Quad5Room p) :
     Room m (p.add 32#64) 1024 := by
-  obtain ⟨blk, hblk, hl, hsz⟩ := h.room_4
-  refine ⟨blk, hblk, hl, ?_⟩
+  obtain ⟨blk, hblk, hl, hsz, hwr⟩ := h.room_4.block
+  refine Room.of_block (by simpa [Pointer.add_id] using hblk) hl ?_ hwr
   have h1 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 32#64) (by decide))
   have h2 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 128#64) (by decide))
   simp only [BitVec.toNat_ofNat] at h1 h2
@@ -361,6 +364,10 @@ theorem Room.storeTmp5 {m : MemoryState} (h : Room m p w) :
     Room (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w :=
   Room.storeTmp5_iff.mpr h
 
+theorem Writable.storeTmp5 {m : MemoryState} (h : Writable m p) :
+    Writable (m.storeTmp5 t0 t1 t2 t3 t4 Q) p :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt
+
 @[mlir_mem, mlir_transport]
 theorem InBounds.storeTmp5 {m : MemoryState} (h : InBounds m p w) :
     InBounds (m.storeTmp5 t0 t1 t2 t3 t4 Q) p w :=
@@ -377,6 +384,9 @@ theorem Fits.storeQuad5 {m : MemoryState} (h : Fits m p w) : Fits (m.storeQuad5 
 @[mlir_mem, mlir_transport]
 theorem Room.storeQuad5 {m : MemoryState} (h : Room m p w) : Room (m.storeQuad5 q Q) p w :=
   Room.storeTmp5 h
+
+theorem Writable.storeQuad5 {m : MemoryState} (h : Writable m p) : Writable (m.storeQuad5 q Q) p :=
+  Writable.storeTmp5 h
 
 @[mlir_mem, mlir_transport]
 theorem InBounds.storeQuad5 {m : MemoryState} (h : InBounds m p w) :
@@ -508,8 +518,8 @@ theorem MemoryState.readAt_storeTmp5_of_id_ne {m : MemoryState} {q : Pointer} (h
 /-! The callee's out-pointers in five blocks, each read back. -/
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_0 {m : MemoryState} (h : InBounds m t0 256)
-    (h1 : t1.id ≠ t0.id) (h2 : t2.id ≠ t0.id) (h3 : t3.id ≠ t0.id) (h4 : t4.id ≠ t0.id) :
+theorem MemoryState.readAt_storeTmp5_0 {m : MemoryState} (h : Room m t0 256) (h1 : t1.id ≠ t0.id)
+    (h2 : t2.id ≠ t0.id) (h3 : t3.id ≠ t0.id) (h4 : t4.id ≠ t0.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t0 256 = BitVec.packLanes Q.P0 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h1) : (Range.of t1 256).Disjoint _),
@@ -519,8 +529,8 @@ theorem MemoryState.readAt_storeTmp5_0 {m : MemoryState} (h : InBounds m t0 256)
     readAt_storeAt_self h]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_1 {m : MemoryState} (h : InBounds m t1 256)
-    (h2 : t2.id ≠ t1.id) (h3 : t3.id ≠ t1.id) (h4 : t4.id ≠ t1.id) :
+theorem MemoryState.readAt_storeTmp5_1 {m : MemoryState} (h : Room m t1 256) (h2 : t2.id ≠ t1.id)
+    (h3 : t3.id ≠ t1.id) (h4 : t4.id ≠ t1.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t1 256 = BitVec.packLanes Q.P1 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h2) : (Range.of t2 256).Disjoint _),
@@ -529,8 +539,8 @@ theorem MemoryState.readAt_storeTmp5_1 {m : MemoryState} (h : InBounds m t1 256)
     readAt_storeAt_self h.storeAt]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_2 {m : MemoryState} (h : InBounds m t2 256)
-    (h3 : t3.id ≠ t2.id) (h4 : t4.id ≠ t2.id) :
+theorem MemoryState.readAt_storeTmp5_2 {m : MemoryState} (h : Room m t2 256) (h3 : t3.id ≠ t2.id)
+    (h4 : t4.id ≠ t2.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t2 256 = BitVec.packLanes Q.P2 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h3) : (Range.of t3 256).Disjoint _),
@@ -538,15 +548,14 @@ theorem MemoryState.readAt_storeTmp5_2 {m : MemoryState} (h : InBounds m t2 256)
     readAt_storeAt_self h.storeAt.storeAt]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_3 {m : MemoryState} (h : InBounds m t3 256)
-    (h4 : t4.id ≠ t3.id) :
+theorem MemoryState.readAt_storeTmp5_3 {m : MemoryState} (h : Room m t3 256) (h4 : t4.id ≠ t3.id) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t3 256 = BitVec.packLanes Q.P3 := by
   simp only [storeTmp5, storeWv,
     readAt_storeAt_disjoint (Or.inl (by simpa [Range.of] using h4) : (Range.of t4 256).Disjoint _),
     readAt_storeAt_self h.storeAt.storeAt.storeAt]
 
 @[mlir_read]
-theorem MemoryState.readAt_storeTmp5_4 {m : MemoryState} (h : InBounds m t4 256) :
+theorem MemoryState.readAt_storeTmp5_4 {m : MemoryState} (h : Room m t4 256) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).readAt t4 256 = BitVec.packLanes Q.P4 := by
   simp only [storeTmp5, storeWv, readAt_storeAt_self h.storeAt.storeAt.storeAt.storeAt]
 
@@ -590,18 +599,17 @@ theorem MemoryState.readQuad5_storeQuad5_self {m : MemoryState} {p : Pointer} (h
   · rw [readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
       readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
       readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
-      readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm,
-      readWv_storeWv_self h.2.1.inBounds]
+      readWv_storeWv_disjoint (hd0 _ (by decide) (by decide)).symm, readWv_storeWv_self h.2.1]
   · rw [readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
       readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
       readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
-      readWv_storeWv_self h.2.2.1.storeWv.inBounds]
+      readWv_storeWv_self h.2.2.1.storeWv]
   · rw [readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
       readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
-      readWv_storeWv_self h.2.2.2.1.storeWv.storeWv.inBounds]
+      readWv_storeWv_self h.2.2.2.1.storeWv.storeWv]
   · rw [readWv_storeWv_disjoint (hd _ _ (by decide) (by decide) (by decide)),
-      readWv_storeWv_self h.2.2.2.2.1.storeWv.storeWv.storeWv.inBounds]
-  · rw [readWv_storeWv_self h.2.2.2.2.2.storeWv.storeWv.storeWv.storeWv.inBounds]
+      readWv_storeWv_self h.2.2.2.2.1.storeWv.storeWv.storeWv]
+  · rw [readWv_storeWv_self h.2.2.2.2.2.storeWv.storeWv.storeWv.storeWv]
 
 /-- A point elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
@@ -958,14 +966,14 @@ theorem GlobalState.WF.callTmp5_mk {a : AllocState} {m : MemoryState}
 
 @[mlir_mem, mlir_transport]
 theorem InBounds.callTmp5 {m : MemoryState} (h : InBounds m p w) :
-    InBounds (m.callTmp5 t0 t1 t2 t3 t4 Q) p w := by
-  unfold MemoryState.callTmp5
-  repeat
-    first
-    | exact h
-    | apply InBounds.lifetimeEnd
-    | apply InBounds.storeTmp5
-    | apply InBounds.lifetimeStart
+    InBounds (m.callTmp5 t0 t1 t2 t3 t4 Q) p w :=
+  h.lifetimeStart.lifetimeStart.lifetimeStart.lifetimeStart.lifetimeStart.storeTmp5.lifetimeEnd
+    |>.lifetimeEnd.lifetimeEnd.lifetimeEnd.lifetimeEnd
+
+theorem Writable.callTmp5 {m : MemoryState} (h : Writable m p) :
+    Writable (m.callTmp5 t0 t1 t2 t3 t4 Q) p :=
+  h.lifetimeStart.lifetimeStart.lifetimeStart.lifetimeStart.lifetimeStart.storeTmp5.lifetimeEnd
+    |>.lifetimeEnd.lifetimeEnd.lifetimeEnd.lifetimeEnd
 
 @[mlir_mem, mlir_transport]
 theorem Room.callTmp5 {m : MemoryState} (h : Room m p w) (h0 : p.id ≠ t0.id) (h1 : p.id ≠ t1.id)

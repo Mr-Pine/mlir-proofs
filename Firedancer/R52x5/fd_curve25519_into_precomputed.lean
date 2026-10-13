@@ -31,7 +31,7 @@ section Proof
 /-- `fd_curve25519_into_precomputed` stores `spec` of the point at `r` at `r`; its five
 `wl_permute` calls' unions are freed, the counter moves on by five blocks. -/
 public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.Quad5Fit r) :
+    (hr : s.mem.Quad5Fit r) (hrw : Writable s.mem r) :
     fd_curve25519_into_precomputed.call (fd_curve25519_into_precomputed.args (.value r)) s =
       .value
         (.nil,

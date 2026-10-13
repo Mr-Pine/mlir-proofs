@@ -7,6 +7,7 @@ public import Agave.Serial.Sha512VarCore_VariableOutputCore_finalize_variable_co
 public import Agave.Serial.copy_from_slice_impl_u8
 public import Agave.Avx2.Mlir.Sha512VarCore_VariableOutputCore_finalize_variable_core
 import Firedancer.Common.Memory
+import Firedancer.Common.Point
 import Std.Data.ExtHashMap.Lemmas
 import Mathlib.Tactic.Rename
 import Std.Tactic.BVDecide
@@ -24,15 +25,14 @@ namespace Sha512VarCore_VariableOutputCore_finalize_variable_core
 
 open Serial.Sha512VarCore_VariableOutputCore_finalize_variable_core (twoBlocks)
 
-/-- The blocks `finalize_variable_core` allocates: the panic location, the padding block, four per
-`compress512`. -/
+/-- The blocks `finalize_variable_core` allocates: the padding block, three per `compress512`. -/
 def frames (P : BitVec 8) : Nat :=
-  if twoBlocks P then 10 else 6
+  if twoBlocks P then 7 else 4
 
 /-- `frames` after absorbing `M`: a second padding block when the `M.length % 128` buffered bytes
 leave no room for the length. -/
 def framesOf (M : List (BitVec 8)) : Nat :=
-  if 112 ≤ M.length % 128 then 10 else 6
+  if 112 ≤ M.length % 128 then 7 else 4
 
 end Sha512VarCore_VariableOutputCore_finalize_variable_core
 
@@ -62,7 +62,8 @@ local macro "last_block" : tactic =>
       step_store
       rw [storeAt_storeAt_add (off := 112#64) (by simp [BitVec.uaddOverflow, hblock_off])
           (by decide)] at hS
-      have hread_b : S.mem.readAt block 1024 = _ := readBack hS hfits_block.inBounds
+      have hread_b : S.mem.readAt block 1024 = _ :=
+        readBack hS (hfits_block.room hblock_room.writable)
       step_call using
         (compress_one (hst := sha_fit hso h0 h1 h2 h3 h4 h5 h6 h7) (hH :=
           sha_of_words hw0 hw1 hw2 hw3 hw4 hw5 hw6 hw7) (hBr := hread_b) (hne := ?_)) consuming
@@ -131,7 +132,8 @@ theorem pos_slt {pos : BitVec 8} (h : pos.toNat < 128) : (255#8).slt pos = true 
 theorem storeAt_storeAt_concat {m : MemoryState} {p : Pointer} {off : BitVec 64} {x : BitVec v}
     {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
@@ -163,7 +165,8 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
@@ -179,40 +182,10 @@ theorem storeAt_storeAt_low {m : MemoryState} {p : Pointer} {u : BitVec wu} (hw 
       (by simpa using hw) y
   rwa [Pointer.add_zero] at h
 
-open Memory in
 /-- Storing the known bits a range holds changes nothing. -/
 theorem storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
-    m.storeAt p (m.readAt p w) = m := by
-  obtain ⟨blk, hblk, -, hsz, hd⟩ := h
-  have hb : m.mem[p.id]? = some blk := hblk
-  unfold MemoryBlock.lengthInBits at hsz
-  simp only [MemoryState.storeAt, MemoryState.readAt, hblk, MemoryState.modifyBlock]
-  refine MemoryState.ext ?_ rfl
-  apply Std.ExtHashMap.ext_getElem?
-  intro k
-  simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
-  split
-  · subst_vars
-    rw [hb]
-    simp only [Option.map_some, Option.some.injEq]
-    cases blk
-    simp only [MemoryBlock.mk.injEq, true_and, and_true] at hsz hd ⊢
-    refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-      rw [getLsbD_spliceBits]
-    · rw [BitVec.getLsbD_extractLsb']
-      split
-      · have h1 : p.offsetInBits + (i - p.offsetInBits) = i := by omega
-        have h2 : i - p.offsetInBits < w := by omega
-        simp [h1, h2]
-      · rfl
-    · split
-      · have := congrArg (·.getLsbD (i - p.offsetInBits)) hd
-        have h1 : p.offsetInBits + (i - p.offsetInBits) = i := by omega
-        simp only [BitVec.getLsbD_extractLsb', BitVec.getLsbD_allOnes] at this
-        have h2 : i - p.offsetInBits < w := by omega
-        simp_all
-      · rfl
-  · rfl
+    m.storeAt p (m.readAt p w) = m :=
+  MemoryState.storeAt_readAt_self h
 
 /-- A state's memory with a known range: the same memory, the range's bits stored again. -/
 theorem restore {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer} {X : BitVec w}
@@ -223,15 +196,16 @@ theorem restore {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointe
 
 /-- A state's memory after a store, read back there. -/
 theorem readBack {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer} {X : BitVec w}
-    (hS : S = ⟨a, m.storeAt p X⟩) (h : InBounds S.mem p w) : S.mem.readAt p w = X := by
+    (hS : S = ⟨a, m.storeAt p X⟩) (h : Room S.mem p w) : S.mem.readAt p w = X := by
   subst hS
-  exact MemoryState.readAt_storeAt_self (InBounds.storeAt_iff.1 h) _
+  exact MemoryState.readAt_storeAt_self (Room.storeAt_iff.1 h) _
 
 /-- A store right before another: one store of both. -/
 theorem storeAt_storeAt_below {m : MemoryState} {p : Pointer} {off : BitVec 64} {x : BitVec v}
     {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     (m.storeAt (p.add off) y).storeAt p x = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
@@ -342,7 +316,7 @@ theorem words_after {S : GlobalState} {a : AllocState} {m : MemoryState} {d : Po
     (Room.add_of_le (off := 128#64) (w := 512)
         (by
           simp [BitVec.uaddOverflow]; omega)
-        (by decide) (Room.storeSha512_iff.1 h)).inBounds
+        (by decide) (Room.storeSha512_iff.1 h))
   exact this
 
 /-- The state words at `d + 128` fit, from their eight words'. -/
@@ -429,17 +403,18 @@ theorem hov32 {out : Pointer} (hoo : ¬out.offset.uaddOverflow 64#64) :
   omega
 
 /-- `compress512` of one block at `blk` (in its own slot) into the state words `H` at `st`. -/
-theorem compress_one (st blk : Pointer) (s : GlobalState) (hwf : s.WF) (hst : s.mem.Sha512Fit st)
+theorem compress_one (st blk : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals compress512.globals) (hst : s.mem.Sha512Fit st) (hstw : Writable s.mem st)
     (hB : Fits s.mem blk 1024) (hbo : blk.offset = 0) (hne : st.id ≠ blk.id)
     {H : Vector (BitVec 64) 8} {B : BitVec 1024} (hH : s.mem.readSha512 st = H)
     (hBr : s.mem.readAt blk 1024 = B) :
     compress512.call (compress512.args (.value st) (.value blk) (.value 1#64)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 4⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 3⟩,
             mem := s.mem.storeSha512 st (Serial.compress512.spec H (bytesLE B)) }) := by
   have hBr' : s.mem.readAt blk (1024 * (1#64).toNat) = B := hBr
-  rw [compress512.call_eq st blk 1#64 s hwf hst (by decide) hB (by simp [hbo])
+  rw [compress512.call_eq st blk 1#64 s hwf hg hst hstw (by decide) hB (by simp [hbo])
       (Range.disjoint_of_id_ne hne),
     hH, hBr']
 
@@ -448,7 +423,9 @@ theorem compress_one (st blk : Pointer) (s : GlobalState) (hwf : s.WF) (hst : s.
 block(s) compressed into the state words (`state`), the position reset, the words stored
 big-endian at `out` (`outBits`). The buffer's `pos < 128` first bytes are known; `out` is in
 another block. -/
-public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Room s.mem d 1664)
+public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals Sha512VarCore_VariableOutputCore_finalize_variable_core.globals)
+    (hd : Room s.mem d 1664)
     (hdo : d.offset.toNat + 208 < 2 ^ 64) (hpos : Fits s.mem (d.add 127#64) 8)
     (hP128 : (s.mem.readAt (d.add 127#64) 8).toNat < 128)
     (hbuf : Fits s.mem d (8 * (s.mem.readAt (d.add 127#64) 8).toNat))
@@ -508,7 +485,8 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Ro
         simp [BitVec.uaddOverflow, hblock_off]; omega)
       (by omega) 128#8,
     hP64, ← padBlock] at hS
-  have hread_blk : S.mem.readAt block 1024 = padBlock P D := readBack hS hfits_block.inBounds
+  have hread_blk : S.mem.readAt block 1024 = padBlock P D :=
+    readBack hS (hfits_block.room hblock_room.writable)
   finish_block
   case isFalse =>
     have htwo : twoBlocks P = false := by simpa [twoBlocks] using hbr
@@ -562,7 +540,9 @@ public theorem frames_eq {m : MemoryState} {d : Pointer} {M : List (BitVec 8)}
 /-- `call_eq` on sha2's `Sha512` at `d` having absorbed `M`: the state words become SHA-512's of
 `pad M`, and `out` holds them big-endian, the bytes `digest M` (`bytesLE_outBits_pad`). -/
 public theorem call_eq_absorbed (d out : Pointer) (M : List (BitVec 8)) (s : GlobalState)
-    (hwf : s.WF) (hA : s.mem.Sha2Absorbed d M) (hout : Room s.mem out 512)
+    (hwf : s.WF)
+    (hg : s.mem.Globals Sha512VarCore_VariableOutputCore_finalize_variable_core.globals)
+    (hA : s.mem.Sha2Absorbed d M) (hout : Room s.mem out 512)
     (hoo : ¬out.offset.uaddOverflow 64#64) (hsep : out.id ≠ d.id) :
     Sha512VarCore_VariableOutputCore_finalize_variable_core.call
         (args (.value (d.add 128#64)) (.value d) (.value out)) s =
@@ -575,7 +555,7 @@ public theorem call_eq_absorbed (d out : Pointer) (M : List (BitVec 8)) (s : Glo
                     (d.add 127#64) 0#8).storeAt
                 out (outBits (Sha512.compressBlocks Sha512.IV (Sha512.pad M))) }) := by
   have hP := hA.pos
-  rw [call_eq d out s hwf hA.room hA.off hA.posFits (by omega)
+  rw [call_eq d out s hwf hg hA.room hA.off hA.posFits (by omega)
       (by
         rw [hP]; exact hA.bufFits)
       hA.stateFit hA.countFits hout hoo hsep,

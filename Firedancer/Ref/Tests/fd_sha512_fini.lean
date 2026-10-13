@@ -31,9 +31,10 @@ private def hash : Pointer :=
 
 /-- The struct's block, the message's block holding `m`, the hash's block; all else zero. -/
 private def state (m : List UInt8) : GlobalState :=
-  ⟨⟨3⟩,
-    ⟨Std.ExtHashMap.ofList
-        [(⟨0⟩, .ofBytes 256 0), (⟨1⟩, .ofBytes m.length (bytes m)), (⟨2⟩, .ofBytes 64 0)]⟩⟩
+  GlobalState.withGlobals fd_sha512_fini.globals
+    ⟨⟨3⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨0⟩, .ofBytes 256 0), (⟨1⟩, .ofBytes m.length (bytes m)), (⟨2⟩, .ofBytes 64 0)]⟩⟩
 
 /-- `init`, an `append` per `(offset, size)` piece of `m`, then `fini`, run through the lifts: the
 64 bytes at `hash`, or `none` for UB / out of fuel. -/

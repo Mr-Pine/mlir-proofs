@@ -21,7 +21,7 @@ private def s0 (k : Nat) : GlobalState :=
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩,
             ⟨16, 0, 0, true, fun o =>
-              if o = 0 then some (buf k) else if o = 64 then some (buf 4) else none⟩),
+              if o = 0 then some (buf k) else if o = 64 then some (buf 4) else none, true⟩),
           (⟨2⟩, .ofBytes 4 0xdeadbeef)]⟩⟩
 
 /-- The bytes at `buf` and the iterator's start after the call, or `none` for UB. -/

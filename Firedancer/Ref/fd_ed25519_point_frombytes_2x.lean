@@ -3,6 +3,7 @@ module
 public import MLIR.Run.Tactic
 public import Firedancer.Common.Point
 public import Firedancer.Common.Tactics
+public import Firedancer.Common.Writable
 public import Firedancer.Ref.fd_ed25519_point_frombytes
 public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes_2x
 
@@ -27,7 +28,8 @@ section Proof
 `r2`, each as `fd_ed25519_point_frombytes` stores it, and returns `spec`. `buf2` is read after `r1`
 is written, so they are in different blocks. -/
 public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr1 : s.mem.PointRoom r1) (hbuf1 : Fits s.mem buf1 (8 * 32))
+    (hwf : s.WF) (hg : s.mem.Globals fd_ed25519_point_frombytes_2x.globals)
+    (hr1 : s.mem.PointRoom r1) (hbuf1 : Fits s.mem buf1 (8 * 32))
     (hbuf1_off : ¬buf1.offset.uaddOverflow 32#64) (hr2 : s.mem.PointRoom r2)
     (hbuf2 : Fits s.mem buf2 (8 * 32)) (hbuf2_off : ¬buf2.offset.uaddOverflow 32#64)
     (hsep : r1.id ≠ buf2.id) :
@@ -42,10 +44,10 @@ public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer)
             alloc :=
               ⟨s.alloc.nextFreeBlock +
                   if (fd_ed25519_point_frombytes.spec (s.mem.readAt buf1 256)).isSome then
-                    79 +
-                      if (fd_ed25519_point_frombytes.spec (s.mem.readAt buf2 256)).isSome then 79
-                      else 57
-                  else 57⟩,
+                    76 +
+                      if (fd_ed25519_point_frombytes.spec (s.mem.readAt buf2 256)).isSome then 76
+                      else 54
+                  else 54⟩,
             mem :=
               (s.mem.storePointOpt r1
                     (fd_ed25519_point_frombytes.spec (s.mem.readAt buf1 256))).storePointOpt
@@ -58,6 +60,9 @@ public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer)
   iterate 4 step_pure
   -- res = fd_ed25519_point_frombytes( r1, buf1 );
   step_call using fd_ed25519_point_frombytes.call_eq
+  -- the globals past `storePointOpt`, which the step does not see through
+  · subst hS'
+    exact hg.mono MemoryState.globals_storePointOpt fun _ h => h
   -- if( res == NULL ) return -1;
   rcases h1 : fd_ed25519_point_frombytes.spec (S₀.mem.readAt buf1 256) with _ | P1
   · step_pure [h1]
@@ -76,6 +81,8 @@ public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer)
     -- res = fd_ed25519_point_frombytes( r2, buf2 );
     block_init
     step_call using fd_ed25519_point_frombytes.call_eq
+    · subst hS'
+      exact hg.mono MemoryState.globals_storePointOpt fun _ h => h
     have hr2_null : (r2 == Pointer.null) = false :=
       beq_eq_false_iff_ne.mpr fun h =>
         hwf.ne_null_of_inBounds hr2.2.1.2.1.inBounds (congrArg (·.id) h)

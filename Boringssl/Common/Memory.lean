@@ -23,7 +23,11 @@ theorem MemoryState.storeAt_of_width_zero {m : MemoryState} {p : Pointer} {x : B
       first
       | rfl
       | omega
-  simp only [MemoryState.storeAt, MemoryState.modifyBlock, hs]
+  have hu : (MemoryBlock.update fun blk => { blk with }) = id := by
+    funext b
+    unfold MemoryBlock.update
+    split <;> rfl
+  simp only [MemoryState.storeAt, MemoryState.modifyBlock, hs, hu]
   congr 1
   apply Std.ExtHashMap.ext_getElem?
   intro k

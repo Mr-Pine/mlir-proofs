@@ -50,16 +50,21 @@ theorem sq_lt (x : Fin 5 → BitVec 64) : Fe.Lt (Fe.sq.spec x) (2 ^ 54) := fun i
 
 /-- An iteration keeps the facts the next one needs. -/
 theorem step_facts {tmp fe : Pointer} {S : GlobalState} (hwf : S.WF) (ht : S.mem.LimbsRoom tmp)
-    (hf : S.mem.LimbsFit fe) :
+    (hf : S.mem.LimbsFit fe) (hw : Writable S.mem fe) :
     (step tmp fe S).WF ∧
       (step tmp fe S).mem.LimbsRoom tmp ∧
       (step tmp fe S).mem.LimbsFit fe ∧
+      Writable (step tmp fe S).mem fe ∧
       (step tmp fe S).mem.readLimbs fe = Fe.sq.spec (S.mem.readLimbs fe) := by
-  refine ⟨?_, ht.storeLimbs.storeLimbs, .storeLimbs_self hf.room.storeLimbs, ?_⟩
+  refine
+    ⟨?_, ht.storeLimbs.storeLimbs, .storeLimbs_self (hf.room hw).storeLimbs,
+      (hf.room hw).storeLimbs.storeLimbs.2.1.writable, ?_⟩
   · have h2 := hwf.storeLimbs (p := tmp) (l := Fe.sq.spec (S.mem.readLimbs fe))
     have h3 := h2.storeLimbs (p := fe) (l := Fe.sq.spec (S.mem.readLimbs fe))
-    exact ⟨fun k hk => Nat.lt_of_lt_of_le (h3.bound k hk) (by simp [step]), by simp [step], h3.null⟩
-  · exact MemoryState.readLimbs_storeLimbs_self hf.room.storeLimbs
+    exact
+      ⟨fun k hk => Nat.lt_of_lt_of_le (h3.bound k hk) (by simp [step]), by simp [step], h3.null,
+        h3.global, h3.merged⟩
+  · exact MemoryState.readLimbs_storeLimbs_self (hf.room hw).storeLimbs
 
 /-- The iterations' facts, `fe` holding `m` squares. -/
 theorem iter_facts {tmp fe : Pointer} :
@@ -67,20 +72,22 @@ theorem iter_facts {tmp fe : Pointer} :
       S.WF →
         S.mem.LimbsRoom tmp →
         S.mem.LimbsFit fe →
+        Writable S.mem fe →
         (iter tmp fe m S).WF ∧
           (iter tmp fe m S).mem.LimbsRoom tmp ∧
           (iter tmp fe m S).mem.LimbsFit fe ∧
+          Writable (iter tmp fe m S).mem fe ∧
           (iter tmp fe m S).mem.readLimbs fe = Fe.sqn.spec m (S.mem.readLimbs fe) ∧
           (iter tmp fe m S).alloc = ⟨S.alloc.nextFreeBlock + 2 * m⟩ := by
   intro m
   induction m with
   | zero =>
-    intro S hwf ht hf; exact ⟨hwf, ht, hf, rfl, rfl⟩
+    intro S hwf ht hf hw; exact ⟨hwf, ht, hf, hw, rfl, rfl⟩
   | succ m ih =>
-    intro S hwf ht hf
-    obtain ⟨w1, t1, f1, r1⟩ := step_facts hwf ht hf
-    obtain ⟨w, t, f, r, a⟩ := ih _ w1 t1 f1
-    refine ⟨w, t, f, ?_, ?_⟩
+    intro S hwf ht hf hw
+    obtain ⟨w1, t1, f1, hw1, r1⟩ := step_facts hwf ht hf hw
+    obtain ⟨w, t, f, hw', r, a⟩ := ih _ w1 t1 f1 hw1
+    refine ⟨w, t, f, hw', ?_, ?_⟩
     · rw [iter, r, r1]; rfl
     · rw [iter, a]; simp [step]; omega
 
@@ -119,6 +126,7 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
         S.WF →
         S.mem.LimbsRoom tmp →
         S.mem.LimbsFit fe →
+        Writable S.mem fe →
         tmp.id ≠ fe.id →
         Fe.Lt (S.mem.readLimbs fe) (2 ^ 54) →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
@@ -129,7 +137,7 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
   intro m
   induction m with
   | zero =>
-    intro i S E hArgs hR hi hn hwf ht hf hsep hb hK
+    intro i S E hArgs hR hi hn hwf ht hf hfw hsep hb hK
     block_init
     step_pure
     finish_block
@@ -139,7 +147,7 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
       simp [BitVec.toNat_eq] at hbr
       omega
   | succ m ih =>
-    intro i S E hArgs hR hi hn hwf ht hf hsep hb hK
+    intro i S E hArgs hR hi hn hwf ht hf hfw hsep hb hK
     block_init
     step_pure
     finish_block
@@ -150,15 +158,15 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
       block_init
       step_call using Fe_sq.call_eq consuming hb
       have hT320 := ht.fits
-      have hF320 := hf.room.room
+      have hF320 := (hf.room hfw).room
       step_memcpy consuming hT320 hF320
       step_pure [counter_overflow (show i + 1 < 2 ^ 63 by omega)]
       finish_block
-      rename_i S₁ _
+      rename_i S₁ _ htr
       have ht₁ : S₁.mem.LimbsRoom tmp := by
-        have := ht.room; rw [hS] at this; simpa [MemoryState.LimbsRoom] using this
+        have := htr; rw [hS] at this; simpa [MemoryState.LimbsRoom] using this
       have hf₁ : S₁.mem.LimbsRoom fe := by
-        have := hf.room; rw [hS] at this; simpa [MemoryState.LimbsRoom] using this
+        have := hf.room hfw; rw [hS] at this; simpa [MemoryState.LimbsRoom] using this
       have hst : S = step tmp fe S₁ := by
         rw [hS]
         simp only [step]
@@ -170,7 +178,8 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
         rw [MemoryState.readLimbs_storeLimbs_self hf₁.storeLimbs]
         exact sq_lt _
       refine
-        ih (i + 1) S E hArgs ?_ (by omega) hn hwf ht.room hf hsep hb'
+        ih (i + 1) S E hArgs ?_ (by omega) hn hwf htr hf
+          (hst ▸ hf₁.storeLimbs.storeLimbs.2.1.writable) hsep hb'
           (fun E' S' h1 h2 h3 => hK E' S' h1 h2 (h3.trans ?_))
       · refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> env_reads
         rw [BitVec.ofNat_add]
@@ -212,11 +221,12 @@ public theorem Fe_sqn.call_eq (out a : Pointer) (n : BitVec 64) (s : GlobalState
     rw [MemoryState.storeAt_readAt_eq_storeLimbs haL₀ hfeA.1,
       MemoryState.readLimbs_storeLimbs_self hfeA]
   refine
-    Fe_sqn.loop out a tmp fe n _ _ n.toNat 0 S E hArgs ?_ (by simp) hn hwf htmp_limbs hfeF hsep
-      (hcopy ▸ ha'₀) ?_
+    Fe_sqn.loop out a tmp fe n _ _ n.toNat 0 S E hArgs ?_ (by simp) hn hwf htmp_limbs hfeF
+      hfe_limbs.2.1.writable hsep (hcopy ▸ ha'₀) ?_
   · refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> env_reads
   · intro E' S' h1 h2 h3
-    obtain ⟨hw', -, hf', hr', hal'⟩ := Fe_sqn.iter_facts n.toNat S hwf htmp_limbs hfeF
+    obtain ⟨hw', -, hf', -, hr', hal'⟩ :=
+      Fe_sqn.iter_facts n.toNat S hwf htmp_limbs hfeF hfe_limbs.2.1.writable
     have hout' := Fe_sqn.iter_limbsRoom (tmp := tmp) (fe := fe) n.toNat S hout
     have herase :=
       Fe_sqn.iter_erase (tmp := tmp) (fe := fe) (b := S₀.alloc.nextFreeBlock)

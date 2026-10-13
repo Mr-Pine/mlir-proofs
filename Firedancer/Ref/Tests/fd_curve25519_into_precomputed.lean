@@ -11,7 +11,8 @@ private def r : Pointer :=
 
 /-- One 160-byte block holding `bytes`. -/
 private def state (bytes : BitVec 1280) : GlobalState :=
-  ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 160 bytes)]⟩⟩
+  GlobalState.withGlobals fd_curve25519_into_precomputed.globals
+    ⟨⟨1⟩, ⟨Std.ExtHashMap.ofList [(⟨0⟩, .ofBytes 160 bytes)]⟩⟩
 
 /-- Limbs `2^52 - 1` in `X`, `1, 2, 3, 4, 5` in `Y`, `2^51 + 7` in `T`, `9` in `Z`'s lowest. -/
 private def rBytes : BitVec 1280 :=

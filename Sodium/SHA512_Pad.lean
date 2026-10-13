@@ -35,10 +35,6 @@ def head (v : HashState) : HashState :=
     let u := v.fill (BitVec.ofNat 64 (r v)) (pad.setWidth (8 * (BitVec.ofNat 64 (128 - r v)).toNat))
     { u with state := SHA512_Transform.spec u.state u.buf }.fill 0#64 0#896
 
-/-- How many blocks `SHA512_Pad` allocates: `PAD`'s, one per compressed block. -/
-def blocks (v : HashState) : Nat :=
-  if r v < 112 then 2 else 3
-
 /-- `be64enc_vect(&state->buf[112], state->count, 16)`. -/
 def count (w : HashState) : HashState :=
   (w.fill 112#64 (store64_be.spec w.count0)).fill 120#64 (store64_be.spec w.count1)
@@ -143,7 +139,7 @@ theorem storeWords_count {M : MemoryState} {st : Pointer} {w : HashState}
         (be64enc_vect.spec (M.storeHashState st w) (st.add 64#64)) 2 =
       M.storeHashState st (count w) := by
   have hsto := hMf.1
-  have hin := hMf.2.1.inBounds
+  have hin := hMf.2.1
   simp only [MemoryState.storeWords, be64enc_vect.spec, Pointer.add_add, Nat.mul_zero, Nat.mul_one,
     BitVec.add_zero, BitVec.reduceAdd, MemoryState.readAt_storeHashState_count0 hin hsto,
     MemoryState.readAt_storeHashState_count1 hin hsto]
@@ -154,13 +150,14 @@ theorem storeWords_count {M : MemoryState} {st : Pointer} {w : HashState}
 /-- `^bb3`: the counts into the last 16 bytes, the last block compressed. -/
 theorem tail_block (st tmp : Pointer) (M : MemoryState) (w : HashState) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value st) (.value tmp)).get) (hR : E ⊨ [%280 := 16#64]) (hwf : S.WF)
-    (hM : S.mem = M.storeHashState st w) (hMf : M.HashStateFit st) (htmp : Room M tmp 5632)
+    (hM : S.mem = M.storeHashState st w) (hgM : M.Globals SHA512_Pad.globals)
+    (hMf : M.HashStateFit st) (htmp : Room M tmp 5632)
     (htmpo : ¬tmp.offset.uaddOverflow 704#64) (hsep : tmp.id ≠ st.id) (hpre : w.Prefix 112)
     (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.nil,
-              { alloc := ⟨S.alloc.nextFreeBlock + 1⟩,
+              { alloc := S.alloc,
                 mem := (M.storeAt tmp (tailTmp w)).storeHashState st (tail w) }) >>=
           g) =
         K) :
@@ -168,6 +165,7 @@ theorem tail_block (st tmp : Pointer) (M : MemoryState) (w : HashState) (S : Glo
   subst hK
   have hsto := hMf.1
   have hSf : S.mem.HashStateFit st := hM ▸ hMf.storeHashState
+  have hgS : S.mem.Globals SHA512_Pad.globals := by rw [hM]; exact hgM.mono rfl fun _ h => h
   have ho := Pointer.offset_lt_of_hashState hsto
   have h192 := Pointer.offset_add_of_hashState hsto (k := 192) (by decide)
   have h64 := Pointer.offset_add_of_hashState hsto (k := 64) (by decide)
@@ -208,7 +206,7 @@ theorem tail_block (st tmp : Pointer) (M : MemoryState) (w : HashState) (S : Glo
   -- SHA512_Transform(state->state, state->buf, &tmp64[0], &tmp64[80]);
   step_call using SHA512_Transform.call_eq consuming hst512 hsto64 hbuf hbufo htmp' hsep'
   finish_block
-  have hin := hMf.2.1.inBounds
+  have hin := hMf.2.1
   rw [hS, MemoryState.readWords8_storeHashState hin hsto,
     MemoryState.readAt_storeHashState_buf hin hsto, MemoryState.storeHashState_storeAt_comm hsep,
     MemoryState.storeHashState_storeWords8 hsto]
@@ -249,15 +247,15 @@ theorem PAD.flatBits_lit {hw : _} : Ty.flatBits (hw := hw) PAD.lit = SHA512_Pad.
 
 /-- `SHA512_Pad(state, tmp64)` pads the buffered bytes and compresses the last block or two into
 `state` (`spec`), leaving the last block's words at `tmp64`. The buffer's first `r` bytes must be
-known. The block counter advances by `blocks`. -/
+known. -/
 public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hst : s.mem.HashStateFit st)
+    (hg : s.mem.Globals SHA512_Pad.globals) (hst : s.mem.HashStateFit st)
     (hpre : (s.mem.readHashState st).Prefix (SHA512_Pad.r (s.mem.readHashState st)))
     (htmp : Room s.mem tmp 5632) (htmpo : ¬tmp.offset.uaddOverflow 704#64) (hsep : tmp.id ≠ st.id) :
     SHA512_Pad.call (SHA512_Pad.args (.value st) (.value tmp)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + SHA512_Pad.blocks (s.mem.readHashState st)⟩,
+          { s with
             mem :=
               (s.mem.storeAt tmp
                     (SHA512_Pad.tailTmp (SHA512_Pad.head (s.mem.readHashState st)))).storeHashState
@@ -268,20 +266,17 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
   have hsto := hst.1
   generalize hres : SHA512_Pad.spec v = res
   generalize hX : SHA512_Pad.tailTmp (SHA512_Pad.head v) = X
-  generalize hk : SHA512_Pad.blocks v = k
   func_init
   have hv₀ : S₀.mem.readHashState st = v := hS ▸ hv
+  have hm₁ : S₀.mem.HashStateFit st := hS ▸ hst
+  have htmp₀ : Room S₀.mem tmp 5632 := hS ▸ htmp
+  have hg₀ : S₀.mem.Globals SHA512_Pad.globals := hS ▸ hg
   clear hv
   block_init
   iterate 4 step_pure
   step_addressof PAD.value_eq with pad
-  erw [PAD.flatBits_lit] at hS hread_pad
-  have hpad_id : pad.id = ⟨S₀.alloc.nextFreeBlock⟩ := by
-    rw [hpad]; rfl
-  -- the struct, past the new block
-  have hv₁ : S.mem.readHashState st = v := by
-    rw [hS]
-    exact (MemoryState.readHashState_addBlock_of_id_ne (hpad_id ▸ hst_ne_pad)).trans hv₀
+  erw [PAD.flatBits_lit] at hread_pad
+  have hv₁ : S.mem.readHashState st = v := by rw [hS]; exact hv₀
   iterate 3 step_pure
   obtain ⟨R, hRe⟩ : ∃ R, v.count1.toNat / 8 % 128 = R := ⟨_, rfl⟩
   have hR : R < 128 := hRe ▸ Nat.mod_lt _ (by decide)
@@ -293,15 +288,8 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
   step_pure
   step_pure [SHA512_Pad.r32_eq, hRe]
   step_pure
-  have hm₁ : (S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).HashStateFit st :=
-    MemoryState.HashStateFit.addBlock hwf₀ ⟨hsto, hst₀, hst₀_1⟩
-  have hv₂ : (S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).readHashState st = v :=
-    (MemoryState.readHashState_addBlock_of_id_ne (hpad_id ▸ hst_ne_pad)).trans hv₀
-  have hp₁ :
-    (S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).readAt pad 1024 =
-      SHA512_Pad.pad := by
-    rw [hpad, ← GlobalState.allocaPtr_eq_slot]
-    exact MemoryState.readAt_addBlock_allocaPtr (by decide)
+  have hv₂ : S₀.mem.readHashState st = v := hv₀
+  have hp₁ : S₀.mem.readAt pad 1024 = SHA512_Pad.pad := by rw [← hS]; exact hread_pad
   finish_block
   · -- if (r < 112): PAD to byte 112
     have hR' : R < 112 := by
@@ -345,9 +333,10 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
           (SHA512_Pad.pad.setWidth (8 * (BitVec.ofNat 64 (112 - R)).toNat)) := by
       rw [SHA512_Pad.head, hrv]
       simp only [hR', ↓reduceIte]
+    rw [← bind_pure (SHA512_Pad.runFrom E 3 S)]
     refine
-      SHA512_Pad.tail_block st tmp (S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad)
-        (SHA512_Pad.head v) S E hArgs (by env_reads) hwf ?_ hm₁ (htmp₀.addBlock hwf₀) htmpo hsep ?_
+      SHA512_Pad.tail_block st tmp S₀.mem
+        (SHA512_Pad.head v) S E hArgs (by env_reads) hwf ?_ hg₀ hm₁ htmp₀ htmpo hsep ?_
         _ _ ?_
     · rw [hS, hhead]
       dsimp only
@@ -378,13 +367,9 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
         show R + (BitVec.ofNat 64 (112 - R)).toNat = 112 by
           simp; omega] at
         this
-    · subst hres hX hk
-      have hSa : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 1 := by rw [hS]
-      have hb : SHA512_Pad.blocks v = 2 := by simp [SHA512_Pad.blocks, hrv, hR']
-      rw [hSa, hb, SHA512_Pad.spec]
-      simp only [PoisonOr.value_bind, MemoryState.eraseFrom_storeHashState,
-        MemoryState.eraseFrom_storeAt, MemoryState.eraseFrom_addBlock_of_le (Nat.le_refl _),
-        GlobalState.WF.eraseFrom hwf₀]
+    · subst hres hX
+      rw [hS]
+      rfl
   · -- else: PAD to the block's end, compress, zero the first 112 bytes
     have hR' : 112 ≤ R := by
       simpa [BitVec.ult, Nat.mod_eq_of_lt (show R < 4294967296 by omega)] using hbr
@@ -423,11 +408,11 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
     step_memcpy consuming hsrc hdst
     -- the bytes as the struct's
     have hu :
-      (S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).storeAt
+      S₀.mem.storeAt
           (st.add (BitVec.ofNat 64 (R + 80)))
-          ((S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).readAt pad
+          (S₀.mem.readAt pad
             (8 * (BitVec.ofNat 64 (128 - R)).toNat)) =
-        (S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).storeHashState st
+        S₀.mem.storeHashState st
           (v.fill (BitVec.ofNat 64 R)
             (SHA512_Pad.pad.setWidth (8 * (BitVec.ofNat 64 (128 - R)).toNat))) := by
       rw [MemoryState.readAt_of_readAt_le
@@ -470,7 +455,7 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
     step_pure
     -- SHA512_Transform(state->state, state->buf, &tmp64[0], &tmp64[80]);
     step_call using SHA512_Transform.call_eq consuming hst512 hsto64 hbuf hbufo hsep'
-    have hin := hm₁.2.1.inBounds
+    have hin := hm₁.2.1
     rw [MemoryState.readWords8_storeHashState hin hsto,
       MemoryState.readAt_storeHashState_buf hin hsto, MemoryState.storeHashState_storeAt_comm hsep,
       MemoryState.storeHashState_storeWords8 hsto] at hS
@@ -492,28 +477,25 @@ public theorem SHA512_Pad.call_eq (st tmp : Pointer) (s : GlobalState) (hwf : s.
           0#64 0#896 := by
       rw [SHA512_Pad.head, hrv]
       simp only [show ¬R < 112 by omega, ↓reduceIte]
+    rw [← bind_pure (SHA512_Pad.runFrom E 3 S)]
     refine
       SHA512_Pad.tail_block st tmp
-        ((S₀.mem.addBlock ⟨S₀.alloc.nextFreeBlock⟩ 128 SHA512_Pad.pad).storeAt tmp
+        (S₀.mem.storeAt tmp
           (SHA512_Transform.tmp
             (v.fill (BitVec.ofNat 64 R)
                 (SHA512_Pad.pad.setWidth (8 * (BitVec.ofNat 64 (128 - R)).toNat))).state
             (v.fill (BitVec.ofNat 64 R)
                 (SHA512_Pad.pad.setWidth (8 * (BitVec.ofNat 64 (128 - R)).toNat))).buf))
-        (SHA512_Pad.head v) S E hArgs (by env_reads) hwf ?_ hm₁.storeAt
-        (htmp₀.addBlock hwf₀).storeAt htmpo hsep ?_ _ _ ?_
+        (SHA512_Pad.head v) S E hArgs (by env_reads) hwf ?_ (hg₀.mono rfl fun _ h => h) hm₁.storeAt
+        htmp₀.storeAt htmpo hsep ?_ _ _ ?_
     · simp only [BitVec.sub_self] at hS
       rw [hS, hhead]
     · rw [hhead]
       exact
         (HashState.prefix_zero _).fill (off := 0#64) (k := 0) rfl 0#896 (j := 112) rfl (by decide)
-    · subst hres hX hk
-      have hSa : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 1 + 1 := by rw [hS]
-      have hb : SHA512_Pad.blocks v = 3 := by simp [SHA512_Pad.blocks, hrv, show ¬R < 112 by omega]
-      rw [hSa, hb, SHA512_Pad.spec, MemoryState.storeAt_storeAt_self]
-      simp only [PoisonOr.value_bind, MemoryState.eraseFrom_storeHashState,
-        MemoryState.eraseFrom_storeAt, MemoryState.eraseFrom_addBlock_of_le (Nat.le_refl _),
-        GlobalState.WF.eraseFrom hwf₀]
+    · subst hres hX
+      rw [hS, SHA512_Pad.spec, MemoryState.storeAt_storeAt_self]
+      rfl
 
 end Proof
 

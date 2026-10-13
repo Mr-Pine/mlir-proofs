@@ -18,7 +18,7 @@ public theorem anon_042b818bc72209407b52bd0e4d6c8368_41.value_eq (s : GlobalStat
       .value (Ty.wrap anon_042b818bc72209407b52bd0e4d6c8368_41.lit, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
-/-- `constants::R`'s limbs, at the block `addressof` stores them in. -/
+/-- `constants::R`'s limbs, in the global's block. -/
 public theorem anon_042b818bc72209407b52bd0e4d6c8368_41.readLimbs {m : MemoryState} {p : Pointer}
     {hw : (Ty.array 40 (.bv 8)).width = 320} (hf : Fits m p 320) (ho : p.offset = 0)
     (h : m.readAt p 320 = Ty.flatBits anon_042b818bc72209407b52bd0e4d6c8368_41.lit (hw := hw)) :
@@ -32,7 +32,7 @@ public theorem anon_042b818bc72209407b52bd0e4d6c8368_40.value_eq (s : GlobalStat
       .value (Ty.wrap anon_042b818bc72209407b52bd0e4d6c8368_40.lit, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
-/-- `constants::RR`'s limbs, at the block `addressof` stores them in. -/
+/-- `constants::RR`'s limbs, in the global's block. -/
 public theorem anon_042b818bc72209407b52bd0e4d6c8368_40.readLimbs {m : MemoryState} {p : Pointer}
     {hw : (Ty.array 40 (.bv 8)).width = 320} (hf : Fits m p 320) (ho : p.offset = 0)
     (h : m.readAt p 320 = Ty.flatBits anon_042b818bc72209407b52bd0e4d6c8368_40.lit (hw := hw)) :

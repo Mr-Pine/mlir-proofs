@@ -8,13 +8,14 @@ namespace MLIR.Zig
 
 /-- `out` undefined, the scalar's 32 bytes at `sp`. -/
 private def state (x : BitVec 256) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, 0, 0, true, fun _ => none⟩), (⟨2⟩, .ofBytes 32 x)]⟩⟩
+  ⟨⟨3⟩,
+    ⟨Std.ExtHashMap.ofList [(⟨1⟩, ⟨64, 0, 0, true, fun _ => none, true⟩), (⟨2⟩, .ofBytes 32 x)]⟩⟩
 
 /-- The 64 bytes at `out` after the call, or `none` for UB / out of fuel. -/
 private def out (x : BitVec 256) : Option (BitVec 512) :=
   match
     Edwards25519_slide.eval 10000 (Edwards25519_slide.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩))
-      (state x) with
+      ((state x).withGlobals Edwards25519_slide.globals) with
   | .value (some .nil, s') => some (s'.mem.readAt ⟨⟨1⟩, 0⟩ 512)
   | _ => none
 

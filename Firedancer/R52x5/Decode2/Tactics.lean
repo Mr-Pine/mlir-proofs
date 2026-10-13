@@ -62,10 +62,15 @@ macro_rules
       have hz2 := hF.tmp $(n 2)
       have hz3 := hF.tmp $(n 3)
       have hz4 := hF.tmp $(n 4)
+      have hw0 := hF.wr $(n 0)
+      have hw1 := hF.wr $(n 1)
+      have hw2 := hF.wr $(n 2)
+      have hw3 := hF.wr $(n 3)
+      have hw4 := hF.wr $(n 4)
       iterate 5 step_pure
       step_call using $c
       iterate 5 step_load [ofFn_extractVecElem_readAt] inline
-      clear hz0 hz1 hz2 hz3 hz4
+      clear hz0 hz1 hz2 hz3 hz4 hw0 hw1 hw2 hw3 hw4
       clear_facts_at (B.slot $(n 0)) (B.slot $(n 1)) (B.slot $(n 2)) (B.slot $(n 3))
         (B.slot $(n 4))
       iterate 5 step_pure

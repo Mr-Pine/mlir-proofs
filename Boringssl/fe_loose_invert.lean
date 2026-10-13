@@ -101,6 +101,7 @@ theorem loop (t0 t1 t2 t3 : Pointer) (g : Vals [] × GlobalState → PoisonOr β
     ∀ n i (S : GlobalState) (E : ⟪Γ⟫),
       S.WF →
         S.mem.LimbsFit t3 →
+        Writable S.mem t3 →
         i + n + 1 = 100 →
         (∀ E' : ⟪Γ⟫,
           E'.args = E.args →
@@ -115,7 +116,7 @@ theorem loop (t0 t1 t2 t3 : Pointer) (g : Vals [] × GlobalState → PoisonOr β
   intro n
   induction n with
   | zero =>
-    intro i S E hwf ht hi hK
+    intro i S E hwf ht htw hi hK
     block_init
     step_call using fe_sq_tt.call_eq
     step_pure [saddOverflow_ofNat_one (i := i) (by omega),
@@ -126,7 +127,7 @@ theorem loop (t0 t1 t2 t3 : Pointer) (g : Vals [] × GlobalState → PoisonOr β
     · simp [BitVec.toNat_eq] at hbr
       omega
   | succ n ih =>
-    intro i S E hwf ht hi hK
+    intro i S E hwf ht htw hi hK
     block_init
     step_call using fe_sq_tt.call_eq
     step_pure [saddOverflow_ofNat_one (i := i) (by omega),
@@ -135,7 +136,7 @@ theorem loop (t0 t1 t2 t3 : Pointer) (g : Vals [] × GlobalState → PoisonOr β
     finish_block
     · simp [BitVec.toNat_eq] at hbr
       omega
-    · step_loop using ih (i + 1) _ _ hwf ht (by omega)
+    · step_loop using ih (i + 1) _ _ hwf ht htw (by omega)
       · exact (BitVec.ofNat_add i 1).symm
       · rw [hS, MemoryState.storeLimbs_storeLimbs_self]
         step_loop using hK

@@ -31,15 +31,19 @@ private def msg (n : Nat) : List (BitVec 8) :=
 private def bitsOf (l : List (BitVec 8)) : BitVec (8 * l.length) :=
   BitVec.ofNat _ (l.foldr (fun b acc => b.toNat + 256 * acc) 0)
 
-/-- A struct of `0xaa` bytes, `buf` undefined; the input `n` message bytes; room for the digest. -/
+/-- A struct of `0xaa` bytes, `buf` undefined; the input `n` message bytes; room for the digest;
+the three functions' globals after. -/
 private def state (n : Nat) : GlobalState :=
+  GlobalState.withGlobals
+    (crypto_hash_sha512_init.globals ++ crypto_hash_sha512_update.globals ++
+      crypto_hash_sha512_final.globals) <|
   ⟨⟨4⟩,
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩, ⟨208, (0xaa#8).replicate 208, (BitVec.allOnes 640).setWidth 1664, true,
-            fun _ => none⟩),
+            fun _ => none, true⟩),
           (⟨2⟩, ⟨n, (bitsOf (msg n)).cast (by simp [msg]), BitVec.allOnes (8 * n), true,
-            fun _ => none⟩),
-          (⟨3⟩, ⟨64, 0#512, 0#512, true, fun _ => none⟩)]⟩⟩
+            fun _ => none, true⟩),
+          (⟨3⟩, ⟨64, 0#512, 0#512, true, fun _ => none, true⟩)]⟩⟩
 
 /-- `init`, `update` with the `n` bytes in pieces of `lens`, `final`: the digest's bytes. -/
 private def run (n : Nat) (lens : List Nat) : Option (List (BitVec 8)) := do
@@ -77,7 +81,7 @@ private def fields (v : HashState) :=
   (v.state.toList, v.count0, v.count1, v.buf, v.bufDef)
 
 /-- After `init` and updates with `lens`, the lift's struct is the specs' (`init.spec`,
-`update.spec`) and the counter matches `cores`. -/
+`update.spec`) and the counter moves by `tmp64`'s block. -/
 private def specsMatch (n : Nat) (lens : List Nat) : Bool :=
   Id.run do
     let s0 := state n
@@ -104,7 +108,7 @@ private def specsMatch (n : Nat) (lens : List Nat) : Bool :=
           return false
         if
             s'.alloc.nextFreeBlock !=
-              s.alloc.nextFreeBlock + 1 + crypto_hash_sha512_update.cores v l then
+              s.alloc.nextFreeBlock + 1 then
           return false
         s := s'
         off := off + len

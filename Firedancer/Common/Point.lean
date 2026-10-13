@@ -30,11 +30,12 @@ theorem MemoryState.storeAt_comm {m : MemoryState} {p q : Pointer} {x : BitVec v
   by_cases hid : p.id = q.id
   · simp only [Range.Disjoint, Range.of, hid, ne_eq, not_true_eq_false, false_or] at h
     rw [hid, modifyBlock_modifyBlock_self, modifyBlock_modifyBlock_self]
-    congr 1
-    funext blk
-    simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
-    exact
-      ⟨heq_of_eq (spliceBits_comm _ _ _ (by omega)), heq_of_eq (spliceBits_comm _ _ _ (by omega))⟩
+    · congr 1
+      funext blk
+      simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
+      exact
+        ⟨heq_of_eq (spliceBits_comm _ _ _ (by omega)), heq_of_eq (spliceBits_comm _ _ _ (by omega))⟩
+    all_goals intro; rfl
   · exact modifyBlock_comm hid
 
 /-! ### Storing what is there -/
@@ -47,14 +48,17 @@ theorem MemoryState.storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
   unfold MemoryBlock.lengthInBits at hsz
   simp only [MemoryState.storeAt, MemoryState.readAt, hblk,
     MemoryState.modifyBlock]
-  refine MemoryState.ext ?_ rfl
+  refine MemoryState.ext ?_ rfl rfl
   apply Std.ExtHashMap.ext_getElem?
   intro k
   simp only [Std.ExtHashMap.getElem?_modify, beq_iff_eq]
   split
   · subst_vars
     rw [hb]
-    simp only [Option.map_some, Option.some.injEq]
+    simp only [Option.map_some, Option.some.injEq, MemoryBlock.update]
+    split
+    rotate_left
+    · rfl
     cases blk
     simp only [MemoryBlock.mk.injEq, true_and, and_true] at hsz hd ⊢
     refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
@@ -145,8 +149,11 @@ abbrev MemoryState.PointRoom (m : MemoryState) (p : Pointer) : Prop :=
     m.LimbsRoom p ∧
     m.LimbsRoom (p.add 40#64) ∧ m.LimbsRoom (p.add 80#64) ∧ m.LimbsRoom (p.add 120#64)
 
-theorem MemoryState.PointFit.room {m : MemoryState} (h : m.PointFit p) : m.PointRoom p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.room⟩
+/-- A point known in a writable block has room. -/
+theorem MemoryState.PointFit.room {m : MemoryState} (h : m.PointFit p) (hw : Writable m p) :
+    m.PointRoom p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.room (hw.of_id_eq rfl)⟩
 
 /-- `LimbsFit` in a memory where more bits are known. -/
 theorem MemoryState.LimbsFit.of_imp {m m' : MemoryState}
@@ -284,14 +291,30 @@ theorem MemoryState.readLimbs_storeLimbs_coord {m : MemoryState} {p : Pointer} {
   readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords h.1 ha hb hab)
     (Pointer.coord_offset h.1 ha) (Pointer.coord_offset h.1 hb)
 
+/-- `readLimbs_storeLimbs_coord` from the point's offsets alone. -/
+theorem MemoryState.readLimbs_storeLimbs_coord_of_off {m : MemoryState} {p : Pointer} {a b : Nat}
+    (h : p.offset.toNat + 160 ≤ 2 ^ 64) (ha : a ≤ 120) (hb : b ≤ 120)
+    (hab : a + 40 ≤ b ∨ b + 40 ≤ a) :
+    (m.storeLimbs (p.add (BitVec.ofNat 64 a)) l).readLimbs (p.add (BitVec.ofNat 64 b)) =
+      m.readLimbs (p.add (BitVec.ofNat 64 b)) :=
+  readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords h ha hb hab)
+    (Pointer.coord_offset h ha) (Pointer.coord_offset h hb)
+
+/-- `readLimbs_storeLimbs_coord` for a store to `X`, from the point's offsets alone. -/
+theorem MemoryState.readLimbs_storeLimbs_coord_X_of_off {m : MemoryState} {p : Pointer} {b : Nat}
+    (h : p.offset.toNat + 160 ≤ 2 ^ 64) (hb : b ≤ 120) (h40 : 40 ≤ b) :
+    (m.storeLimbs p l).readLimbs (p.add (BitVec.ofNat 64 b)) =
+      m.readLimbs (p.add (BitVec.ofNat 64 b)) :=
+  readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords_base' h hb h40) (by omega)
+    (Pointer.coord_offset h hb)
+
 /-- `readLimbs_storeLimbs_coord` for a store to `X`. -/
 @[mlir_read]
 theorem MemoryState.readLimbs_storeLimbs_coord_X {m : MemoryState} {p : Pointer} {b : Nat}
     (h : m.PointRoom p) (hb : b ≤ 120) (h40 : 40 ≤ b) :
     (m.storeLimbs p l).readLimbs (p.add (BitVec.ofNat 64 b)) =
       m.readLimbs (p.add (BitVec.ofNat 64 b)) :=
-  readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords_base' h.1 hb h40) (by omega)
-    (Pointer.coord_offset h.1 hb)
+  readLimbs_storeLimbs_coord_X_of_off h.1 hb h40
 
 /-- `readLimbs_storeLimbs_coord` for a read of `X`. -/
 @[mlir_read]
@@ -614,11 +637,11 @@ theorem MemoryState.storePoint_of_T {m : MemoryState} {p : Pointer} (h : m.Point
       ((m.storeLimbs p X).storeLimbs (p.add 40#64) Y).storeLimbs (p.add 120#64) Z := by
   have h' := h.storeLimbs (p := p) (l := X) |>.storeLimbs (p := p.add 40#64) (l := Y)
   simp only [MemoryState.storePoint]
-  rw [← readLimbs_storeLimbs_coord_X (l := X) h.room (b := 80) (by omega) (by omega), ←
-    readLimbs_storeLimbs_coord (l := Y) (h.storeLimbs.room) (a := 40) (b := 80) (by omega)
+  rw [← readLimbs_storeLimbs_coord_X_of_off (l := X) h.1 (b := 80) (by omega) (by omega), ←
+    readLimbs_storeLimbs_coord_of_off (l := Y) h.1 (a := 40) (b := 80) (by omega)
       (by omega) (by omega),
     ←
-    readLimbs_storeLimbs_coord (l := Z) h'.room (a := 120) (b := 80) (by omega) (by omega)
+    readLimbs_storeLimbs_coord_of_off (l := Z) h.1 (a := 120) (b := 80) (by omega) (by omega)
       (by omega),
     storeLimbs_readLimbs_self h'.storeLimbs.2.2.2.1]
 
@@ -627,8 +650,8 @@ theorem MemoryState.storePoint_of_Z {m : MemoryState} {p : Pointer} (h : m.Point
     m.storePoint p ⟨X, Y, T, m.readLimbs (p.add 120#64)⟩ =
       ((m.storeLimbs p X).storeLimbs (p.add 40#64) Y).storeLimbs (p.add 80#64) T := by
   simp only [MemoryState.storePoint]
-  rw [← readLimbs_storeLimbs_coord_X (l := X) h.room (b := 120) (by omega) (by omega), ←
-    readLimbs_storeLimbs_coord (l := Y) h.storeLimbs.room (a := 40) (b := 120) (by omega) (by omega)
+  rw [← readLimbs_storeLimbs_coord_X_of_off (l := X) h.1 (b := 120) (by omega) (by omega), ←
+    readLimbs_storeLimbs_coord_of_off (l := Y) h.1 (a := 40) (b := 120) (by omega) (by omega)
       (by omega),
     storeLimbs_readLimbs_self h.storeLimbs.storeLimbs.2.2.2.2]
 

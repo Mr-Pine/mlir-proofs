@@ -226,9 +226,9 @@ def slotDsts : List (Dst Γ .ptr × Nat) :=
 theorem bb0_slots : bb0.body.drop 46 = allocaRun slotDsts ++ bb0.body.drop 247 :=
   rir_rfl%
 
-/-- The bytes of the frame's slot `j` (`B.slot j` for the entry state `B`; slots `0 … 2` are the
-globals): `34` field elements, the two copies `buf2a buf2b`, the arrays `ea eb`, `155` QUAD
-temporaries `wl_t`, the `8` arrays of the two `FD_R52X5_QUAD_PACK`s. -/
+/-- The bytes of the frame's slot `j` (`B.slot j`, `B`'s counter three below the entry's; slots
+`0 … 2` are not the frame's): `34` field elements, the two copies `buf2a buf2b`, the arrays
+`ea eb`, `155` QUAD temporaries `wl_t`, the `8` arrays of the two `FD_R52X5_QUAD_PACK`s. -/
 def slotBytes (j : Nat) : Nat :=
   if j < 37 then 64 else if j < 39 then 32 else if j < 41 then 64 else if j < 196 then 32 else 64
 
@@ -236,15 +236,19 @@ def slotBytes (j : Nat) : Nat :=
 theorem slotDsts_sizes : slotDsts.map (·.2) = (List.range' 3 201).map slotBytes :=
   rir_rfl%
 
-/-- Every frame slot of `B` is in bounds for its bytes, the field elements' (slots `3 … 36`, live
-from the entry to the return) live. -/
+/-- Every frame slot of `B` is in bounds for its bytes and writable, the field elements' (slots
+`3 … 36`, live from the entry to the return) live. -/
 def Frame (B : GlobalState) (m : MemoryState) : Prop :=
   (∀ j, 3 ≤ j → j < 204 → InBounds m (B.slot j) (8 * slotBytes j)) ∧
-    ∀ j, 3 ≤ j → j < 37 → Room m (B.slot j) 512
+    (∀ j, 3 ≤ j → j < 37 → Room m (B.slot j) 512) ∧ ∀ j, 3 ≤ j → j < 204 → Writable m (B.slot j)
 
 theorem Frame.vec {B : GlobalState} {m : MemoryState} (h : Frame B m) (j : Nat)
     (hj : 3 ≤ j ∧ j < 37 := by decide) : Room m (B.slot j) 512 :=
-  h.2 j hj.1 hj.2
+  h.2.1 j hj.1 hj.2
+
+theorem Frame.wr {B : GlobalState} {m : MemoryState} (h : Frame B m) (j : Nat)
+    (hj : 3 ≤ j ∧ j < 204 := by decide) : Writable m (B.slot j) :=
+  h.2.2 j hj.1 hj.2
 
 theorem Frame.arr {B : GlobalState} {m : MemoryState} (h : Frame B m) (j : Nat)
     (hj : 39 ≤ j ∧ j < 41 ∨ 196 ≤ j ∧ j < 204 := by decide) : InBounds m (B.slot j) 512 := by
@@ -266,48 +270,53 @@ theorem Frame.tmp {B : GlobalState} {m : MemoryState} (h : Frame B m) (j : Nat)
 
 theorem Frame.of {B : GlobalState} {m m' : MemoryState}
     (hb : ∀ p w, InBounds m p w → InBounds m' p w)
-    (hr : ∀ j, 3 ≤ j → j < 37 → Room m (B.slot j) 512 → Room m' (B.slot j) 512) (h : Frame B m) :
-    Frame B m' :=
-  ⟨fun j h3 hj => hb _ _ (h.1 j h3 hj), fun j h3 hj => hr j h3 hj (h.2 j h3 hj)⟩
+    (hr : ∀ j, 3 ≤ j → j < 37 → Room m (B.slot j) 512 → Room m' (B.slot j) 512)
+    (hw : ∀ p, Writable m p → Writable m' p) (h : Frame B m) : Frame B m' :=
+  ⟨fun j h3 hj => hb _ _ (h.1 j h3 hj), fun j h3 hj => hr j h3 hj (h.2.1 j h3 hj), fun j h3 hj =>
+    hw _ (h.2.2 j h3 hj)⟩
 
 @[mlir_transport]
 theorem Frame.storeAt {B : GlobalState} {m : MemoryState} {x : BitVec w} (h : Frame B m) :
     Frame B (m.storeAt p x) :=
-  h.of (fun _ _ => InBounds.storeAt) fun _ _ _ => Room.storeAt
+  h.of (fun _ _ => InBounds.storeAt) (fun _ _ _ => Room.storeAt) fun _ => Writable.storeAt
 
 @[mlir_transport]
 theorem Frame.storeVec {B : GlobalState} {m : MemoryState} (h : Frame B m) :
     Frame B (m.storeVec p v) :=
-  h.of (fun _ _ => InBounds.storeVec) fun _ _ _ => Room.storeVec
+  h.of (fun _ _ => InBounds.storeVec) (fun _ _ _ => Room.storeVec) fun _ => Writable.storeAt
 
 @[mlir_transport]
 theorem Frame.storeTmp5 {B : GlobalState} {m : MemoryState} (h : Frame B m) :
     Frame B (m.storeTmp5 t0 t1 t2 t3 t4 Q) :=
-  h.of (fun _ _ => InBounds.storeTmp5) fun _ _ _ => Room.storeTmp5
+  h.of (fun _ _ => InBounds.storeTmp5) (fun _ _ _ => Room.storeTmp5) fun _ => Writable.storeTmp5
 
 /-- A slot past the field elements' started: the frame kept. -/
 @[mlir_transport]
 theorem Frame.lifetimeStart_slot {B : GlobalState} {m : MemoryState} (h : Frame B m) (hk : 37 ≤ k) :
     Frame B (m.lifetimeStart (B.slot k)) :=
-  h.of (fun _ _ => InBounds.lifetimeStart) fun _ _ hj hr =>
-    hr.lifetimeStart (GlobalState.slot_id_ne (by omega))
+  h.of (fun _ _ => InBounds.lifetimeStart)
+    (fun _ _ hj hr => hr.lifetimeStart (GlobalState.slot_id_ne (by omega))) fun _ =>
+    Writable.lifetimeStart
 
 /-- A slot past the field elements' ended: the frame kept. -/
 @[mlir_transport]
 theorem Frame.lifetimeEnd_slot {B : GlobalState} {m : MemoryState} (h : Frame B m) (hk : 37 ≤ k) :
     Frame B (m.lifetimeEnd (B.slot k)) :=
-  h.of (fun _ _ => InBounds.lifetimeEnd) fun _ _ hj hr =>
-    hr.lifetimeEnd (GlobalState.slot_id_ne (by omega))
+  h.of (fun _ _ => InBounds.lifetimeEnd)
+    (fun _ _ hj hr => hr.lifetimeEnd (GlobalState.slot_id_ne (by omega))) fun _ =>
+    Writable.lifetimeEnd
 
 /-- A call's temporaries in slots past the field elements: the frame kept. -/
 @[mlir_transport]
 theorem Frame.callTmp5_slots {B : GlobalState} {m : MemoryState} (h : Frame B m) (h0 : 37 ≤ k0)
     (h1 : 37 ≤ k1) (h2 : 37 ≤ k2) (h3 : 37 ≤ k3) (h4 : 37 ≤ k4) :
     Frame B (m.callTmp5 (B.slot k0) (B.slot k1) (B.slot k2) (B.slot k3) (B.slot k4) Q) :=
-  h.of (fun _ _ => InBounds.callTmp5) fun _ _ hj hr =>
-    hr.callTmp5 (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
-      (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
-      (GlobalState.slot_id_ne (by omega))
+  h.of (fun _ _ => InBounds.callTmp5)
+    (fun _ _ hj hr =>
+      hr.callTmp5 (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
+        (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))
+        (GlobalState.slot_id_ne (by omega)))
+    fun _ => Writable.callTmp5
 
 theorem WF_allocas : ∀ (ns : List Nat) (s : GlobalState), s.WF → (allocas s ns).WF
   | [], _, h => h
@@ -317,6 +326,11 @@ theorem fits_allocas_of {p : Pointer} {w : Nat} :
     ∀ (ns : List Nat) (s : GlobalState), s.WF → Fits s.mem p w → Fits (allocas s ns).mem p w
   | [], _, _, h => h
   | _ :: ns, _, hwf, h => fits_allocas_of ns _ hwf.alloca (h.alloca hwf)
+
+theorem writable_allocas_of {p : Pointer} :
+    ∀ (ns : List Nat) (s : GlobalState), s.WF → Writable s.mem p → Writable (allocas s ns).mem p
+  | [], _, _, h => h
+  | _ :: ns, _, hwf, h => writable_allocas_of ns _ hwf.alloca (h.alloca hwf)
 
 theorem inBounds_allocas_of {p : Pointer} {w : Nat} :
     ∀ (ns : List Nat) (s : GlobalState), s.WF → InBounds s.mem p w → InBounds (allocas s ns).mem p w
@@ -348,6 +362,30 @@ theorem fits_allocas (B : GlobalState) :
       j =>
       have :=
         fits_allocas B ns (s.alloca n true) (k + 1) j hwf.alloca
+          (by
+            simp [hk]; omega)
+          (by simpa using hj)
+      simpa [Nat.add_assoc, Nat.add_comm 1] using this
+
+/-- The slots after their `alloca`s, from slot `k` on: each writable. -/
+theorem writable_allocas (B : GlobalState) :
+    ∀ (ns : List Nat) (s : GlobalState) (k j : Nat),
+      s.WF →
+        s.alloc.nextFreeBlock = B.alloc.nextFreeBlock + k →
+        j < ns.length → Writable (allocas s ns).mem (B.slot (k + j))
+  | [], _, _, _, _, _, hj => absurd hj (by simp)
+  | n :: ns, s, k, j, hwf, hk, hj => by
+    simp only [allocas]
+    cases j with
+    | zero =>
+      have : s.allocaPtr = B.slot k := by
+        simp only [GlobalState.allocaPtr, GlobalState.slot, hk]; rfl
+      simpa [← this] using
+        writable_allocas_of ns _ hwf.alloca (Writable.allocaPtr (n := n) (d := true))
+    | succ
+      j =>
+      have :=
+        writable_allocas B ns (s.alloca n true) (k + 1) j hwf.alloca
           (by
             simp [hk]; omega)
           (by simpa using hj)
@@ -389,6 +427,14 @@ theorem inBounds_startFields_of {m : MemoryState} {B : GlobalState} (h : InBound
   | nil => exact h
   | cons j l ih => exact ih h.lifetimeStart
 
+theorem writable_startFields_of {m : MemoryState} {B : GlobalState} (h : Writable m p) :
+    Writable (startFields m B) p := by
+  unfold startFields
+  generalize List.range' 3 34 = l
+  induction l generalizing m with
+  | nil => exact h
+  | cons j l ih => exact ih h.lifetimeStart
+
 theorem room_foldl_start {m : MemoryState} {B : GlobalState} {l : List Nat} (hj : j ∉ l)
     (h : Room m (B.slot j) w) :
     Room (l.foldl (fun m k => m.lifetimeStart (B.slot k)) m) (B.slot j) w := by
@@ -399,19 +445,20 @@ theorem room_foldl_start {m : MemoryState} {B : GlobalState} {l : List Nat} (hj 
     exact ih hj.2 (h.lifetimeStart (GlobalState.slot_id_ne hj.1))
 
 theorem room_foldl_start_mem {m : MemoryState} {B : GlobalState} {l : List Nat} (hl : l.Nodup)
-    (hj : j ∈ l) (h : InBounds m (B.slot j) w) :
+    (hj : j ∈ l) (h : InBounds m (B.slot j) w) (hw : Writable m (B.slot j)) :
     Room (l.foldl (fun m k => m.lifetimeStart (B.slot k)) m) (B.slot j) w := by
   induction l generalizing m with
   | nil => simp at hj
   | cons k l ih =>
     simp only [List.foldl_cons]
     rcases List.mem_cons.1 hj with rfl | hj'
-    · exact room_foldl_start (List.nodup_cons.1 hl).1 (Room.lifetimeStart_self h)
-    · exact ih (List.nodup_cons.1 hl).2 hj' h.lifetimeStart
+    · exact room_foldl_start (List.nodup_cons.1 hl).1 (Room.lifetimeStart_self h hw)
+    · exact ih (List.nodup_cons.1 hl).2 hj' h.lifetimeStart hw.lifetimeStart
 
 theorem room_startFields {m : MemoryState} {B : GlobalState} (hj : 3 ≤ j ∧ j < 37)
-    (h : InBounds m (B.slot j) w) : Room (startFields m B) (B.slot j) w :=
-  room_foldl_start_mem List.nodup_range' (List.mem_range'_1.2 (by omega)) h
+    (h : InBounds m (B.slot j) w) (hw : Writable m (B.slot j)) :
+    Room (startFields m B) (B.slot j) w :=
+  room_foldl_start_mem List.nodup_range' (List.mem_range'_1.2 (by omega)) h hw
 
 /-- `^bb0`'s `lifetime.start`s of the field elements, `247` to `281`. -/
 theorem starts_run {β : Type} {E : ⟪Γ⟫} {S B : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
@@ -447,10 +494,19 @@ theorem frame_allocas {s B : GlobalState} (hwf : s.WF)
           simp; omega)
     simpa [show 3 + (j - 3) = j by omega, List.getElem!_eq_getElem?_getD, List.getElem?_range',
       show j - 3 < 201 by omega] using this
-  refine ⟨fun j h3 hj => inBounds_startFields_of (hb j h3 hj), fun j h3 hj => ?_⟩
+  have hw (j : Nat) (h3 : 3 ≤ j) (hj : j < 204) :
+    Writable (allocas s slotSizes).mem (B.slot j) := by
+    have :=
+      writable_allocas B slotSizes s 3 (j - 3) hwf hs
+        (by
+          simp; omega)
+    rwa [show 3 + (j - 3) = j by omega] at this
+  refine
+    ⟨fun j h3 hj => inBounds_startFields_of (hb j h3 hj), fun j h3 hj => ?_, fun j h3 hj =>
+      writable_startFields_of (hw j h3 hj)⟩
   have := hb j h3 (by omega)
   rw [show slotBytes j = 64 by simp [slotBytes, show j < 37 by omega]] at this
-  exact room_startFields ⟨h3, hj⟩ this
+  exact room_startFields ⟨h3, hj⟩ this (hw j h3 (by omega))
 
 /-! ### Field elements past other writes -/
 
@@ -490,18 +546,18 @@ theorem insert4_eq (a b c d : BitVec 64) (h0 h1 h2 h3) :
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
   all_goals simp [Ty.wrap_vec, wl]
 
-/-- The env after `^bb0`'s entry: its constants over `E₀`, the globals `B.slot 0 … 2`, the
+/-- The env after `^bb0`'s entry: its constants over `E₀`, the globals `gsq gone gd`, the
 slots. -/
-def entryEnv (E₀ : ⟪Γ⟫) (B : GlobalState) : ⟪Γ⟫ :=
+def entryEnv (E₀ : ⟪Γ⟫) (B : GlobalState) (gsq gone gd : Pointer) : ⟪Γ⟫ :=
   writeSlots
     (E₀[%1547 := Ty.wrap #v[1#64, 0#64, 0#64, 0#64, 0#64, 0#64, 0#64, 0#64], %1548 :=
-      PoisonOr.value (B.slot 0), %1549 := PoisonOr.value 4294967294#32, %1550 :=
+      PoisonOr.value gsq, %1549 := PoisonOr.value 4294967294#32, %1550 :=
       PoisonOr.value 4294967295#32, %1551 := Ty.wrap (Vector.replicate 4 0#64), %1552 :=
       Ty.wrap #v[0#64, 1#64, 1#64, 0#64], %1560 := PoisonOr.value 1#32, %1561 :=
-      PoisonOr.value 32#64, %1562 := PoisonOr.value 127#8, %1563 := PoisonOr.value (B.slot 1),
-      %1564 := PoisonOr.value (B.slot 2), %1565 := Vector.replicate 4 PoisonOr.poison, %1566 :=
-      PoisonOr.value 0#64, %1567 := PoisonOr.value 1#64, %1568 := PoisonOr.value 2#64, %1569 :=
-      PoisonOr.value 3#64, %1570 := Ty.wrap (Vector.replicate 4 51#64), %1571 :=
+      PoisonOr.value 32#64, %1562 := PoisonOr.value 127#8, %1563 := PoisonOr.value gone, %1564 :=
+      PoisonOr.value gd, %1565 := Vector.replicate 4 PoisonOr.poison, %1566 := PoisonOr.value 0#64,
+      %1567 := PoisonOr.value 1#64, %1568 := PoisonOr.value 2#64, %1569 := PoisonOr.value 3#64,
+      %1570 := Ty.wrap (Vector.replicate 4 51#64), %1571 :=
       Ty.wrap (Vector.replicate 4 2251799813685247#64), %1572 := Ty.wrap (Vector.replicate 4 19#64),
       %1573 := PoisonOr.value 20#32, %1574 := PoisonOr.value 50#32, %1575 := PoisonOr.value 100#32,
       %1576 := PoisonOr.value 7#8, %1580 := PoisonOr.value 0#32, %1584 :=
@@ -589,8 +645,8 @@ theorem Inv.fits {B S : GlobalState} {M : MemoryState} (h : Inv B M c S) {p : Po
 
 theorem room_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Room (m.eraseFrom n) p w) :
     Room m p w := by
-  obtain ⟨b, hb, hl, hw⟩ := h
-  refine ⟨b, ?_, hl, hw⟩
+  obtain ⟨b, hb, hl, hw, hwr⟩ := h.block
+  refine Room.of_block ?_ hl hw hwr
   simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter'] at hb
   rw [MemoryState.getElem?_eq]
   cases hm : m.mem[p.id]? <;> simp_all
@@ -776,14 +832,17 @@ theorem Keeps.callTmp5 {B : GlobalState} {m m' : MemoryState} (h : Keeps B m m')
       (GlobalState.slot_id_ne (by omega)) (GlobalState.slot_id_ne (by omega))]
   exact (h j h3' hj).1
 
-/-- The globals in `M`: `√-1`, `1` and `d` at `B.slot 0 … 2`. -/
-structure Globals (B : GlobalState) (M : MemoryState) : Prop where
-  sqrtm1_fits : Fits M (B.slot 0) 512
-  one_fits : Fits M (B.slot 1) 512
-  d_fits : Fits M (B.slot 2) 512
-  sqrtm1 : M.readVec (B.slot 0) = fd_f25519_sqrtm1.vec
-  one : M.readVec (B.slot 1) = fd_f25519_one.vec
-  d : M.readVec (B.slot 2) = fd_f25519_d.vec
+/-- The globals in `M`: `√-1`, `1` and `d` at `gsq gone gd`, below the frame. -/
+structure Globals (B : GlobalState) (gsq gone gd : Pointer) (M : MemoryState) : Prop where
+  sqrtm1_lt : gsq.id.id < B.alloc.nextFreeBlock + 3
+  one_lt : gone.id.id < B.alloc.nextFreeBlock + 3
+  d_lt : gd.id.id < B.alloc.nextFreeBlock + 3
+  sqrtm1_fits : Fits M gsq 512
+  one_fits : Fits M gone 512
+  d_fits : Fits M gd 512
+  sqrtm1 : M.readVec gsq = fd_f25519_sqrtm1.vec
+  one : M.readVec gone = fd_f25519_one.vec
+  d : M.readVec gd = fd_f25519_d.vec
 
 /-! `FD_R52X5_QUAD_REDUCE`'s limbs as the steps give them, folded back into the QUAD. -/
 

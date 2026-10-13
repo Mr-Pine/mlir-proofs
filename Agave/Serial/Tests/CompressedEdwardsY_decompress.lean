@@ -14,7 +14,8 @@ private def repr : Pointer :=
 
 /-- Block 0 free (the null pointer's); `out` a 168-byte zeroed block, `repr` holding `bytes`. -/
 private def state (bytes : BitVec 256) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 168 0), (⟨2⟩, .ofBytes 32 bytes)]⟩⟩
+  GlobalState.withGlobals CompressedEdwardsY_decompress.globals
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 168 0), (⟨2⟩, .ofBytes 32 bytes)]⟩⟩
 
 private abbrev V :=
   Vector (BitVec 64) 5

@@ -48,16 +48,16 @@ def tableA (P : EdwardsPoint) : Nat → Fe2625x4 :=
 def toEdwards (v : Fe2625x4) : EdwardsPoint :=
   ⟨Fe2625x4.split v 0, Fe2625x4.split v 1, Fe2625x4.split v 2, Fe2625x4.split v 3⟩
 
-/-- Blocks a digit's add allocates, `sel` its `select`'s: `add`'s 6, `sub`'s 7; none at `0`. -/
-def digitBlocks (sel : Nat) (d : BitVec 8) : Nat :=
-  if (0#8).slt d then sel + 6 else if d.slt 0#8 then sel + 7 else 0
+/-- Blocks a digit's add allocates: `add`'s 6, `sub`'s 7; none at `0`. -/
+def digitBlocks (d : BitVec 8) : Nat :=
+  if (0#8).slt d then 6 else if d.slt 0#8 then 7 else 0
 
 /-- Blocks the loop's callees allocate from `i` down: `double`'s 4 per iteration and the digits'
-adds, `table_A.select`'s 1, `table_B.select`'s 2. -/
+adds. -/
 def ladderBlocks (a_naf b_naf : BitVec (8 * 256)) : Nat → Nat
-  | 0 => 4 + digitBlocks 1 (digit a_naf 0) + digitBlocks 2 (digit b_naf 0)
+  | 0 => 4 + digitBlocks (digit a_naf 0) + digitBlocks (digit b_naf 0)
   | i + 1 =>
-    4 + digitBlocks 1 (digit a_naf (i + 1)) + digitBlocks 2 (digit b_naf (i + 1)) +
+    4 + digitBlocks (digit a_naf (i + 1)) + digitBlocks (digit b_naf (i + 1)) +
       ladderBlocks a_naf b_naf i
 
 end impl_mul
@@ -75,12 +75,12 @@ noncomputable def impl_mul.spec (a : BitVec 256) (A : EdwardsPoint) (b : BitVec 
       EXTENDEDPOINT_IDENTITY.point)
 
 open impl_mul Serial.mul in
-/-- The blocks the function allocates, its callees' included: 84 before the loop (the identity's
-global, 13 slots, the NAFs' one each, `table_A`'s 68). -/
+/-- The blocks the function allocates, its callees' included: 83 before the loop (13 slots, the
+NAFs' one each, `table_A`'s 68). -/
 def impl_mul.blocks (a b : BitVec 256) : Nat :=
   let a_naf := Scalar_non_adjacent_form.spec a 5
   let b_naf := Scalar_non_adjacent_form.spec b 8
-  84 + ladderBlocks a_naf b_naf (start a_naf b_naf 255)
+  83 + ladderBlocks a_naf b_naf (start a_naf b_naf 255)
 
 end
 

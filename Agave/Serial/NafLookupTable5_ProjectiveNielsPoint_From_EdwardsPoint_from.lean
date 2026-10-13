@@ -163,8 +163,15 @@ theorem storeAt_nielsBits {m : MemoryState} {p : Pointer} {P : ProjectiveNielsPo
 theorem readLimbs_of_readAt {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVec 64}
     (hf : Fits m p 320) (ho : p.offset.toNat + 32 < 2 ^ 64) (h : m.readAt p 320 = limbsBits l) :
     m.readLimbs p = l := by
-  rw [← MemoryState.storeAt_readAt_self hf, h, ← storeLimbs_eq_storeAt ho]
-  exact MemoryState.readLimbs_storeLimbs_self (limbsRoom_of_room hf.room ho)
+  -- in a copy of `m` with `p`'s block writable, which reads the same
+  have hr (q : Pointer) (w : Nat) : (m.makeWritable p.id).readAt q w = m.readAt q w :=
+    MemoryState.readAt_makeWritable
+  have hl : (m.makeWritable p.id).readLimbs p = m.readLimbs p := by
+    funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
+  have hfw : Fits (m.makeWritable p.id) p 320 := hf.makeWritable
+  rw [← hl, ← MemoryState.storeAt_readAt_self hfw, hr, h, ← storeLimbs_eq_storeAt ho]
+  exact
+    MemoryState.readLimbs_storeLimbs_self (limbsRoom_of_room (Room.makeWritable_self hf.live) ho)
 
 /-- A table entry's offsets do not wrap. -/
 theorem entry_off {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toNat ≤ 1120) :
@@ -224,22 +231,31 @@ theorem readAt_table {m : MemoryState} {t : Pointer} {T : Fin 8 → ProjectiveNi
 theorem readNiels_of_readAt {m : MemoryState} {p : Pointer} {P : ProjectiveNielsPoint}
     (hf : Fits m p 1280) (ho : p.offset.toNat + 160 ≤ 2 ^ 64) (h : m.readAt p 1280 = nielsBits P) :
     m.readNiels p = P := by
-  have hr := pointRoom_of_room hf.room ho
-  rw [← MemoryState.storeAt_readAt_self hf, h, storeAt_nielsBits ho]
-  exact MemoryState.readNiels_storeNiels_self hr
+  -- in a copy of `m` with `p`'s block writable, which reads the same
+  have hr (q : Pointer) (w : Nat) : (m.makeWritable p.id).readAt q w = m.readAt q w :=
+    MemoryState.readAt_makeWritable
+  have hl (q : Pointer) : (m.makeWritable p.id).readLimbs q = m.readLimbs q := by
+    funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
+  have hn : (m.makeWritable p.id).readNiels p = m.readNiels p := by
+    simp only [MemoryState.readNiels, hl]
+  have hfw : Fits (m.makeWritable p.id) p 1280 := hf.makeWritable
+  rw [← hn, ← MemoryState.storeAt_readAt_self hfw, hr, h, storeAt_nielsBits ho]
+  exact
+    MemoryState.readNiels_storeNiels_self (pointRoom_of_room (Room.makeWritable_self hf.live) ho)
 
 -- about 130 steps over a frame of 8 slots and 22 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
 /-- `NafLookupTable5::<ProjectiveNielsPoint>::from(A)` stores `spec A` at `out`, the `sret` slot; `A`
 is read before `out` is written, so they may alias. Its slots and its callees' temporaries are
-freed again: the counter moves on by 72 blocks. -/
+freed again: the counter moves on by 64 blocks. -/
 public theorem call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.globals)
     (hout : Room s.mem out 10240) (ha : s.mem.PointFit a) :
     NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.call (args (.value out) (.value a))
         s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 72⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + 64⟩
             mem := s.mem.storeNafTable out (spec (s.mem.readEdwards a)) }) := by
   func_init
   block_init

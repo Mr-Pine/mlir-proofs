@@ -107,10 +107,11 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
     (hR : LoopEnv E r z0 z1 z2 z3 z4 z5) (hP : Folded P) (hwf : S.WF) (hr : S.mem.QuadRoom r)
     (h0 : InBounds S.mem z0 512) (h1 : InBounds S.mem z1 512) (h2 : InBounds S.mem z2 512)
     (h3 : InBounds S.mem z3 512) (h4 : InBounds S.mem z4 512) (h5 : InBounds S.mem z5 512)
-    (hb0 : b ≤ z0.id.id) (hb1 : b ≤ z1.id.id) (hb2 : b ≤ z2.id.id) (hb3 : b ≤ z3.id.id)
-    (hb4 : b ≤ z4.id.id) (hb5 : b ≤ z5.id.id) (h01 : z0.id ≠ z1.id) (h02 : z0.id ≠ z2.id)
-    (h12 : z1.id ≠ z2.id) (h34 : z3.id ≠ z4.id) (h35 : z3.id ≠ z5.id) (h45 : z4.id ≠ z5.id)
-    (hrb : r.id.id < b)
+    (w0 : Writable S.mem z0) (w1 : Writable S.mem z1) (w2 : Writable S.mem z2)
+    (w3 : Writable S.mem z3) (w4 : Writable S.mem z4) (w5 : Writable S.mem z5) (hb0 : b ≤ z0.id.id)
+    (hb1 : b ≤ z1.id.id) (hb2 : b ≤ z2.id.id) (hb3 : b ≤ z3.id.id) (hb4 : b ≤ z4.id.id)
+    (hb5 : b ≤ z5.id.id) (h01 : z0.id ≠ z1.id) (h02 : z0.id ≠ z2.id) (h12 : z1.id ≠ z2.id)
+    (h34 : z3.id ≠ z4.id) (h35 : z3.id ≠ z5.id) (h45 : z4.id ≠ z5.id) (hrb : r.id.id < b)
     (hback :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (args (.value r) (.value a) (.value n)).get →
@@ -123,6 +124,12 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
           InBounds S'.mem z3 512 →
           InBounds S'.mem z4 512 →
           InBounds S'.mem z5 512 →
+          Writable S'.mem z0 →
+          Writable S'.mem z1 →
+          Writable S'.mem z2 →
+          Writable S'.mem z3 →
+          Writable S'.mem z4 →
+          Writable S'.mem z5 →
           S'.alloc = S.alloc →
           S'.mem.eraseFrom b = S.mem.eraseFrom b →
           Folded (geDbl quadMul quadSqr P) →
@@ -215,6 +222,12 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
         InBounds S.mem z3 512 →
         InBounds S.mem z4 512 →
         InBounds S.mem z5 512 →
+        Writable S.mem z0 →
+        Writable S.mem z1 →
+        Writable S.mem z2 →
+        Writable S.mem z3 →
+        Writable S.mem z4 →
+        Writable S.mem z5 →
         b ≤ z0.id.id →
         b ≤ z1.id.id →
         b ≤ z2.id.id →
@@ -242,13 +255,13 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
   intro m
   induction m with
   | zero =>
-    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34
-      h35 h45 hrb hK
+    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 w0 w1 w2 w3 w4 w5 hb0 hb1 hb2 hb3 hb4
+      hb5 h01 h02 h12 h34 h35 h45 hrb hK
     refine
-      trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2
-        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb ?_ ?_
+      trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 w0 w1 w2 w3 w4
+        w5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb ?_ ?_
     · -- around again: impossible, the counter has reached `n`
-      intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hbr
+      intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hbr
       have : (BitVec.setWidth 32 (BitVec.ofNat 8 k + 1#8)).toNat = k + 1 := by
         simp [BitVec.toNat_setWidth, BitVec.toNat_add]
         omega
@@ -258,16 +271,16 @@ theorem loop (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b : 
       exact hK E' S' h1 h2 h3 h4 h5 h6
   | succ m
     ih =>
-    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34
-      h35 h45 hrb hK
+    intro k P S E hArgs hR hk hn hP hwf hr h0 h1 h2 h3 h4 h5 w0 w1 w2 w3 w4 w5 hb0 hb1 hb2 hb3 hb4
+      hb5 h01 h02 h12 h34 h35 h45 hrb hK
     refine
-      trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 hb0 hb1 hb2
-        hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb ?_ ?_
+      trip r a n z0 z1 z2 z3 z4 z5 b k P S E g K hArgs hR hP hwf hr h0 h1 h2 h3 h4 h5 w0 w1 w2 w3 w4
+        w5 hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb ?_ ?_
     · -- around again, one trip fewer
-      intro E' S' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 ha hm hF _
+      intro E' S' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11 g12 g13 g14 g15 g16 ha hm hF _
       exact
-        ih (k + 1) _ S' E' g1 g2 (by omega) hn hF g3 g4 g5 g6 g7 g8 g9 g10 hb0 hb1 hb2 hb3 hb4 hb5
-          h01 h02 h12 h34 h35 h45 hrb
+        ih (k + 1) _ S' E' g1 g2 (by omega) hn hF g3 g4 g5 g6 g7 g8 g9 g10 g11 g12 g13 g14 g15 g16
+          hb0 hb1 hb2 hb3 hb4 hb5 h01 h02 h12 h34 h35 h45 hrb
           (fun E'' S'' f1 f2 f3 f4 f5 f6 => hK E'' S'' f1 f2 f3 f4 (f5.trans ha) (f6.trans hm))
     · -- leaving: impossible, the counter is below `n`
       intro _ _ _ _ _ _ _ _ hbr

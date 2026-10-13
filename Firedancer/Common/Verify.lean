@@ -41,14 +41,13 @@ def fd_ed25519_verify.hash (buf0 : BitVec 1024) (r publicKey : BitVec 256) (msgS
     (msg : BitVec (8 * msgSz.toNat)) : ShaState × Vector (BitVec 64) 8 :=
   fd_sha512_fini.spec (fd_ed25519_verify.shaStates buf0 r publicKey msgSz msg).2.2.2
 
-/-- The blocks the SHA-512 calls' `core` calls count. -/
+/-- The blocks the SHA-512 calls' `core` calls count, one each. -/
 def fd_ed25519_verify.hashBlocks (buf0 : BitVec 1024) (r publicKey : BitVec 256) (msgSz : BitVec 64)
     (msg : BitVec (8 * msgSz.toNat)) : Nat :=
   let (sha0, sha1, sha2, sha3) := fd_ed25519_verify.shaStates buf0 r publicKey msgSz msg
-  2 *
-    (fd_sha512_append.cores sha0 32#64 + fd_sha512_append.cores sha1 32#64 +
-      fd_sha512_append.cores sha2 msgSz +
-      fd_sha512_fini.cores sha3)
+  fd_sha512_append.cores sha0 32#64 + fd_sha512_append.cores sha1 32#64 +
+    fd_sha512_append.cores sha2 msgSz +
+    fd_sha512_fini.cores sha3
 
 /-- `fd_sha512_init`'s stores at `sha`. -/
 def fd_sha512_init.stores (m : MemoryState) (sha : Pointer) : MemoryState :=
@@ -163,12 +162,22 @@ theorem _root_.MLIR.InBounds.initStores {m : MemoryState} (h : InBounds m q w) :
   unfold fd_sha512_init.stores
   exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
 
+theorem _root_.MLIR.Room.initStores {m : MemoryState} (h : Room m q w) :
+    Room (fd_sha512_init.stores m p) q w := by
+  unfold fd_sha512_init.stores
+  exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+
 theorem _root_.MLIR.Fits.hashMem {m : MemoryState} (h : Fits m q w) :
     Fits (fd_ed25519_verify.hashMem m sha k X v) q w :=
   h.initStores.storeSha.storeWords8
 
 theorem _root_.MLIR.InBounds.hashMem {m : MemoryState} (h : InBounds m q w) :
     InBounds (fd_ed25519_verify.hashMem m sha k X v) q w := by
+  unfold fd_ed25519_verify.hashMem MemoryState.storeSha
+  exact h.initStores.storeAt.storeAt.storeAt.storeAt.storeWords8.storeWords8
+
+theorem _root_.MLIR.Room.hashMem {m : MemoryState} (h : Room m q w) :
+    Room (fd_ed25519_verify.hashMem m sha k X v) q w := by
   unfold fd_ed25519_verify.hashMem MemoryState.storeSha
   exact h.initStores.storeAt.storeAt.storeAt.storeAt.storeWords8.storeWords8
 
@@ -236,14 +245,14 @@ theorem _root_.MLIR.MemoryState.readAt_hashMem_of_id_ne {m : MemoryState} (hsha 
 
 /-- A store at the start of a known read: the bits spliced in. -/
 theorem _root_.MLIR.MemoryState.readAt_storeAt_base {m : MemoryState} {p : Pointer}
-    (hfits : InBounds m p v) (hv : ¬p.offset.uaddOverflow 0#64) (hw : w ≤ v) (x : BitVec w) :
+    (hfits : Room m p v) (hv : ¬p.offset.uaddOverflow 0#64) (hw : w ≤ v) (x : BitVec w) :
     (m.storeAt p x).readAt p v = Memory.spliceBits (m.readAt p v) 0 x := by
   have := MemoryState.readAt_add_storeAt (off := 0#64) hfits hv (by simpa using hw) x
   simpa [Pointer.add] using this
 
 /-- The digest's 64 bytes read back from the eight words stored at `p`. -/
 theorem _root_.MLIR.MemoryState.readAt_storeWords8_self {m : MemoryState} {p : Pointer}
-    (h : InBounds m p 512) (hov : ¬p.offset.uaddOverflow 64#64) :
+    (h : Room m p 512) (hov : ¬p.offset.uaddOverflow 64#64) :
     (m.storeWords8 p v).readAt p 512 = Words8.bits v := by
   have hov' (o : Nat) (ho : o ≤ 64) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 o) :=
     BitVec.not_uaddOverflow_of_le hov
@@ -266,7 +275,7 @@ theorem _root_.MLIR.MemoryState.readAt_storeWords8_self {m : MemoryState} {p : P
   grind
 
 /-- The digest at `k` read back. -/
-theorem _root_.MLIR.MemoryState.readAt_hashMem_k {m : MemoryState} (h : InBounds m k 512)
+theorem _root_.MLIR.MemoryState.readAt_hashMem_k {m : MemoryState} (h : Room m k 512)
     (hov : ¬k.offset.uaddOverflow 64#64) :
     (fd_ed25519_verify.hashMem m sha k X v).readAt k 512 = Words8.bits v :=
   MemoryState.readAt_storeWords8_self

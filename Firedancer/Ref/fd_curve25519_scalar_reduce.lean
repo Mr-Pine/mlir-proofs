@@ -314,8 +314,8 @@ public theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {
     intro i hi
     simp only [BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
     split <;> simp <;> omega
-  simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, hoff, spliceBits_spliceBits_append, hones]

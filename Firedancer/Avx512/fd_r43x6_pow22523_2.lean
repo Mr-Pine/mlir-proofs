@@ -45,6 +45,9 @@ local macro "repsqr_mul2 " a:ident b:ident : tactic =>
       clear_facts $(slot a) $(slot b)
       step_call using fd_r43x6_repsqr_mul2.call_eq))
 
+-- the twenty temporaries' facts, `Writable` ones among them, through every step: over 200000
+-- heartbeats
+set_option maxHeartbeats 400000 in
 /-- `fd_r43x6_pow22523_2` stores `spec za` at `_za`, then `spec zb` at `_zb`; its `20`
 temporaries are freed again, the counter moves on by `20` blocks. -/
 public theorem fd_r43x6_pow22523_2.call_eq (_za _zb : Pointer) (za zb : Wwl) (s : GlobalState)

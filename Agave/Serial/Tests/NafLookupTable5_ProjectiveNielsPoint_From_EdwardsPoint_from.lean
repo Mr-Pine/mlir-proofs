@@ -14,9 +14,11 @@ private def out : Pointer :=
 private def a : Pointer :=
   ⟨⟨2⟩, 0⟩
 
-/-- Block 0 free (the null pointer's); `out` a zeroed 1280-byte block, `a` holding `aBytes`. -/
+/-- Block 0 free (the null pointer's); `out` a zeroed 1280-byte block, `a` holding `aBytes`; then
+the globals'. -/
 private def state (aBytes : BitVec 1280) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 1280 0), (⟨2⟩, .ofBytes 160 aBytes)]⟩⟩
+  GlobalState.withGlobals NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.globals
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 1280 0), (⟨2⟩, .ofBytes 160 aBytes)]⟩⟩
 
 /-- A field element from its limbs, lowest first. -/
 private def fe (l0 l1 l2 l3 l4 : Nat) : BitVec 320 :=
@@ -73,14 +75,14 @@ private def table (A : EdwardsPoint) : Nat → List V4
       ofEdwards (CompletedPoint_as_extended.spec ⟨cx.get, cy.get, cz.get, ct.get⟩)
     ofNiels (EdwardsPoint_as_projective_niels.spec ⟨ex.get, ey.get, ez.get, et.get⟩) :: t
 
-/-- The run stores `spec`'s points (`table`) at `out`, entry by entry, and counts 72 blocks. -/
+/-- The run stores `spec`'s points (`table`) at `out`, entry by entry, and counts 64 blocks. -/
 private def agrees (s : GlobalState) : Bool :=
   match
     NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from.eval 2
       (args (.value out) (.value a)) s with
   | .value (some .nil, s') =>
     let T := (table (s.mem.readEdwards a) 7).reverse
-    s'.alloc.nextFreeBlock == s.alloc.nextFreeBlock + 72 &&
+    s'.alloc.nextFreeBlock == s.alloc.nextFreeBlock + 64 &&
       (List.range 8).all fun i =>
         ofNiels (s'.mem.readNiels (out.add (BitVec.ofNat 64 (160 * i)))) == T[i]!
   | _ => false

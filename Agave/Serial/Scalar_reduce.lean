@@ -451,13 +451,13 @@ public theorem Scalar_reduce.call_eq (out self : Pointer) (s : GlobalState) (hwf
   -- `x.zeroize(); xR.zeroize(); x_mod_l.zeroize();`
   step_pure
   step_memset
-  have hdst := Agave.room_of_limbsRoom hx_limbs.room
+  have hdst := Agave.room_of_limbsRoom (hx_limbs.room (by mem_fact))
   step_memcpy consuming hdst
   step_pure
   iterate 9 step_store
   step_pure
   step_memset
-  have hdst := Agave.room_of_limbsRoom hx_mod_l_limbs.room
+  have hdst := Agave.room_of_limbsRoom (hx_mod_l_limbs.room (by mem_fact))
   step_memcpy consuming hdst
   iterate 12 step_pure
   finish_block

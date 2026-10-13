@@ -64,7 +64,7 @@ section Proof
 
 /-- `_carry128` writes the carried columns back to `r` and stores `spec` at `out`. -/
 public theorem Fe_carry128.call_eq (out r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsRoom out) (hr : s.mem.WideFit r)
+    (hout : s.mem.LimbsRoom out) (hr : s.mem.WideFit r) (hrw : Writable s.mem r)
     (hpre : Fe.carry128.Pre (s.mem.readWide r)) :
     Fe_carry128.call (Fe_carry128.args (.value out) (.value r)) s =
       .value
@@ -89,7 +89,7 @@ public theorem Fe_carry128.call_eq (out r : Pointer) (s : GlobalState) (hwf : s.
   have b4 := add_shr51_lt h4' b3
   have o4 := add_shr51_overflow h4' b3
   have b4' : _ < 3 * 2 ^ 109 + 2 ^ 64 := (add_shr51_lt_add h4' b3).trans_le (by omega)
-  have hr_room := hr.room
+  have hr_room := hr.room hrw
   block_init
   iterate 5 step_pure
   step_load

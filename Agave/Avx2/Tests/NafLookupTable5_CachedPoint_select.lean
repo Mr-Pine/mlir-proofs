@@ -18,7 +18,8 @@ private def tblBytes : BitVec 10240 :=
 
 /-- Block 0 free (the null pointer's); `out` a 160-byte zeroed block, `tbl` the test table. -/
 private def state : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 1280 tblBytes)]⟩⟩
+  GlobalState.withGlobals NafLookupTable5_CachedPoint_select.globals
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 1280 tblBytes)]⟩⟩
 
 /-- The run stores entry `x / 2` at `out`. -/
 private def agrees (x : Nat) (hx : x / 2 < 8) : Bool :=

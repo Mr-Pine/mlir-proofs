@@ -32,11 +32,11 @@ theorem fits_of_limbsFit {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) : Fi
 
 /-- Room for limbs is room for 320 bits. -/
 theorem room_of_limbsRoom {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) : Room m p 320 := by
-  obtain ⟨ho, -, -, -, -, ⟨blk, hblk, hl, hsz⟩⟩ := h
+  obtain ⟨ho, -, -, -, -, ⟨⟨blk, hblk, hl, hsz⟩, hw⟩⟩ := h
   rw [Pointer.offsetInBits_add (not_uaddOverflow_limb ho (by decide))] at hsz
   exact
-    ⟨blk, by simpa [Pointer.add_id] using hblk, hl, by
-      simp at hsz; omega⟩
+    ⟨⟨blk, by simpa [Pointer.add_id] using hblk, hl, by
+      simp at hsz; omega⟩, hw.of_id_eq rfl⟩
 
 /-- The limb pair at byte `k ≤ 24` fits. -/
 theorem fits_pair {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) {k : BitVec 64}
@@ -185,7 +185,7 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {off : BitVec 64} {x
     {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
   simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
@@ -218,14 +218,24 @@ theorem storeLimbs_eq_storeAt {m : MemoryState} {p : Pointer} {l : Fin 5 → Bit
 /-- The 320 bits at limbs that fit: the limbs' bits. -/
 theorem readAt_eq_limbsBits {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
     m.readAt p 320 = limbsBits (m.readLimbs p) := by
-  conv_lhs => rw [← MemoryState.storeLimbs_readLimbs_self h]
-  rw [storeLimbs_eq_storeAt h.1, MemoryState.readAt_storeAt_self (fits_of_limbsFit h).inBounds]
+  -- in a copy of `m` with `p`'s block writable, which reads the same
+  let m' := m.makeWritable p.id
+  have hr (q : Pointer) (w : Nat) : m'.readAt q w = m.readAt q w := MemoryState.readAt_makeWritable
+  have h' : m'.LimbsFit p :=
+    ⟨h.1, h.2.1.makeWritable, h.2.2.1.makeWritable, h.2.2.2.1.makeWritable,
+      h.2.2.2.2.1.makeWritable, h.2.2.2.2.2.makeWritable⟩
+  have hl : m'.readLimbs p = m.readLimbs p := by
+    funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
+  rw [← hr, ← hl]
+  conv_lhs => rw [← MemoryState.storeLimbs_readLimbs_self h']
+  rw [storeLimbs_eq_storeAt h.1,
+    MemoryState.readAt_storeAt_self (Room.makeWritable_self (fits_of_limbsFit h).live)]
 
 /-- Limbs stored where there is room, read back whole: their bits. -/
 @[mlir_read]
 theorem readAt_storeLimbs_self {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p)
     (l : Fin 5 → BitVec 64) : (m.storeLimbs p l).readAt p 320 = limbsBits l := by
-  rw [storeLimbs_eq_storeAt h.1, MemoryState.readAt_storeAt_self (room_of_limbsRoom h).inBounds]
+  rw [storeLimbs_eq_storeAt h.1, MemoryState.readAt_storeAt_self (room_of_limbsRoom h)]
 
 /-- A field element copied whole (a `memcpy` of 40 bytes): its limbs stored. -/
 theorem storeAt_readAt_eq_storeLimbs {m m' : MemoryState} {p q : Pointer} (hq : m'.LimbsFit q)

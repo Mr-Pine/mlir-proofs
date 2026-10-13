@@ -44,13 +44,13 @@ section Proof
 
 /-- `fd_r52x5_reduce( x )` replaces the limbs at `x` by `spec` of them. -/
 public theorem fd_r52x5_reduce.call_eq (x : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hx : s.mem.LimbsFit x) :
+    (hx : s.mem.LimbsFit x) (hxw : Writable s.mem x) :
     fd_r52x5_reduce.call (fd_r52x5_reduce.args (.value x)) s =
       .value
         (.nil,
           { s with mem := s.mem.storeLimbs x (fd_r52x5_reduce.spec (s.mem.readLimbs x)) }) := by
-  have hx256 : Room s.mem x 256 := hx.room.room320.mono (by omega)
-  rw [← MemoryState.storeLimbsV_eq hx.room]
+  have hx256 : Room s.mem x 256 := (hx.room hxw).room320.mono (by omega)
+  rw [← MemoryState.storeLimbsV_eq (hx.room hxw)]
   func_init
   block_init
   iterate 9 step_pure

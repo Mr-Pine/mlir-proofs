@@ -25,7 +25,8 @@ section Proof
 /-- `fd_ed25519_point_add_final_mul_projective` stores `spec` of the point at `a` at `r`, in another
 block, leaving `r`'s `T`, and returns `r`. -/
 public theorem fd_ed25519_point_add_final_mul_projective.call_eq (r a : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) (hsep : r.id ≠ a.id) :
+    (hwf : s.WF) (hr : s.mem.PointFit r) (hrw : Writable s.mem r) (ha : s.mem.PointFit a)
+    (hsep : r.id ≠ a.id) :
     fd_ed25519_point_add_final_mul_projective.call
         (fd_ed25519_point_add_final_mul_projective.args (.value r) (.value a)) s =
       .value

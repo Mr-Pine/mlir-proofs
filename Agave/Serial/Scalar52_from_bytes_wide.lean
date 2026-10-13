@@ -91,19 +91,21 @@ local macro "copied " p:ident : tactic => do
 
 -- a long chain of calls: the state cut from the entry state every so often (`rir.stateDepth`)
 set_option rir.stateDepth 64 in
--- about 330 steps in one block: past the default heartbeats
-set_option maxHeartbeats 1000000 in
+-- about 330 steps in one block, each carrying the 14 slots' and two globals' facts: past the
+-- default heartbeats
+set_option maxHeartbeats 2000000 in
 /-- `Scalar52::from_bytes_wide(bytes)` for the 64 bytes at `bytes` stores `spec` at `out`: `lo` and
-`hi`'s Montgomery products by `R` and `RR`, added. The temporaries' and globals' blocks and the
-callees' are freed again: only the counter moves on. The loads all come before the store to `out`,
+`hi`'s Montgomery products by `R` and `RR`, added. The temporaries' and the callees' blocks are
+freed again: only the counter moves on. The loads all come before the store to `out`,
 so `out` may alias `bytes`. -/
 public theorem Scalar52_from_bytes_wide.call_eq (out bytes : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsRoom out) (hbytes : Fits s.mem bytes 512)
+    (hg : s.mem.Globals Scalar52_from_bytes_wide.globals) (hout : s.mem.LimbsRoom out)
+    (hbytes : Fits s.mem bytes 512)
     (hbytes_off : ¬bytes.offset.uaddOverflow 64#64) :
     Scalar52_from_bytes_wide.call (Scalar52_from_bytes_wide.args (.value out) (.value bytes)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 40⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + 38⟩
             mem :=
               s.mem.storeLimbs out (Scalar52_from_bytes_wide.spec (s.mem.readAt bytes 512)) }) := by
   func_init

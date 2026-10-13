@@ -116,11 +116,11 @@ public theorem Scalar_toBytes.call_eq (out l : Pointer) (s : GlobalState) (hwf :
   step_memcpy
   finish_block
   -- the first store, spliced into the slot's (undefined) bits
-  have hb : InBounds (S₀.alloca 32).mem buf 256 := by
+  have hb : Room (S₀.alloca 32).mem buf 256 := by
     have h := hbuf_room
     rw [hS] at h
     simp only [Room.storeAt_iff] at h
-    exact h.inBounds
+    exact h
   have h0 :=
     MemoryState.readAt_add_storeAt (off := 0#64) (w := 64) hb
       (by simp [hbuf_off, BitVec.uaddOverflow]) (by decide) v0

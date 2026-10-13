@@ -12,18 +12,28 @@ open _root_.Ed25519 MLIR.Agave compress512
 
 attribute [local mlir_transport] KPairs.storeAt KPairs.lifetimeStart KPairs.lifetimeEnd
 
+/-- A block's writability past the single block's stores. -/
+theorem writable_single {m : MemoryState} {ms st q : Pointer} {W : Nat → BitVec 64}
+    {v : Vector (BitVec 64) 8} (h : Writable m q) :
+    Writable ((storeWords (pairsMem ms W 0 40 (m.lifetimeStart ms)) st v).lifetimeEnd ms) q :=
+  Writable.lifetimeEnd
+    (Writable.storeAt (Writable.storeAt (Writable.storeAt (Writable.storeAt (Writable.storeAt
+      (Writable.storeAt (Writable.storeAt (Writable.storeAt
+        (Writable.pairsMem (Writable.lifetimeStart h))))))))))
+
 /-- `compress512(state, blocks, n)` compresses the `n` 128-byte blocks at `blocks` into the eight
 state words at `state` and stores the result there (`Serial.compress512.spec`, SHA-512's
 compression of each block in order). The state is read and stored between block pairs, so it is
-apart from the blocks; the `K` table and the three schedule buffers take four blocks. -/
+apart from the blocks; the three schedule buffers take three blocks. -/
 public theorem compress512.call_eq (st blocks : Pointer) (n : BitVec 64) (s : GlobalState)
-    (hwf : s.WF) (hst : s.mem.Sha512Fit st) (hn56 : n.toNat < 2 ^ 56)
+    (hwf : s.WF) (hg : s.mem.Globals compress512.globals) (hst : s.mem.Sha512Fit st)
+    (hstw : Writable s.mem st) (hn56 : n.toNat < 2 ^ 56)
     (hB : Fits s.mem blocks (1024 * n.toNat)) (hdo : blocks.offset.toNat + 128 * n.toNat < 2 ^ 64)
     (hsep : (Range.of st 512).Disjoint (Range.of blocks (1024 * n.toNat))) :
     compress512.call (compress512.args (.value st) (.value blocks) (.value n)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 4⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 3⟩,
             mem :=
               s.mem.storeSha512 st
                 (Serial.compress512.spec (s.mem.readSha512 st)
@@ -67,7 +77,8 @@ public theorem compress512.call_eq (st blocks : Pointer) (n : BitVec 64) (s : Gl
     rw [hE] at hArgs ⊢
     refine
       tail st blocks Kp ms t2 ms2 n 0 H D S _ _ _ S₀.alloc.nextFreeBlock (by simpa using hArgs) ?_
-        ?_ (Nat.zero_le _) (by omega) hn56 hdo ?_ ?_ hB hD hms2_bounds ht2_bounds hms2_off ht2_off
+        ?_ (Nat.zero_le _) (by omega) hn56 hdo ?_ hstw ?_ hB hD hms2_bounds (by mem_fact)
+        ht2_bounds (by mem_fact) hms2_off ht2_off
         hKp_off hKp_fits hK ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     · env_reads
     · env_reads
@@ -100,22 +111,24 @@ public theorem compress512.call_eq (st blocks : Pointer) (n : BitVec 64) (s : Gl
         | omega
     refine
       single st blocks Kp ms t2 ms2 n H (D.extractLsb' 0 1024) S E _ _ hArgs (by env_reads)
-        (by env_reads) ⟨hstp, hs0, hs1, hs2, hs3, hs4, hs5, hs6, hs7⟩ hH' hB1 hBr1 (by omega)
-        hms_bounds hms_off hKp_fits hKp_off hK (by mem_fact) (by mem_fact) (by mem_fact)
-        fun E' a b c => ?_
+        (by env_reads) ⟨hstp, hs0, hs1, hs2, hs3, hs4, hs5, hs6, hs7⟩ hstw hH' hB1 hBr1 (by omega)
+        hms_bounds (by mem_fact) hms_off hKp_fits hKp_off hK (by mem_fact) (by mem_fact)
+        (by mem_fact) fun E' a b c => ?_
     refine
       tail st blocks Kp ms t2 ms2 n 1 (Sha512.compress H (bytesLE (D.extractLsb' 0 1024))) D _ E' _
         _ S₀.alloc.nextFreeBlock a b c (by omega) (by omega) hn56 hdo
-        ⟨hstp, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ hms2_off ht2_off hKp_off ?_ ?_ ?_ ?_
-        ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+        ⟨hstp, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ hms2_off ht2_off hKp_off
+        ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    -- writability through the schedule's stores, which the steps do not unfold
+    all_goals try exact writable_single (by first | exact hstw | mem_fact)
     all_goals try mem_fact
     all_goals try slot_bound
     · rw [readSha512_lifetimeEnd,
         readSha512_storeWords_self hstp
-          (InBounds.pairsMem
-            (InBounds.lifetimeStart
-              (MemoryState.Sha512Fit.fits
-                  ⟨hstp, hs0, hs1, hs2, hs3, hs4, hs5, hs6, hs7⟩).inBounds))]
+          (Room.pairsMem
+            (Room.lifetimeStart'
+              ((MemoryState.Sha512Fit.fits
+                  ⟨hstp, hs0, hs1, hs2, hs3, hs4, hs5, hs6, hs7⟩).room hstw)))]
     · simp only [MemoryState.readAt_lifetimeEnd]
       rw [readAt_storeWords_of_disjoint hstp hsep, readAt_pairsMem_of_id_ne (by mem_fact),
         MemoryState.readAt_lifetimeStart]

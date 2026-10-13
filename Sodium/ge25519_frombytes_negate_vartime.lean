@@ -83,9 +83,9 @@ def negBlocks (s : BitVec 256) (x : Fin 5 → BitVec 64) : Nat :=
 /-- The blocks the call uses on each path. -/
 def blocks (s : BitVec 256) : Nat :=
   if fe25519_iszero.spec (m_root_check s) = 0#32 then
-    if fe25519_iszero.spec (p_root_check s) = 0#32 then 17
-    else 19 + negBlocks s (fe25519_mul.spec (x s) fd_f25519_sqrtm1.limbs)
-  else 16 + negBlocks s (x s)
+    if fe25519_iszero.spec (p_root_check s) = 0#32 then 15
+    else 17 + negBlocks s (fe25519_mul.spec (x s) fd_f25519_sqrtm1.limbs)
+  else 14 + negBlocks s (x s)
 
 end ge25519_frombytes_negate_vartime
 
@@ -174,13 +174,18 @@ theorem tail (h buf u v v3 vxx mrc prc : Pointer) (b : BitVec 256) (X : Fin 5 �
 
 end ge25519_frombytes_negate_vartime
 
+-- the globals' read-only facts, carried through every step, put it just past the default budget
+
+-- the globals' read-only facts, carried through every step, put it just past the default budget
+set_option maxHeartbeats 300000 in
 /-- `ge25519_frombytes_negate_vartime` decodes the 32 bytes at `buf` into the `ge25519_p3` at `h`,
 negated: when `spec` is a point, it stores it and returns `0`; else it returns `-1`, `h`'s `X, Y, Z`
-holding the candidate `(x : y : 1)`. `h` is in another block than `buf`. The globals', temporaries'
+holding the candidate `(x : y : 1)`. `h` is in another block than `buf`. The temporaries'
 and callees' blocks are freed again: only the counter moves on, by `blocks`. -/
 public theorem ge25519_frombytes_negate_vartime.call_eq (h buf : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hh : s.mem.PointRoom h) (hbuf : Fits s.mem buf 256)
-    (hbuf_off : buf.offset.toNat + 32 < 2 ^ 64) (hsep : h.id ≠ buf.id) :
+    (hwf : s.WF) (hg : s.mem.Globals ge25519_frombytes_negate_vartime.globals)
+    (hh : s.mem.PointRoom h) (hbuf : Fits s.mem buf 256) (hbuf_off : buf.offset.toNat + 32 < 2 ^ 64)
+    (hsep : h.id ≠ buf.id) :
     ge25519_frombytes_negate_vartime.call
         (ge25519_frombytes_negate_vartime.args (.value h) (.value buf)) s =
       .value

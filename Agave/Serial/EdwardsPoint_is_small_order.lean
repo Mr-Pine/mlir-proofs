@@ -104,14 +104,16 @@ theorem storeAt_limbsBits_eq_storeProjective {m : MemoryState} {p : Pointer}
           Range.disjoint_coords_le (a := 40) (b := 0) hp (by omega) (by omega) (by omega))]
   rfl
 
-/-- `P.is_small_order()` returns `spec P`. Its slots, the global `ONE` and its callees' temporaries
-are freed again: only the counter moves on, by 102 blocks. -/
+-- about 90 steps over a frame of 9 slots and 13 calls: past the default heartbeats
+set_option maxHeartbeats 400000 in
+/-- `P.is_small_order()` returns `spec P`. Its slots and its callees' temporaries are freed again:
+only the counter moves on, by 101 blocks. -/
 public theorem EdwardsPoint_is_small_order.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hp : s.mem.PointFit p) :
+    (hg : s.mem.Globals EdwardsPoint_is_small_order.globals) (hp : s.mem.PointFit p) :
     EdwardsPoint_is_small_order.call (EdwardsPoint_is_small_order.args (.value p)) s =
       .value
         (.cons (.value (EdwardsPoint_is_small_order.spec (s.mem.readEdwards p))) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 102⟩, mem := s.mem }) := by
+          { alloc := ⟨s.alloc.nextFreeBlock + 101⟩, mem := s.mem }) := by
   func_init
   block_init
   -- `P`'s coordinates, read before the frame's blocks
@@ -218,7 +220,7 @@ public theorem EdwardsPoint_is_small_order.call_eq (p : Pointer) (s : GlobalStat
       ⟨.storeEdwards_self h, MemoryState.readLimbs_storeEdwards_X h,
         MemoryState.readLimbs_storeEdwards_Y h, MemoryState.readLimbs_storeEdwards_Z h⟩
   clear hread_v8 hread_v8_40 hread_v8_80 hread_v8_120 hfits_v8 hfits_v8_40 hfits_v8_80 hfits_v8_120
-    hroom_v8 hv8_point hv8_bounds hread_one_limbs hone_fits hone_room
+    hroom_v8 hv8_point hv8_bounds hread_one_limbs hone_fits hone_live
   -- (&self.X * &other.Z).ct_eq(&(&other.X * &self.Z))
   step_pure
   limbs_room v7

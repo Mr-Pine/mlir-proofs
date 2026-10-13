@@ -11,11 +11,11 @@ open Memory
 
 /-- A read over a masked store inside it: the bits read before, the stored ones spliced in. -/
 public theorem _root_.MLIR.MemoryState.readAt_add_storeDef {m : MemoryState} {p : Pointer}
-    {off : BitVec 64} (h : InBounds m p v) (hov : ¬p.offset.uaddOverflow off)
+    {off : BitVec 64} (h : Room m p v) (hov : ¬p.offset.uaddOverflow off)
     (_hw : off.toNat * 8 + w ≤ v) (x d : BitVec w) :
     (m.storeDef (p.add off) x d).readAt p v = spliceBits (m.readAt p v) (off.toNat * 8) x := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk
+  obtain ⟨blk, hblk, -, hsz, hwr⟩ := h.block
+  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk hwr
   simp only [Pointer.add_id] at hs
   simp only [MemoryState.readAt, hs, hblk]
   unfold MemoryBlock.lengthInBits at hsz
@@ -27,12 +27,12 @@ public theorem _root_.MLIR.MemoryState.readAt_add_storeDef {m : MemoryState} {p 
 
 /-- Definedness over a masked store inside it: `d` spliced in. -/
 public theorem _root_.MLIR.MemoryState.definedAt_add_storeDef {m : MemoryState} {p : Pointer}
-    {off : BitVec 64} (h : InBounds m p v) (hov : ¬p.offset.uaddOverflow off)
+    {off : BitVec 64} (h : Room m p v) (hov : ¬p.offset.uaddOverflow off)
     (_hw : off.toNat * 8 + w ≤ v) (x d : BitVec w) :
     (m.storeDef (p.add off) x d).definedAt p v =
       spliceBits (m.definedAt p v) (off.toNat * 8) d := by
-  obtain ⟨blk, hblk, hsz⟩ := h
-  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk
+  obtain ⟨blk, hblk, -, hsz, hwr⟩ := h.block
+  have hs := MemoryState.getElem?_storeDef_self (p := p.add off) (x := x) (d := d) hblk hwr
   simp only [Pointer.add_id] at hs
   simp only [MemoryState.definedAt, hs, hblk]
   unfold MemoryBlock.lengthInBits at hsz
@@ -59,7 +59,7 @@ public theorem _root_.MLIR.MemoryState.definedAt_add_of_definedAt {m : MemorySta
 
 /-- A range inside a block whose definedness `d` sets it: known. -/
 public theorem Fits.of_definedAt_add {m : MemoryState} {p : Pointer} {off : BitVec 64}
-    {d : BitVec v} (h : Room m p v) (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ v)
+    {d : BitVec v} (h : Live m p v) (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ v)
     (hd : m.definedAt p v = d) (hset : d.extractLsb' (off.toNat * 8) w = BitVec.allOnes w) :
     Fits m (p.add off) w := by
   obtain ⟨blk, hblk, hl, hsz⟩ := h

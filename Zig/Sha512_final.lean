@@ -114,6 +114,15 @@ theorem room_lenStores {m : MemoryState} {d : Pointer} :
   | succ n ih =>
     intro i x; rw [lenStores, ih]; simp
 
+theorem live_lenStores {m : MemoryState} {d : Pointer} :
+    ∀ n i (x : BitVec 128), Live (lenStores d x i n m) p w ↔ Live m p w := by
+  intro n
+  induction n generalizing m with
+  | zero =>
+    intro _ _; rfl
+  | succ n ih =>
+    intro i x; rw [lenStores, ih, Sha512_update.live_storeAt_iff]
+
 theorem inBounds_lenStores {m : MemoryState} {d : Pointer} :
     ∀ n i (x : BitVec 128), InBounds (lenStores d x i n m) p w ↔ InBounds m p w := by
   intro n
@@ -203,6 +212,15 @@ theorem room_outStores {m : MemoryState} {out : Pointer} {f : Nat → BitVec 64}
     intro _; rfl
   | succ n ih =>
     intro j; rw [outStores, ih]; simp
+
+theorem live_outStores {m : MemoryState} {out : Pointer} {f : Nat → BitVec 64} :
+    ∀ n j, Live (Sha512_final.outStores out f j n m) p w ↔ Live m p w := by
+  intro n
+  induction n generalizing m with
+  | zero =>
+    intro _; rfl
+  | succ n ih =>
+    intro j; rw [outStores, ih, Sha512_update.live_storeAt_iff]
 
 theorem Fits.outStores {m : MemoryState} {out : Pointer} {f : Nat → BitVec 64} (h : Fits m p w) :
     ∀ n j, Fits (Sha512_final.outStores out f j n m) p w := by
@@ -424,6 +442,9 @@ theorem fin_eq {s X : GlobalState} (hwf : s.WF)
       PoisonOr.value (Vals.nil, fromLen X d out) := by
   simp only [h.eraseFrom hwf]
 
+theorem ssub_bufLen (x : BitVec 8) : (128#64).ssubOverflow (BitVec.setWidth 64 x) = false := by
+  bv_decide
+
 /-- `Sha512.final` on the object at `d` leaves `post`, the digest at `out`; `buf_len` below 128
 with that many bytes of `buf` known, `out` room for 64 bytes apart from the object. -/
 public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Sha512Obj.Fit s.mem d)
@@ -440,7 +461,7 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Sh
   clear hbl0
   have hblm : bl.toNat % 18446744073709551616 = bl.toNat := Nat.mod_eq_of_lt (by omega)
   have hblt : bl.toNat < 18446744073709551616 := by omega
-  have hs1 : (128#64).ssubOverflow (BitVec.setWidth 64 bl) = false := by bv_decide
+  have hs1 := ssub_bufLen bl
   have hs2 : (128#64).usubOverflow (BitVec.setWidth 64 bl) = false := by
     simp [BitVec.usubOverflow]; omega
   have hk : 128#64 - BitVec.setWidth 64 bl = BitVec.ofNat 64 (128 - bl.toNat) := by
@@ -576,11 +597,11 @@ theorem readAt_byte_storeAt {m : MemoryState} {d : Pointer} {c a : BitVec 64} {w
       if c.toNat ≤ a.toNat ∧ a.toNat * 8 < c.toNat * 8 + w then
         x.extractLsb' (8 * (a.toNat - c.toNat)) 8
       else m.readAt (d.add a) 8 := by
-  have hfc : InBounds m (d.add c) w :=
+  have hfc : Room m (d.add c) w :=
     (Room.add_of_le
         (by
           simp [BitVec.uaddOverflow]; omega)
-        (by omega) hf).inBounds
+        (by omega) hf)
   have hoff (b : BitVec 64) (hb : b.toNat ≤ 224) :
     (d.add b).offsetInBits = d.offsetInBits + b.toNat * 8 := by
     rw [Pointer.offsetInBits_add
@@ -867,7 +888,7 @@ theorem splice8 (r : BitVec 512) (x0 x1 x2 x3 x4 x5 x6 x7 : BitVec 64) :
   simp only [Memory.spliceBits]
   bv_decide
 
-theorem readAt_storeAt_out {m : MemoryState} {out : Pointer} (hfo : InBounds m out 512)
+theorem readAt_storeAt_out {m : MemoryState} {out : Pointer} (hfo : Room m out 512)
     (hoo : out.offset.toNat + 64 < 2 ^ 64) {j : Nat} (hj : j < 8) (x : BitVec 64) :
     (m.storeAt (out.add (BitVec.ofNat 64 (8 * j))) x).readAt out 512 =
       Memory.spliceBits (m.readAt out 512) (64 * j) x := by
@@ -881,7 +902,7 @@ theorem readAt_storeAt_out {m : MemoryState} {out : Pointer} (hfo : InBounds m o
   omega
 
 /-- The 64 bytes `outStores` writes: each word big-endian. -/
-theorem bytesLE_outStores {m : MemoryState} {out : Pointer} (hfo : InBounds m out 512)
+theorem bytesLE_outStores {m : MemoryState} {out : Pointer} (hfo : Room m out 512)
     (hoo : out.offset.toNat + 64 < 2 ^ 64) (f : Nat → BitVec 64) :
     bytesLE ((outStores out f 0 8 m).readAt out 512) =
       Sha512.bytesBE (f 0) ++ Sha512.bytesBE (f 1) ++ Sha512.bytesBE (f 2) ++
@@ -891,13 +912,13 @@ theorem bytesLE_outStores {m : MemoryState} {out : Pointer} (hfo : InBounds m ou
         Sha512.bytesBE (f 6) ++
         Sha512.bytesBE (f 7) := by
   simp only [outStores]
-  rw [readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 7) (by omega),
-    readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 6) (by omega),
-    readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 5) (by omega),
-    readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 4) (by omega),
-    readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 3) (by omega),
-    readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 2) (by omega),
-    readAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 1) (by omega),
+  rw [readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 7) (by omega),
+    readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 6) (by omega),
+    readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 5) (by omega),
+    readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 4) (by omega),
+    readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 3) (by omega),
+    readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 2) (by omega),
+    readAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 1) (by omega),
     readAt_storeAt_out hfo hoo (j := 0) (by omega)]
   simp only [show 64 * 0 = 0 from rfl, show 64 * 1 = 64 from rfl, show 64 * 2 = 128 from rfl,
     show 64 * 3 = 192 from rfl, show 64 * 4 = 256 from rfl, show 64 * 5 = 320 from rfl,
@@ -1033,12 +1054,12 @@ theorem state_final {s : GlobalState} {d : Pointer} {M : List (BitVec 8)}
     have hr80 :=
       Sha512_update.obj_disjoint (d := d) (a := 80#64) (c := 16#64) (v := 1024) (w := 512) hdo
         (by decide) (by decide) (by simp)
-    have hfr : InBounds (Sha512_update.roundState s1 d (d.add 80#64)).mem (d.add 80#64) 1024 :=
-      (Sha512_update.room_roundState.2
-          (Room.add_of_le
-            (by
-              simp [BitVec.uaddOverflow]; omega)
-            (by simp) hf1)).inBounds
+    have hfr : Room (Sha512_update.roundState s1 d (d.add 80#64)).mem (d.add 80#64) 1024 :=
+      Sha512_update.room_roundState.2
+        (Room.add_of_le
+          (by
+            simp [BitVec.uaddOverflow]; omega)
+          (by simp) hf1)
     have hT0 : (Range.of (d.add 80#64) 1024).Disjoint (Range.of d 128) := by
       simpa using
         Sha512_update.obj_disjoint (d := d) (a := 80#64) (c := 0#64) (v := 1024) (w := 128) hdo
@@ -1113,7 +1134,7 @@ theorem flatMap_vec8 (H : Vector (BitVec 64) 8) :
 /-- `Sha512.final` on an object that has absorbed `M`: the 64 bytes at `out` are SHA-512 of
 `M`. -/
 public theorem digest {s : GlobalState} {d out : Pointer} {M : List (BitVec 8)}
-    (hA : Sha512Obj.Absorbed s.mem d M) (hd : Sha512Obj.Fit s.mem d) (ho : InBounds s.mem out 512)
+    (hA : Sha512Obj.Absorbed s.mem d M) (hd : Sha512Obj.Fit s.mem d) (ho : Room s.mem out 512)
     (hoo : out.offset.toNat + 64 < 2 ^ 64) :
     bytesLE ((post s d out).mem.readAt out 512) = Sha512.digest M := by
   have hH := state_final hA hd.2.1 hd.1
@@ -1121,17 +1142,17 @@ public theorem digest {s : GlobalState} {d out : Pointer} {M : List (BitVec 8)}
   simp only [post, fromLen]
   generalize hs2 : (if 111 < (Sha512Obj.bufLen s.mem d).toNat then _ else _ : GlobalState) =
     s2 at hH
-  have ho2 : InBounds s2.mem out 512 := by
+  have ho2 : Room s2.mem out 512 := by
     rw [← hs2]; split
     · exact
-        (Sha512_update.inBounds_roundState.2
+        (Sha512_update.room_roundState.2
             (by
-              simp only [padMem, InBounds.storeAt_iff]; exact ho)).storeAt
-    · simp only [padMem, InBounds.storeAt_iff]; exact ho
+              simp only [padMem, Room.storeAt_iff]; exact ho)).storeAt
+    · simp only [padMem, Room.storeAt_iff]; exact ho
   rw [bytesLE_outStores
-      (Sha512_update.inBounds_roundState.2
+      (Sha512_update.room_roundState.2
         (by
-          simp only [lenState]; exact (inBounds_lenStores 15 1 _).2 ho2.storeAt))
+          simp only [lenState]; exact (room_lenStores 15 1 _).2 ho2.storeAt))
       hoo,
     hH, flatMap_vec8]
   rfl
@@ -1161,6 +1182,12 @@ public theorem room_post {s : GlobalState} : Room (post s d out).mem q w ↔ Roo
   split <;>
     simp only [room_outStores, Sha512_update.room_roundState, room_lenStores, Room.storeAt_iff,
       padMem]
+
+public theorem live_post {s : GlobalState} : Live (post s d out).mem q w ↔ Live s.mem q w := by
+  simp only [post, fromLen, lenState]
+  split <;>
+    simp only [live_outStores, Sha512_update.live_roundState, live_lenStores,
+      Sha512_update.live_storeAt_iff, padMem]
 
 public theorem post_wf {s : GlobalState} (h : s.WF) : (post s d out).WF := by
   have hw : ({ s with mem := padMem s.mem d (Sha512Obj.bufLen s.mem d) } : GlobalState).WF := by

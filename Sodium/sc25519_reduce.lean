@@ -6327,7 +6327,7 @@ theorem sc25519_reduce.run464 {β : Type} {p : Pointer}
     {s0_5 s1_9 s2_10 s1_10 s3_11 s2_11 s4_12 s3_12 s5_13 s4_13 s6_12 s5_14 s7_13 s6_13 s8_13 s9_13
       s10_13 s9_14 s11_13 s10_14 : BitVec 64}
     (hArgs : E.args = (sc25519_reduce.args (.value p)).get) (hp : Fits S.mem p (8 * 64))
-    (hp_off : ¬p.offset.uaddOverflow 64#64) (hc : sc25519_reduce.Consts E)
+    (hpw : Writable S.mem p) (hp_off : ¬p.offset.uaddOverflow 64#64) (hc : sc25519_reduce.Consts E)
     (hR :
       E ⊨ [%1990 := s0_5, %2002 := s1_9, %2004 := s2_10, %2005 := s1_10, %2007 := s3_11, %2008 :=
         s2_11, %2010 := s4_12, %2011 := s3_12, %2013 := s5_13, %2014 := s4_13, %2016 := s6_12,
@@ -6539,7 +6539,7 @@ theorem sc25519_reduce.run464 {β : Type} {p : Pointer}
 /-- `sc25519_reduce` stores BoringSSL's `x25519_sc_reduce.spec` of the 64 bytes at `p` as the 32
 bytes at `p`. -/
 public theorem sc25519_reduce.call_eq (p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hp : Fits s.mem p (8 * 64)) (hp_off : ¬p.offset.uaddOverflow 64#64) :
+    (hp : Fits s.mem p (8 * 64)) (hpw : Writable s.mem p) (hp_off : ¬p.offset.uaddOverflow 64#64) :
     sc25519_reduce.call (sc25519_reduce.args (.value p)) s =
       .value
         (.nil,

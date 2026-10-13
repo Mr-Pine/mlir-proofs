@@ -123,18 +123,21 @@ theorem or_ofNat_16 {i k : Nat} (hi : i % 16 = 0) (hk : k < 16) :
 
 open Memory in
 /-- Lane `k` of eight stored words. -/
-theorem readAt_storeWords8_lane {m : MemoryState} {p : Pointer} (hm : InBounds m p 512)
+theorem readAt_storeWords8_lane {m : MemoryState} {p : Pointer} (hm : Room m p 512)
     (hp : p.offset.toNat + 56 < 2 ^ 64) (v : Vector (BitVec 64) 8) {k : Nat} (hk : k < 8) :
     (m.storeWords8 p v).readAt (p.add (BitVec.ofNat 64 (8 * k))) 64 = v[k] := by
   have ho (c : BitVec 64) (hc : c.toNat ≤ 56) :
     (p.add c).offsetInBits = p.offsetInBits + 8 * c.toNat := by
     simp only [Pointer.offsetInBits, Pointer.add, BitVec.toNat_add]
     rw [Nat.mod_eq_of_lt (by omega)]; omega
-  obtain ⟨blk, hblk, hsz⟩ := hm
+  obtain ⟨⟨blk, hblk, -, hsz⟩, blk', hblk', hwr⟩ := hm
+  rw [hblk] at hblk'
+  cases hblk'
   simp only [MemoryBlock.lengthInBits] at hsz
   simp only [MemoryState.storeWords8, MemoryState.readAt, MemoryState.storeAt,
-    Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self, MemoryState.getElem?_modifyBlock_self,
-    hblk, Option.map_some, Function.comp_apply]
+    Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self, implies_true,
+    MemoryState.getElem?_modifyBlock_self, hblk, Option.map_some, Function.comp_apply,
+    MemoryBlock.update, hwr, ite_true]
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
   interval_cases k <;>
@@ -154,7 +157,7 @@ theorem storeWords8_storeAt_lane {m : MemoryState} {p : Pointer} (hp : p.offset.
     rw [Nat.mod_eq_of_lt (by omega)]; omega
   interval_cases k <;>
     · simp only [MemoryState.storeWords8, MemoryState.storeAt, Pointer.add_id,
-        MemoryState.modifyBlock_modifyBlock_self]
+        MemoryState.modifyBlock_modifyBlock_self, implies_true, Function.comp_apply]
       congr 1
       funext blk
       simp (disch := decide) only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true,

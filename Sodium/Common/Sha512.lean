@@ -216,12 +216,12 @@ theorem MemoryState.storeHashState_storeAt {v' : HashState} {off : BitVec 64} {x
   rfl
 
 /-- A read inside the struct: its bits. -/
-theorem MemoryState.readAt_storeHashState {off : BitVec 64} (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeHashState {off : BitVec 64} (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) (hw : off.toNat * 8 + w ≤ 1664) :
     (m.storeHashState c v).readAt (c.add off) w = v.bits.extractLsb' (off.toNat * 8) w :=
   MemoryState.readAt_overlay_add hm (Pointer.not_uaddOverflow_of_hashState hc (by omega)) hw _ _
 
-theorem MemoryState.readHashState_storeHashState_self (hm : InBounds m c 1664) :
+theorem MemoryState.readHashState_storeHashState_self (hm : Room m c 1664) :
     (m.storeHashState c v).readHashState c = v := by
   rw [MemoryState.readHashState, MemoryState.storeHashState, MemoryState.readAt_overlay_self hm,
     MemoryState.definedAt_overlay_self hm, HashState.ofBits_bits_defs]
@@ -248,7 +248,7 @@ theorem MemoryState.storeHashState_readHashState_self (h : m.HashStateFit c) :
   rw [MemoryState.storeHashState, hb, hdd, MemoryState.overlay_readAt_definedAt h.2.1.inBounds]
 
 /-- The state words of a stored struct. -/
-theorem MemoryState.readWords8_storeHashState (hm : InBounds m c 1664)
+theorem MemoryState.readWords8_storeHashState (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) : (m.storeHashState c v).readWords8 c = v.state := by
   have e : (m.storeHashState c v).readAt c 64 = (m.storeHashState c v).readAt (c.add 0#64) 64 := by
     rw [Pointer.add_zero]
@@ -265,7 +265,7 @@ theorem MemoryState.readWords8_storeHashState (hm : InBounds m c 1664)
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> bv_decide
 
 /-- `buf` of a stored struct. -/
-theorem MemoryState.readAt_storeHashState_buf (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeHashState_buf (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) :
     (m.storeHashState c v).readAt (c.add 80#64) 1024 = v.buf := by
   rw [MemoryState.readAt_storeHashState hm hc (by decide)]
@@ -273,7 +273,7 @@ theorem MemoryState.readAt_storeHashState_buf (hm : InBounds m c 1664)
   bv_decide
 
 /-- The state words of a stored struct, as one read. -/
-theorem MemoryState.readAt_storeHashState_state (hm : InBounds m c 1664) :
+theorem MemoryState.readAt_storeHashState_state (hm : Room m c 1664) :
     (m.storeHashState c v).readAt c 512 = (v.low.setWidth 512) := by
   rw [MemoryState.storeHashState, MemoryState.readAt_overlay_le hm (by decide), HashState.bits]
   bv_decide
@@ -348,7 +348,7 @@ theorem MemoryState.storeHashState_storeWords8 (hc : ¬c.offset.uaddOverflow 208
   congr 1 <;> splice_bits
 
 /-- State word `i` of a stored struct. -/
-theorem MemoryState.readAt_storeHashState_word (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeHashState_word (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) {i : Nat} (hi : i < 8) :
     (m.storeHashState c v).readAt (c.add (BitVec.ofNat 64 (8 * i))) 64 = v.state[i]! := by
   rw [MemoryState.readAt_storeHashState hm hc
@@ -371,27 +371,27 @@ theorem MemoryState.storeHashState_storeAt_self {y : BitVec w} (hw : w = 1664) :
     (m.storeHashState c v).storeAt c y = m.storeAt c y := by
   subst hw
   simp only [MemoryState.storeHashState, MemoryState.storeAt, MemoryState.overlay,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, spliceBits_spliceBits_self]
 
 /-- The struct's fields but `buf`, of a stored struct. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeHashState_low (hm : InBounds m c 1664) :
+theorem MemoryState.readAt_storeHashState_low (hm : Room m c 1664) :
     (m.storeHashState c v).readAt c 640 = v.low := by
   rw [MemoryState.storeHashState, MemoryState.readAt_overlay_le hm (by decide), HashState.bits]
   bv_decide
 
 @[mlir_read]
-theorem MemoryState.readAt_storeHashState_count0 (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeHashState_count0 (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) :
     (m.storeHashState c v).readAt (c.add 64#64) 64 = v.count0 := by
   rw [MemoryState.readAt_storeHashState hm hc (by decide)]
   splice_bits
 
 @[mlir_read]
-theorem MemoryState.readAt_storeHashState_count1 (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeHashState_count1 (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) :
     (m.storeHashState c v).readAt (c.add 72#64) 64 = v.count1 := by
   rw [MemoryState.readAt_storeHashState hm hc (by decide)]
@@ -532,6 +532,19 @@ theorem GlobalState.WF.add_blocks_storeAt_storeWords8 {s : GlobalState} {x : Bit
     (⟨⟨s.alloc.nextFreeBlock + k⟩, (s.mem.storeAt p x).storeWords8 q u⟩ : GlobalState).WF :=
   GlobalState.WF.storeWords8 (s := ⟨_, s.mem.storeAt p x⟩)
     (GlobalState.WF.storeAt (s := ⟨⟨s.alloc.nextFreeBlock + k⟩, s.mem⟩) h.add_blocks)
+
+/-- `SHA512_Transform`'s result state: `tmp64` and the state words stored. -/
+@[mlir_transport]
+theorem GlobalState.WF.storeAt_storeWords8 {s : GlobalState} {x : BitVec w}
+    {u : Vector (BitVec 64) 8} (h : s.WF) :
+    (⟨s.alloc, (s.mem.storeAt p x).storeWords8 q u⟩ : GlobalState).WF :=
+  GlobalState.WF.storeWords8 (s := ⟨s.alloc, s.mem.storeAt p x⟩) (GlobalState.WF.storeAt h)
+
+/-- `SHA512_Pad`'s result state: `tmp64` and the struct stored. -/
+@[mlir_transport]
+theorem GlobalState.WF.storeAt_storeHashState {s : GlobalState} {x : BitVec w} (h : s.WF) :
+    (⟨s.alloc, (s.mem.storeAt p x).storeHashState c v⟩ : GlobalState).WF :=
+  GlobalState.WF.storeHashState (s := ⟨s.alloc, s.mem.storeAt p x⟩) (GlobalState.WF.storeAt h)
 
 /-- `SHA512_Pad`'s result state: blocks counted, `tmp64` and the struct stored. -/
 @[mlir_transport]

@@ -24,7 +24,8 @@ section Proof
 /-- `fd_ed25519_point_frombytes_2x` stores `spec`'s points of the encodings at `buf1` and `buf2`
 at `r1` (when the first decodes), then `r2`, and returns its value. -/
 public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr1 : s.mem.Quad5Room r1) (hr2 : s.mem.Quad5Room r2) (hb1 : Fits s.mem buf1 256)
+    (hwf : s.WF) (hg : s.mem.Globals fd_ed25519_point_frombytes_2x.globals)
+    (hr1 : s.mem.Quad5Room r1) (hr2 : s.mem.Quad5Room r2) (hb1 : Fits s.mem buf1 256)
     (hb2 : Fits s.mem buf2 256) (hb1_off : ¬buf1.offset.uaddOverflow 32#64)
     (hb2_off : ¬buf2.offset.uaddOverflow 32#64) :
     fd_ed25519_point_frombytes_2x.call
@@ -45,10 +46,11 @@ public theorem fd_ed25519_point_frombytes_2x.call_eq (r1 buf1 r2 buf2 : Pointer)
   iterate 8 step_pure
   step_call using
     (fd_r52x5_ge_decode2.call_eq _ _ _ _ _ _ _ _ _ _ _ _ _ hwf
+      (hg.mono rfl fun _ h => List.mem_append_right _ h)
       ⟨hr1.room_0, hr1.room_1, hr1.room_2, hr1.room_3, hr1.room_4, hr2.room_0, hr2.room_1,
         hr2.room_2, hr2.room_3, hr2.room_4⟩
       hb1 hb2 hb1_off hb2_off) consuming
-    hwf hr1 hr2 hb1 hb2
+    hwf hg hr1 hr2 hb1 hb2
   finish_block
   rw [hS]
   simp only [hR]

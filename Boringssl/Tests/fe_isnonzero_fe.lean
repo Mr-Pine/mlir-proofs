@@ -41,7 +41,8 @@ private def xs : List (Fin 5 → BitVec 64) :=
 /-- `f` in block 1; the result, or `none` for UB. -/
 private def run (f : Fin 5 → BitVec 64) : Option (BitVec 32) :=
   let s : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, blk 40 (bytesOf f))]⟩⟩
-  match fe_isnonzero_fe.call (fe_isnonzero_fe.args (.value ⟨⟨1⟩, 0⟩)) s with
+  match fe_isnonzero_fe.call (fe_isnonzero_fe.args (.value ⟨⟨1⟩, 0⟩))
+      (s.withGlobals fe_isnonzero_fe.globals) with
   | .value (.cons (.value r) .nil, _) => some r
   | _ => none
 

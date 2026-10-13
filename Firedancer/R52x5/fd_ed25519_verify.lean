@@ -39,16 +39,16 @@ noncomputable def fd_ed25519_verify.spec (tbl : Nat → Quad5) (msgSz : BitVec 6
     if res ≠ 0#32 then ⟨if res = -1#32 then -2#32 else -1#32, none, blocks⟩
     else
       let Aprime := Aprime.getD quadZero
-      if fd_ed25519_affine_is_small_order.spec Aprime ≠ 0#32 then ⟨-2#32, none, blocks + 16⟩
+      if fd_ed25519_affine_is_small_order.spec Aprime ≠ 0#32 then ⟨-2#32, none, blocks + 14⟩
       else
-        if fd_ed25519_affine_is_small_order.spec R ≠ 0#32 then ⟨-1#32, none, blocks + 32⟩
+        if fd_ed25519_affine_is_small_order.spec R ≠ 0#32 then ⟨-1#32, none, blocks + 28⟩
         else
           let (sha4, kw) := fd_ed25519_verify.hash buf0 r publicKey msgSz msg
           let k := Ref.fd_curve25519_scalar_reduce.spec (Words8.bits kw)
           let Aneg := fd_ed25519_point_neg.spec Aprime
           let Rcmp := fd_ed25519_double_scalar_mul_base.spec tbl k Aneg S
           ⟨if fd_ed25519_point_affine_eq.spec Rcmp R = 0#32 then -3#32 else 0#32, some sha4,
-            blocks + 32 + fd_ed25519_verify.hashBlocks buf0 r publicKey msgSz msg +
+            blocks + 28 + 2 * fd_ed25519_verify.hashBlocks buf0 r publicKey msgSz msg +
               fd_ed25519_double_scalar_mul_base.blocks k S +
               22⟩
 
@@ -102,6 +102,16 @@ theorem MemoryState.Quad5Room.storeQuad5? {m : MemoryState} (h : m.Quad5Room q) 
   · exact h
   · exact h.storeQuad5
 
+theorem Writable.storeQuad5? {m : MemoryState} (h : Writable m p) :
+    Writable (m.storeQuad5? q o) p := by
+  cases o
+  · exact h
+  · exact h.storeQuad5
+
+/-- `frombytes_2x`'s stores keep the globals table. -/
+theorem MemoryState.globals_storeQuad5_storeQuad5? {m : MemoryState} :
+    ((m.storeQuad5? q o).storeQuad5 r Q).globals = m.globals := by cases o <;> rfl
+
 theorem GlobalState.WF.storeQuad5?_mk {a : AllocState} {m : MemoryState}
     (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.storeQuad5? p o⟩ : GlobalState).WF := by
   cases o
@@ -134,7 +144,8 @@ attribute [local mlir_erase high] MemoryState.eraseFrom_storeQuad5?_of_le
 
 /-- `fd_ed25519_point_frombytes_2x.call_eq` with its store of `Pa` as `storeQuad5?`. -/
 theorem fd_ed25519_point_frombytes_2x.call_eq' (r1 buf1 r2 buf2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr1 : s.mem.Quad5Room r1) (hr2 : s.mem.Quad5Room r2) (hb1 : Fits s.mem buf1 256)
+    (hwf : s.WF) (hg : s.mem.Globals fd_ed25519_point_frombytes_2x.globals)
+    (hr1 : s.mem.Quad5Room r1) (hr2 : s.mem.Quad5Room r2) (hb1 : Fits s.mem buf1 256)
     (hb2 : Fits s.mem buf2 256) (hb1_off : ¬buf1.offset.uaddOverflow 32#64)
     (hb2_off : ¬buf2.offset.uaddOverflow 32#64) :
     fd_ed25519_point_frombytes_2x.call
@@ -145,7 +156,7 @@ theorem fd_ed25519_point_frombytes_2x.call_eq' (r1 buf1 r2 buf2 : Pointer) (s : 
           { alloc := ⟨s.alloc.nextFreeBlock + fd_r52x5_ge_decode2.blocks R.1⟩,
             mem := (s.mem.storeQuad5? r1 R.2.1).storeQuad5 r2 R.2.2 }) := by
   have h :=
-    fd_ed25519_point_frombytes_2x.call_eq r1 buf1 r2 buf2 s hwf hr1 hr2 hb1 hb2 hb1_off hb2_off
+    fd_ed25519_point_frombytes_2x.call_eq r1 buf1 r2 buf2 s hwf hg hr1 hr2 hb1 hb2 hb1_off hb2_off
   revert h
   generalize fd_ed25519_point_frombytes_2x.spec (s.mem.readAt buf1 256) (s.mem.readAt buf2 256) = R
   rcases R with ⟨_, _ | _, _⟩ <;> exact id
@@ -178,7 +189,7 @@ attribute [local mlir_erase high] MemoryState.eraseFrom_hashMem_of_le
 
 attribute [local mlir_fresh] Fits.hashMem_k
 
-attribute [local mlir_transport] MemoryState.Words8Room.storeSha InBounds.hashMem
+attribute [local mlir_transport] MemoryState.Words8Room.storeSha InBounds.hashMem Room.hashMem
   MemoryState.Words8Room.hashMem
 
 /-- `fd_sha512_fini( fd_sha512_append( fd_sha512_append( fd_sha512_append( fd_sha512_init( sha ),
@@ -192,10 +203,10 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
         (fd_ed25519_verify.args (.value msg) (.value msgSz) (.value sig) (.value pk)
             (.value sha)).get)
     (hR : E ⊨ [%299 := 32#64, %307 := k]) (hwf : S.WF) (hsha : S.mem.ShaFit sha)
-    (hsig : Fits S.mem sig (8 * 32)) (hsig_off : ¬sig.offset.uaddOverflow 32#64)
-    (hpk : Fits S.mem pk (8 * 32)) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
-    (hmsg : Fits S.mem msg (8 * msgSz.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgSz)
-    (hmsgSz : msgSz.toNat < 2 ^ 63)
+    (hshaw : Writable S.mem sha) (hsig : Fits S.mem sig (8 * 32))
+    (hsig_off : ¬sig.offset.uaddOverflow 32#64) (hpk : Fits S.mem pk (8 * 32))
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hmsg : Fits S.mem msg (8 * msgSz.toNat))
+    (hmsg_off : ¬msg.offset.uaddOverflow msgSz) (hmsgSz : msgSz.toNat < 2 ^ 63)
     (hk : S.mem.Words8Room k) (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id)
     (hmsg_sha : msg.id ≠ sha.id) (hk_sha : k.id ≠ sha.id)
     (hK :
@@ -206,8 +217,9 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
             {
               alloc :=
                 ⟨S.alloc.nextFreeBlock +
-                    fd_ed25519_verify.hashBlocks (S.mem.readAt sha 1024) (S.mem.readAt sig 256)
-                      (S.mem.readAt pk 256) msgSz (S.mem.readAt msg (8 * msgSz.toNat))⟩,
+                    2 *
+                      fd_ed25519_verify.hashBlocks (S.mem.readAt sha 1024) (S.mem.readAt sig 256)
+                        (S.mem.readAt pk 256) msgSz (S.mem.readAt msg (8 * msgSz.toNat))⟩,
               mem :=
                 let h :=
                   fd_ed25519_verify.hash (S.mem.readAt sha 1024) (S.mem.readAt sig 256)
@@ -217,7 +229,7 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
         K) :
     (fd_ed25519_verify.bb5.runBodyFrom E 1 S >>= g) = K := by
   -- the hash object `init` leaves, an equation that stays about the state before it
-  have hinit := Ref.fd_sha512_init.readSha hsha
+  have hinit := Ref.fd_sha512_init.readSha hsha hshaw
   obtain ⟨hsha_fits, hsha_off⟩ := hsha
   step_call using fd_sha512_init.call_eq
   rename_i S₀
@@ -261,12 +273,12 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
 /-- `fd_ed25519_verify` returns `spec`'s code and leaves `spec`'s hash object; its frame is freed.
 The signature, key and message are only read, the hash object only written by the SHA-512 calls. -/
 public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (sig pk sha : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgSz.toNat))
-    (hmsg_off : ¬msg.offset.uaddOverflow msgSz) (hmsgSz : msgSz.toNat < 2 ^ 63)
-    (hsig : Fits s.mem sig (8 * 64))
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals fd_ed25519_verify.globals)
+    (hmsg : Fits s.mem msg (8 * msgSz.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgSz)
+    (hmsgSz : msgSz.toNat < 2 ^ 63) (hsig : Fits s.mem sig (8 * 64))
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits s.mem pk (8 * 32))
-    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsha : s.mem.ShaFit sha) (hmsg_sha : msg.id ≠ sha.id)
-    (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id) :
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsha : s.mem.ShaFit sha) (hshaw : Writable s.mem sha)
+    (hmsg_sha : msg.id ≠ sha.id) (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id) :
     fd_ed25519_verify.call
         (fd_ed25519_verify.args (.value msg) (.value msgSz) (.value sig) (.value pk) (.value sha))
         s =
@@ -347,6 +359,12 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
     have hRA : R.id ≠ A.id := by simp [hA, hR, GlobalState.slot]
     -- int res = fd_ed25519_point_frombytes_2x( Aprime, public_key, R, r );
     step_call using fd_ed25519_point_frombytes_2x.call_eq'
+    -- the globals and the writable blocks past `storeQuad5?`, which the step does not see through
+    any_goals
+      subst hS'
+      first
+      | exact hg.mono MemoryState.globals_storeQuad5_storeQuad5? fun _ h => h
+      | exact Writable.storeQuad5 (Writable.storeQuad5? (by assumption))
     obtain ⟨⟨fres, Ap, Rp⟩, hfb⟩ :
       ∃ t, fd_ed25519_point_frombytes_2x.spec (S₀.mem.readAt pk 256) (S₀.mem.readAt sig 256) = t :=
       ⟨_, rfl⟩
@@ -436,7 +454,7 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           --   fd_sha512_init( sha ), r, 32UL ), public_key, 32UL ), msg, msg_sz ), k );
           have hsha : S.mem.ShaFit sha := ⟨hsha_fits, hsha_off⟩
           have hk_w := MemoryState.Words8Room.of_room hroom_k hk_off
-          clear hroom_k hA_pt
+          clear hA_pt
           step_pattern using fd_ed25519_verify.hash_run
           obtain ⟨⟨sha4, kw⟩, hH⟩ :
             ∃ H,
@@ -445,7 +463,7 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
                 H :=
             ⟨_, rfl⟩
           rw [hH] at hS hread_k
-          clear hsha hk_w
+          clear hsha hk_w hroom_k
           -- fd_curve25519_scalar_reduce( k, k );
           have hk32 : ¬k.offset.uaddOverflow 32#64 := by simp [BitVec.uaddOverflow, hk_off]
           have hk64 : ¬k.offset.uaddOverflow 64#64 := by simp [BitVec.uaddOverflow, hk_off]

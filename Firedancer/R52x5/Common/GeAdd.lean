@@ -153,12 +153,10 @@ def qpMulLoadRun (z0 z1 z2 z3 z4 : Dst Γ .ptr) (p : Reg Γ .ptr) (g1 g2 g3 g4 :
   [.lifetimeStart (.val z0.i z0.h) 32, .lifetimeStart (.val z1.i z1.h) 32,
     .lifetimeStart (.val z2.i z2.h) 32, .lifetimeStart (.val z3.i z3.h) 32,
     .lifetimeStart (.val z4.i z4.h) 32, .load y0 p,
-    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p,
-    .load y1 (.val g1.i g1.h), .unop (.gepConst { nusw := true, nuw := true } 64) g2 p,
-    .load y2 (.val g2.i g2.h),
+    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p, .load y1 (.val g1.i g1.h),
+    .unop (.gepConst { nusw := true, nuw := true } 64) g2 p, .load y2 (.val g2.i g2.h),
     .unop (.gepConst { nusw := true, nuw := true } 96) g3 p, .load y3 (.val g3.i g3.h),
-    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p,
-    .load y4 (.val g4.i g4.h),
+    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p, .load y4 (.val g4.i g4.h),
     .call fd_r52x5_quad_mul_fast.call
       (.cons (.val z0.i z0.h)
         (.cons (.val z1.i z1.h)
@@ -205,6 +203,9 @@ theorem runBodyFrom_qpMulLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
       InBounds S.mem Z0 256 ∧
         InBounds S.mem Z1 256 ∧
         InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hZw :
+      Writable S.mem Z0 ∧
+        Writable S.mem Z1 ∧ Writable S.mem Z2 ∧ Writable S.mem Z3 ∧ Writable S.mem Z4)
     (hPZ : P.id ≠ Z0.id ∧ P.id ≠ Z1.id ∧ P.id ≠ Z2.id ∧ P.id ≠ Z3.id ∧ P.id ≠ Z4.id)
     (hne :
       Z1.id ≠ Z0.id ∧
@@ -234,6 +235,7 @@ theorem runBodyFrom_qpMulLoadRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hZw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   obtain ⟨hP0, hP1, hP2, hP3, hP4⟩ := hPZ
   obtain ⟨hp1, hp2, hp3⟩ := hp
@@ -306,6 +308,9 @@ theorem runBodyFrom_geAddEndRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
       InBounds S.mem Z0 256 ∧
         InBounds S.mem Z1 256 ∧
         InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hZw :
+      Writable S.mem Z0 ∧
+        Writable S.mem Z1 ∧ Writable S.mem Z2 ∧ Writable S.mem Z3 ∧ Writable S.mem Z4)
     (hPZ : P.id ≠ Z0.id ∧ P.id ≠ Z1.id ∧ P.id ≠ Z2.id ∧ P.id ≠ Z3.id ∧ P.id ≠ Z4.id)
     (hne :
       Z1.id ≠ Z0.id ∧
@@ -340,6 +345,7 @@ theorem runBodyFrom_geAddEndRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
             K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hZw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   obtain ⟨hP0, hP1, hP2, hP3, hP4⟩ := hPZ
   obtain ⟨hp1, hp2, hp3, hp4⟩ := hp

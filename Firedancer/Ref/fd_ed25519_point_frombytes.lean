@@ -49,11 +49,11 @@ private theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_d
 
 /-- `fd_ed25519_point_frombytes` decodes the 32 bytes at `buf`: when `spec` is a point, it stores it
 at `r` and returns `r`, else it returns null and stores nothing. `buf` is read before `r` is
-written, so `r` may alias it. The globals', temporaries' and callees' blocks are freed again: only
-the counter moves on, by 79 blocks (57 on failure). -/
+written, so `r` may alias it. The temporaries' and callees' blocks are freed again: only the
+counter moves on, by 76 blocks (54 on failure). -/
 public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointRoom r) (hbuf : Fits s.mem buf (8 * 32))
-    (hbuf_off : ¬buf.offset.uaddOverflow 32#64) :
+    (hg : s.mem.Globals fd_ed25519_point_frombytes.globals) (hr : s.mem.PointRoom r)
+    (hbuf : Fits s.mem buf (8 * 32)) (hbuf_off : ¬buf.offset.uaddOverflow 32#64) :
     fd_ed25519_point_frombytes.call (fd_ed25519_point_frombytes.args (.value r) (.value buf)) s =
       .value
         (.cons
@@ -64,8 +64,8 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
           {
             alloc :=
               ⟨s.alloc.nextFreeBlock +
-                  if (fd_ed25519_point_frombytes.spec (s.mem.readAt buf 256)).isSome then 79
-                  else 57⟩,
+                  if (fd_ed25519_point_frombytes.spec (s.mem.readAt buf 256)).isSome then 76
+                  else 54⟩,
             mem :=
               s.mem.storePointOpt r
                 (fd_ed25519_point_frombytes.spec (s.mem.readAt buf 256)) }) := by

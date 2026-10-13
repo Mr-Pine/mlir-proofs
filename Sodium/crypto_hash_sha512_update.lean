@@ -31,13 +31,6 @@ def blocks (h : Vector (BitVec 64) 8) (D : BitVec n) (a : Nat) : Nat → Vector 
   | 0 => h
   | k + 1 => blocks (SHA512_Transform.spec h (D.extractLsb' (8 * a) 1024)) D (a + 128) k
 
-/-- How many blocks `update` compresses. -/
-def cores (v : HashState) (inlen : BitVec 64) : Nat :=
-  if inlen = 0#64 then 0
-  else
-    if inlen.toNat < 128 - v.count1.toNat / 8 % 128 then 0
-    else 1 + (inlen.toNat - (128 - v.count1.toNat / 8 % 128)) / 128
-
 end crypto_hash_sha512_update
 
 open crypto_hash_sha512_update in
@@ -153,7 +146,8 @@ from byte `a`, `j + 1` blocks left. -/
 theorem blocks_loop (st inp tmp : Pointer) (inlen ast : BitVec 64) (M : MemoryState)
     (D : BitVec (8 * inlen.toNat)) (hD : M.readAt inp (8 * inlen.toNat) = D)
     (hin : Fits M inp (8 * inlen.toNat)) (hino : ¬inp.offset.uaddOverflow inlen)
-    (hsep : inp.id ≠ st.id) (hMf : M.HashStateFit st) (htmp : Room M tmp 5632)
+    (hsep : inp.id ≠ st.id) (hgM : M.Globals crypto_hash_sha512_update.globals)
+    (hMf : M.HashStateFit st) (htmp : Room M tmp 5632)
     (htmpo : ¬tmp.offset.uaddOverflow 704#64) (htmpst : tmp.id ≠ st.id) (htmpin : tmp.id ≠ inp.id)
     (g : Vals [.bv 32] × GlobalState → PoisonOr β) (K : PoisonOr β) :
     ∀ j a (w : HashState) (X : BitVec 5632) (S : GlobalState) (E : ⟪Γ⟫),
@@ -172,7 +166,7 @@ theorem blocks_loop (st inp tmp : Pointer) (inlen ast : BitVec 64) (M : MemorySt
               BitVec.ofNat 64 (inlen.toNat - (a + 128 * j + 128)), %1412 :=
               inp.add (BitVec.ofNat 64 (a + 128 * j + 128))]) →
             S'.WF →
-            S'.alloc = ⟨S.alloc.nextFreeBlock + (j + 1)⟩ →
+            S'.alloc = S.alloc →
             S'.mem =
               (M.storeAt tmp X').storeHashState st { w with state := blocks w.state D a (j + 1) } →
             (crypto_hash_sha512_update.runFrom E' 34 S' >>= g) = K) →
@@ -208,10 +202,12 @@ theorem blocks_loop (st inp tmp : Pointer) (inlen ast : BitVec 64) (M : MemorySt
       rw [hM]; exact htmp.storeAt.storeHashState
     have hsep' : tmp.id ≠ (inp.add (BitVec.ofNat 64 a)).id := htmpin
     have hg := hblko
+    have hgS : S.mem.Globals crypto_hash_sha512_update.globals := by
+      rw [hM]; exact hgM.mono rfl fun _ h => h
     block_init
     -- SHA512_Transform(state->state, in, &tmp64[0], &tmp64[80]);
     step_call using SHA512_Transform.call_eq consuming hst512 hsto64 hblk hblko htmp' hsep'
-    rw [hM, MemoryState.readWords8_storeHashState hMf.2.1.inBounds.storeAt hsto,
+    rw [hM, MemoryState.readWords8_storeHashState hMf.2.1.storeAt hsto,
       block_read hD hin hino hsep htmpin (by omega), transform_merge hsto htmpst] at hS
     clear hread_tmp hSf
     -- in += 128; inlen -= 128;
@@ -252,10 +248,12 @@ theorem blocks_loop (st inp tmp : Pointer) (inlen ast : BitVec 64) (M : MemorySt
       rw [hM]; exact htmp.storeAt.storeHashState
     have hsep' : tmp.id ≠ (inp.add (BitVec.ofNat 64 a)).id := htmpin
     have hg := hblko
+    have hgS : S.mem.Globals crypto_hash_sha512_update.globals := by
+      rw [hM]; exact hgM.mono rfl fun _ h => h
     block_init
     -- SHA512_Transform(state->state, in, &tmp64[0], &tmp64[80]);
     step_call using SHA512_Transform.call_eq consuming hst512 hsto64 hblk hblko htmp' hsep'
-    rw [hM, MemoryState.readWords8_storeHashState hMf.2.1.inBounds.storeAt hsto,
+    rw [hM, MemoryState.readWords8_storeHashState hMf.2.1.storeAt hsto,
       block_read hD hin hino hsep htmpin (by omega), transform_merge hsto htmpst] at hS
     clear hread_tmp hSf
     -- in += 128; inlen -= 128;
@@ -277,8 +275,6 @@ theorem blocks_loop (st inp tmp : Pointer) (inlen ast : BitVec 64) (M : MemorySt
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> env_reads
     · rwa [hj1] at h3
     · rw [h5, hS]
-      simp only [AllocState.mk.injEq]
-      omega
     · rw [h6]
       rfl
 
@@ -287,9 +283,10 @@ end crypto_hash_sha512_update
 open crypto_hash_sha512_update in
 /-- `crypto_hash_sha512_update(state, in, inlen)` appends the `inlen` bytes at `in` to the struct
 (`spec`) and returns `0`. The buffered bytes must be known, `in` must not share the struct's
-block. The block counter advances by `tmp64`'s and one per compressed block. -/
+block. The block counter advances by `tmp64`'s. -/
 public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : BitVec 64)
-    (s : GlobalState) (hwf : s.WF) (hst : s.mem.HashStateFit st)
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals crypto_hash_sha512_update.globals)
+    (hst : s.mem.HashStateFit st)
     (hpre : (s.mem.readHashState st).Prefix ((s.mem.readHashState st).count1.toNat / 8 % 128))
     (hin : Fits s.mem inp (8 * inlen.toNat)) (hino : ¬inp.offset.uaddOverflow inlen)
     (hsep : inp.id ≠ st.id) :
@@ -297,10 +294,7 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
         (crypto_hash_sha512_update.args (.value st) (.value inp) (.value inlen)) s =
       .value
         (.cons (.value 0#32) .nil,
-          {
-            alloc :=
-              ⟨s.alloc.nextFreeBlock + 1 +
-                  crypto_hash_sha512_update.cores (s.mem.readHashState st) inlen⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem :=
               s.mem.storeHashState st
                 (crypto_hash_sha512_update.spec (s.mem.readHashState st) inlen
@@ -313,9 +307,9 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
     rw [← hv, MemoryState.readHashState_count0 hst.2.1.inBounds hst.1]
   have hsto := hst.1
   generalize hres : crypto_hash_sha512_update.spec v inlen D = res
-  generalize hk : crypto_hash_sha512_update.cores v inlen = k
   func_init
   have hD₀ : S₀.mem.readAt inp (8 * inlen.toNat) = D := hS ▸ hD
+  have hg₀ : S₀.mem.Globals crypto_hash_sha512_update.globals := hS ▸ hg
   clear hD
   block_init
   iterate 30 step_pure
@@ -330,10 +324,10 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
     block_init
     step_lifetime
     finish_block
-    subst hS hres hk
+    subst hS hres
     erase_frame
-    simp only [crypto_hash_sha512_update.spec, crypto_hash_sha512_update.cores, ↓reduceIte,
-      Nat.add_zero, ← hv, MemoryState.storeHashState_readHashState_self ⟨hsto, hst₀, hst₀_1⟩]
+    simp only [crypto_hash_sha512_update.spec, ↓reduceIte, ← hv,
+      MemoryState.storeHashState_readHashState_self ⟨hsto, hst₀, hst₀_1⟩]
     rfl
   · have hne := hbr
     block_init
@@ -399,10 +393,9 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
           (by
             rw [hS]; rfl)
           hm₀ hinM hino hsep _ _ ?_
-      subst hres hk
+      subst hres
       rw [hM₀, hS]
-      simp only [crypto_hash_sha512_update.spec, crypto_hash_sha512_update.cores, hne, hRe, hn,
-        ↓reduceIte, Nat.add_zero]
+      simp only [crypto_hash_sha512_update.spec, hne, hRe, hn, ↓reduceIte]
       have htid : S₀.alloc.nextFreeBlock ≤ tmp.id.id := by
         rw [htmp]; exact Nat.le_refl _
       simp only [PoisonOr.value_bind, MemoryState.eraseFrom_lifetimeEnd_of_le htid,
@@ -445,17 +438,19 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
         Pointer.not_uaddOverflow_add hsto (by decide)
       have htmpR : Room ((S₀.alloca 704 true).mem.lifetimeStart tmp) tmp 5632 := by
         rw [htmp, ← GlobalState.allocaPtr_eq_slot]
-        exact Room.lifetimeStart_self (InBounds.allocaPtr_self)
+        exact Room.lifetimeStart_self InBounds.allocaPtr_self Writable.allocaPtr_self
       have htmpS : Room S.mem tmp 5632 := by
         rw [hM]; exact htmpR.storeHashState
       have htmpo : ¬tmp.offset.uaddOverflow 704#64 := by
         rw [htmp_off]; decide
       have hsep' : tmp.id ≠ (st.add 80#64).id := Ne.symm hst_ne_tmp
+      have hgS : S.mem.Globals crypto_hash_sha512_update.globals := by
+        rw [hM]; exact hg₀.mono rfl fun _ h => h
       block_init
       step_pure
       step_call using SHA512_Transform.call_eq consuming hst512 hsto64 hbuf hbufo htmpS hsep'
-      rw [hM, MemoryState.readWords8_storeHashState hm₀.2.1.inBounds hsto,
-        MemoryState.readAt_storeHashState_buf hm₀.2.1.inBounds hsto,
+      rw [hM, MemoryState.readWords8_storeHashState hm₀.2.1 hsto,
+        MemoryState.readAt_storeHashState_buf hm₀.2.1 hsto,
         MemoryState.storeHashState_storeAt_comm (Ne.symm hst_ne_tmp),
         MemoryState.storeHashState_storeWords8 hsto] at hS
       clear hread_tmp hSf
@@ -483,8 +478,8 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
         have hj2 : inlen.toNat < 128 - R + 128 * j + 256 := by omega
         refine
           blocks_loop st inp tmp inlen ast ((S₀.alloca 704 true).mem.lifetimeStart tmp) D hD₁ hinM
-            hino hsep hm₀ htmpR htmpo (Ne.symm hst_ne_tmp) htmpin _ _ j (128 - R) _ _ S E hj1 hj2
-            hArgs (by env_reads) ?_ hwf (by rw [hS]) ?_
+            hino hsep (by mem_fact) hm₀ htmpR htmpo (Ne.symm hst_ne_tmp) htmpin _ _ j (128 - R) _ _
+            S E hj1 hj2 hArgs (by env_reads) ?_ hwf (by rw [hS]) ?_
         · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> env_reads
         intro E S X' hArgs hC hR hwf hSb hM
         have hm' : inlen.toNat - (128 - R + 128 * j + 128) < 128 := by omega
@@ -495,8 +490,7 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
         refine
           tail_block st inp tmp (inp.add (BitVec.ofNat 64 (128 - R + 128 * j + 128))) inlen
             (inlen.toNat - (128 - R + 128 * j + 128)) ast _ _ S E hArgs (by env_reads)
-            (by env_reads) hm' hwf hM hm₀.storeAt ?_ ?_ hsep htmpR.storeAt _ _
-            ?_
+            (by env_reads) hm' hwf hM hm₀.storeAt ?_ ?_ hsep htmpR.storeAt _ _ ?_
         · exact
             (Fits.add_of_le hga'
                 (by
@@ -524,16 +518,15 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
               hD₁,
             BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show 128 - R + 128 * j + 128 < 2 ^ 64 by omega),
             Nat.mul_comm _ 8]
-          have hSa' : S.alloc = ⟨S₀.alloc.nextFreeBlock + 1 + (1 + (j + 1))⟩ := by
+          have hSa' : S.alloc = ⟨S₀.alloc.nextFreeBlock + 1⟩ := by
             rw [hSb, hS]
-            simp only [hSa, hA0, GlobalState.alloca, AllocState.mk.injEq]
-            omega
+            simp only [hSa, hA0, GlobalState.alloca]
           have hmod :
             (inlen.toNat - (128 - R)) % 128 = inlen.toNat - (128 - R + 128 * j + 128) := by omega
           have hoff : 128 - R + 128 * (j + 1) = 128 - R + 128 * j + 128 := by omega
-          subst hres hk
-          simp only [crypto_hash_sha512_update.spec, crypto_hash_sha512_update.cores, hne, hRe,
-            show ¬inlen.toNat < 128 - R by omega, ↓reduceIte]
+          subst hres
+          simp only [crypto_hash_sha512_update.spec, hne, hRe, show ¬inlen.toNat < 128 - R by omega,
+            ↓reduceIte]
           rw [hRe, hj, hmod, hoff, hSa']
       · -- the rest buffered
         have hm : inlen.toNat - (128 - R) < 128 := by
@@ -576,14 +569,14 @@ public theorem crypto_hash_sha512_update.call_eq (st inp : Pointer) (inlen : Bit
                   simp; rw [Nat.mod_eq_of_lt (by omega)]; omega)
                 hD₁,
               BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega), Nat.mul_comm (128 - R) 8]
-          have hSa' : S.alloc = ⟨S₀.alloc.nextFreeBlock + 1 + 1⟩ := by
+          have hSa' : S.alloc = ⟨S₀.alloc.nextFreeBlock + 1⟩ := by
             rw [hS]
             simp only [hSa, hA0, GlobalState.alloca]
-          subst hres hk
+          subst hres
           rw [hr1, hr2]
-          simp only [crypto_hash_sha512_update.spec, crypto_hash_sha512_update.cores, hne, hRe,
-            show ¬inlen.toNat < 128 - R by omega, ↓reduceIte, Nat.div_eq_of_lt hm,
-            Nat.mod_eq_of_lt hm, blocks, Nat.mul_zero, Nat.add_zero]
+          simp only [crypto_hash_sha512_update.spec, hne, hRe, show ¬inlen.toNat < 128 - R by omega,
+            ↓reduceIte, Nat.div_eq_of_lt hm, Nat.mod_eq_of_lt hm, blocks, Nat.mul_zero,
+            Nat.add_zero]
           rw [hRe, Nat.mod_eq_of_lt hm, hSa']
 
 end Proof

@@ -23,7 +23,8 @@ theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {x : Bit
     (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (spliceBits x (off.toNat * 8) y) := by
   have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
     simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits, ho, MemoryBlock.mk.injEq, true_and,
@@ -73,10 +74,10 @@ theorem MemoryState.storeWords8_readWords8_self {m : MemoryState} (h : m.Words8F
     MemoryState.storeAt_readAt_self h4, MemoryState.storeAt_readAt_self h5,
     MemoryState.storeAt_readAt_self h6, MemoryState.storeAt_readAt_self h7]
 
-/-- Eight words stored where they fit read back. -/
-theorem MemoryState.readWords8_storeWords8_self {m : MemoryState} (h : m.Words8Fit p) :
-    (m.storeWords8 p v).readWords8 p = v := by
-  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+/-- Eight words stored where they fit, in a writable block, read back. -/
+theorem MemoryState.readWords8_storeWords8_self {m : MemoryState} (h : m.Words8Fit p)
+    (hw : Writable m p) : (m.storeWords8 p v).readWords8 p = v := by
+  obtain ⟨ho, h0, h1, h2, h3, h4, h5, h6, h7⟩ := h.room hw
   ext k hk
   simp only [MemoryState.readWords8, MemoryState.storeWords8]
   match k, hk with
@@ -267,8 +268,8 @@ theorem MemoryState.storeSha_storeAt_buf_base {m : MemoryState} (h : ¬p.offset.
   have := MemoryState.storeSha_storeAt_buf (m := m) (v := v) (off := 0#64) (x := x) h (by simpa)
   simpa using this
 
-/-- The struct stored where it fits reads back. -/
-theorem MemoryState.readSha_storeSha_self {m : MemoryState} (h : m.ShaFit p) :
+/-- The struct stored where it fits, in a writable block, reads back. -/
+theorem MemoryState.readSha_storeSha_self {m : MemoryState} (h : m.ShaFit p) (hw : Writable m p) :
     (m.storeSha p v).readSha p = v := by
   have h0 := h.fits_buf (w := 1024) (by decide)
   have hu := h.fits_add (k := 200) (w := 64) (by decide)
@@ -292,31 +293,33 @@ theorem MemoryState.readSha_storeSha_self {m : MemoryState} (h : m.ShaFit p) :
         (Range.disjoint_sha_base h.2 (by decide) (by decide)).symm,
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha_base h.2 (by decide) (by decide)).symm,
-      MemoryState.readAt_storeAt_self h0.inBounds]
-  · exact MemoryState.readWords8_storeWords8_self h.words8Fit.storeAt.storeAt.storeAt.storeAt
+      MemoryState.readAt_storeAt_self (h0.room hw)]
+  · exact
+      MemoryState.readWords8_storeWords8_self h.words8Fit.storeAt.storeAt.storeAt.storeAt
+        (hw.storeAt.storeAt.storeAt.storeAt.of_id_eq rfl)
   · rw [MemoryState.readAt_storeWords8_of_disjoint hs (hd 200 64 (by decide) (by decide)),
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha h.2 (a := 216) (b := 200) (by decide) (by decide) (by decide)),
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha h.2 (a := 208) (b := 200) (by decide) (by decide) (by decide)),
-      MemoryState.readAt_storeAt_self hu.storeAt.inBounds]
+      MemoryState.readAt_storeAt_self (hu.room (hw.of_id_eq rfl)).storeAt]
   · rw [MemoryState.readAt_storeWords8_of_disjoint hs (hd 208 64 (by decide) (by decide)),
       MemoryState.readAt_storeAt_disjoint
         (Range.disjoint_sha h.2 (a := 216) (b := 208) (by decide) (by decide) (by decide)),
-      MemoryState.readAt_storeAt_self hl.storeAt.storeAt.inBounds]
+      MemoryState.readAt_storeAt_self (hl.room (hw.of_id_eq rfl)).storeAt.storeAt]
   · rw [MemoryState.readAt_storeWords8_of_disjoint hs (hd 216 64 (by decide) (by decide)),
-      MemoryState.readAt_storeAt_self hh.storeAt.storeAt.storeAt.inBounds]
+      MemoryState.readAt_storeAt_self (hh.room (hw.of_id_eq rfl)).storeAt.storeAt.storeAt]
 
-theorem MemoryState.readAt_storeSha_buf {m : MemoryState} (h : m.ShaFit p) :
+theorem MemoryState.readAt_storeSha_buf {m : MemoryState} (h : m.ShaFit p) (hw : Writable m p) :
     (m.storeSha p v).readAt p 1024 = v.buf :=
-  congrArg ShaState.buf (MemoryState.readSha_storeSha_self h)
+  congrArg ShaState.buf (MemoryState.readSha_storeSha_self h hw)
 
-theorem MemoryState.readWords8_storeSha_state {m : MemoryState} (h : m.ShaFit p) :
-    (m.storeSha p v).readWords8 (p.add 128#64) = v.state :=
-  congrArg ShaState.state (MemoryState.readSha_storeSha_self h)
+theorem MemoryState.readWords8_storeSha_state {m : MemoryState} (h : m.ShaFit p)
+    (hw : Writable m p) : (m.storeSha p v).readWords8 (p.add 128#64) = v.state :=
+  congrArg ShaState.state (MemoryState.readSha_storeSha_self h hw)
 
 /-- The state words of a stored struct, at the offsets `getelementptr` gives them. -/
-theorem MemoryState.readAt_storeSha_state {m : MemoryState} (h : m.ShaFit p) :
+theorem MemoryState.readAt_storeSha_state {m : MemoryState} (h : m.ShaFit p) (hw : Writable m p) :
     (m.storeSha p v).readAt (p.add 128#64) 64 = v.state[0] ∧
       (m.storeSha p v).readAt (p.add 136#64) 64 = v.state[1] ∧
       (m.storeSha p v).readAt (p.add 144#64) 64 = v.state[2] ∧
@@ -325,9 +328,9 @@ theorem MemoryState.readAt_storeSha_state {m : MemoryState} (h : m.ShaFit p) :
       (m.storeSha p v).readAt (p.add 168#64) 64 = v.state[5] ∧
       (m.storeSha p v).readAt (p.add 176#64) 64 = v.state[6] ∧
       (m.storeSha p v).readAt (p.add 184#64) 64 = v.state[7] := by
-  have hw := MemoryState.readWords8_storeSha_state (v := v) h
-  simp only [MemoryState.readWords8, Pointer.add_add, BitVec.reduceAdd] at hw
-  rw [← hw]
+  have h8 := MemoryState.readWords8_storeSha_state (v := v) h hw
+  simp only [MemoryState.readWords8, Pointer.add_add, BitVec.reduceAdd] at h8
+  rw [← h8]
   simp
 
 /-- Storing the struct that is there changes nothing. -/
@@ -375,6 +378,10 @@ theorem Fits.storeSha {m : MemoryState} (h : Fits m p w) : Fits (m.storeSha q v)
 @[simp]
 theorem Room.storeSha_iff {m : MemoryState} : Room (m.storeSha q v) p w ↔ Room m p w := by
   simp [MemoryState.storeSha]
+
+@[mlir_transport]
+theorem Writable.storeSha {m : MemoryState} (h : Writable m p) : Writable (m.storeSha q v) p :=
+  (h.storeAt.storeAt.storeAt.storeAt).storeWords8
 
 @[mlir_transport]
 theorem Room.storeSha {m : MemoryState} (h : Room m p w) : Room (m.storeSha q v) p w :=
@@ -534,11 +541,10 @@ abbrev hdr7 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
 theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
     (M : MemoryState) (v : ShaState) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (fd_sha512_append.args (.value sha) (.value data) (.value sz)).get)
-    (hwf : S.WF) (hM : S.mem = M.storeSha sha v) (hMf : M.ShaFit sha)
+    (hwf : S.WF) (hM : S.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hMw : Writable M sha)
     (hd : Fits S.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id)
-    (hn : n.toNat < 2 ^ 63)
-    (hD : S.mem.readAt d (8 * n.toNat) = D) (g : Vals [.ptr] × GlobalState → PoisonOr β)
-    (K : PoisonOr β)
+    (hn : n.toNat < 2 ^ 63) (hD : S.mem.readAt d (8 * n.toNat) = D)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.cons (.value sha) .nil, { S with mem := M.storeSha sha (leftover v n D) }) >>=
@@ -547,6 +553,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
     (fd_sha512_append.runFrom (hdr7 sha d n E) 7 S >>= g) = K := by
   subst hK
   have hSf : S.mem.ShaFit sha := hM ▸ hMf.storeSha
+  have hSw : Writable S.mem sha := hM ▸ hMw.storeSha
   block_init
   -- buf_used = sz & (FD_SHA512_PRIVATE_BUF_MAX-1UL);
   step_pure
@@ -610,21 +617,22 @@ abbrev hdr5 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
 theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
     (M : MemoryState) (v : ShaState) (S₁ : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (fd_sha512_append.args (.value sha) (.value data) (.value sz)).get)
-    (hwf : S₁.WF) (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha)
-    (hd : Fits S₁.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id)
-    (hn : n.toNat < 2 ^ 63)
+    (hwf : S₁.WF) (hg : S₁.mem.Globals fd_sha512_append.globals) (hM : S₁.mem = M.storeSha sha v)
+    (hMf : M.ShaFit sha) (hMw : Writable M sha) (hd : Fits S₁.mem d (8 * n.toNat))
+    (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id) (hn : n.toNat < 2 ^ 63)
     (hD : S₁.mem.readAt d (8 * n.toNat) = D) (g : Vals [.ptr] × GlobalState → PoisonOr β)
     (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.cons (.value sha) .nil,
-              { alloc := ⟨S₁.alloc.nextFreeBlock + 2 * if n >>> 7 ≠ 0#64 then 1 else 0⟩,
+              { alloc := ⟨S₁.alloc.nextFreeBlock + if n >>> 7 ≠ 0#64 then 1 else 0⟩,
                 mem := M.storeSha sha (bulk v n D) }) >>=
           g) =
         K) :
     (fd_sha512_append.runFrom (hdr5 sha d n E) 5 S₁ >>= g) = K := by
   subst hK
   have hSf : S₁.mem.ShaFit sha := hM ▸ hMf.storeSha
+  have hSw : Writable S₁.mem sha := hM ▸ hMw.storeSha
   block_init
   -- ulong block_cnt = sz >> FD_SHA512_PRIVATE_LG_BUF_MAX;
   step_pure
@@ -654,7 +662,7 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
     finish_block
     have hstate : S₁.mem.readWords8 (sha.add 128#64) = v.state := by
       rw [hM]
-      exact congrArg ShaState.state (MemoryState.readSha_storeSha_self hMf)
+      exact congrArg ShaState.state (MemoryState.readSha_storeSha_self hMf hMw)
     have hblock :
       S₁.mem.readAt d (1024 * (n >>> 7).toNat) = D.setWidth (1024 * (n >>> 7).toNat) := by
       rw [← hread_d]
@@ -672,15 +680,16 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
 end fd_sha512_append
 
 /-- `fd_sha512_append` appends the `sz` bytes at `data` to the struct at `sha` and returns `sha`.
-Each `fd_sha512_core` call it makes leaves two blocks counted; `data` is in another block. -/
+Each `fd_sha512_core` call it makes leaves one block counted; `data` is in another block. -/
 public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s : GlobalState)
-    (hwf : s.WF) (hsha : s.mem.ShaFit sha) (hu : (s.mem.readSha sha).bufUsed.toNat < 128)
+    (hwf : s.WF) (hg : s.mem.Globals fd_sha512_append.globals) (hsha : s.mem.ShaFit sha)
+    (hshaw : Writable s.mem sha) (hu : (s.mem.readSha sha).bufUsed.toNat < 128)
     (hdata : Fits s.mem data (8 * sz.toNat)) (hdo : ¬data.offset.uaddOverflow sz)
     (hsep : data.id ≠ sha.id) (hsz : sz.toNat < 2 ^ 63) :
     fd_sha512_append.call (fd_sha512_append.args (.value sha) (.value data) (.value sz)) s =
       .value
         (.cons (.value sha) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2 * fd_sha512_append.cores (s.mem.readSha sha) sz⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + fd_sha512_append.cores (s.mem.readSha sha) sz⟩,
             mem :=
               s.mem.storeSha sha
                 (fd_sha512_append.spec (s.mem.readSha sha) sz
@@ -696,7 +705,7 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
     block_init
     finish_block
     subst hS hbr
-    simp only [fd_sha512_append.spec, cores, ↓reduceIte, Nat.mul_zero, Nat.add_zero, hwf₀.eraseFrom,
+    simp only [fd_sha512_append.spec, cores, ↓reduceIte, Nat.add_zero, hwf₀.eraseFrom,
       MemoryState.storeSha_readSha_self hsha₀]
   · have hsz : sz ≠ 0#64 := hbr
     block_init
@@ -814,7 +823,8 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
         rw [MemoryState.storeSha_storeAt_buf hsha₀.2
             (by
               rw [hrem]; omega),
-          MemoryState.readWords8_storeSha_state hsha₀, MemoryState.readAt_storeSha_buf hsha₀,
+          MemoryState.readWords8_storeSha_state hsha₀ hshaw₀,
+          MemoryState.readAt_storeSha_buf hsha₀ hshaw₀,
           MemoryState.storeSha_storeWords8_state] at hS
         step_store
         rw [MemoryState.storeSha_storeAt_bufUsed hsha₀.2] at hS

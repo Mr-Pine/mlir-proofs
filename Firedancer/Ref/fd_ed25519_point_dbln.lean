@@ -48,7 +48,9 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
         n.toNat ≤ 255 →
         S.WF →
         S.mem.PointFit r →
+        Writable S.mem r →
         S.mem.PointFit tp →
+        Writable S.mem tp →
         r.id ≠ tp.id →
         S.mem.readPoint tp = t →
         (∀ (E' : ⟪Γ⟫) (S' : GlobalState),
@@ -66,7 +68,7 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
   intro m
   induction m with
   | zero =>
-    intro k t S E hArgs hR hk hk1 hn hwf hr htp hsep ht hK
+    intro k t S E hArgs hR hk hk1 hn hwf hr hrw htp htw hsep ht hK
     block_init
     step_call using fd_ed25519_point_add_final_mul_projective.call_eq
     step_call using fd_ed25519_partial_dbl.call_eq
@@ -84,7 +86,7 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
     · step_loop using hK
       rfl
   | succ m ih =>
-    intro k t S E hArgs hR hk hk1 hn hwf hr htp hsep ht hK
+    intro k t S E hArgs hR hk hk1 hn hwf hr hrw htp htw hsep ht hK
     have htpo := htp.1
     block_init
     step_call using fd_ed25519_point_add_final_mul_projective.call_eq
@@ -95,15 +97,16 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
     finish_block
     · -- around again, one iteration fewer
       refine
-        ih (k + 1) (step t) S E hArgs ?_ (by omega) (by omega) hn hwf hr htp hsep ?_
+        ih (k + 1) (step t) S E hArgs ?_ (by omega) (by omega) hn hwf hr hrw htp htw hsep ?_
           (fun E' S' h1 h2 h3 => hK E' S' h1 h2 (h3.trans ?_))
       · refine ⟨?_, ?_, ?_⟩ <;> env_reads
         rw [BitVec.ofNat_add]
       · rw [hread_tp]
         rfl
       · have hr₀ := hr
-        rw [hS] at hr₀
-        replace hr₀ := hr₀.room.of_storePoint.of_storePoint
+        have hrw₀ := hrw
+        rw [hS] at hr₀ hrw₀
+        replace hr₀ := (hr₀.room hrw₀).of_storePoint.of_storePoint
         rw [hS]
         simp only [GlobalState.mk.injEq, AllocState.mk.injEq]
         refine ⟨by omega, ?_⟩
@@ -124,8 +127,8 @@ end fd_ed25519_point_dbln
 /-- `fd_ed25519_point_dbln` stores `spec` of the point at `a` (its `2ⁿ` multiple) at `r` and returns
 `r`, for `1 ≤ n ≤ 255`; `r` may be `a`. The block counter advances by `1 + 5 n`. -/
 public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.PointFit r) (ha : s.mem.PointFit a) (hn1 : 1 ≤ n.toNat)
-    (hn : n.toNat ≤ 255) :
+    (hwf : s.WF) (hr : s.mem.PointFit r) (hrw : Writable s.mem r) (ha : s.mem.PointFit a)
+    (hn1 : 1 ≤ n.toNat) (hn : n.toNat ≤ 255) :
     fd_ed25519_point_dbln.call (fd_ed25519_point_dbln.args (.value r) (.value a) (.value n)) s =
       .value
         (.cons (.value r) .nil,
@@ -148,7 +151,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
       omega
     refine
       fd_ed25519_point_dbln.loop r a tp n _ _ (n.toNat - 2) 1 _ S E hArgs ?_ (by omega) le_rfl hn
-        hwf hr htp hr_ne_tp hread_tp ?_
+        hwf hr hrw (by assumption) (by mem_fact) hr_ne_tp hread_tp ?_
     · env_reads
     · intro E' S' h1 h2 h3
       block_init

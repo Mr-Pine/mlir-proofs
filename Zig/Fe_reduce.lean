@@ -7413,12 +7413,13 @@ theorem Fe.reduce.code_eq {x : Fin 5 → BitVec 64} (hx : Fe.Lt x (2 ^ 63)) :
 
 /-- `Fe.reduce` stores `spec fe` back at `fe`, for limbs below `2^63`. -/
 public theorem Fe_reduce.call_eq (fe : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hfe : s.mem.LimbsFit fe) (hfe' : Fe.Lt (s.mem.readLimbs fe) (2 ^ 63)) :
+    (hfe : s.mem.LimbsFit fe) (hfew : Writable s.mem fe)
+    (hfe' : Fe.Lt (s.mem.readLimbs fe) (2 ^ 63)) :
     Fe_reduce.call (Fe_reduce.args (.value fe)) s =
       .value
         (.nil, { s with mem := s.mem.storeLimbs fe (Fe.reduce.spec (s.mem.readLimbs fe)) }) := by
   func_init
-  have hfe_room := hfe.room
+  have hfe_room := hfe.room hfew
   have hov := Fe.reduce.noOverflow (hS ▸ hfe')
   have hc := Fe.reduce.code_eq (hS ▸ hfe')
   simp only [MemoryState.readLimbs] at hov hc

@@ -88,11 +88,11 @@ noncomputable def ge25519_double_scalarmult_vartime.spec (a : BitVec 256) (A : G
   | none => Boringssl.ge_p2_0.spec
 
 open ge25519_double_scalarmult_vartime in
-/-- The blocks the function allocates, its callees' included: 24 before the main loop. -/
+/-- The blocks the function allocates, its callees' included: 15 before the main loop. -/
 def ge25519_double_scalarmult_vartime.blocks (a b : BitVec 256) : Nat :=
   let as := Boringssl.slide.spec a
   let bs := Boringssl.slide.spec b
-  24 +
+  15 +
     match start as bs 255 (by decide) with
     | some i => ladderBlocks as bs i i.isLt
     | none => 0
@@ -466,6 +466,7 @@ structure LoopFacts (S : GlobalState) (r t u aslide bslide ai bi : Pointer)
     (as bs : Vector (BitVec 8) 256) (AI : Nat → GeCached) (BI : Nat → GePrecomp) : Prop where
   wf : S.WF
   fitR : S.mem.Fe3Fit r
+  writR : Writable S.mem r
   roomT : S.mem.PointRoom t
   roomU : S.mem.PointRoom u
   slidesA : SlidesAt S.mem aslide as
@@ -496,7 +497,8 @@ theorem headA_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
           S'.mem.eraseFrom N = S.mem.eraseFrom N →
           (ge25519_double_scalarmult_vartime.runFrom E' ^bb12 S' >>= g) = K) :
     (ge25519_double_scalarmult_vartime.runFrom E ^bb8 S >>= g) = K := by
-  obtain ⟨hwf, hr, ht, hu, hsa, hsb, hta, htb⟩ := hF
+  obtain ⟨hwf, hr, hrw, ht, hu, hsa, hsb, hta, htb⟩ := hF
+  have htw : Writable S.mem t := ht.2.1.2.1.writable
   have hrt := hL.rt
   have hru := hL.ru
   have htu := hL.tu
@@ -529,7 +531,8 @@ theorem headA_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
     step_call using ge25519_add.call_eq
     finish_block
     refine
-      hK E S hArgs (by env_reads) (by env_reads) ⟨hwf, hr, ht.room, hu.room, hsa, hsb, hta, htb⟩ ht
+      hK E S hArgs (by env_reads) (by env_reads)
+        ⟨hwf, hr, by mem_fact, ht.room (by mem_fact), hu.room (by mem_fact), hsa, hsb, hta, htb⟩ ht
         ?_ hrv ?_ ?_
     · rw [hread_t]
       simp only [addA, hbr, ↓reduceIte, hk]
@@ -556,7 +559,8 @@ theorem headA_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
       step_call using ge25519_sub.call_eq
       finish_block
       refine
-        hK E S hArgs (by env_reads) (by env_reads) ⟨hwf, hr, ht.room, hu.room, hsa, hsb, hta, htb⟩
+        hK E S hArgs (by env_reads) (by env_reads)
+          ⟨hwf, hr, by mem_fact, ht.room (by mem_fact), hu.room (by mem_fact), hsa, hsb, hta, htb⟩
           ht ?_ hrv ?_ ?_
       · rw [hread_t]
         simp only [addA, hnpos, hneg, Bool.false_eq_true, ↓reduceIte, ← hnd, hk]
@@ -568,8 +572,8 @@ theorem headA_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
     case isFalse =>
       have h0 := eq_zero_of_not hnpos hbr
       refine
-        hK E S hArgs (by env_reads) (by env_reads) ⟨hwf, hr, ht.room, hu, hsa, hsb, hta, htb⟩ ht ?_
-          hrv ?_ ?_
+        hK E S hArgs (by env_reads) (by env_reads)
+          ⟨hwf, hr, by mem_fact, ht.room (by mem_fact), hu, hsa, hsb, hta, htb⟩ ht ?_ hrv ?_ ?_
       · rw [hread_t]
         simp only [addA, h0, show (0#8).slt 0#8 = false from rfl, Bool.false_eq_true, ↓reduceIte]
       · rw [hS]
@@ -601,7 +605,8 @@ theorem headB_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
           S'.mem.eraseFrom N = S.mem.eraseFrom N →
           (ge25519_double_scalarmult_vartime.runFrom E' ^bb16 S' >>= g) = K) :
     (ge25519_double_scalarmult_vartime.runFrom E ^bb12 S >>= g) = K := by
-  obtain ⟨hwf, hr, ht, hu, hsa, hsb, hta, htb⟩ := hF
+  obtain ⟨hwf, hr, hrw, ht, hu, hsa, hsb, hta, htb⟩ := hF
+  have htw : Writable S.mem t := ht.2.1.2.1.writable
   have hrt := hL.rt
   have hru := hL.ru
   have htu := hL.tu
@@ -634,7 +639,8 @@ theorem headB_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
     step_call using ge25519_madd.call_eq
     finish_block
     refine
-      hK E S hArgs (by env_reads) (by env_reads) ⟨hwf, hr, htf.room, hu.room, hsa, hsb, hta, htb⟩
+      hK E S hArgs (by env_reads) (by env_reads)
+        ⟨hwf, hr, by mem_fact, htf.room (by mem_fact), hu.room (by mem_fact), hsa, hsb, hta, htb⟩
         htf ?_ hrv ?_ ?_
     · rw [hread_t]
       simp only [addB, hbr, ↓reduceIte, hk]
@@ -661,7 +667,8 @@ theorem headB_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
       step_call using ge25519_msub.call_eq
       finish_block
       refine
-        hK E S hArgs (by env_reads) (by env_reads) ⟨hwf, hr, htf.room, hu.room, hsa, hsb, hta, htb⟩
+        hK E S hArgs (by env_reads) (by env_reads)
+          ⟨hwf, hr, by mem_fact, htf.room (by mem_fact), hu.room (by mem_fact), hsa, hsb, hta, htb⟩
           htf ?_ hrv ?_ ?_
       · rw [hread_t]
         simp only [addB, hnpos, hneg, Bool.false_eq_true, ↓reduceIte, ← hnd, hk]
@@ -673,8 +680,8 @@ theorem headB_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
     case isFalse =>
       have h0 := eq_zero_of_not hnpos hbr
       refine
-        hK E S hArgs (by env_reads) (by env_reads) ⟨hwf, hr, htf.room, hu, hsa, hsb, hta, htb⟩ htf
-          ?_ hrv ?_ ?_
+        hK E S hArgs (by env_reads) (by env_reads)
+          ⟨hwf, hr, by mem_fact, htf.room (by mem_fact), hu, hsa, hsb, hta, htb⟩ htf ?_ hrv ?_ ?_
       · rw [htv]
         simp only [addB, h0, show (0#8).slt 0#8 = false from rfl, Bool.false_eq_true, ↓reduceIte]
       · rw [hS]
@@ -728,7 +735,8 @@ theorem tail_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vecto
               S'.mem.eraseFrom N = (S.mem.eraseFrom N).storeP2 r (ge25519_p1p1_to_p2.spec T) →
               (ge25519_double_scalarmult_vartime.runFrom E' ^bb8 S' >>= g) = K) :
     (ge25519_double_scalarmult_vartime.runFrom E ^bb16 S >>= g) = K := by
-  obtain ⟨hwf, hr, ht, hu, hsa, hsb, hta, htb⟩ := hF
+  obtain ⟨hwf, hr, hrw, ht, hu, hsa, hsb, hta, htb⟩ := hF
+  have htw : Writable S.mem t := ht.2.1.2.1.writable
   have hrt := hL.rt
   have hru := hL.ru
   have hra := hL.ra
@@ -749,15 +757,17 @@ theorem tail_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vecto
       exact absurd hbr (by decide)
     refine
       hback (i - 1) (by omega) E S hArgs (by env_reads) ?_
-        ⟨hwf, hr, htf.room, hu, hsa, hsb, hta, htb⟩ hread_r (by rw [hS]) ?_
+        ⟨hwf, hr, by mem_fact, htf.room (by mem_fact), hu, hsa, hsb, hta, htb⟩ hread_r (by rw [hS])
+        ?_
     · rw [← Firedancer.add_neg_one64 hi1 (by omega)]
       env_reads
     · rw [hS, MemoryState.eraseFrom_storeP2]
   case isFalse =>
     have hi0 := eq_zero_of_not_slt64 (by omega) hbr
     refine
-      hexit hi0 E S hArgs (by env_reads) ⟨hwf, hr, htf.room, hu, hsa, hsb, hta, htb⟩ hread_r
-        (by rw [hS]) ?_
+      hexit hi0 E S hArgs (by env_reads)
+        ⟨hwf, hr, by mem_fact, htf.room (by mem_fact), hu, hsa, hsb, hta, htb⟩ hread_r (by rw [hS])
+        ?_
     rw [hS, MemoryState.eraseFrom_storeP2]
 
 /-- A `ge25519_p2` stored twice at `p`: the second. -/
@@ -1106,9 +1116,9 @@ def tableU (P : GeP3) (j : Nat) : GeP3 :=
 
 /-- `WF` past a table step: blocks counted, three stores. -/
 theorem GlobalState.WF.tableStep {s : GlobalState} (h : s.WF) :
-    (⟨⟨s.alloc.nextFreeBlock + j + k⟩, ((s.mem.storeCached p C).storeP1p1 t X).storeP3 u U⟩ :
+    (⟨⟨s.alloc.nextFreeBlock + k⟩, ((s.mem.storeCached p C).storeP1p1 t X).storeP3 u U⟩ :
         GlobalState).WF :=
-  (((GlobalState.WF.add_blocks₂ h).storeCached_mk).storeP1p1_mk).storeP3_mk
+  (((GlobalState.WF.add_blocks h).storeCached_mk).storeP1p1_mk).storeP3_mk
 
 /-- One step of the table: `k = ai + off`, `ge25519_p3_to_cached(k, u)`,
 `ge25519_add(t, a2, k)`, `ge25519_p1p1_to_p3(u, t)`. -/
@@ -1126,14 +1136,16 @@ theorem runBodyFrom_tableRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
     {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
     (hbody : blk.body.drop pos = tableRun ai u t a2 k off ++ rest)
     (hR : E ⊨ [ai := AI, u := U, t := T, a2 := A2]) (hd : [k.i, ai.i, u.i, t.i, a2.i].Nodup)
-    (hwf : S.WF) (hU : S.mem.PointFit U) (hT : S.mem.PointRoom T) (hA2 : S.mem.PointFit A2)
+    (hwf : S.WF) (hg : S.mem.Globals ge25519_double_scalarmult_vartime.globals)
+    (hU : S.mem.PointFit U) (hUw : Writable S.mem U) (hT : S.mem.PointRoom T)
+    (hA2 : S.mem.PointFit A2)
     (hAI : S.mem.PointRoom (AI.add (BitVec.ofNat 64 off))) (hAIo : AI.offset = 0)
     (hoff : off < 4294967296) (hAU : AI.id ≠ U.id) (hAT : AI.id ≠ T.id) (hAA : AI.id ≠ A2.id)
     (hTU : T.id ≠ U.id) (hTA : T.id ≠ A2.id)
     (hK :
       ∀ vk,
         (blk.runBodyFrom E[k := vk] (pos + 4)
-              { alloc := ⟨S.alloc.nextFreeBlock + 1 + 1⟩,
+              { alloc := ⟨S.alloc.nextFreeBlock + 1⟩,
                 mem :=
                   ((S.mem.storeCached (AI.add (BitVec.ofNat 64 off))
                             (ge25519_p3_to_cached.spec (S.mem.readP3 U))).storeP1p1
@@ -1182,11 +1194,13 @@ structure TableLayout (r t u aslide bslide ai bi a2 : Pointer) (N : Nat) : Prop 
 structure TablePhase (S : GlobalState) (r t u aslide bslide ai bi a2 : Pointer)
     (as bs : Vector (BitVec 8) 256) (P : GeP3) (n₀ N : Nat) (M : MemoryState) (j : Nat) : Prop where
   wf : S.WF
-  alloc : S.alloc.nextFreeBlock = n₀ + 2 * (j - 1)
+  alloc : S.alloc.nextFreeBlock = n₀ + (j - 1)
   erase : S.mem.eraseFrom N = M
   tbl : CachedTable S.mem ai j (aiTbl P)
   room : ∀ k, j ≤ k → k < 8 → S.mem.PointRoom (ai.add (BitVec.ofNat 64 (160 * k)))
+  globals : S.mem.Globals ge25519_double_scalarmult_vartime.globals
   fitU : S.mem.PointFit u
+  writU : Writable S.mem u
   valU : S.mem.readP3 u = tableU P j
   roomT : S.mem.PointRoom t
   fitA2 : S.mem.PointFit a2
@@ -1201,7 +1215,7 @@ theorem TablePhase.step {S : GlobalState}
     (h : TablePhase S r t u aslide bslide ai bi a2 as bs P n₀ N M j)
     (hL : TableLayout r t u aslide bslide ai bi a2 N) (hj : 1 ≤ j) (hj8 : j < 8) :
     TablePhase
-      { alloc := ⟨S.alloc.nextFreeBlock + 1 + 1⟩,
+      { alloc := ⟨S.alloc.nextFreeBlock + 1⟩,
         mem :=
           ((S.mem.storeCached (ai.add (BitVec.ofNat 64 (160 * j)))
                     (ge25519_p3_to_cached.spec (S.mem.readP3 u))).storeP1p1
@@ -1235,9 +1249,11 @@ theorem TablePhase.step {S : GlobalState}
         exact h.erase
       tbl := fun k hk => ?_
       room := fun k hk hk8 => (h.room k (by omega) hk8).storeCached.storeP1p1.storeP3
-      fitU := MemoryState.PointFit.storeP3_self h.fitU.room.storeCached.storeP1p1
+      globals := h.globals.mono rfl fun _ h => h
+      fitU := MemoryState.PointFit.storeP3_self (h.fitU.room h.writU).storeCached.storeP1p1
+      writU := h.writU.storeCached.storeP1p1.storeP3
       valU := by
-        rw [MemoryState.readP3_storeP3_self h.fitU.room.storeCached.storeP1p1]
+        rw [MemoryState.readP3_storeP3_self (h.fitU.room h.writU).storeCached.storeP1p1]
         rfl
       roomT := h.roomT.storeCached.storeP1p1.storeP3
       fitA2 := h.fitA2.storeCached.storeP1p1.storeP3
@@ -1299,8 +1315,9 @@ theorem table_step {r t u aslide bslide ai bi a2 : Pointer} {as bs : Vector (Bit
         TablePhase S' r t u aslide bslide ai bi a2 as bs P n₀ N M (j + 1) →
           (bb0.runBodyFrom E[k := vk] (pos + 4) S' >>= g) = K) :
     (bb0.runBodyFrom E pos S >>= g) = K :=
-  runBodyFrom_tableRun hbody hR hd hTP.wf hTP.fitU hTP.roomT hTP.fitA2 (hTP.room j le_rfl hj8)
-    hL.aio (by omega) hL.aiu hL.ait hL.aia2 hL.tu hL.ta2 fun vk => hK vk _ (hTP.step hL hj hj8)
+  runBodyFrom_tableRun hbody hR hd hTP.wf hTP.globals hTP.fitU hTP.writU hTP.roomT hTP.fitA2
+    (hTP.room j le_rfl hj8) hL.aio (by omega) hL.aiu hL.ait hL.aia2 hL.tu hL.ta2 fun vk =>
+    hK vk _ (hTP.step hL hj hj8)
 
 /-- The table loop's six steps, entries `1 … 6`, from `bb0`'s instruction 29. -/
 theorem table_run {r t u aslide bslide ai bi a2 : Pointer} {as bs : Vector (BitVec 8) 256}
@@ -1350,7 +1367,7 @@ theorem spec_of_none {x1 x2 : BitVec 256} {A : GeP3}
 
 theorem blocks_of_none {x1 x2 : BitVec 256}
     (h : start (Boringssl.slide.spec x1) (Boringssl.slide.spec x2) 255 (by decide) = none) :
-    blocks x1 x2 = 24 := by
+    blocks x1 x2 = 15 := by
   unfold blocks
   dsimp only
   rw [h]
@@ -1368,7 +1385,7 @@ theorem spec_of_some {x1 x2 : BitVec 256} {A : GeP3} {j : Fin 256}
 theorem blocks_of_some {x1 x2 : BitVec 256} {j : Fin 256}
     (h : start (Boringssl.slide.spec x1) (Boringssl.slide.spec x2) 255 (by decide) = some j) :
     blocks x1 x2 =
-      24 + ladderBlocks (Boringssl.slide.spec x1) (Boringssl.slide.spec x2) j j.isLt := by
+      15 + ladderBlocks (Boringssl.slide.spec x1) (Boringssl.slide.spec x2) j j.isLt := by
   unfold blocks
   dsimp only
   rw [h]
@@ -1425,10 +1442,10 @@ attribute [local mlir_transport] SlidesAt.storeP1p1 SlidesAt.storeP3 SlidesAt.st
 `A` and the 32 bytes at `b` at `r`, for digits in range; `r` is written after every input is read.
 The block counter advances by `blocks`. -/
 public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.Fe3Room r) (ha : Fits s.mem a 256)
-    (ha_off : ¬a.offset.uaddOverflow 32#64) (hA : s.mem.PointFit A) (hb : Fits s.mem b 256)
-    (hb_off : ¬b.offset.uaddOverflow 32#64) (hda : Digits (s.mem.readAt a 256))
-    (hdb : Digits (s.mem.readAt b 256)) :
+    (hwf : s.WF) (hg : s.mem.Globals ge25519_double_scalarmult_vartime.globals)
+    (hr : s.mem.Fe3Room r) (ha : Fits s.mem a 256) (ha_off : ¬a.offset.uaddOverflow 32#64)
+    (hA : s.mem.PointFit A) (hb : Fits s.mem b 256) (hb_off : ¬b.offset.uaddOverflow 32#64)
+    (hda : Digits (s.mem.readAt a 256)) (hdb : Digits (s.mem.readAt b 256)) :
     ge25519_double_scalarmult_vartime.call
         (ge25519_double_scalarmult_vartime.args (.value r) (.value a) (.value A) (.value b)) s =
       .value
@@ -1457,17 +1474,13 @@ public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s 
   block_init
   iterate 5 step_pure
   step_addressof ge25519_double_scalarmult_vartime_Bi.value_eq with bi
-  -- the inputs past the table's block
-  have hbi_ne (q : Pointer) (h : q.id ≠ bi.id) : q.id ≠ ⟨S₀.alloc.nextFreeBlock⟩ := by
-    rw [hbi] at h
-    exact h
   have hP : S.mem.readP3 A = P := by
-    rw [hS, MemoryState.readP3_addBlock_of_id_ne (hbi_ne A hA_ne_bi), hP₀]
+    rw [hS]; exact hP₀
   have hxa : S.mem.readAt a 256 = xa := by
-    rw [hS, MemoryState.readAt_addBlock_of_id_ne (hbi_ne a ha_ne_bi), hxa₀]
+    rw [hS]; exact hxa₀
   have hxb : S.mem.readAt b 256 = xb := by
-    rw [hS, MemoryState.readAt_addBlock_of_id_ne (hbi_ne b hb_ne_bi), hxb₀]
-  clear hP₀ hxa₀ hxb₀ hbi_ne
+    rw [hS]; exact hxb₀
+  clear hP₀ hxa₀ hxb₀
   iterate 4 step_pure
   -- signed char aslide[256]; signed char bslide[256]; ge25519_cached Ai[8];
   -- ge25519_p1p1 t; ge25519_p3 u; ge25519_p3 A2;
@@ -1501,7 +1514,7 @@ public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s 
       mem_fact, hai_off, by slot_bound, by slot_bound, by slot_bound⟩
   have hTP :
     TablePhase S r t u aslide bslide ai bi a2 (Boringssl.slide.spec xa) (Boringssl.slide.spec xb) P
-      (S₀.alloc.nextFreeBlock + 11) S₀.alloc.nextFreeBlock S₀.mem 1 :=
+      (S₀.alloc.nextFreeBlock + 9) S₀.alloc.nextFreeBlock S₀.mem 1 :=
     { wf := hwf
       alloc := by
         rw [hS]
@@ -1515,9 +1528,11 @@ public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s 
         rw [Nat.mul_zero, Pointer.add_zero']
         exact ⟨hai0, hread_ai⟩
       room := fun k _ hk8 => PointRoom.entry hroom_ai hai_off hk8
+      globals := hg
       fitU := hu_pt
+      writU := by mem_fact
       valU := hread_u
-      roomT := ht_pt.room
+      roomT := ht_pt.room (by mem_fact)
       fitA2 := ha2_pt
       valA2 := hread_a2
       roomR := hr
@@ -1530,9 +1545,11 @@ public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s 
     hread_t_40 hread_t_80 hread_t_120 hread_t hread_a2_readLimbs hread_a2_40 hread_a2_80
     hread_a2_120 hread_a2 hread_ai_readLimbs hread_ai_40 hread_ai_80 hread_ai_120 hread_ai
     hread_bslide hread_aslide hread_bi ha2_pt ht_pt hai0 hfits_bslide hfits_aslide hroom_ai
-    hroom_bslide hroom_aslide hwf hr ha hA hb hbi_room hbi_fits haslide_bounds hbslide_bounds
+    hroom_bslide hroom_aslide hwf hg hr ha hA hb hbi_live hbi_fits haslide_bounds hbslide_bounds
     hai_bounds hS
-  obtain ⟨hwf, halloc, herase, htbl, hroom, hu_pt, hread_u, ht_pt, -, -, hr, hsa, hsb, htb⟩ := h₇
+  obtain
+    ⟨hwf, halloc, herase, htbl, hroom, hg, hu_pt, huw, hread_u, ht_pt, -, -, hr, hsa, hsb, htb⟩ :=
+    h₇
   have hai7 : S₇.mem.PointRoom (ai.add 1120#64) := hroom 7 (by decide) (by decide)
   clear hroom
   -- the table's first seven entries, about a memory the steps leave alone
@@ -1558,8 +1575,8 @@ public theorem ge25519_double_scalarmult_vartime.call_eq (r a A b : Pointer) (s 
   have hF :
     LoopFacts S r t u aslide bslide ai bi (Boringssl.slide.spec xa) (Boringssl.slide.spec xb)
       (aiTbl P) biTbl :=
-    ⟨hwf, hr, ht_pt, hu_pt.room, hsa, hsb, hai8, htb⟩
-  have hS₈ : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 24 := by rw [hS, halloc]
+    ⟨hwf, hr, by mem_fact, ht_pt, hu_pt.room (by mem_fact), hsa, hsb, hai8, htb⟩
+  have hS₈ : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 15 := by rw [hS, halloc]
   have he₈ : S.mem.eraseFrom S₀.alloc.nextFreeBlock = S₀.mem.storeP2 r Boringssl.ge_p2_0.spec := by
     rw [hS]
     dsimp only

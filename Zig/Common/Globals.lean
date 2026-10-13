@@ -118,7 +118,7 @@ public theorem Edwards25519_identityElement.value_eq (s : GlobalState) :
 
 /-- The identity global's block (`step_addressof`'s facts): the identity, `is_base` false. -/
 public theorem _root_.MLIR.MemoryState.identity_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Room m p 1344) (hf : Fits m p 1281) (ho : p.offset = 0)
+    (hr : Live m p 1344) (hf : Fits m p 1281) (ho : p.offset = 0)
     (h : m.readAt p 1344 = Edwards25519.identityBits) :
     m.PtFit p ∧ m.readPt p = Edwards25519.identity ∧ m.readBase p = 0 := by
   have ho' : p.offset.toNat + 168 ≤ 2 ^ 64 := by simp [ho]
@@ -171,7 +171,7 @@ public def Edwards25519_mulDoubleBasePublic_weak.bits : BitVec 1408 :=
 
 /-- `error.InvalidEncoding`'s block (`step_addressof`'s facts): its code at byte 168. -/
 public theorem _root_.MLIR.MemoryState.invalid_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Room m p 1408) (ho : p.offset = 0)
+    (hr : Live m p 1408) (ho : p.offset = 0)
     (h : m.readAt p 1408 = Edwards25519_fromBytes_invalid.bits) :
     m.readAt (p.add 168#64) 16 = 2#16 := by
   rw [MemoryState.readAt_add_of_readAt hr.inBounds (by simp [BitVec.uaddOverflow, ho]) (by decide)
@@ -180,7 +180,7 @@ public theorem _root_.MLIR.MemoryState.invalid_of_readAt {m : MemoryState} {p : 
 
 /-- `error.WeakPublicKey`'s block (`step_addressof`'s facts): its code at byte 168. -/
 public theorem _root_.MLIR.MemoryState.weak_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Room m p 1408) (ho : p.offset = 0)
+    (hr : Live m p 1408) (ho : p.offset = 0)
     (h : m.readAt p 1408 = Edwards25519_mulDoubleBasePublic_weak.bits) :
     m.readAt (p.add 168#64) 16 = 4#16 := by
   rw [MemoryState.readAt_add_of_readAt hr.inBounds (by simp [BitVec.uaddOverflow, ho]) (by decide)
@@ -207,45 +207,5 @@ public def Sha512_iv.bits : BitVec 1792 :=
 public theorem Sha512_iv.value_eq (s : GlobalState) :
     Sha512_iv.value s = .value (Sha512_iv.val, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
-
-/-- No bits are known where there is room. -/
-public theorem Fits.zero {m : MemoryState} {p : Pointer} (h : Room m p 0) : Fits m p 0 := by
-  obtain ⟨b, hb, hl, hw⟩ := h
-  exact ⟨b, hb, hl, hw, BitVec.eq_of_toNat_eq (by simp)⟩
-
-/-- `Sha512.iv`'s state words, `buf_len` and `total_len` in its bits. -/
-theorem iv_bits :
-    (∀ i : Fin 8, Sha512_iv.bits.extractLsb' ((16 + 8 * i.val) * 8) 64 = Sha512.IV[i]) ∧
-      Sha512_iv.bits.extractLsb' (208 * 8) 8 = 0#8 ∧ Sha512_iv.bits.setWidth 128 = 0#128 := by
-  decide +kernel
-
-/-- `Sha512.iv`'s block (`step_addressof`'s facts): an object that has absorbed nothing. -/
-public theorem Sha512Obj.iv_of_readAt {m : MemoryState} {d : Pointer} (hr : MLIR.Room m d 1792)
-    (hf : Fits m d 640) (hb : Fits m (d.add 208#64) 8) (ho : d.offset = 0)
-    (h : m.readAt d 1792 = Sha512_iv.bits) : Sha512Obj.Fit m d ∧ Sha512Obj.Absorbed m d [] := by
-  have hr' (k w : Nat) (hk : k * 8 + w ≤ 1792) :
-    m.readAt (d.add (BitVec.ofNat 64 k)) w = Sha512_iv.bits.extractLsb' (k * 8) w := by
-    rw [MemoryState.readAt_add_of_readAt hr.inBounds
-        (by
-          simp [BitVec.uaddOverflow, ho]; omega)
-        (by
-          simp; omega)
-        h]
-    congr 1
-    simp
-    omega
-  refine ⟨⟨by simp [ho], hr, hf, hb⟩, ⟨?_, ?_, by simp, ?_, ?_⟩⟩
-  · rw [Sha512.compressBlocks_of_lt (by simp)]
-    apply Vector.ext
-    intro i hi
-    simp only [Sha512Obj.state, Vector.getElem_ofFn]
-    rw [show 16#64 + BitVec.ofNat 64 (8 * i) = BitVec.ofNat 64 (16 + 8 * i) by
-        apply BitVec.eq_of_toNat_eq; simp,
-      hr' _ _ (by omega)]
-    exact iv_bits.1 ⟨i, hi⟩
-  · rw [Sha512Obj.bufLen, hr' 208 8 (by omega), iv_bits.2.1]
-    rfl
-  · exact (MemoryState.readAt_of_readAt_le (w := 128) (by decide) h).trans iv_bits.2.2
-  · exact Fits.zero (Room.add_of_le (by simp [BitVec.uaddOverflow, ho]) (by decide) hr)
 
 end MLIR.Zig

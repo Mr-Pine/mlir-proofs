@@ -13,9 +13,10 @@ private def a : Pointer :=
 private def bytes (f : Nat → Nat) : BitVec 1536 :=
   BitVec.ofNat 1536 ((List.range 24).foldl (fun acc i => acc + f i * 2 ^ (64 * i)) 0)
 
-/-- `a` holding `b`. -/
+/-- `a` holding `b`, then the globals. -/
 private def state (b : BitVec 1536) : GlobalState :=
-  ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 b)]⟩⟩
+  GlobalState.withGlobals fd_ed25519_affine_is_small_order.globals
+    ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 192 b)]⟩⟩
 
 /-- Whether `fd_ed25519_affine_is_small_order(a)` returns `spec`, and that is `r`. -/
 private def check (b : BitVec 1536) (r : BitVec 32) : Bool :=

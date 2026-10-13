@@ -22,12 +22,13 @@ private def limbsBlock (x : Nat) : MemoryBlock :=
 /-- `out` undefined, `a` and `b`'s limbs. -/
 private def state (a b : Nat) : GlobalState :=
   ⟨⟨4⟩, ⟨Std.ExtHashMap.ofList
-    [(⟨1⟩, ⟨40, 0, 0, true, fun _ => none⟩), (⟨2⟩, limbsBlock a), (⟨3⟩, limbsBlock b)]⟩⟩
+    [(⟨1⟩, ⟨40, 0, 0, true, fun _ => none, true⟩), (⟨2⟩, limbsBlock a), (⟨3⟩, limbsBlock b)]⟩⟩
 
 /-- `out`'s value after the call, or `none` for UB / out of fuel. -/
 private def out (a b : Nat) : Option Nat :=
   match
-    Scalar_add.eval 1000 (Scalar_add.args (.value outp) (.value ap) (.value bp)) (state a b) with
+    Scalar_add.eval 1000 (Scalar_add.args (.value outp) (.value ap) (.value bp))
+      ((state a b).withGlobals Scalar_add.globals) with
   | .value (some .nil, s') => some (Scalar.val (s'.mem.readLimbs outp))
   | _ => none
 

@@ -17,7 +17,7 @@ private def state (b : BitVec 256) : GlobalState :=
 private def out (b : BitVec 256) : Option (BitVec 16) :=
   match
     scalar_rejectNonCanonical.eval 100000 (scalar_rejectNonCanonical.args (.value inp))
-      (state b) with
+      ((state b).withGlobals scalar_rejectNonCanonical.globals) with
   | .value (some (.cons (.value r) .nil), _) => some r
   | _ => none
 

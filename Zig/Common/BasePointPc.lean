@@ -103,7 +103,7 @@ theorem basePointPc_entry_bits :
 
 /-- Entry `i` of the table global's block (`step_addressof`'s facts): its point and `is_base`. -/
 public theorem _root_.MLIR.MemoryState.basePointPc_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Room m p 21504) (ho : p.offset = 0) (h : m.readAt p 21504 = Edwards25519.basePointPc.bits)
+    (hr : Live m p 21504) (ho : p.offset = 0) (h : m.readAt p 21504 = Edwards25519.basePointPc.bits)
     (i : Fin 16) (hf : Fits m (p.add (BitVec.ofNat 64 (i.val * 168))) 1281) :
     m.PtFit (p.add (BitVec.ofNat 64 (i.val * 168))) ∧
       m.readPt (p.add (BitVec.ofNat 64 (i.val * 168))) = Edwards25519.basePointPc.pts[i] ∧
@@ -119,8 +119,8 @@ public theorem _root_.MLIR.MemoryState.basePointPc_of_readAt {m : MemoryState} {
       simp [Pointer.add, ho]
     rw [e, hn]
     omega
-  have hrq : Room m (p.add (BitVec.ofNat 64 (i.val * 168))) 1344 :=
-    Room.add_of_le (hov _ (by omega))
+  have hrq : Live m (p.add (BitVec.ofNat 64 (i.val * 168))) 1344 :=
+    Live.add_of_le (hov _ (by omega))
       (by
         rw [hn]; omega)
       hr

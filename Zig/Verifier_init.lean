@@ -92,21 +92,20 @@ def code (r S A : BitVec 256) : BitVec 16 :=
           | none => 2#16
           | some R => Edwards25519.rejectIdentity.spec R
 
-/-- The blocks allocated: `7` (the IV's, five slots, `scalar.rejectNonCanonical`'s), then the
-calls'. -/
+/-- The blocks allocated: the frame's five slots, then the calls'. -/
 def blocks (r S A : BitVec 256) : Nat :=
-  7 +
+  5 +
     if scalar.rejectNonCanonical.spec S ≠ 0#16 then 0
     else
       match Edwards25519.fromBytes.spec A with
-      | none => 595
+      | none => 591
       | some a =>
-        602 +
+        597 +
           if Edwards25519.rejectIdentity.spec a ≠ 0#16 ∨ Fe.rejectNonCanonical.spec r ≠ 0#16 then 0
           else
             match Edwards25519.fromBytes.spec r with
-            | none => 595
-            | some _ => 602
+            | none => 591
+            | some _ => 597
 
 /-- `fromBytes`' point bits, zero when the bytes do not decode. -/
 def ptBitsOf : Option ZPt → BitVec 1344
@@ -155,13 +154,12 @@ theorem fresh_slot {s : GlobalState} {m : MemoryState} {q : Pointer} (hq : q = s
 
 /-- `scalar.rejectNonCanonical`'s `call_eq` on the bytes `b` read at `p`. -/
 theorem scalar_rejectNonCanonical.call_eq_of (p : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hp : Fits s.mem p 256) (hpo : p.offset.toNat + 32 < 2 ^ 64) (hb : s.mem.readAt p 256 = b) :
+    (hg : s.mem.Globals scalar_rejectNonCanonical.globals) (hp : Fits s.mem p 256)
+    (hpo : p.offset.toNat + 32 < 2 ^ 64) (hb : s.mem.readAt p 256 = b) :
     scalar_rejectNonCanonical.call (scalar_rejectNonCanonical.args (.value p)) s =
-      .value
-        (.cons (.value (scalar.rejectNonCanonical.spec b)) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem }) := by
+      .value (.cons (.value (scalar.rejectNonCanonical.spec b)) .nil, s) := by
   subst hb
-  exact scalar_rejectNonCanonical.call_eq p s hwf hp hpo
+  exact scalar_rejectNonCanonical.call_eq p s hwf hg hp hpo
 
 /-- `Fe.rejectNonCanonical`'s `call_eq` on the bytes `b` read at `p`. -/
 theorem Fe_rejectNonCanonical.call_eq_of (p : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -183,32 +181,34 @@ theorem Edwards25519_rejectIdentity.call_eq_of (p : Pointer) (s : GlobalState) (
 
 /-- `fromBytes`' `call_eq` when the bytes decode to `P`: its stores spelled out. -/
 theorem Edwards25519_fromBytes.call_eq_some (out buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64) (hbuf : Fits s.mem buf 256)
+    (hg : s.mem.Globals Edwards25519_fromBytes.globals) (hout : Room s.mem out 1408)
+    (hoo : out.offset.toNat + 176 ≤ 2 ^ 64) (hbuf : Fits s.mem buf 256)
     (hbo : buf.offset.toNat + 32 ≤ 2 ^ 64) (hb : s.mem.readAt buf 256 = b)
     (hP : Edwards25519.fromBytes.spec b = some P) :
     Edwards25519_fromBytes.call (Edwards25519_fromBytes.args (.value out) (.value buf)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 601⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 596⟩,
             mem :=
               ((s.mem.storeAt (out.add 168#64) 0#16).storeAt out P.bits).storeDef (out.add 160#64)
                 0#8 0#8 }) := by
-  rw [Edwards25519_fromBytes.call_eq out buf s hwf hout hoo hbuf hbo, hb, hP]
+  rw [Edwards25519_fromBytes.call_eq out buf s hwf hg hout hoo hbuf hbo, hb, hP]
   rfl
 
 /-- `fromBytes`' `call_eq` when the bytes do not decode: the `InvalidEncoding` global copied. -/
 theorem Edwards25519_fromBytes.call_eq_none (out buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64) (hbuf : Fits s.mem buf 256)
+    (hg : s.mem.Globals Edwards25519_fromBytes.globals) (hout : Room s.mem out 1408)
+    (hoo : out.offset.toNat + 176 ≤ 2 ^ 64) (hbuf : Fits s.mem buf 256)
     (hbo : buf.offset.toNat + 32 ≤ 2 ^ 64) (hb : s.mem.readAt buf 256 = b)
     (hP : Edwards25519.fromBytes.spec b = none) :
     Edwards25519_fromBytes.call (Edwards25519_fromBytes.args (.value out) (.value buf)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 595⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 591⟩,
             mem :=
               s.mem.storeDef out Edwards25519_fromBytes_invalid.bits
                 Edwards25519.fromBytes.invalidDef }) := by
-  rw [Edwards25519_fromBytes.call_eq out buf s hwf hout hoo hbuf hbo, hb, hP]
+  rw [Edwards25519_fromBytes.call_eq out buf s hwf hg hout hoo hbuf hbo, hb, hP]
   rfl
 
 /-- Two ranges of one block at offsets `a`, `b` bytes from its start, apart. -/
@@ -233,7 +233,7 @@ theorem fromBytes_some_facts {m m' : MemoryState} {p : Pointer} {P : ZPt}
       m'.readAt (p.add 168#64) 16 = 0#16 ∧
       m'.readAt p 1344 = ptBits P ∧ m'.definedAt p 1344 = ptDefs := by
   subst hm
-  have hi : InBounds m p 1344 := hr.inBounds.mono (by omega)
+  have hi : Room m p 1344 := hr.mono (by omega)
   have h0 :=
     disjoint_add (p := p) ho (a := 0) (b := 168) (v := 1344) (w := 16) (by omega) (by omega)
       (by omega)
@@ -253,7 +253,7 @@ theorem fromBytes_some_facts {m m' : MemoryState} {p : Pointer} {P : ZPt}
         h1
   · rw [MemoryState.readAt_storeDef_disjoint h1, MemoryState.readAt_storeAt_disjoint h2,
       MemoryState.readAt_storeAt_self
-        (hr.add_of_le (by simp [BitVec.uaddOverflow, ho]) (by simp)).inBounds]
+        (hr.add_of_le (by simp [BitVec.uaddOverflow, ho]) (by simp))]
   · rw [MemoryState.readAt_add_storeDef hi.storeAt.storeAt hov (by simp),
       MemoryState.readAt_storeAt_over hi.storeAt (by omega),
       MemoryState.readAt_storeAt_disjoint h0.symm, hb]
@@ -278,7 +278,7 @@ theorem fromBytes_none_facts {m m' : MemoryState} {p : Pointer}
   subst hm
   have hov : ¬p.offset.uaddOverflow 168#64 := by simp [BitVec.uaddOverflow, ho]
   refine ⟨Fits.storeDef_of_mask hr hov (by simp) (by decide +kernel), ?_⟩
-  rw [MemoryState.readAt_storeDef_add hr.inBounds hov (by simp)]
+  rw [MemoryState.readAt_storeDef_add hr hov (by simp)]
   exact invalid_code
 
 /-- A decoded point in a fresh slot, by `ptBits`, `ptDefs`: its field elements known, the point. -/
@@ -286,7 +286,7 @@ theorem pt_of_bits {m : MemoryState} {p : Pointer} {P : ZPt} (hr : m.PtRoom p)
     (hb : m.readAt p 1344 = ptBits P) (hd : m.definedAt p 1344 = ptDefs) :
     m.PtLimbsFit p ∧ m.readPt p = P := by
   refine
-    ⟨.of_definedAt hr
+    ⟨.of_definedAt hr.ptLive
         (by
           rw [hd]; simp only [ptDefs]; bv_decide),
       ?_⟩
@@ -327,10 +327,11 @@ theorem hash_facts {m : MemoryState} {d : Pointer} {X D : BitVec 1792} {bl : Bit
     simp [BitVec.uaddOverflow, ho]; omega
   refine ⟨⟨by simp [ho], hr, ?_, ?_⟩, ?_, ?_, ?_⟩
   · simpa [Pointer.add_zero'] using
-      Fits.of_definedAt_add (off := 0#64) hr (hov _ (by decide)) (by simp) hD (by simpa using h1)
-  · exact Fits.of_definedAt_add hr (hov _ (by decide)) (by simp) hD (by simpa using h2)
+      Fits.of_definedAt_add (off := 0#64) hr.live (hov _ (by decide)) (by simp) hD
+        (by simpa using h1)
+  · exact Fits.of_definedAt_add hr.live (hov _ (by decide)) (by simp) hD (by simpa using h2)
   · exact
-      Fits.of_definedAt_add hr (hov _ (by decide))
+      Fits.of_definedAt_add hr.live (hov _ (by decide))
         (by
           rw [show (80#64).toNat = 80 from rfl]; omega)
         hD (by simpa using h3)
@@ -353,7 +354,7 @@ theorem upd32_facts {m m' : MemoryState} {d : Pointer} {X D : BitVec 1792} {bl :
     (hD : m.definedAt d 1792 = D) (hbl : bl.toNat < 96) :
     m'.readAt d 1792 = upd32 X bl T x ∧ m'.definedAt d 1792 = upd32Def D bl := by
   subst hm
-  have hi := hr.inBounds
+  have hi := hr
   have hk : (80#64 + bl.setWidth 64).toNat = 80 + bl.toNat := by
     simp [BitVec.toNat_add]; omega
   have hov : ¬d.offset.uaddOverflow (80#64 + bl.setWidth 64) := by
@@ -407,7 +408,7 @@ theorem upd2_def : upd32Def hash1Def 32#8 = hashDefs := by
 
 /-- A masked store at a block's start, over its bits and definedness: spliced in. -/
 theorem splice_def0 {m m' : MemoryState} {p : Pointer} {X D : BitVec V} {x d : BitVec w}
-    (hm : m' = m.storeDef p x d) (hi : InBounds m p V) (hw : w ≤ V) (hX : m.readAt p V = X)
+    (hm : m' = m.storeDef p x d) (hi : Room m p V) (hw : w ≤ V) (hX : m.readAt p V = X)
     (hD : m.definedAt p V = D) :
     m'.readAt p V = spliceBits X 0 x ∧ m'.definedAt p V = spliceBits D 0 d := by
   subst hm hX hD
@@ -419,7 +420,7 @@ theorem splice_def0 {m m' : MemoryState} {p : Pointer} {X D : BitVec V} {x d : B
 
 /-- A masked store inside a block, over its bits and definedness: spliced in. -/
 theorem splice_def {m m' : MemoryState} {p : Pointer} {off : BitVec 64} {X D : BitVec V}
-    {x d : BitVec w} (hm : m' = m.storeDef (p.add off) x d) (hi : InBounds m p V)
+    {x d : BitVec w} (hm : m' = m.storeDef (p.add off) x d) (hi : Room m p V)
     (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ V) (hX : m.readAt p V = X)
     (hD : m.definedAt p V = D) :
     m'.readAt p V = spliceBits X (off.toNat * 8) x ∧
@@ -431,7 +432,7 @@ theorem splice_def {m m' : MemoryState} {p : Pointer} {off : BitVec 64} {X D : B
 
 /-- A store inside a block, over its bits and definedness: spliced in, defined. -/
 theorem splice_at {m m' : MemoryState} {p : Pointer} {off : BitVec 64} {X D : BitVec V}
-    {x y : BitVec w} (hm : m' = m.storeAt (p.add off) x) (hx : x = y) (hi : InBounds m p V)
+    {x y : BitVec w} (hm : m' = m.storeAt (p.add off) x) (hx : x = y) (hi : Room m p V)
     (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ V) (hX : m.readAt p V = X)
     (hD : m.definedAt p V = D) :
     m'.readAt p V = spliceBits X (off.toNat * 8) y ∧
@@ -491,6 +492,7 @@ set_option exponentiation.threshold 1792 in
 /-- `Verifier.init` of the signature `r ‖ S` at `sig` and the key `A` at `pk` stores `mem` at
 `out`. -/
 public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals Verifier_init.globals)
     (hout : Room s.mem out 4752) (hoo : out.offset.toNat + 594 ≤ 2 ^ 64) (hsig : Fits s.mem sig 512)
     (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
     (hpo : pk.offset.toNat + 32 < 2 ^ 64) :
@@ -528,12 +530,9 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
   have hiv_b : S.mem.readAt iv 1792 = 0#1152 ++ ivState ++ 0#128 :=
     hread_iv.trans (by decide +kernel)
   have hiv_d :
-    S.mem.definedAt iv 1792 = 0#120 ++ BitVec.allOnes 8 ++ 0#1024 ++ BitVec.allOnes 640 := by
-    rw [hS, hiv]
-    exact
-      (MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega)) _ _).trans
-        (by decide +kernel)
-  clear hread_iv
+    S.mem.definedAt iv 1792 = 0#120 ++ BitVec.allOnes 8 ++ 0#1024 ++ BitVec.allOnes 640 :=
+    hdefined_iv.trans (by decide +kernel)
+  clear hread_iv hdefined_iv
   checkpoint hck0
   rename' S => S₁
   step_pure
@@ -728,15 +727,15 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
           block_init
           step_memcpy
           have hhb : S.mem.readAt h 1792 = 0#1152 ++ ivState ++ 0#128 := by
-            have hi := hh_room.inBounds
+            have hi := hh_room
             rw [hS] at hi ⊢
-            exact MemoryState.readAt_storeDef_self (InBounds.storeDef_iff.mp hi) _ _
+            exact MemoryState.readAt_storeDef_self (Room.storeDef_iff.mp hi) _ _
           have hhd :
             S.mem.definedAt h 1792 = 0#120 ++ BitVec.allOnes 8 ++ 0#1024 ++ BitVec.allOnes 640 := by
-            have hi := hh_room.inBounds
+            have hi := hh_room
             rw [hS] at hi ⊢
             exact
-              (MemoryState.definedAt_storeDef_self (InBounds.storeDef_iff.mp hi) _ _).trans
+              (MemoryState.definedAt_storeDef_self (Room.storeDef_iff.mp hi) _ _).trans
                 (by decide +kernel)
           obtain ⟨hFit, hbuf, hbl, hT⟩ :=
             hash_facts (bl := 0#8) (T := 0#128) hh_room hh_off hhb hhd (by decide +kernel)
@@ -772,14 +771,14 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
             simp [BitVec.uaddOverflow, hv_off]; omega
           checkpoint hck6
           have hV := fun m' (x d : BitVec 1792) hm =>
-            splice_def0 (m' := m') (x := x) (d := d) hm hv_room.inBounds (by omega) hv_zb hv_zd
+            splice_def0 (m' := m') (x := x) (d := d) hm hv_room (by omega) hv_zb hv_zd
           clear hv_zb hv_zd
           step_memcpy
           v_post
           clear_facts h
           step_pure
           have hV := fun m' hm =>
-            splice_at (m' := m') (off := 560#64) hm hSc hv_room.inBounds (hov _ (by decide))
+            splice_at (m' := m') (off := 560#64) hm hSc hv_room (hov _ (by decide))
               (by simp) hv_zb hv_zd
           clear hv_zb hv_zd
           checkpoint hck7
@@ -793,7 +792,7 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
           step_pure
           checkpoint hck8
           have hV := fun m' (x d : BitVec 1344) hm =>
-            splice_def (m' := m') (x := x) (d := d) (off := 224#64) hm hv_room.inBounds
+            splice_def (m' := m') (x := x) (d := d) (off := 224#64) hm hv_room
               (hov _ (by decide)) (by simp) hv_zb hv_zd
           clear hv_zb hv_zd
           step_memcpy
@@ -801,7 +800,7 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
           step_pure
           checkpoint hck9
           have hV := fun m' (x d : BitVec 1344) hm =>
-            splice_def (m' := m') (x := x) (d := d) (off := 392#64) hm hv_room.inBounds
+            splice_def (m' := m') (x := x) (d := d) (off := 392#64) hm hv_room
               (hov _ (by decide)) (by simp) hv_zb hv_zd
           clear hv_zb hv_zd
           step_memcpy
@@ -955,7 +954,7 @@ public theorem Verifier.init.facts {m : MemoryState} {p : Pointer} {r S A : BitV
       (by
         rw [hdd 392#64 1344 (by decide)]; exact d3)
   refine ⟨hFit, hAbs, ha1, ha2, hR1, hR2, ?_, ?_⟩
-  · exact Fits.of_definedAt_add hr (hov _ (by decide)) (by decide) hd d4
+  · exact Fits.of_definedAt_add hr.live (hov _ (by decide)) (by decide) hd d4
   · rw [hrd 560#64 256 (by decide)]; exact e4
 
 end Proof

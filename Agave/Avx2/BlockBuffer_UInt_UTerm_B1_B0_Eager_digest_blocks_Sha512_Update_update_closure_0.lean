@@ -153,6 +153,9 @@ theorem rng_disj0 {p : Pointer} {b : BitVec 64} {v w : Nat} (hp : p.offset.toNat
 /-- `^bb3` on `n` bytes at `inp`, the buffer empty: `tailMem`. -/
 theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) (E : ⟪Γ⟫)
     (hwf : S.WF)
+    (hg :
+      S.mem.Globals
+        BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.globals)
     (hArgs :
       E.args = (args (.value self) (.value data) (.value len) (.value (self.add 128#64))).get)
     (hR :
@@ -165,7 +168,7 @@ theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) 
     BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.runFrom E 3 S =
       .value
         (.nil,
-          { alloc := ⟨S.alloc.nextFreeBlock + 4 * tailCalls n⟩,
+          { alloc := ⟨S.alloc.nextFreeBlock + 3 * tailCalls n⟩,
             mem := tailMem S.mem self inp n }) := by
   have hfov := noOverflow_of_le (and_mask_le n) hio
   have hso8 : ¬self.offset.uaddOverflow 208#64 := by
@@ -236,6 +239,9 @@ theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) 
 `self`, the core's state and block count at `self + 128` (`updateMem`). The buffer's length (its
 last byte) is below `128` and as many first bytes known; `self` is apart from `data`. -/
 public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState) (hwf : s.WF)
+    (hg :
+      s.mem.Globals
+        BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.globals)
     (hself : Room s.mem self 1664) (hso : self.offset.toNat + 208 < 2 ^ 64)
     (hpos : Fits s.mem (self.add 127#64) 8) (hP128 : (s.mem.readAt (self.add 127#64) 8).toNat < 128)
     (hbuf : Fits s.mem self (8 * (s.mem.readAt (self.add 127#64) 8).toNat))
@@ -246,7 +252,7 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
         (args (.value self) (.value data) (.value len) (.value (self.add 128#64))) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 4 * updateCalls s.mem self len⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + 3 * updateCalls s.mem self len⟩
             mem := updateMem s.mem self data len }) := by
   generalize hP : s.mem.readAt (self.add 127#64) 8 = P at hP128 hbuf
   simp only [updateMem, updateCalls]
@@ -299,7 +305,7 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
     finish_block
     case isTrue =>
       subst hbr
-      rw [tail_eq self data data len len S E hwf hArgs (by env_reads) hself hso hst hbl hdata hdo
+      rw [tail_eq self data data len len S E hwf hg hArgs (by env_reads) hself hso hst hbl hdata hdo
           hlen hsd]
       subst hS
       simp only [PoisonOr.value_bind, hbr0, ↓reduceIte, Bool.false_eq_true,
@@ -348,7 +354,7 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
         simp only [Pointer.add, BitVec.toNat_add]
         rw [Nat.mod_eq_of_lt (by omega)]
         omega
-      rw [tail_eq self data (data.add rem) len (len - rem) S E hwf hArgs (by env_reads) hself hso
+      rw [tail_eq self data (data.add rem) len (len - rem) S E hwf hg hArgs (by env_reads) hself hso
           hst hbl hinp hio (by omega) (by simpa [Pointer.add_id] using hsd)]
       subst hS
       simp only [PoisonOr.value_bind, hbr0, hbr, ↓reduceIte, Bool.false_eq_true]

@@ -403,13 +403,13 @@ theorem offsetInBits_slot {X : Pointer} (hX : X.offset = 0) {b : Nat} (hb : b < 
 
 /-- A word of a lane pair stored at byte `b` of a buffer, read back. -/
 public theorem readAt_storeAt_pair {m : MemoryState} {X : Pointer} (hX : X.offset = 0) {n b : Nat}
-    (hf : InBounds m X (8 * n)) (hb : b + 16 ≤ n) (hn : n < 2 ^ 60) (v : Vector (BitVec 64) 2)
+    (hf : Room m X (8 * n)) (hb : b + 16 ≤ n) (hn : n < 2 ^ 60) (v : Vector (BitVec 64) 2)
     {l : Nat} (hl : l < 2) :
     (m.storeAt (X.add (BitVec.ofNat 64 b)) (BitVec.packLanes v)).readAt
         (X.add (BitVec.ofNat 64 (b + 8 * l))) 64 =
       v[l] := by
-  have hin : InBounds m (X.add (BitVec.ofNat 64 b)) 128 :=
-    InBounds.add_of_le
+  have hin : Room m (X.add (BitVec.ofNat 64 b)) 128 :=
+    Room.add_of_le
       (by
         simp [BitVec.uaddOverflow, hX]; omega)
       (by
@@ -420,7 +420,7 @@ public theorem readAt_storeAt_pair {m : MemoryState} {X : Pointer} (hX : X.offse
       X.add (BitVec.ofNat 64 (b + 8 * l)) =
         (X.add (BitVec.ofNat 64 b)).add (BitVec.ofNat 64 (8 * l))
       by rw [Pointer.add_add, BitVec.ofNat_add],
-    MemoryState.readAt_add_of_readAt hin.storeAt
+    MemoryState.readAt_add_of_readAt hin.inBounds.storeAt
       (by
         simp [BitVec.uaddOverflow, Pointer.add, hX]; omega)
       (by
@@ -443,7 +443,7 @@ public theorem readAt_storeAt_pair_ne {m : MemoryState} {X : Pointer} (hX : X.of
 /-- A pair stored at slot `p % 8` of a ring buffer: words `2 p`, `2 p + 1` in, the two it
 overwrites out. -/
 public theorem HoldsR.store {m : MemoryState} {X : Pointer} {W : Nat → BitVec 64} {lo p : Nat}
-    (hX : X.offset = 0) (hf : InBounds m X 1024) (h : HoldsR m X W lo (2 * p))
+    (hX : X.offset = 0) (hf : Room m X 1024) (h : HoldsR m X W lo (2 * p))
     (v : Vector (BitVec 64) 2) (h0 : v[0] = wk W (2 * p)) (h1 : v[1] = wk W (2 * p + 1)) :
     HoldsR (m.storeAt (X.add (BitVec.ofNat 64 (p % 8 * 16))) (BitVec.packLanes v)) X W
       (max lo (2 * p - 14)) (2 * p + 2) := by
@@ -462,7 +462,7 @@ public theorem HoldsR.store {m : MemoryState} {X : Pointer} {W : Nat → BitVec 
 
 /-- A pair stored at byte `16 p` of a buffer holding words `t < 2 p`: words `2 p`, `2 p + 1` in. -/
 public theorem HoldsT.store {m : MemoryState} {X : Pointer} {W : Nat → BitVec 64} {p : Nat}
-    (hX : X.offset = 0) (hf : InBounds m X 5120) (hp : p < 40) (h : HoldsT m X W (2 * p))
+    (hX : X.offset = 0) (hf : Room m X 5120) (hp : p < 40) (h : HoldsT m X W (2 * p))
     (v : Vector (BitVec 64) 2) (h0 : v[0] = wk W (2 * p)) (h1 : v[1] = wk W (2 * p + 1)) :
     HoldsT (m.storeAt (X.add (BitVec.ofNat 64 (p * 16))) (BitVec.packLanes v)) X W (2 * p + 2) := by
   intro t ht
@@ -525,11 +525,32 @@ public theorem Room.pairsMem {mem : MemoryState} (h : Room mem q w) :
   | succ n ih => exact ih h.storeAt
 
 @[mlir_transport]
+public theorem Live.pairsMem {mem : MemoryState} (h : Live mem q w) :
+    Live (pairsMem X W p n mem) q w := by
+  induction n generalizing p mem with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+@[mlir_transport]
+public theorem Writable.pairsMem {mem : MemoryState} (h : Writable mem q) :
+    Writable (pairsMem X W p n mem) q := by
+  induction n generalizing p mem with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+@[mlir_transport]
 public theorem InBounds.pairsMem {mem : MemoryState} (h : InBounds mem q w) :
     InBounds (pairsMem X W p n mem) q w := by
   induction n generalizing p mem with
   | zero => exact h
   | succ n ih => exact ih h.storeAt
+
+/-- The ring buffer's stores keep every block, its length, lifetime and writability. -/
+public theorem Room.pairsMem_iff {mem : MemoryState} :
+    Room (compress512.pairsMem X W p n mem) q w ↔ Room mem q w := by
+  induction n generalizing p mem with
+  | zero => rfl
+  | succ n ih => rw [pairsMem_succ, ih, Room.storeAt_iff]
 
 /-- The ring buffer's stores keep every block and its length. -/
 public theorem InBounds.pairsMem_iff {mem : MemoryState} :
@@ -572,7 +593,7 @@ public theorem eraseFrom_pairsMem_of_le {mem : MemoryState} (h : B ≤ X.id.id) 
 
 /-- The ring buffer's window after storing pairs `p … p + n - 1`. -/
 public theorem HoldsR.pairsMem {mem : MemoryState} {X : Pointer} {W : Nat → BitVec 64}
-    (hX : X.offset = 0) (hf : InBounds mem X 1024) :
+    (hX : X.offset = 0) (hf : Room mem X 1024) :
     ∀ {p n lo},
       lo ≤ 2 * p →
         2 * p ≤ lo + 16 →
@@ -695,6 +716,19 @@ public theorem Room.tMem {mem : MemoryState} (h : Room mem q w) : Room (tMem X W
   | succ n ih => exact ih h.storeAt
 
 @[mlir_transport]
+public theorem Live.tMem {mem : MemoryState} (h : Live mem q w) : Live (tMem X W p n mem) q w := by
+  induction n generalizing p mem with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+@[mlir_transport]
+public theorem Writable.tMem {mem : MemoryState} (h : Writable mem q) :
+    Writable (tMem X W p n mem) q := by
+  induction n generalizing p mem with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+@[mlir_transport]
 public theorem InBounds.tMem {mem : MemoryState} (h : InBounds mem q w) :
     InBounds (tMem X W p n mem) q w := by
   induction n generalizing p mem with
@@ -739,7 +773,7 @@ public theorem eraseFrom_tMem_of_le {mem : MemoryState} (h : B ≤ X.id.id) :
 
 /-- The buffer's words after storing pairs `p … p + n - 1` from word `2 p` on. -/
 public theorem HoldsT.tMem {mem : MemoryState} {X : Pointer} {W : Nat → BitVec 64}
-    (hX : X.offset = 0) (hf : InBounds mem X 5120) :
+    (hX : X.offset = 0) (hf : Room mem X 5120) :
     ∀ {p n}, p + n ≤ 40 → HoldsT mem X W (2 * p) → HoldsT (tMem X W p n mem) X W (2 * (p + n)) := by
   intro p n
   induction n generalizing p mem with

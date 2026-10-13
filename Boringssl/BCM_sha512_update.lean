@@ -294,7 +294,7 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
     finish_block
     have hstate : S₁.mem.readWords8 c = v.h := by
       rw [hM]
-      exact MemoryState.readWords8_storeShaCtx hMf.2.1.inBounds hco
+      exact MemoryState.readWords8_storeShaCtx hMf.2.1 hco
     have hblock :
       S₁.mem.readAt d (1024 * (n >>> 7).toNat) = D.setWidth (1024 * (n >>> 7).toNat) := by
       rw [← hread_d]
@@ -447,8 +447,8 @@ theorem rest_block (c data : Pointer) (len : BitVec 64) (D : BitVec (8 * len.toN
           BitVec.uaddOverflow] at hco ⊢
         omega
       step_call using sha512_block_data_order.call_eq consuming hst hp hpo' hpd
-      rw [MemoryState.readWords8_storeShaCtx hMf.2.1.inBounds hco,
-        MemoryState.readAt_storeShaCtx_p hMf.2.1.inBounds hco,
+      rw [MemoryState.readWords8_storeShaCtx hMf.2.1 hco,
+        MemoryState.readAt_storeShaCtx_p hMf.2.1 hco,
         MemoryState.storeShaCtx_storeWords8 hco] at hS
       have hM' := congrArg GlobalState.mem hS
       dsimp only at hM'

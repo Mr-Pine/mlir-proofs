@@ -25,11 +25,13 @@ end
 section Proof
 
 public theorem fd_curve25519_into_precomputed.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.QuadFit r) :
+    (hr : s.mem.QuadFit r) (hrw : Writable s.mem r) :
     fd_curve25519_into_precomputed.call (fd_curve25519_into_precomputed.args (.value r)) s =
-      .value (.nil,
-        { alloc := ⟨s.alloc.nextFreeBlock + 3⟩,
-          mem := s.mem.storeQuad r (fd_curve25519_into_precomputed.spec (s.mem.readQuad r)) }) := by
+      .value
+        (.nil,
+          { alloc := ⟨s.alloc.nextFreeBlock + 3⟩,
+            mem :=
+              s.mem.storeQuad r (fd_curve25519_into_precomputed.spec (s.mem.readQuad r)) }) := by
   func_init
   have hrr : S.mem.readQuad r = S₀.mem.readQuad r := by rw [hS]
   block_init

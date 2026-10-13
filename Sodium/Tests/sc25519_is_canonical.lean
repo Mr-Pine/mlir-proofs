@@ -9,7 +9,9 @@ namespace MLIR.Sodium
 /-- `s` in block 1; the returned value, or `none` for UB. -/
 private def run (s : BitVec 256) : Option (BitVec 32) :=
   let st : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 32 s)]⟩⟩
-  match sc25519_is_canonical.call (sc25519_is_canonical.args (.value ⟨⟨1⟩, 0⟩)) st with
+  match
+    sc25519_is_canonical.call (sc25519_is_canonical.args (.value ⟨⟨1⟩, 0⟩))
+      (st.withGlobals sc25519_is_canonical.globals) with
   | .value (.cons (.value r) .nil, _) => some r
   | _ => none
 

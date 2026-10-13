@@ -30,9 +30,9 @@ public theorem ZigVerify.code_eq (msg : List (BitVec 8)) (r S A : BitVec 256) :
 /-- `zig_ed25519_verify` on a message, a signature `r ‖ S` and a key `A` returns `verify`'s code,
 and leaves memory as it found it. -/
 public theorem zig_ed25519_verify.correct (msg : Pointer) (len : BitVec 64) (sig pk : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * len.toNat))
-    (hmo : msg.offset.toNat + len.toNat < 2 ^ 64) (hsig : Fits s.mem sig 512)
-    (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals zig_ed25519_verify.globals)
+    (hmsg : Fits s.mem msg (8 * len.toNat)) (hmo : msg.offset.toNat + len.toNat < 2 ^ 64)
+    (hsig : Fits s.mem sig 512) (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
     (hpo : pk.offset.toNat + 32 < 2 ^ 64) (hlen : len.toNat + 128 < 2 ^ 63) :
     ∃ n,
       zig_ed25519_verify.call
@@ -48,7 +48,7 @@ public theorem zig_ed25519_verify.correct (msg : Pointer) (len : BitVec 64) (sig
     ⟨ZigVerify.blocks (bytesLE (s.mem.readAt msg (8 * len.toNat))) (s.mem.readAt sig 256)
         (s.mem.readAt (sig.add 32#64) 256) (s.mem.readAt pk 256),
       ?_⟩
-  rw [zig_ed25519_verify.call_eq msg len sig pk s hwf hmsg hmo hsig hso hpk hpo hlen]
+  rw [zig_ed25519_verify.call_eq msg len sig pk s hwf hg hmsg hmo hsig hso hpk hpo hlen]
   dsimp only
   rw [ZigVerify.code_eq]
 

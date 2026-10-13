@@ -34,11 +34,11 @@ private def run (P : GeP3) : Option GeCached :=
           [(⟨1⟩, blk 160 0),
             (⟨2⟩, blk 160 (bytesOf P.T ++ bytesOf P.Z ++ bytesOf P.Y ++ bytesOf P.X))]⟩⟩
   match
-    ge25519_p3_to_cached.call (ge25519_p3_to_cached.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩)) s with
+    ge25519_p3_to_cached.call (ge25519_p3_to_cached.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩))
+      (s.withGlobals ge25519_p3_to_cached.globals) with
   | .value (_, s') => some (s'.mem.readCached ⟨⟨1⟩, 0⟩)
   | _ => none
 
--- the spec's, on three inputs
 #guard
   ([⟨fe 0, fe 1, fe 2, fe 3⟩, ⟨fe 7, fe 8, fe 9, fe 10⟩, ⟨fe 14, fe 15, fe 16, fe 17⟩] :
         List GeP3).all

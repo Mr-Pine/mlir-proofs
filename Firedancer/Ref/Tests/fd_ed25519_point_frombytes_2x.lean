@@ -10,12 +10,13 @@ private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
 
 /-- Zeroed 160-byte blocks for `r1` (block 1) and `r2` (block 3), 32-byte blocks holding `b1`
-(block 2) and `b2` (block 4); block 0 is null's. -/
+(block 2) and `b2` (block 4); block 0 is null's, the globals' follow. -/
 private def state (b1 b2 : BitVec 256) : GlobalState :=
-  ⟨⟨5⟩,
-    ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 b1), (⟨3⟩, .ofBytes 160 0),
-          (⟨4⟩, .ofBytes 32 b2)]⟩⟩
+  GlobalState.withGlobals fd_ed25519_point_frombytes_2x.globals
+    ⟨⟨5⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 32 b1), (⟨3⟩, .ofBytes 160 0),
+            (⟨4⟩, .ofBytes 32 b2)]⟩⟩
 
 /-- A point's coordinates `X, Y, Z, T` at `p`, canonically encoded. -/
 private def enc (m : MemoryState) (p : Pointer) : List (BitVec 256) :=
@@ -32,7 +33,7 @@ private def out (b1 b2 : BitVec 256) (q : Pointer := ptr 4) :
         (.value q))
       (state b1 b2) with
   | .value (.cons (.value ret) .nil, s') =>
-    some (ret, s'.alloc.nextFreeBlock - 5, enc s'.mem (ptr 1), enc s'.mem (ptr 3))
+    some (ret, s'.alloc.nextFreeBlock - 8, enc s'.mem (ptr 1), enc s'.mem (ptr 3))
   | _ => none
 
 /-- The base point's and the neutral point's coordinates, and an untouched (zero) point's. -/
@@ -62,20 +63,20 @@ private def oneSignBytes : BitVec 256 :=
   0x8000000000000000000000000000000000000000000000000000000000000001#256
 
 -- two valid points
-#guard out baseBytes oneBytes == some (0#32, 158, base, neutral)
+#guard out baseBytes oneBytes == some (0#32, 152, base, neutral)
 
 -- the first invalid: `-1`, nothing stored, the second not decoded
-#guard out twoBytes oneBytes == some (-1#32, 57, zero, zero)
+#guard out twoBytes oneBytes == some (-1#32, 54, zero, zero)
 
 -- the second invalid: `-2`, only the first stored
-#guard out oneBytes twoBytes == some (-2#32, 136, neutral, zero)
+#guard out oneBytes twoBytes == some (-2#32, 130, neutral, zero)
 
 -- `x = 0` with the sign bit set, in either slot
-#guard out oneSignBytes baseBytes == some (0#32, 158, neutral, base)
+#guard out oneSignBytes baseBytes == some (0#32, 152, neutral, base)
 
-#guard out baseBytes oneSignBytes == some (0#32, 158, base, neutral)
+#guard out baseBytes oneSignBytes == some (0#32, 152, base, neutral)
 
 -- both from one buffer
-#guard out baseBytes 0 (q := ptr 2) == some (0#32, 158, base, base)
+#guard out baseBytes 0 (q := ptr 2) == some (0#32, 152, base, base)
 
 end MLIR.Firedancer.Ref

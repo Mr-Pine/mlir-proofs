@@ -22,7 +22,8 @@ set_option maxHeartbeats 400000 in
 /-- `^bb0` from the sign bytes to `_Quv`: both encodings at `sa sb` (`sA sB`) through `pre`, their
 values the checks need stored, `_Quv = quv` in registers. -/
 theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ × GlobalState → PoisonOr β}
-    {K : PoisonOr β} {B : GlobalState} {M : MemoryState} (sA sB : BitVec 256)
+    {K : PoisonOr β} {B : GlobalState} {M : MemoryState} {gsq gone gd : Pointer}
+    (sA sB : BitVec 256)
     (hArgs : Ein.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get)
     (hR :
       Ein ⊨ [rir_reg% hty 46 := B.slot 3, rir_reg% hty 47 := B.slot 4, rir_reg% hty 48 := B.slot 5,
@@ -32,14 +33,14 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
         rir_reg% hty 58 := B.slot 15, rir_reg% hty 59 := B.slot 16, rir_reg% hty 60 := B.slot 17,
         rir_reg% hty 61 := B.slot 18, rir_reg% hty 62 := B.slot 19, rir_reg% hty 63 := B.slot 20,
         rir_reg% hty 80 := B.slot 37, rir_reg% hty 81 := B.slot 38, rir_reg% hty 82 := B.slot 39,
-        rir_reg% hty 83 := B.slot 40, rir_reg% hty 16 := B.slot 1, rir_reg% hty 17 := B.slot 2,
+        rir_reg% hty 83 := B.slot 40, rir_reg% hty 16 := gone, rir_reg% hty 17 := gd,
         rir_reg% hty 14 := 32#64, rir_reg% hty 15 := 127#8, rir_reg% hty 18 :=
         (Vector.replicate 4 PoisonOr.poison : ⟦.vec 4 64⟧), rir_reg% hty 19 := 0#64,
         rir_reg% hty 20 := 1#64, rir_reg% hty 21 := 2#64, rir_reg% hty 22 := 3#64])
-    (hI : Inv B M 0 S) (hG : Globals B M) (hsa : Fits S.mem sa 256) (hsb : Fits S.mem sb 256)
-    (hsA : S.mem.readAt sa 256 = sA) (hsB : S.mem.readAt sb 256 = sB)
+    (hI : Inv B M 0 S) (hG : Globals B gsq gone gd M) (hsa : Fits S.mem sa 256)
+    (hsb : Fits S.mem sb 256) (hsA : S.mem.readAt sa 256 = sA) (hsB : S.mem.readAt sb 256 = sB)
     (hsa_off : ¬sa.offset.uaddOverflow 32#64) (hsb_off : ¬sb.offset.uaddOverflow 32#64)
-    (hsa_lt : sa.id.id < B.alloc.nextFreeBlock) (hsb_lt : sb.id.id < B.alloc.nextFreeBlock)
+    (hsa_lt : sa.id.id < B.alloc.nextFreeBlock + 3) (hsb_lt : sb.id.id < B.alloc.nextFreeBlock + 3)
     (hK :
       ∀ (E' : ⟪Γ⟫) (S' : GlobalState),
         E'.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get →
@@ -62,8 +63,11 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
     (bb0.runBodyFrom Ein 281 S >>= g) = K := by
   have hg1 := hI.fits hG.one_fits
   have hg2 := hI.fits hG.d_fits
-  have hone := (hI.readVec (p := B.slot 1) (by simp [GlobalState.slot])).trans hG.one
-  have hd := (hI.readVec (p := B.slot 2) (by simp [GlobalState.slot])).trans hG.d
+  have hone := (hI.readVec hG.one_lt).trans hG.one
+  have hd := (hI.readVec hG.d_lt).trans hG.d
+  -- the globals below the frame, for their facts past its slots' writes
+  have hone_lt := hG.one_lt
+  have hd_lt := hG.d_lt
   clear hG
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   have hsa_ne : sa.id ≠ (B.slot 37).id := fun h => by
@@ -76,6 +80,8 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
     have := congrArg BlockId.id h; simp [GlobalState.slot] at this; omega
   have hb2a := hF.tmp 37
   have hb2b := hF.tmp 38
+  have hw37 := hF.wr 37
+  have hw38 := hF.wr 38
   have ho37 : (B.slot 37).offset = 0 := rfl
   have ho38 : (B.slot 38).offset = 0 := rfl
   step_pure
@@ -154,6 +160,8 @@ theorem fields_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ 
   name_vec uv7a
   have h39 := hF.arr 39
   have h40 := hF.arr 40
+  have hw39 := hF.wr 39
+  have hw40 := hF.wr 40
   have ho39 : (B.slot 39).offset = 0 := rfl
   have ho40 : (B.slot 40).offset = 0 := rfl
   -- `wwl_st( ea, uv7a->el )`, `wwl_st( eb, uv7b->el )`

@@ -90,7 +90,7 @@ theorem fits_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64} (hf
 
 /-- Lane `j` of stored digits. -/
 theorem readAt_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64}
-    (hf : InBounds m p 512) (ho : p.offset = 0) (hj : j < 64) :
+    (hf : Room m p 512) (ho : p.offset = 0) (hj : j < 64) :
     (m.storeAt p (BitVec.packLanes v)).readAt (p.add (BitVec.ofNat 64 j)) 8 = v[j] := by
   rw [MemoryState.readAt_storeAt_add hf (lane_ov ho hj).2
       (by
@@ -153,7 +153,7 @@ theorem overlay_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64} 
   have hj8 : (p.add (BitVec.ofNat 64 j)).offsetInBits = j * 8 := by
     rw [Pointer.offsetInBits_add (lane_ov ho hj).2, h0, (lane_ov ho hj).1]; omega
   simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, hj8, h0, ← spliceBits_packLanes hj,
@@ -428,7 +428,7 @@ theorem carry_loop (out sp e : Pointer) (x : BitVec 256) (g : Vals [] × GlobalS
     have hkn : (BitVec.ofNat 64 k).toNat = k := by
       rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
     have hf := fits_lane (v := stage x k) hef he (j := k) (by omega)
-    have hl := readAt_lane (v := stage x k) hef.inBounds he (j := k) (by omega)
+    have hl := readAt_lane (v := stage x k) hef he (j := k) (by omega)
     rw [stage_get (by omega)] at hl
     obtain ⟨o1, o2, o3⟩ := carry_ovf x k
     block_init

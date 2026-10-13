@@ -16,12 +16,14 @@ section Tests
 private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
 
-/-- The points `r1`, `r2` in blocks `0`, `2` (192 bytes, zeroed), the encodings in `1`, `3`. -/
+/-- The points `r1`, `r2` in blocks `0`, `2` (192 bytes, zeroed), the encodings in `1`, `3`, then
+the globals. -/
 private def state (e1 e2 : Nat) : GlobalState :=
-  ⟨⟨4⟩,
-    ⟨Std.ExtHashMap.ofList
-        [(⟨0⟩, .ofBytes 192 0), (⟨1⟩, .ofBytes 32 (BitVec.ofNat 256 e1)), (⟨2⟩, .ofBytes 192 0),
-          (⟨3⟩, .ofBytes 32 (BitVec.ofNat 256 e2))]⟩⟩
+  GlobalState.withGlobals fd_ed25519_point_frombytes_2x.globals
+    ⟨⟨4⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨0⟩, .ofBytes 192 0), (⟨1⟩, .ofBytes 32 (BitVec.ofNat 256 e1)), (⟨2⟩, .ofBytes 192 0),
+            (⟨3⟩, .ofBytes 32 (BitVec.ofNat 256 e2))]⟩⟩
 
 private def eqQ (P Q : Quad5) : Bool :=
   P.P0 == Q.P0 && P.P1 == Q.P1 && P.P2 == Q.P2 && P.P3 == Q.P3 && P.P4 == Q.P4

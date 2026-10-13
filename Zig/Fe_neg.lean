@@ -28,12 +28,12 @@ section Proof
 
 /-- `Fe.neg` stores `spec a` at `out`, for limbs below `2^63`. -/
 public theorem Fe_neg.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsRoom out) (ha : s.mem.LimbsFit a)
+    (hg : s.mem.Globals Fe_neg.globals) (hout : s.mem.LimbsRoom out) (ha : s.mem.LimbsFit a)
     (ha' : Fe.Lt (s.mem.readLimbs a) (2 ^ 63)) :
     Fe_neg.call (Fe_neg.args (.value out) (.value a)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem := s.mem.storeLimbs out (Fe.neg.spec (s.mem.readLimbs a)) }) := by
   func_init
   have ha₀ : S₀.mem.LimbsFit a := hS ▸ ha
@@ -47,8 +47,6 @@ public theorem Fe_neg.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   have hz' : Fe.Lt (S.mem.readLimbs z) (2 ^ 63) := by
     rw [hzl]; intro i; simp
   limbs_fit z
-  have hz_ne : z.id ≠ S.allocaPtr.id := by
-    subst hz hS; simp [GlobalState.allocaPtr, GlobalState.slot]
   step_pure
   step_alloca with t
   limbs_room t

@@ -15,8 +15,7 @@ open _root_.Ed25519
 
 namespace Sha512_Update_chain_slice_u8
 
-open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (updateMem
-  updateCalls)
+open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (updateMem)
 
 /-- sha2's `Sha512` at `self` moved to `out`: its 208 bytes, defined where they were. -/
 def copyObj (m : MemoryState) (out self : Pointer) : MemoryState :=
@@ -31,16 +30,11 @@ end
 namespace Sha512_Update_chain_slice_u8
 
 open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (updateMem
-  updateCalls updateMem_absorbed room_updateMem wf_updateMem)
+  updateMem_absorbed room_updateMem wf_updateMem)
 
 section Proof
 
 attribute [local mlir_transport] room_updateMem wf_updateMem
-
-/-- Nothing at or above a well-formed state's counter. -/
-theorem eraseFrom_of_wf {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    m.eraseFrom a.nextFreeBlock = m :=
-  h.eraseFrom
 
 /-- `copyObj` keeps a state well-formed. -/
 theorem wf_copyObj {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
@@ -51,7 +45,8 @@ theorem wf_copyObj {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalS
 `self` (`updateMem`), which then moves to `out`. The buffer's length (its last byte) is below `128`
 and as many first bytes known; `self` is apart from `data` and `out`. -/
 public theorem call_eq (out self data : Pointer) (len : BitVec 64) (s : GlobalState) (hwf : s.WF)
-    (hself : Room s.mem self 1664) (hso : self.offset.toNat + 208 < 2 ^ 64)
+    (hg : s.mem.Globals Sha512_Update_chain_slice_u8.globals) (hself : Room s.mem self 1664)
+    (hso : self.offset.toNat + 208 < 2 ^ 64)
     (hpos : Fits s.mem (self.add 127#64) 8) (hP128 : (s.mem.readAt (self.add 127#64) 8).toNat < 128)
     (hbuf : Fits s.mem self (8 * (s.mem.readAt (self.add 127#64) 8).toNat))
     (hst : s.mem.Sha512Fit (self.add 128#64)) (hbl : Fits s.mem (self.add 192#64) 128)
@@ -62,21 +57,24 @@ public theorem call_eq (out self data : Pointer) (len : BitVec 64) (s : GlobalSt
         s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + updateCalls s.mem self len⟩
-            mem := copyObj (updateMem s.mem self data len) out self }) := by
+          { s with mem := copyObj (updateMem s.mem self data len) out self }) := by
+  -- the end state's `WF`, for `func_init`'s frame-free form
+  have hwfU :
+      ({ s with mem := copyObj (updateMem s.mem self data len) out self } : GlobalState).WF :=
+    wf_copyObj (a := s.alloc) (wf_updateMem hwf)
   func_init
+  clear hwfU
   block_init
   step_pure
   step_pure
   step_call using
     (BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.call_eq
       (hP128 := hP128) (hbuf := hbuf)) consuming
-    hpos hP128 hbuf hst hbl hdata
+    hg hpos hP128 hbuf hst hbl hdata
   step_memcpy
   finish_block
   subst hS
-  dsimp only
-  rw [← copyObj, eraseFrom_of_wf (wf_copyObj (wf_updateMem hwf₀))]
+  rfl
 
 /-! ## The absorbed bytes -/
 
@@ -97,7 +95,7 @@ theorem copy_read {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout :
     (hself : Room m self 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64)
     (hso : self.offset.toNat + 208 < 2 ^ 64) (hk : k.toNat * 8 + w ≤ 1664) :
     (copyObj m out self).readAt (out.add k) w = m.readAt (self.add k) w :=
-  MemoryState.readAt_storeDef_readAt_add hout.inBounds hself.inBounds
+  MemoryState.readAt_storeDef_readAt_add hout hself.inBounds
     (by
       simp [BitVec.uaddOverflow]; omega)
     (by
@@ -123,7 +121,7 @@ theorem absorbed_copy {m : MemoryState} {out self : Pointer} {M : List (BitVec 8
         ?_, ?_, ?_⟩,
       ?_, copy_fits hout hoo hso (by decide) hcf, ?_⟩
   · rw [copy_read hout hroom hoo hso (by decide), hp]
-  · rw [copyObj, MemoryState.readAt_storeDef_readAt_le hout.inBounds (by omega), hb]
+  · rw [copyObj, MemoryState.readAt_storeDef_readAt_le hout (by omega), hb]
   · exact copy_fits hout hoo hso (by decide) h0
   · simp only [add_128]; exact copy_fits hout hoo hso (by decide) h1
   · simp only [add_128]; exact copy_fits hout hoo hso (by decide) h2

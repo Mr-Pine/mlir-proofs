@@ -20,9 +20,9 @@ open _root_.Ed25519
 @[expose] public section
 
 /-- The blocks `scalar_from_sha512` allocates: its seven slots, `finalize_variable_core`'s and
-`from_bytes_wide`'s. -/
+`from_bytes_wide`'s 38. -/
 def scalar_from_sha512.frames (M : List (BitVec 8)) : Nat :=
-  7 + Sha512VarCore_VariableOutputCore_finalize_variable_core.framesOf M + 40
+  7 + Sha512VarCore_VariableOutputCore_finalize_variable_core.framesOf M + 38
 
 end
 
@@ -53,7 +53,7 @@ theorem absorbed_of_block {m m' : MemoryState} {d : Pointer} {M : List (BitVec 8
     simp only [MemoryState.readSha512, MemoryState.readAt, Pointer.add_id, hb]
   obtain ⟨hoff, hroom, hpf, hp, hbf, hbuf, ⟨hso, h0, h1, h2, h3, h4, h5, h6, h7⟩, hst, hcf, hc⟩ := h
   refine
-    ⟨hoff, by simpa only [Room, hb] using hroom, hf hpf rfl, by rwa [hr (d.add 127#64) rfl],
+    ⟨hoff, hroom.of_getElem?_eq hb, hf hpf rfl, by rwa [hr (d.add 127#64) rfl],
       hf hbf rfl, by rwa [hr d rfl],
       ⟨hso, hf h0 rfl, hf h1 rfl, hf h2 rfl, hf h3 rfl, hf h4 rfl, hf h5 rfl, hf h6 rfl, hf h7 rfl⟩,
       by rwa [hs], hf hcf rfl, by rwa [hr (d.add 192#64) rfl]⟩
@@ -95,7 +95,7 @@ theorem copy_read {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout :
     (hself : Room m self 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64)
     (hso : self.offset.toNat + 208 < 2 ^ 64) (hk : k.toNat * 8 + w ≤ 1664) :
     (copyObj m out self).readAt (out.add k) w = m.readAt (self.add k) w :=
-  MemoryState.readAt_storeDef_readAt_add hout.inBounds hself.inBounds
+  MemoryState.readAt_storeDef_readAt_add hout hself.inBounds
     (by
       simp [BitVec.uaddOverflow]; omega)
     (by
@@ -121,7 +121,7 @@ theorem absorbed_copy {m : MemoryState} {out self : Pointer} {M : List (BitVec 8
         ?_, ?_, ?_⟩,
       ?_, copy_fits hout hoo hso (by decide) hcf, ?_⟩
   · rw [copy_read hout hroom hoo hso (by decide), hp]
-  · rw [copyObj, MemoryState.readAt_storeDef_readAt_le hout.inBounds (by omega), hb]
+  · rw [copyObj, MemoryState.readAt_storeDef_readAt_le hout (by omega), hb]
   · exact copy_fits hout hoo hso (by decide) h0
   · simp only [add_128]; exact copy_fits hout hoo hso (by decide) h1
   · simp only [add_128]; exact copy_fits hout hoo hso (by decide) h2
@@ -162,8 +162,8 @@ theorem eraseFrom_storeSha512_of_le {m : MemoryState} {p : Pointer} {v : Vector 
 is copied first, so `hash` is unchanged; the temporaries' and callees' blocks are freed, only the
 counter moves on. -/
 public theorem call_eq (out hash : Pointer) (M : List (BitVec 8)) (s : GlobalState) (hwf : s.WF)
-    (hA : s.mem.Sha2Absorbed hash M) (hout : Room s.mem out 256)
-    (hoo : ¬out.offset.uaddOverflow 32#64) :
+    (hg : s.mem.Globals scalar_from_sha512.globals) (hA : s.mem.Sha2Absorbed hash M)
+    (hout : Room s.mem out 256) (hoo : ¬out.offset.uaddOverflow 32#64) :
     scalar_from_sha512.call (args (.value out) (.value hash)) s =
       .value
         (.nil,

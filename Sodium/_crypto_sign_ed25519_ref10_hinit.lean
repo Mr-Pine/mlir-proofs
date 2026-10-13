@@ -23,15 +23,15 @@ public theorem _crypto_sign_ed25519_ref10_hinit_DOM2PREFIX.value_eq (s : GlobalS
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
 /-- `_crypto_sign_ed25519_ref10_hinit(hs, 0)` sets up the struct at `hs` as
-`crypto_hash_sha512_init` does. `DOM2PREFIX`'s and the callee's blocks are freed again: only the
-counter moves on, by two blocks. -/
+`crypto_hash_sha512_init` does. -/
 public theorem _crypto_sign_ed25519_ref10_hinit.call_eq (hs : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hroom : Room s.mem hs 1664) (hso : ¬hs.offset.uaddOverflow 208#64) :
+    (hwf : s.WF) (hg : s.mem.Globals _crypto_sign_ed25519_ref10_hinit.globals)
+    (hroom : Room s.mem hs 1664) (hso : ¬hs.offset.uaddOverflow 208#64) :
     _crypto_sign_ed25519_ref10_hinit.call
         (_crypto_sign_ed25519_ref10_hinit.args (.value hs) (.value 0#32)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
+          { s with
             mem :=
               s.mem.storeHashState hs
                 (crypto_hash_sha512_init.spec (s.mem.readHashState hs)) }) := by
@@ -48,10 +48,7 @@ public theorem _crypto_sign_ed25519_ref10_hinit.call_eq (hs : Pointer) (s : Glob
   block_init
   finish_block
   subst hS
-  erase_frame
-  rw [MemoryState.readHashState_addBlock_of_id_ne
-      (by
-        rw [hdom] at hhs_ne_dom; exact hhs_ne_dom)]
+  rfl
 
 end Proof
 

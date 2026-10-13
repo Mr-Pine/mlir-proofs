@@ -99,8 +99,8 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
@@ -119,11 +119,10 @@ theorem limb_offset {v : Pointer} (hv : v.offset = 0) (hw : w < 5) :
 /-- `n[w]`, read from a stored `n`. -/
 @[mlir_read]
 public theorem fd_curve25519_scalar_wnaf.readAt_limb {m : MemoryState} {v : Pointer}
-    {n : BitVec 320} (hf : Fits m v 320) (hv : v.offset = 0) (hw : w < 5) :
+    {n : BitVec 320} (hf : Room m v 320) (hv : v.offset = 0) (hw : w < 5) :
     (m.storeAt v n).readAt (v.add (BitVec.ofNat 64 (8 * w))) 64 = n.extractLsb' (64 * w) 64 := by
   obtain ⟨h8, hov⟩ := limb_offset hv hw
-  rw [MemoryState.readAt_storeAt_add hf.inBounds hov (by omega), h8,
-    show 8 * w * 8 = 64 * w by omega]
+  rw [MemoryState.readAt_storeAt_add hf hov (by omega), h8, show 8 * w * 8 = 64 * w by omega]
 
 /-- A store of `n[w]` into a stored `n`: `n` with limb `w` spliced. -/
 theorem storeAt_limb {m : MemoryState} {v : Pointer} {n : BitVec 320} (hv : v.offset = 0)
@@ -369,8 +368,9 @@ abbrev hdr15 (v : Pointer) (B : Nat) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (q
 /-- `^bb14`, the carry loop, at word `cw`, bit `cb`, `4 - cw` words left: on to `^bb15` with `1`
 added at bit `64 cw + cb`. -/
 theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar v : Pointer) (bits : BitVec 32)
-    (B q : Nat) (Sb : GlobalState) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (t : Vector Int 256) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) :
+    (B q : Nat) (Sb : GlobalState) (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v)
+    (hv : v.offset = 0) (t : Vector Int 256) {β : Type} (g : Vals [] × GlobalState → PoisonOr β)
+    (K : PoisonOr β) :
     ∀ m cw cb (n : BitVec 320) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫),
       E.args = (fd_curve25519_scalar_wnaf.args (.value slides) (.value scalar) (.value bits)).get →
         cw + m = 4 →
@@ -496,10 +496,10 @@ abbrev hdr10 (v : Pointer) (B : Nat) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (p
 /-- `^bb10`, the window cleared from `n`: `_t[pos]` set, the carry, then `^bb15` at `pos+wid`. -/
 theorem fd_curve25519_scalar_wnaf.store_digit (slides scalar v : Pointer) (bits : BitVec 32)
     (B : Nat) (hB : B ≤ 12) (Sb : GlobalState) (hfs : Fits Sb.mem slides (8 * 512))
-    (hso : ¬slides.offset.uaddOverflow 512#64) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
-    (p : Nat) (hp : p < 256) (n : BitVec 320) (t : Vector Int 256)
-    (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫)
+    (hws : Writable Sb.mem slides) (hso : ¬slides.offset.uaddOverflow 512#64)
+    (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v) (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) (p : Nat) (hp : p < 256)
+    (n : BitVec 320) (t : Vector Int 256) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫)
     (hArgs :
       E.args = (fd_curve25519_scalar_wnaf.args (.value slides) (.value scalar) (.value bits)).get)
     (hK :
@@ -558,7 +558,7 @@ theorem fd_curve25519_scalar_wnaf.store_digit (slides scalar v : Pointer) (bits 
     finish_block
     simp only [digit, hbr, ↓reduceIte] at hK
     step_loop using
-      fd_curve25519_scalar_wnaf.carry_loop slides scalar v bits B (p + (B + 1)) Sb hfv hv _ g K
+      fd_curve25519_scalar_wnaf.carry_loop slides scalar v bits B (p + (B + 1)) Sb hfv hwv hv _ g K
         (4 - (p + (B + 1)) / 64) ((p + (B + 1)) / 64) ((p + (B + 1)) % 64) _ _ _ (by omega)
         (by omega)
     rw [show 64 * ((p + (B + 1)) / 64) + (p + (B + 1)) % 64 = p + (B + 1) by omega] at hS
@@ -588,10 +588,10 @@ abbrev hdr8 (v : Pointer) (B : Nat) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (n 
 `^bb10`. -/
 theorem fd_curve25519_scalar_wnaf.clear_window (slides scalar v : Pointer) (bits : BitVec 32)
     (B : Nat) (hB : B ≤ 12) (Sb : GlobalState) (hfs : Fits Sb.mem slides (8 * 512))
-    (hso : ¬slides.offset.uaddOverflow 512#64) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
-    (w b : Nat) (hw : w < 4) (hb : b < 64) (n : BitVec 320) (t : Vector Int 256)
-    (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫)
+    (hws : Writable Sb.mem slides) (hso : ¬slides.offset.uaddOverflow 512#64)
+    (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v) (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) (w b : Nat) (hw : w < 4)
+    (hb : b < 64) (n : BitVec 320) (t : Vector Int 256) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫)
     (hArgs :
       E.args = (fd_curve25519_scalar_wnaf.args (.value slides) (.value scalar) (.value bits)).get)
     (hK :
@@ -630,14 +630,14 @@ theorem fd_curve25519_scalar_wnaf.clear_window (slides scalar v : Pointer) (bits
     rw [storeAt_limb hv hw1, clear_spill n hw (by omega) hb hB] at hS
     finish_block
     step_loop using
-      fd_curve25519_scalar_wnaf.store_digit slides scalar v bits B hB Sb hfs hso hfv hv hne g K
-        (64 * w + b) (by omega) n t
+      fd_curve25519_scalar_wnaf.store_digit slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
+        g K (64 * w + b) (by omega) n t
     step_loop using hK
   · simp only [decide_eq_true_eq] at hbr
     rw [clear_one n hw (by omega) hB] at hS
     step_loop using
-      fd_curve25519_scalar_wnaf.store_digit slides scalar v bits B hB Sb hfs hso hfv hv hne g K
-        (64 * w + b) (by omega) n t
+      fd_curve25519_scalar_wnaf.store_digit slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
+        g K (64 * w + b) (by omega) n t
     step_loop using hK
 
 /-- `ctz` of a non-zero `y >> b0` stays within `y`'s 64 bits. -/
@@ -671,11 +671,12 @@ abbrev hdr6 (v : Pointer) (B : Nat) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (n 
 /-- `^bb6`, `x = n[w]>>b0` non-zero: `pos = 64 w + b0 + find_lsb(x)`, `lo`, then `^bb8`. -/
 theorem fd_curve25519_scalar_wnaf.read_window (slides scalar v : Pointer) (bits : BitVec 32)
     (B : Nat) (hB : B ≤ 12) (Sb : GlobalState) (hwf : Sb.WF) (hfs : Fits Sb.mem slides (8 * 512))
-    (hso : ¬slides.offset.uaddOverflow 512#64) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
-    (w b0 b base : Nat) (hbase : base = 64 * w + b0) (hw : w < 4) (n : BitVec 320)
-    (t : Vector Int 256) (x : BitVec 64) (hx : x = n.extractLsb' (64 * w) 64 >>> b0)
-    (hx0 : x ≠ 0#64) (hb : b0 + x.ctz.toNat = b) (hb64 : b < 64) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫)
+    (hws : Writable Sb.mem slides) (hso : ¬slides.offset.uaddOverflow 512#64)
+    (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v) (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) (w b0 b base : Nat)
+    (hbase : base = 64 * w + b0) (hw : w < 4) (n : BitVec 320) (t : Vector Int 256) (x : BitVec 64)
+    (hx : x = n.extractLsb' (64 * w) 64 >>> b0) (hx0 : x ≠ 0#64) (hb : b0 + x.ctz.toNat = b)
+    (hb64 : b < 64) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫)
     (hArgs :
       E.args = (fd_curve25519_scalar_wnaf.args (.value slides) (.value scalar) (.value bits)).get)
     (hK :
@@ -711,8 +712,8 @@ theorem fd_curve25519_scalar_wnaf.read_window (slides scalar v : Pointer) (bits 
       simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show b < 2 ^ 64 by omega)] at this
       exact this
     step_loop using
-      fd_curve25519_scalar_wnaf.clear_window slides scalar v bits B hB Sb hfs hso hfv hv hne g K w 0
-        hw (by omega) n t
+      fd_curve25519_scalar_wnaf.clear_window slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
+        g K w 0 hw (by omega) n t
     step_loop using hK
   · -- `lo |= n[w+1]<<(64UL-b);`
     have hb0 : 0 < b := by
@@ -729,8 +730,8 @@ theorem fd_curve25519_scalar_wnaf.read_window (slides scalar v : Pointer) (bits 
     step_pure [hd, hlo]
     finish_block
     step_loop using
-      fd_curve25519_scalar_wnaf.clear_window slides scalar v bits B hB Sb hfs hso hfv hv hne g K w b
-        hw hb64 n t
+      fd_curve25519_scalar_wnaf.clear_window slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
+        g K w b hw hb64 n t
     step_loop using hK
 
 /-! ### The scan -/
@@ -848,9 +849,10 @@ nothing set from `pos` on: to `^bb16` if no set bit is left, through `^bb6` to `
 in `n[w+1]`, or on past `w+1`. -/
 theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : BitVec 32) (B : Nat)
     (hB : B ≤ 12) (Sb : GlobalState) (hwf : Sb.WF) (hfs : Fits Sb.mem slides (8 * 512))
-    (hso : ¬slides.offset.uaddOverflow 512#64) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
-    (pos : Nat) (n : BitVec 320) (t : Vector Int 256)
+    (hws : Writable Sb.mem slides) (hso : ¬slides.offset.uaddOverflow 512#64)
+    (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v) (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) (pos : Nat)
+    (n : BitVec 320) (t : Vector Int 256)
     (hK16 :
       nextBit n 256 pos = 256 →
         ∀ E' : ⟪fd_curve25519_scalar_wnaf.Γ⟫,
@@ -923,9 +925,9 @@ theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : 
     step_pure [h1, h2, h3]
     finish_block
     step_loop using
-      fd_curve25519_scalar_wnaf.read_window slides scalar v bits B hB Sb hwf hfs hso hfv hv hne g K
-        (w + 1) 0 _ (64 * (w + 1)) (by omega) (by omega) n t _ (BitVec.ushiftRight_zero _).symm hbr
-        rfl
+      fd_curve25519_scalar_wnaf.read_window slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv hv
+        hne g K (w + 1) 0 _ (64 * (w + 1)) (by omega) (by omega) n t _
+        (BitVec.ushiftRight_zero _).symm hbr rfl
         (by
           have := ctz_ushiftRight_lt hx0; rwa [BitVec.ushiftRight_zero] at this)
     have hn :=
@@ -936,9 +938,10 @@ theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : 
 /-- `^bb4`, the scan, past word `w = 2 - m`, nothing set from `pos` on: to `^bb16` or `^bb15`. -/
 theorem fd_curve25519_scalar_wnaf.scan_loop (slides scalar v : Pointer) (bits : BitVec 32) (B : Nat)
     (hB : B ≤ 12) (Sb : GlobalState) (hwf : Sb.WF) (hfs : Fits Sb.mem slides (8 * 512))
-    (hso : ¬slides.offset.uaddOverflow 512#64) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
-    (pos : Nat) (n : BitVec 320) (t : Vector Int 256)
+    (hws : Writable Sb.mem slides) (hso : ¬slides.offset.uaddOverflow 512#64)
+    (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v) (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) (pos : Nat)
+    (n : BitVec 320) (t : Vector Int 256)
     (hK16 :
       nextBit n 256 pos = 256 →
         ∀ E' : ⟪fd_curve25519_scalar_wnaf.Γ⟫,
@@ -966,13 +969,13 @@ theorem fd_curve25519_scalar_wnaf.scan_loop (slides scalar v : Pointer) (bits : 
   | zero =>
     intro w E hArgs hm hpos hz
     exact
-      fd_curve25519_scalar_wnaf.scan_iter slides scalar v bits B hB Sb hwf hfs hso hfv hv hne g K
-        pos n t hK16 hK15 w E hArgs (by omega) hpos hz fun h => absurd h (by omega)
+      fd_curve25519_scalar_wnaf.scan_iter slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv hv
+        hne g K pos n t hK16 hK15 w E hArgs (by omega) hpos hz fun h => absurd h (by omega)
   | succ m ih =>
     intro w E hArgs hm hpos hz
     exact
-      fd_curve25519_scalar_wnaf.scan_iter slides scalar v bits B hB Sb hwf hfs hso hfv hv hne g K
-        pos n t hK16 hK15 w E hArgs (by omega) hpos hz fun _ hz' E' h =>
+      fd_curve25519_scalar_wnaf.scan_iter slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv hv
+        hne g K pos n t hK16 hK15 w E hArgs (by omega) hpos hz fun _ hz' E' h =>
         ih (w + 1) E' h (by omega) (by omega) hz'
 
 /-- `nextBit` from `k ≤ 256` is at least `k`. -/
@@ -997,8 +1000,9 @@ abbrev hdr1 (v : Pointer) (B : Nat) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫) (po
 them, then `^bb16`. -/
 theorem fd_curve25519_scalar_wnaf.main_loop (slides scalar v : Pointer) (bits : BitVec 32) (B : Nat)
     (hB : B ≤ 12) (Sb : GlobalState) (hwf : Sb.WF) (hfs : Fits Sb.mem slides (8 * 512))
-    (hso : ¬slides.offset.uaddOverflow 512#64) (hfv : Fits Sb.mem v 320) (hv : v.offset = 0)
-    (hne : slides.id ≠ v.id) {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) :
+    (hws : Writable Sb.mem slides) (hso : ¬slides.offset.uaddOverflow 512#64)
+    (hfv : Fits Sb.mem v 320) (hwv : Writable Sb.mem v) (hv : v.offset = 0) (hne : slides.id ≠ v.id)
+    {β : Type} (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) :
     ∀ f pos (n : BitVec 320) (t : Vector Int 256) (E : ⟪fd_curve25519_scalar_wnaf.Γ⟫),
       E.args = (fd_curve25519_scalar_wnaf.args (.value slides) (.value scalar) (.value bits)).get →
         pos < 256 →
@@ -1080,14 +1084,14 @@ theorem fd_curve25519_scalar_wnaf.main_loop (slides scalar v : Pointer) (bits : 
           · exact h
           · exact absurd (by rw [show w = 3 by omega]) hbr
         step_loop using
-          fd_curve25519_scalar_wnaf.scan_loop slides scalar v bits B hB Sb hwf hfs hso hfv hv hne g
-            K (64 * w + b0) n t hK16 hK15 (2 - w) w _ _ (by omega) (by omega)
+          fd_curve25519_scalar_wnaf.scan_loop slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv
+            hv hne g K (64 * w + b0) n t hK16 hK15 (2 - w) w _ _ (by omega) (by omega)
             (fun i h1 h2 => hz i h1 (by omega))
     · -- `pos += find_lsb( x );`
       have hlt := ctz_ushiftRight_lt hbr
       step_loop using
-        fd_curve25519_scalar_wnaf.read_window slides scalar v bits B hB Sb hwf hfs hso hfv hv hne g
-          K w b0 _ (64 * w + b0) rfl hw n t _ rfl hbr rfl (by omega)
+        fd_curve25519_scalar_wnaf.read_window slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv
+          hv hne g K w b0 _ (64 * w + b0) rfl hw n t _ rfl hbr rfl (by omega)
       step_loop using hK15 _ _ (nextBit_limb_shift hw le_rfl (fun i h1 h2 => by omega) hbr)
 
 /-! ### The function -/
@@ -1197,7 +1201,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
     fd_curve25519_scalar_wnaf.main_loop slides scalar v bits B (by omega)
       { alloc := (S₀.alloca 40 true).alloc,
         mem := (((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320 }
-      _ _ hso _ hv_off hslides_ne_v _ _ 256 0 (n0 x) (Vector.replicate 256 0) _ _ (by omega)
+      _ _ _ hso _ _ hv_off hslides_ne_v _ _ 256 0 (n0 x) (Vector.replicate 256 0) _ _ (by omega)
       (by omega)
   -- `return`
   block_init

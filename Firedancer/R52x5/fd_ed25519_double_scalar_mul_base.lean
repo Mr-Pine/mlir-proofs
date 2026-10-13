@@ -84,12 +84,12 @@ def ladderBlocks (w1 w2 : Vector Int 256) : (i : Nat) → i < 256 → Nat
   | 0, _ => 40 + digitBlocks w1[0] + digitBlocks w2[0]
   | i + 1, h => 40 + digitBlocks w1[i + 1] + digitBlocks w2[i + 1] + ladderBlocks w1 w2 i (by omega)
 
-/-- The blocks the function allocates, its callees' included: 411 before the main loop (the
-table's, five `alloca`s, `dbln`'s fifty, `into_precomputed`'s five, fifty per table entry). -/
+/-- The blocks the function allocates, its callees' included: 410 before the main loop (five
+`alloca`s, `dbln`'s fifty, `into_precomputed`'s five, fifty per table entry). -/
 def blocks (n1 n2 : BitVec 256) : Nat :=
   let n1slide := fd_curve25519_scalar_wnaf.wnaf n1 4
   let n2slide := fd_curve25519_scalar_wnaf.wnaf n2 8
-  411 +
+  410 +
     match start n1slide n2slide 255 (by decide) with
     | some i => ladderBlocks n1slide n2slide i i.isLt
     | none => 0
@@ -282,12 +282,15 @@ structure Layout (r tp n1s n2s ai tbl : Pointer) : Prop where
   aio : ai.offset.toNat + 192 * 8 < 2 ^ 64
   tbo : tbl.offset.toNat + 192 * 128 < 2 ^ 64
 
-/-- What the main loop needs of a state: `r` and `t` fit, the slides and tables in place. -/
+/-- What the main loop needs of a state: `r` and `t` fit and writable, the slides and tables in
+place. -/
 structure LoopFacts (S : GlobalState) (r tp n1s n2s ai tbl : Pointer) (w1 w2 : Vector Int 256)
     (AI B : Nat → Quad5) : Prop where
   wf : S.WF
   fitR : S.mem.Quad5Fit r
+  wrR : Writable S.mem r
   fitT : S.mem.Quad5Fit tp
+  wrT : Writable S.mem tp
   slides1 : SlidesAt S.mem n1s w1
   slides2 : SlidesAt S.mem n2s w2
   tblA : TableAt S.mem ai 8 AI
@@ -300,7 +303,9 @@ theorem LoopFacts.store {S : GlobalState} (h : LoopFacts S r tp n1s n2s ai tbl w
     where
   wf := (GlobalState.WF.bump h.wf hn).storeQuad5_mk.storeQuad5_mk
   fitR := h.fitR.storeQuad5.storeQuad5
+  wrR := h.wrR.storeQuad5.storeQuad5
   fitT := h.fitT.storeQuad5.storeQuad5
+  wrT := h.wrT.storeQuad5.storeQuad5
   slides1 := (h.slides1.storeQuad5 hL.t1).storeQuad5 hL.r1
   slides2 := (h.slides2.storeQuad5 hL.t2).storeQuad5 hL.r2
   tblA := (h.tblA.storeQuad5 hL.ta).storeQuad5 hL.ra
@@ -313,8 +318,9 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 : Vector Int 2
     (hi : i < 256) (hw : -15 ≤ w1[i] ∧ w1[i] ≤ 15) (R : Quad5) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
     (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1021 := BitVec.ofNat 64 i]) (hwf : S.WF)
-    (hr : S.mem.Quad5Fit r) (htp : S.mem.Quad5Fit tp) (hrt : r.id ≠ tp.id) (hra : r.id ≠ ai.id)
-    (hta : tp.id ≠ ai.id) (htn : tp.id ≠ n1s.id) (hn1o : n1s.offset.toNat + 512 < 2 ^ 64)
+    (hr : S.mem.Quad5Fit r) (hrw : Writable S.mem r) (htp : S.mem.Quad5Fit tp)
+    (htw : Writable S.mem tp) (hrt : r.id ≠ tp.id) (hra : r.id ≠ ai.id) (hta : tp.id ≠ ai.id)
+    (htn : tp.id ≠ n1s.id) (hn1o : n1s.offset.toNat + 512 < 2 ^ 64)
     (haio : ai.offset.toNat + 192 * 8 < 2 ^ 64) (hrv : S.mem.readQuad5 r = R)
     (hn1s : SlidesAt S.mem n1s w1) (hai : TableAt S.mem ai 8 AI)
     (hK :
@@ -404,7 +410,8 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w2 : Vector Int
     (hi : i < 256) (hw : -255 ≤ w2[i] ∧ w2[i] ≤ 255) (R T : Quad5) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
     (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1021 := BitVec.ofNat 64 i]) (hwf : S.WF)
-    (hr : S.mem.Quad5Fit r) (htp : S.mem.Quad5Fit tp) (hrt : r.id ≠ tp.id) (hrb : r.id ≠ tbl.id)
+    (hr : S.mem.Quad5Fit r) (hrw : Writable S.mem r) (htp : S.mem.Quad5Fit tp)
+    (htw : Writable S.mem tp) (hrt : r.id ≠ tp.id) (hrb : r.id ≠ tbl.id)
     (hn2o : n2s.offset.toNat + 512 < 2 ^ 64) (htbo : tbl.offset.toNat + 192 * 128 < 2 ^ 64)
     (hrv : S.mem.readQuad5 r = R) (htv : S.mem.readQuad5 tp = T) (hn2s : SlidesAt S.mem n2s w2)
     (htbl : TableAt S.mem tbl 128 B)
@@ -496,7 +503,7 @@ theorem tail_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer)
     (T : Quad5) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (args (.value r) (.value n1) (.value a) (.value n2)).get)
     (hR : LoopRegs tbl n1s n2s ai a2 tp E) (hRi : E ⊨ [%1021 := BitVec.ofNat 64 i]) (hwf : S.WF)
-    (hr : S.mem.Quad5Fit r) (htp : S.mem.Quad5Fit tp) (hrt : r.id ≠ tp.id)
+    (hr : S.mem.Quad5Fit r) (hrw : Writable S.mem r) (htp : S.mem.Quad5Fit tp) (hrt : r.id ≠ tp.id)
     (htv : S.mem.readQuad5 tp = T)
     (hexit :
       i = 0 →
@@ -570,7 +577,7 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
     (fd_ed25519_double_scalar_mul_base.runFrom E ^bb12 S >>= g) = K := by
   refine
     head_block r n1 a n2 tbl n1s n2s ai a2 tp w1 AI g K i hi (hw1 i hi) R S E hArgs hR hRi hF.wf
-      hF.fitR hF.fitT hL.rt hL.ra hL.ta hL.t1 hL.n1o hL.aio hrv hF.slides1 hF.tblA
+      hF.fitR hF.wrR hF.fitT hF.wrT hL.rt hL.ra hL.ta hL.t1 hL.n1o hL.aio hrv hF.slides1 hF.tblA
       fun E₁ S₁ h₁ hR₁ hRi₁ hS₁ => ?_
   have hF₁ :=
     hS₁ ▸
@@ -578,16 +585,16 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
         S.alloc.nextFreeBlock + 40 + digitBlocks w1[i]) (by omega)
   have hrv₁ : S₁.mem.readQuad5 r = (add1 AI w1[i] R).1 := by
     rw [hS₁]
-    exact MemoryState.readQuad5_storeQuad5_self hF.fitR.storeQuad5.room
+    exact MemoryState.readQuad5_storeQuad5_self (hF.fitR.storeQuad5.room hF.wrR.storeQuad5)
   have htv₁ : S₁.mem.readQuad5 tp = (add1 AI w1[i] R).2 := by
     rw [hS₁]
     dsimp only
     rw [MemoryState.readQuad5_storeQuad5_of_id_ne hL.rt]
-    exact MemoryState.readQuad5_storeQuad5_self hF.fitT.room
+    exact MemoryState.readQuad5_storeQuad5_self (hF.fitT.room hF.wrT)
   refine
     digit2_block r n1 a n2 tbl n1s n2s ai a2 tp w2 B g K i hi (hw2 i hi) _ _ S₁ E₁ h₁ hR₁ hRi₁
-      hF₁.wf hF₁.fitR hF₁.fitT hL.rt hL.rb hL.n2o hL.tbo hrv₁ htv₁ hF₁.slides2 hF₁.tblB
-      fun E₂ S₂ h₂ hR₂ hRi₂ hS₂ => ?_
+      hF₁.wf hF₁.fitR hF₁.wrR hF₁.fitT hF₁.wrT hL.rt hL.rb hL.n2o hL.tbo hrv₁ htv₁ hF₁.slides2
+      hF₁.tblB fun E₂ S₂ h₂ hR₂ hRi₂ hS₂ => ?_
   have hF₂ :=
     hS₂ ▸
       hF₁.store (T := (adds AI B w1[i] w2[i] R).2) (R := (adds AI B w1[i] w2[i] R).1) hL (n :=
@@ -596,9 +603,9 @@ theorem main_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
     rw [hS₂]
     dsimp only
     rw [MemoryState.readQuad5_storeQuad5_of_id_ne hL.rt]
-    exact MemoryState.readQuad5_storeQuad5_self hF₁.fitT.room
+    exact MemoryState.readQuad5_storeQuad5_self (hF₁.fitT.room hF₁.wrT)
   refine
-      tail_block r n1 a n2 tbl n1s n2s ai a2 tp g K i hi _ S₂ E₂ h₂ hR₂ hRi₂ hF₂.wf hF₂.fitR
+      tail_block r n1 a n2 tbl n1s n2s ai a2 tp g K i hi _ S₂ E₂ h₂ hR₂ hRi₂ hF₂.wf hF₂.fitR hF₂.wrR
         hF₂.fitT hL.rt htv₂ (fun h0 E₃ S₃ h₃ hR₃ hS₃ => hexit h0 E₃ S₃ h₃ hR₃ (hS₃.trans ?_))
         (fun j hj E₃ S₃ h₃ hR₃ hRi₃ hS₃ => hback j hj E₃ S₃ h₃ hR₃ hRi₃ (hS₃.trans ?_)) <;>
     · subst hS₂ hS₁
@@ -651,7 +658,7 @@ theorem main_loop (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
       ih (by omega) (adds AI B w1[j + 1] w2[j + 1] R).2 S' E' h₁ hR' hRi' hF' ?_
         fun E'' S'' T'' h₂ hR₂ hS'' => hK E'' S'' T'' h₂ hR₂ (hS''.trans ?_)
     · rw [hS']
-      exact MemoryState.readQuad5_storeQuad5_self hF.fitR.storeQuad5.room
+      exact MemoryState.readQuad5_storeQuad5_self (hF.fitR.storeQuad5.room hF.wrR.storeQuad5)
     · subst hS'
       dsimp only
       rw [storeQuad5_swap hF.fitT.1 hL.rt.symm, MemoryState.storeQuad5_storeQuad5_self hF.fitR.1]
@@ -882,6 +889,7 @@ theorem table_run (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
           S'.WF →
           S'.mem.Quad5Room r →
           S'.mem.Quad5Fit tp →
+          Writable S'.mem tp →
           SlidesAt S'.mem n1s w1 →
           SlidesAt S'.mem n2s w2 →
           TableAt S'.mem tbl 128 B →
@@ -953,7 +961,9 @@ theorem table_run (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
     | 6, _ => exact ⟨hf6, hread_ai_1152_readQuad5.trans e6⟩
     | 7, _ => exact ⟨hf7, hread_ai_1344_readQuad5.trans e7⟩
   have hNa' (c : BitVec 64) : N ≤ (ai.add c).id.id := by simpa [Pointer.add_id] using hNa
-  refine hK E S hArgs (by env_reads) (by rw [hS]) hwf hr (by mem_fact) hsl1 hsl2 htblB htA ?_
+  refine
+    hK E S hArgs (by env_reads) (by rw [hS]) hwf hr (by mem_fact) (by mem_fact) hsl1 hsl2 htblB htA
+      ?_
   rw [hS]
   simp only [MemoryState.eraseFrom_storeQuad5_of_le hNt,
     MemoryState.eraseFrom_storeQuad5_of_le (hNa' _)]
@@ -977,7 +987,7 @@ theorem blocks_of_none {x1 x2 : BitVec 256}
       start (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) 255
           (by decide) =
         none) :
-    blocks x1 x2 = 411 := by
+    blocks x1 x2 = 410 := by
   unfold blocks
   dsimp only
   rw [h]
@@ -1004,7 +1014,7 @@ theorem blocks_of_some {x1 x2 : BitVec 256} {j : Fin 256}
           (by decide) =
         some j) :
     blocks x1 x2 =
-      411 +
+      410 +
         ladderBlocks (fd_curve25519_scalar_wnaf.wnaf x1 4) (fd_curve25519_scalar_wnaf.wnaf x2 8) j
           j.isLt := by
   unfold blocks
@@ -1020,9 +1030,9 @@ open fd_ed25519_double_scalar_mul_base in
 at `a` at `r` and returns `r`; `r` may be any of the inputs: they are read before it is written.
 The block counter advances by `blocks`. -/
 public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hr : s.mem.Quad5Room r) (hn1 : Fits s.mem n1 (8 * 32))
-    (hn1o : ¬n1.offset.uaddOverflow 32#64) (ha : s.mem.Quad5Fit a) (hn2 : Fits s.mem n2 (8 * 32))
-    (hn2o : ¬n2.offset.uaddOverflow 32#64) :
+    (hwf : s.WF) (hg : s.mem.Globals fd_ed25519_double_scalar_mul_base.globals)
+    (hr : s.mem.Quad5Room r) (hn1 : Fits s.mem n1 (8 * 32)) (hn1o : ¬n1.offset.uaddOverflow 32#64)
+    (ha : s.mem.Quad5Fit a) (hn2 : Fits s.mem n2 (8 * 32)) (hn2o : ¬n2.offset.uaddOverflow 32#64) :
     fd_ed25519_double_scalar_mul_base.call
         (fd_ed25519_double_scalar_mul_base.args (.value r) (.value n1) (.value a) (.value n2)) s =
       .value
@@ -1052,13 +1062,7 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   iterate 9 step_pure
   step_addressof fd_ed25519_base_point_wnaf_table.value_eq with tbl
   iterate 4 step_pure
-  -- `a` past the table's block
-  have hA : S.mem.readQuad5 a = A := by
-    rw [hS,
-      MemoryState.readQuad5_addBlock_of_id_ne
-        (by
-          rw [htbl] at ha_ne_tbl; exact ha_ne_tbl),
-      hA₀]
+  have hA : S.mem.readQuad5 a = A := hS ▸ hA₀
   clear hA₀
   -- short n1slide[256]; short n2slide[256]; fd_ed25519_point_t ai[8], a2[1], t[1];
   step_alloca with n1s
@@ -1107,7 +1111,7 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
       ⟨by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by
         mem_fact, by mem_fact⟩
       (by slot_bound) (by slot_bound) hsl1 hsl2 htblB hread_a2_readQuad5 hread_ai_readQuad5
-      fun E' S' hArgs' hR' halloc hwf' hr' htp' hsl1' hsl2' htblB' htA herase => ?_
+      fun E' S' hArgs' hR' halloc hwf' hr' htp' htw' hsl1' hsl2' htblB' htA herase => ?_
   have hS₁ := hS
   clear_reads
   clear hS hArgs hread_ai_readQuad5 hread_a2_readQuad5 hwf hr ha hroom_ai hsl1 hsl2 htblB hai_pt
@@ -1135,9 +1139,10 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
     intro j hj E₂ h₁ h₂ h₃
     refine
       main_loop r n1 a n2 tbl n1s n2s ai a2 tp _ _ _ _ hL hw1 hw2 _ _ j.val j.isLt _ S E₂ h₁ h₂ h₃
-        ⟨hwf', by mem_fact, htp', hsl1', hsl2', htA, htblB'⟩ hrz fun E₃ S₃ T' h₁' hR₃ hS₃ => ?_
+        ⟨hwf', by mem_fact, by mem_fact, htp', htw', hsl1', hsl2', htA, htblB'⟩ hrz
+        fun E₃ S₃ T' h₁' hR₃ hS₃ => ?_
     rw [← hk, ← hP, blocks_of_some hj, spec_of_some hj]
-    clear hwf' hr' htp' hsl1' hsl2' htA htblB' hrz hL
+    clear hwf' hr' htp' htw' hsl1' hsl2' htA htblB' hrz hL
     subst hS₃
     subst hS
     -- the slots' lifetimes end
@@ -1161,7 +1166,7 @@ public theorem fd_ed25519_double_scalar_mul_base.call_eq (r n1 a n2 : Pointer) (
   · -- no non-zero digit: `r` is zero
     intro hj E₂ h₁ hR₂
     rw [← hk, ← hP, blocks_of_none hj, spec_of_none hj]
-    clear hwf' hr' htp' hsl1' hsl2' htA htblB' hrz hL
+    clear hwf' hr' htp' htw' hsl1' hsl2' htA htblB' hrz hL
     subst hS
     -- the slots' lifetimes end
     block_init

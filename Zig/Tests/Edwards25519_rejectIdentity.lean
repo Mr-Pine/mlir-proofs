@@ -28,7 +28,7 @@ private def out (P : ZPt) : Option (BitVec 16) :=
   let s : GlobalState := ⟨⟨2⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, ptBlock P)]⟩⟩
   match
     Edwards25519_rejectIdentity.eval 1000 (Edwards25519_rejectIdentity.args (.value ⟨⟨1⟩, 0⟩))
-      s with
+      (s.withGlobals Edwards25519_rejectIdentity.globals) with
   | .value (some (.cons (.value r) .nil), _) => some r
   | _ => none
 

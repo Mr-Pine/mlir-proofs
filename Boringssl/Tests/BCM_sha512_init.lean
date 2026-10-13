@@ -14,11 +14,12 @@ private def state : GlobalState :=
   ⟨⟨2⟩,
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩, ⟨208, (0xaa#8).replicate 208, (BitVec.allOnes 1152).setWidth 1664, true,
-          fun _ => none⟩)]⟩⟩
+          fun _ => none, true⟩)]⟩⟩
 
 /-- The struct's bytes and their definedness after `SHA512_Init`, with its return value. -/
 private def run : Option (PoisonOr (BitVec 32) × BitVec 1664 × BitVec 1664) :=
-  match SHA512_Init.eval 1 (SHA512_Init.args (.value c)) state with
+  match
+    SHA512_Init.eval 1 (SHA512_Init.args (.value c)) (state.withGlobals SHA512_Init.globals) with
   | .value (some (.cons r .nil), s) => some (r, s.mem.readAt c 1664, s.mem.definedAt c 1664)
   | _ => none
 

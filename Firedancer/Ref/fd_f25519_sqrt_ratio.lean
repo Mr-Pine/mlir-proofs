@@ -64,17 +64,16 @@ theorem fd_f25519_eq.spec_or_lt (a b c d : Fin 5 → BitVec 64) :
 /-! ### The function -/
 
 /-- `fd_f25519_sqrt_ratio` stores `(spec u v).r` at `r` and returns `(spec u v).ret`; `u` and `v`
-are read after `r` is written, so `r` is in another block, while `u` may alias `v`.
-`fd_f25519_sqrtm1`, the ten temporaries and the callees' blocks are freed again: only the counter
-moves on, by 50 blocks. -/
+are read after `r` is written, so `r` is in another block, while `u` may alias `v`. The ten
+temporaries and the callees' blocks are freed again: only the counter moves on, by 49 blocks. -/
 public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.LimbsRoom r) (hu : s.mem.LimbsFit u) (hv : s.mem.LimbsFit v) (hru : r.id ≠ u.id)
-    (hrv : r.id ≠ v.id) :
+    (hg : s.mem.Globals fd_f25519_sqrt_ratio.globals) (hr : s.mem.LimbsRoom r)
+    (hu : s.mem.LimbsFit u) (hv : s.mem.LimbsFit v) (hru : r.id ≠ u.id) (hrv : r.id ≠ v.id) :
     fd_f25519_sqrt_ratio.call (fd_f25519_sqrt_ratio.args (.value r) (.value u) (.value v)) s =
       .value
         (.cons (.value (fd_f25519_sqrt_ratio.spec (s.mem.readLimbs u) (s.mem.readLimbs v)).ret)
             .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 50⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 49⟩,
             mem :=
               s.mem.storeLimbs r
                 (fd_f25519_sqrt_ratio.spec (s.mem.readLimbs u) (s.mem.readLimbs v)).r }) := by
@@ -150,8 +149,8 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
   -- fd_f25519_mul( check, check, v );
   step_call using fd_f25519_mul.call_eq consuming hv
   name_limbs lcheck1
-  clear hv₀ hrv hv_ne_sqrtm1 hv_ne_v2 hv_ne_v3 hv_ne_uv3 hv_ne_v6 hv_ne_v7 hv_ne_uv7 hv_ne_check
-    hv_ne_u_neg hv_ne_u_neg_sqrtm1 hv_ne_r_prime
+  clear hv₀ hrv hv_ne_v2 hv_ne_v3 hv_ne_uv3 hv_ne_v6 hv_ne_v7 hv_ne_uv7 hv_ne_check hv_ne_u_neg
+    hv_ne_u_neg_sqrtm1 hv_ne_r_prime
   -- fd_f25519_neg( u_neg, u );
   step_pure
   limbs_room u_neg
@@ -164,8 +163,8 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
   name_limbs lu_neg_sqrtm1
   -- int correct_sign_sqrt   = fd_f25519_eq( check, u );
   step_call using fd_f25519_eq.call_eq with correct_sign_sqrt consuming hu
-  clear hu₀ hru hu_ne_sqrtm1 hu_ne_v2 hu_ne_v3 hu_ne_uv3 hu_ne_v6 hu_ne_v7 hu_ne_uv7 hu_ne_check
-    hu_ne_u_neg hu_ne_u_neg_sqrtm1 hu_ne_r_prime
+  clear hu₀ hru hu_ne_v2 hu_ne_v3 hu_ne_uv3 hu_ne_v6 hu_ne_v7 hu_ne_uv7 hu_ne_check hu_ne_u_neg
+    hu_ne_u_neg_sqrtm1 hu_ne_r_prime
   -- int flipped_sign_sqrt   = fd_f25519_eq( check, u_neg );
   step_call using fd_f25519_eq.call_eq with flipped_sign_sqrt consuming hread_u_neg
   clear_facts u_neg

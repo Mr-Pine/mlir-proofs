@@ -318,7 +318,7 @@ theorem lane_offset {p : Pointer} (hso : ¬p.offset.uaddOverflow 512#64) (hj : j
 /-- `_t[j]`, read from a stored `_t`. -/
 @[mlir_read]
 public theorem fd_curve25519_scalar_wnaf.readAt_shorts {m : MemoryState} {p : Pointer}
-    {t : Vector Int 256} (hfits : InBounds m p (8 * 512)) (hso : ¬p.offset.uaddOverflow 512#64)
+    {t : Vector Int 256} (hfits : Room m p (8 * 512)) (hso : ¬p.offset.uaddOverflow 512#64)
     (hj : j < 256) :
     (m.storeAt p (shorts t)).readAt (p.add (BitVec.ofNat 64 (2 * j))) 16 =
       BitVec.ofInt 16 t[j] := by
@@ -340,7 +340,7 @@ theorem overlay_storeAt_lane {m : MemoryState} {p : Pointer} {u d : BitVec (16 *
     rw [Pointer.offsetInBits_add hov, h2j]
     omega
   simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, ho,
@@ -1367,9 +1367,8 @@ def unpackBitRun (j b c c3 cm : Dst Γ (.bv 64)) (a f g h k c7 c1 : Dst Γ (.bv 
     (e : Dst Γ (.bv 8)) (d l : Dst Γ .ptr) (sl sc : Reg Γ .ptr) : List (Instr Γ) :=
   [.unop (.trunc {}) a (.val j.i j.h), .binop (.lshr false) b (.val j.i j.h) (.val c3.i c3.h),
     .binop .and c (.val b.i b.h) (.val cm.i cm.h),
-    .binop (.gepDyn { nusw := true, nuw := true } 0 1) d sc (.val c.i c.h),
-    .load e (.val d.i d.h), .unop (.zext false) f (.val e.i e.h),
-    .binop .and g (.val a.i a.h) (.val c7.i c7.h),
+    .binop (.gepDyn { nusw := true, nuw := true } 0 1) d sc (.val c.i c.h), .load e (.val d.i d.h),
+    .unop (.zext false) f (.val e.i e.h), .binop .and g (.val a.i a.h) (.val c7.i c7.h),
     .binop (.lshr false) h (.val f.i f.h) (.val g.i g.h),
     .binop .and k (.val h.i h.h) (.val c1.i c1.h),
     .binop (.gepDyn { nusw := true, nuw := true } 0 2) l sl (.val j.i j.h),

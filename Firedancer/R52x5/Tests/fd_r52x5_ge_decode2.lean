@@ -20,13 +20,15 @@ private def ptr (k : Nat) : Pointer :=
   ⟨⟨k⟩, 0⟩
 
 /-- `Pa0 … Pa4` in blocks `0 … 4`, `Pb0 … Pb4` in `6 … 10`, 32 bytes each, zeroed; the encodings
-`ea` and `eb` in blocks `5` and `11`. -/
+`ea` and `eb` in blocks `5` and `11`; then the globals. -/
 private def state (ea eb : Nat) : GlobalState :=
-  ⟨⟨12⟩,
-    ⟨Std.ExtHashMap.ofList
-        ((([0, 1, 2, 3, 4, 6, 7, 8, 9, 10].map fun k =>
-            ((⟨k⟩ : BlockId), (.ofBytes 32 0 : MemoryBlock))) ++
-          [(⟨5⟩, .ofBytes 32 (BitVec.ofNat 256 ea)), (⟨11⟩, .ofBytes 32 (BitVec.ofNat 256 eb))]))⟩⟩
+  GlobalState.withGlobals fd_r52x5_ge_decode2.globals
+    ⟨⟨12⟩,
+      ⟨Std.ExtHashMap.ofList
+          ((([0, 1, 2, 3, 4, 6, 7, 8, 9, 10].map fun k =>
+              ((⟨k⟩ : BlockId), (.ofBytes 32 0 : MemoryBlock))) ++
+            [(⟨5⟩, .ofBytes 32 (BitVec.ofNat 256 ea)),
+              (⟨11⟩, .ofBytes 32 (BitVec.ofNat 256 eb))]))⟩⟩
 
 /-- The QUAD in the five blocks from `k`. -/
 private def quadAt (m : MemoryState) (k : Nat) : Quad5 :=

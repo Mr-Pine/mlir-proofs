@@ -15,7 +15,8 @@ open _crypto_sign_ed25519_verify_detached in
 `_crypto_sign_ed25519_verify_detached(sig, m, mlen, pk, 0)`: it returns `spec`, memory unchanged,
 the counter advanced by `blocks`. -/
 public theorem crypto_sign_ed25519_verify_detached.call_eq_spec (sig m pk : Pointer)
-    (mlen : BitVec 64) (s : GlobalState) (hwf : s.WF) (hsig : Fits s.mem sig 512)
+    (mlen : BitVec 64) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals crypto_sign_ed25519_verify_detached.globals) (hsig : Fits s.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hm : Fits s.mem m (8 * mlen.toNat))
     (hm_off : ¬m.offset.uaddOverflow mlen) (hpk : Fits s.mem pk 256)
     (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hv32 : crypto_verify_32.Spec)

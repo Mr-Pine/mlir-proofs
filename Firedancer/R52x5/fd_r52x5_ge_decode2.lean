@@ -30,10 +30,10 @@ def fd_r52x5_ge_decode2.storeOut (m : MemoryState)
     | some P => m.storeTmp5 Pa0 Pa1 Pa2 Pa3 Pa4 P
   m.storeTmp5 Pb0 Pb1 Pb2 Pb3 Pb4 R.2.2
 
-/-- The blocks `fd_r52x5_ge_decode2` allocates: its `204` slots and globals,
-`fd_f25519_is_nonzero`'s and, on success, `fd_f25519_sgn`'s. -/
+/-- The blocks `fd_r52x5_ge_decode2` allocates: its `201` slots, `fd_f25519_is_nonzero`'s and, on
+success, `fd_f25519_sgn`'s. -/
 def fd_r52x5_ge_decode2.blocks (r : BitVec 32) : Nat :=
-  if r = 0 then 216 else 212
+  if r = 0 then 213 else 209
 
 end
 
@@ -50,7 +50,7 @@ set_option maxHeartbeats 1000000 in
 /-- `fd_r52x5_ge_decode2` on the encodings at `sa` and `sb` returns `spec`'s value, stores its
 points at `Pa0 … Pa4` (when both decode) and `Pb0 … Pb4`, and counts `blocks` frames. -/
 public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb : Pointer)
-    (s : GlobalState) (hwf : s.WF)
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals fd_r52x5_ge_decode2.globals)
     (hO :
       Room s.mem Pa0 256 ∧
         Room s.mem Pa1 256 ∧
@@ -77,46 +77,66 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
   step_addressof fd_f25519_one.value_eq with gone
   step_addressof fd_f25519_d.value_eq with gd
   iterate 28 step_pure
-  -- the frame's slots, `S₀.slot 3 …`, and the entry's registers
-  subst hgsq hgone hgd
-  have hS3 : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 3 := by rw [hS]
-  have hsA : S.mem.readAt sa 256 = S₀.mem.readAt sa 256 := by
-    rw [hS]
-    simp only [MemoryState.readAt_addBlock_of_id_ne (by simpa [GlobalState.slot] using hsa_ne_gsq),
-      MemoryState.readAt_addBlock_of_id_ne (by simpa [GlobalState.slot] using hsa_ne_gone),
-      MemoryState.readAt_addBlock_of_id_ne (by simpa [GlobalState.slot] using hsa_ne_gd)]
-  have hsB : S.mem.readAt sb 256 = S₀.mem.readAt sb 256 := by
-    rw [hS]
-    simp only [MemoryState.readAt_addBlock_of_id_ne (by simpa [GlobalState.slot] using hsb_ne_gsq),
-      MemoryState.readAt_addBlock_of_id_ne (by simpa [GlobalState.slot] using hsb_ne_gone),
-      MemoryState.readAt_addBlock_of_id_ne (by simpa [GlobalState.slot] using hsb_ne_gd)]
-  have hM0 : S.mem.eraseFrom S₀.alloc.nextFreeBlock = S₀.mem := by
-    rw [hS]
-    simp only [MemoryState.eraseFrom_addBlock_of_le (Nat.le_refl _),
-      MemoryState.eraseFrom_addBlock_of_le (Nat.le_add_right _ 1),
-      MemoryState.eraseFrom_addBlock_of_le (Nat.le_add_right _ (1 + 1)), hwf₀.eraseFrom]
-  have hG : Globals S₀ S.mem :=
-    ⟨hgsq_fits, hgone_fits, hgd_fits, fd_f25519_sqrtm1.readVec hread_gsq,
-      fd_f25519_one.readVec hread_gone, fd_f25519_d.readVec hread_gd⟩
+  have hvsq := fd_f25519_sqrtm1.readVec hread_gsq
+  have hvone := fd_f25519_one.readVec hread_gone
+  have hvd := fd_f25519_d.readVec hread_gd
+  -- the frame's slots `B.slot 3 …`: `B`'s counter three below the entry's, which the globals'
+  -- three blocks, distinct and not null's, are below
+  have hlt3 : 3 ≤ S₀.alloc.nextFreeBlock := by
+    have hpt (p q : Pointer) (hp : p.offset = 0) (hq : q.offset = 0) (h : p.id = q.id) : p = q := by
+      cases p; cases q; simp_all
+    have h01 : gsq.id ≠ gone.id := fun h => by
+      have := hvsq; rw [hpt _ _ hgsq_off hgone_off h, hvone] at this; exact absurd this (by decide)
+    have h02 : gsq.id ≠ gd.id := fun h => by
+      have := hvsq; rw [hpt _ _ hgsq_off hgd_off h, hvd] at this; exact absurd this (by decide)
+    have h12 : gone.id ≠ gd.id := fun h => by
+      have := hvone; rw [hpt _ _ hgone_off hgd_off h, hvd] at this; exact absurd this (by decide)
+    have hb (x y : BlockId) (h : x ≠ y) : x.id ≠ y.id := fun e =>
+      h
+        (by
+          cases x; cases y; simp_all)
+    have n0 := hb _ _ (hwf.ne_null_of_inBounds hgsq_live.inBounds)
+    have n1 := hb _ _ (hwf.ne_null_of_inBounds hgone_live.inBounds)
+    have n2 := hb _ _ (hwf.ne_null_of_inBounds hgd_live.inBounds)
+    have l0 := hwf.global_lt hglobal_gsq
+    have l1 := hwf.global_lt hglobal_gone
+    have l2 := hwf.global_lt hglobal_gd
+    rw [hS] at l0 l1 l2
+    have := hb _ _ h01
+    have := hb _ _ h02
+    have := hb _ _ h12
+    simp only [Pointer.null] at n0 n1 n2
+    omega
+  obtain ⟨B, hB⟩ : ∃ B : GlobalState, B.alloc.nextFreeBlock + 3 = S₀.alloc.nextFreeBlock :=
+    ⟨⟨⟨S₀.alloc.nextFreeBlock - 3⟩, S₀.mem⟩, by
+      simp only; omega⟩
+  have hS3 : S.alloc.nextFreeBlock = B.alloc.nextFreeBlock + 3 := by rw [hS, hB]
+  have hsA : S.mem.readAt sa 256 = S₀.mem.readAt sa 256 := by rw [hS]
+  have hsB : S.mem.readAt sb 256 = S₀.mem.readAt sb 256 := by rw [hS]
+  rw [hsA, hsB] at hR
+  have hM0 : S.mem.eraseFrom S₀.alloc.nextFreeBlock = S₀.mem := by rw [hS, hwf₀.eraseFrom]
+  have hG : Globals B gsq gone gd S.mem :=
+    ⟨hS3 ▸ hwf.global_lt hglobal_gsq, hS3 ▸ hwf.global_lt hglobal_gone,
+      hS3 ▸ hwf.global_lt hglobal_gd, hgsq_fits, hgone_fits, hgd_fits, hvsq, hvone, hvd⟩
   have hI :
-    Inv S₀ S.mem 0 { allocas S slotSizes with mem := startFields (allocas S slotSizes).mem S₀ } :=
+    Inv B S.mem 0 { allocas S slotSizes with mem := startFields (allocas S slotSizes).mem B } :=
     ⟨WF_startFields (WF_allocas _ _ hwf), frame_allocas hwf hS3, by
       rw [eraseFrom_startFields, eraseFrom_allocas _ _ (by omega), ← hS3, hwf.eraseFrom], by
       rw [alloc_allocas, hS3, show slotSizes.length = 201 by simp [slotSizes]]⟩
   rw [bb0_allocas hS3]
-  obtain ⟨Eent, hEnt⟩ : ∃ X, X = writeSlots E S₀ 3 slotDsts := ⟨_, rfl⟩
+  obtain ⟨Eent, hEnt⟩ : ∃ X, X = writeSlots E B 3 slotDsts := ⟨_, rfl⟩
   rw [← hEnt]
   have hArgsE : Eent.args = (argsOf Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb).get := by
     rw [hEnt, writeSlots_args]
     exact hArgs
-  replace hEnt : Eent = entryEnv E₀ S₀ :=
+  replace hEnt : Eent = entryEnv E₀ B gsq gone gd :=
     hEnt.trans
       (by
         subst hE; exact rir_rfl%)
-  have hsa_lt : sa.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hsa₀.mem
-  have hsb_lt : sb.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hsb₀.mem
+  have hsa_lt : sa.id.id < B.alloc.nextFreeBlock + 3 := hB ▸ hwf₀.lt hsa₀.mem
+  have hsb_lt : sb.id.id < B.alloc.nextFreeBlock + 3 := hB ▸ hwf₀.lt hsb₀.mem
   -- the field elements' lifetimes start
-  refine starts_run (B := S₀) (by chain_reads) ?_
+  refine starts_run (B := B) (by chain_reads) ?_
   refine
     fields_run (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256) hArgsE (by chain_reads) hI hG
       (fits_startFields_of (fits_allocas_of slotSizes S hwf hsa) (by omega))
@@ -142,7 +162,7 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
   rw [Func.continue_next]
   simp only [hRh8, h1560]
   refine
-    loop2 S₀ S.mem 0 _ _ 18 1 Sh8 Eh8 _ rfl hIh8
+    loop2 B S.mem 0 _ _ 18 1 Sh8 Eh8 _ rfl hIh8
       (by
         unfold pre2; chain_reads)
       fun El2 Sl2 hWl2 hOl2 hIl2 hKl2 => ?_
@@ -150,20 +170,20 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
     bb1_run _ _ _ (hWl2.1.trans hAh8) (by chain_reads) hIl2 fun Eb1 Sb1 hAb1 hWb1 hRb1 hIb1 hKb1 =>
       ?_
   refine
-    loop4 S₀ S.mem 0 _ _ 48 1 Sb1 Eb1 _ rfl hIb1
+    loop4 B S.mem 0 _ _ 48 1 Sb1 Eb1 _ rfl hIb1
       (by
         unfold pre4; chain_reads)
       fun El4 Sl4 hWl4 hOl4 hIl4 hKl4 => ?_
   refine
     bb3_run _ _ (hWl4.1.trans hAb1) (by chain_reads) hIl4 fun Eb3 Sb3 hAb3 hWb3 hRb3 hIb3 hKb3 => ?_
   refine
-    loop6 S₀ S.mem 0 _ _ 98 1 Sb3 Eb3 _ rfl hIb3
+    loop6 B S.mem 0 _ _ 98 1 Sb3 Eb3 _ rfl hIb3
       (by
         unfold pre6; chain_reads)
       fun El6 Sl6 hWl6 hOl6 hIl6 hKl6 => ?_
   refine bb5_run _ _ (hWl6.1.trans hAb3) (by chain_reads) hIl6 fun Eb5 Sb5 hAb5 hWb5 hIb5 hKb5 => ?_
   refine
-    loop8 S₀ S.mem 0 _ _ 48 1 Sb5 Eb5 _ rfl hIb5
+    loop8 B S.mem 0 _ _ 48 1 Sb5 Eb5 _ rfl hIb5
       (by
         unfold pre8; chain_reads)
       fun El8 Sl8 hWl8 hOl8 hIl8 hKl8 => ?_
@@ -228,14 +248,14 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
           Bool.false_eq_true, ↓reduceIte]
       rw [hspec]
       simp only [storeOut, blocks, ↓reduceIte]
-      rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ S₀.alloc.nextFreeBlock + 3 by omega),
+      rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ B.alloc.nextFreeBlock + 3 by omega),
         herase, MemoryState.eraseFrom_storeTmp5, MemoryState.eraseFrom_storeTmp5, hM0]
       obtain ⟨⟨n⟩, m12⟩ := S12
       simp only at halloc ⊢
-      rw [halloc, halloc10]
+      rw [halloc, halloc10, ← hB]
       rfl
     · intro E11 hA11 hW11 hnb
-      rw [bb11_run (B := S₀) (hA11.trans hA10) (by chain_reads) (hI10.room hb0) (hI10.room hb1)
+      rw [bb11_run (B := B) (hA11.trans hA10) (by chain_reads) (hI10.room hb0) (hI10.room hb1)
           (hI10.room hb2) (hI10.room hb3) (hI10.room hb4)
           (by
             dsimp only [EndRegs]; chain_reads)]
@@ -259,14 +279,14 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
           ne_eq, not_false_eq_true, Bool.false_eq_true, ↓reduceIte]
       rw [hspec]
       simp only [storeOut, blocks, show (-2 : BitVec 32) ≠ 0 by decide, ↓reduceIte]
-      rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ S₀.alloc.nextFreeBlock + 3 by omega),
+      rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ B.alloc.nextFreeBlock + 3 by omega),
         eraseFrom_endFields, MemoryState.eraseFrom_storeTmp5, herase,
         MemoryState.eraseFrom_storeTmp5, hM0]
       obtain ⟨⟨n⟩, m10⟩ := S10
       simp only at halloc10 ⊢
-      rw [halloc10]
+      rw [halloc10, ← hB]
   · intro E9 S9 hA9 hW9 hI9 herr
-    rw [bb9_run (B := S₀) hA9 (by chain_reads) (hI9.room (hS ▸ hb0)) (hI9.room (hS ▸ hb1))
+    rw [bb9_run (B := B) hA9 (by chain_reads) (hI9.room (hS ▸ hb0)) (hI9.room (hS ▸ hb1))
         (hI9.room (hS ▸ hb2)) (hI9.room (hS ▸ hb3)) (hI9.room (hS ▸ hb4))
         (by
           dsimp only [EndRegs]; chain_reads)]
@@ -285,12 +305,12 @@ public theorem fd_r52x5_ge_decode2.call_eq (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 P
     have halloc := hI9.alloc
     have herase := hI9.erase
     simp only [storeOut, blocks, show (-1 : BitVec 32) ≠ 0 by decide, ↓reduceIte]
-    rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ S₀.alloc.nextFreeBlock + 3 by omega),
+    rw [← eraseFrom_eraseFrom (show S₀.alloc.nextFreeBlock ≤ B.alloc.nextFreeBlock + 3 by omega),
       eraseFrom_endFields, MemoryState.eraseFrom_storeTmp5, herase, MemoryState.eraseFrom_storeTmp5,
       hM0]
     obtain ⟨⟨n⟩, m9⟩ := S9
     simp only at halloc ⊢
-    rw [halloc]
+    rw [halloc, ← hB]
 
 end Proof
 

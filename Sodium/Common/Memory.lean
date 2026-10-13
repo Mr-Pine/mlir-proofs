@@ -111,7 +111,7 @@ theorem Room.storeWords_iff {m : MemoryState} : Room (m.storeWords p f n) q w �
 
 /-- Word `t < n` of the words. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeWords_self {m : MemoryState} (hm : InBounds m p (64 * n))
+theorem MemoryState.readAt_storeWords_self {m : MemoryState} (hm : Room m p (64 * n))
     (hp : p.offset.toNat + 8 * n < 2 ^ 64) (ht : t < n) :
     (m.storeWords p f n).readAt (p.add (BitVec.ofNat 64 (8 * t))) 64 = f t := by
   induction n with
@@ -121,14 +121,14 @@ theorem MemoryState.readAt_storeWords_self {m : MemoryState} (hm : InBounds m p 
     by_cases htn : t = n
     · subst htn
       refine readAt_storeAt_self ?_ _
-      rw [InBounds.storeWords_iff]
-      obtain ⟨blk, hblk, hsz⟩ := hm
-      refine ⟨blk, hblk, ?_⟩
+      rw [Room.storeWords_iff]
+      obtain ⟨⟨blk, hblk, hl, hsz⟩, hw⟩ := hm
+      refine ⟨⟨blk, hblk, hl, ?_⟩, hw.of_id_eq rfl⟩
       rw [Pointer.offsetInBits_word hp (Nat.le_succ t)]
       omega
     · rw [readAt_storeAt_disjoint, ih _ (by omega) (by omega)]
-      · obtain ⟨blk, hblk, hsz⟩ := hm
-        exact ⟨blk, hblk, by omega⟩
+      · obtain ⟨⟨blk, hblk, hl, hsz⟩, hw⟩ := hm
+        exact ⟨⟨blk, hblk, hl, by omega⟩, hw⟩
       · simp only [Range.Disjoint, Range.of, Pointer.add_id,
           Pointer.offsetInBits_word hp (Nat.le_succ n),
           Pointer.offsetInBits_word hp (show t ≤ n + 1 by omega)]
@@ -142,6 +142,14 @@ theorem InBounds.storeWords {m : MemoryState} (h : InBounds m q w) :
 @[mlir_transport]
 theorem Room.storeWords {m : MemoryState} (h : Room m q w) : Room (m.storeWords p f n) q w :=
   Room.storeWords_iff.2 h
+
+/-- `storeWords` keeps every block's writability. -/
+@[mlir_transport]
+theorem Writable.storeWords {m : MemoryState} (h : Writable m q) :
+    Writable (m.storeWords p f n) q := by
+  induction n with
+  | zero => exact h
+  | succ n ih => rw [MemoryState.storeWords_succ]; exact ih.storeAt
 
 /-- `storeWords` keeps known bits known. -/
 @[mlir_transport]
@@ -162,13 +170,13 @@ theorem Fits.storeWords_self {m : MemoryState} (h : Room m p (64 * n))
     · subst htn
       refine Fits.storeAt_self ?_
       rw [Room.storeWords_iff]
-      obtain ⟨blk, hblk, hl, hsz⟩ := h
-      refine ⟨blk, hblk, hl, ?_⟩
+      obtain ⟨⟨blk, hblk, hl, hsz⟩, hw⟩ := h
+      refine ⟨⟨blk, hblk, hl, ?_⟩, hw.of_id_eq rfl⟩
       rw [Pointer.offsetInBits_word hp (Nat.le_succ t)]
       omega
     · refine (ih ?_ (by omega) (by omega)).storeAt
-      obtain ⟨blk, hblk, hl, hsz⟩ := h
-      exact ⟨blk, hblk, hl, by omega⟩
+      obtain ⟨⟨blk, hblk, hl, hsz⟩, hw⟩ := h
+      exact ⟨⟨blk, hblk, hl, by omega⟩, hw⟩
 
 /-- `storeWords` keeps the set of blocks, so `WF` does not depend on it. -/
 @[simp, mlir_mem]

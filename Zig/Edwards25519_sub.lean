@@ -29,12 +29,13 @@ section Proof
 /-- `Edwards25519.sub` copies `spec P Q`, `is_base` false, to `out` from a fresh slot, for limbs
 below `2^53`. -/
 public theorem Edwards25519_sub.call_eq (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals Edwards25519_sub.globals)
     (hout : s.mem.PtRoom out) (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q)
     (hP : (s.mem.readPt p).Lt (2 ^ 53)) (hQ : (s.mem.readPt q).Lt (2 ^ 53)) :
     Edwards25519_sub.call (Edwards25519_sub.args (.value out) (.value p) (.value q)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 47⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 44⟩,
             mem :=
               s.mem.storePtCopy out (Edwards25519.sub.spec (s.mem.readPt p) (s.mem.readPt q))
                 0#1 }) := by

@@ -55,7 +55,7 @@ public theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec w
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
   simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
@@ -83,7 +83,7 @@ theorem word_offset {v : Pointer} (hv : v.offset = 0) (hk : k < 5) :
 
 /-- `x_u64[k]`, read from a stored `x_u64`. -/
 @[mlir_read]
-public theorem readAt_word {m : MemoryState} {v : Pointer} {X : BitVec 320} (hf : InBounds m v 320)
+public theorem readAt_word {m : MemoryState} {v : Pointer} {X : BitVec 320} (hf : Room m v 320)
     (hv : v.offset = 0) (hk : k < 5) :
     (m.storeAt v X).readAt (v.add (BitVec.ofNat 64 (8 * k))) 64 = X.extractLsb' (64 * k) 64 := by
   obtain ⟨h8, hov⟩ := word_offset hv hk

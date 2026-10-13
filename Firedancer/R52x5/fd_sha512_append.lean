@@ -46,11 +46,10 @@ abbrev hdr7 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
 theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
     (M : MemoryState) (v : ShaState) (S : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (fd_sha512_append.args (.value sha) (.value data) (.value sz)).get)
-    (hwf : S.WF) (hM : S.mem = M.storeSha sha v) (hMf : M.ShaFit sha)
+    (hwf : S.WF) (hM : S.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hMw : Writable M sha)
     (hd : Fits S.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id)
-    (hn : n.toNat < 2 ^ 63)
-    (hD : S.mem.readAt d (8 * n.toNat) = D) (g : Vals [.ptr] × GlobalState → PoisonOr β)
-    (K : PoisonOr β)
+    (hn : n.toNat < 2 ^ 63) (hD : S.mem.readAt d (8 * n.toNat) = D)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.cons (.value sha) .nil, { S with mem := M.storeSha sha (leftover v n D) }) >>=
@@ -59,6 +58,7 @@ theorem leftover_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 
     (fd_sha512_append.runFrom (hdr7 sha d n E) 7 S >>= g) = K := by
   subst hK
   have hSf : S.mem.ShaFit sha := hM ▸ hMf.storeSha
+  have hSw : Writable S.mem sha := hM ▸ hMw.storeSha
   block_init
   -- buf_used = sz & (FD_SHA512_PRIVATE_BUF_MAX-1UL);
   step_pure
@@ -122,11 +122,10 @@ abbrev hdr5 (sha d : Pointer) (n : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
 theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.toNat))
     (M : MemoryState) (v : ShaState) (S₁ : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (fd_sha512_append.args (.value sha) (.value data) (.value sz)).get)
-    (hwf : S₁.WF) (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha)
+    (hwf : S₁.WF) (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hMw : Writable M sha)
     (hd : Fits S₁.mem d (8 * n.toNat)) (hdo : ¬d.offset.uaddOverflow n) (hsep : d.id ≠ sha.id)
-    (hn : n.toNat < 2 ^ 63)
-    (hD : S₁.mem.readAt d (8 * n.toNat) = D) (g : Vals [.ptr] × GlobalState → PoisonOr β)
-    (K : PoisonOr β)
+    (hn : n.toNat < 2 ^ 63) (hD : S₁.mem.readAt d (8 * n.toNat) = D)
+    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.cons (.value sha) .nil,
@@ -137,6 +136,7 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
     (fd_sha512_append.runFrom (hdr5 sha d n E) 5 S₁ >>= g) = K := by
   subst hK
   have hSf : S₁.mem.ShaFit sha := hM ▸ hMf.storeSha
+  have hSw : Writable S₁.mem sha := hM ▸ hMw.storeSha
   block_init
   -- ulong block_cnt = sz >> FD_SHA512_PRIVATE_LG_BUF_MAX;
   step_pure
@@ -166,7 +166,7 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
     finish_block
     have hstate : S₁.mem.readWords8 (sha.add 128#64) = v.state := by
       rw [hM]
-      exact congrArg ShaState.state (MemoryState.readSha_storeSha_self hMf)
+      exact congrArg ShaState.state (MemoryState.readSha_storeSha_self hMf hMw)
     have hblock :
       S₁.mem.readAt d (1024 * (n >>> 7).toNat) = D.setWidth (1024 * (n >>> 7).toNat) := by
       rw [← hread_d]
@@ -186,9 +186,9 @@ end fd_sha512_append
 /-- `fd_sha512_append` appends the `sz` bytes at `data` to the struct at `sha` and returns `sha`.
 Each `fd_sha512_core` call it makes leaves two blocks counted; `data` is in another block. -/
 public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s : GlobalState)
-    (hwf : s.WF) (hsha : s.mem.ShaFit sha) (hu : (s.mem.readSha sha).bufUsed.toNat < 128)
-    (hdata : Fits s.mem data (8 * sz.toNat)) (hdo : ¬data.offset.uaddOverflow sz)
-    (hsep : data.id ≠ sha.id) (hsz : sz.toNat < 2 ^ 63) :
+    (hwf : s.WF) (hsha : s.mem.ShaFit sha) (hshaw : Writable s.mem sha)
+    (hu : (s.mem.readSha sha).bufUsed.toNat < 128) (hdata : Fits s.mem data (8 * sz.toNat))
+    (hdo : ¬data.offset.uaddOverflow sz) (hsep : data.id ≠ sha.id) (hsz : sz.toNat < 2 ^ 63) :
     fd_sha512_append.call (fd_sha512_append.args (.value sha) (.value data) (.value sz)) s =
       .value
         (.cons (.value sha) .nil,
@@ -328,7 +328,8 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
         rw [MemoryState.storeSha_storeAt_buf hsha₀.2
             (by
               rw [hrem]; omega),
-          MemoryState.readWords8_storeSha_state hsha₀, MemoryState.readAt_storeSha_buf hsha₀,
+          MemoryState.readWords8_storeSha_state hsha₀ hshaw₀,
+          MemoryState.readAt_storeSha_buf hsha₀ hshaw₀,
           MemoryState.storeSha_storeWords8_state] at hS
         step_store
         rw [MemoryState.storeSha_storeAt_bufUsed hsha₀.2] at hS

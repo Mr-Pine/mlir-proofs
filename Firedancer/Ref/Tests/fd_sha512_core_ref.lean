@@ -33,7 +33,7 @@ private def state (h : Vector (BitVec 64) 8) (n : Nat) (bytes : BitVec (1024 * n
     ⟨⟨2⟩,
       ⟨Std.ExtHashMap.ofList
           [(⟨0⟩, .ofBytes 64 0), (⟨1⟩, .ofBytes (128 * n) (bytes.cast (by omega)))]⟩⟩
-  { s with mem := s.mem.storeWords8 st h }
+  GlobalState.withGlobals fd_sha512_core_ref.globals { s with mem := s.mem.storeWords8 st h }
 
 /-- The state words after the run, or `none` for UB / out of fuel. -/
 private def out (h : Vector (BitVec 64) 8) (n : Nat) (bytes : BitVec (1024 * n)) :

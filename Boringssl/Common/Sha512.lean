@@ -28,7 +28,7 @@ theorem MemoryState.overlay_storeAt_add {m : MemoryState} {p : Pointer} {x d : B
   have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
     simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
   simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits, ho, MemoryBlock.mk.injEq, true_and,
@@ -122,12 +122,12 @@ theorem MemoryState.storeShaCtx_storeAt {m : MemoryState} {c : Pointer} {v v' : 
 
 /-- A read inside the struct: its bits. -/
 theorem MemoryState.readAt_storeShaCtx {m : MemoryState} {c : Pointer} {v : Sha512Ctx}
-    {off : BitVec 64} (hm : InBounds m c 1664) (hc : ¬c.offset.uaddOverflow 208#64)
+    {off : BitVec 64} (hm : Room m c 1664) (hc : ¬c.offset.uaddOverflow 208#64)
     (hw : off.toNat * 8 + w ≤ 1664) :
     (m.storeShaCtx c v).readAt (c.add off) w = v.bits.extractLsb' (off.toNat * 8) w :=
   MemoryState.readAt_overlay_add hm (Pointer.not_uaddOverflow_of_ctx hc (by omega)) hw _ _
 
-theorem MemoryState.readShaCtx_storeShaCtx_self {m : MemoryState} (hm : InBounds m c 1664) :
+theorem MemoryState.readShaCtx_storeShaCtx_self {m : MemoryState} (hm : Room m c 1664) :
     (m.storeShaCtx c v).readShaCtx c = v := by
   rw [MemoryState.readShaCtx, MemoryState.storeShaCtx, MemoryState.readAt_overlay_self hm,
     MemoryState.definedAt_overlay_self hm, Sha512Ctx.ofBits_bits_defs]
@@ -154,7 +154,7 @@ theorem MemoryState.storeShaCtx_readShaCtx_self {m : MemoryState} (h : m.ShaCtxF
   rw [MemoryState.storeShaCtx, hb, hdd, MemoryState.overlay_readAt_definedAt h.2.1.inBounds]
 
 /-- The state words of a stored struct. -/
-theorem MemoryState.readWords8_storeShaCtx {m : MemoryState} (hm : InBounds m c 1664)
+theorem MemoryState.readWords8_storeShaCtx {m : MemoryState} (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) : (m.storeShaCtx c v).readWords8 c = v.h := by
   have e : (m.storeShaCtx c v).readAt c 64 = (m.storeShaCtx c v).readAt (c.add 0#64) 64 := by
     rw [Pointer.add_zero]
@@ -171,7 +171,7 @@ theorem MemoryState.readWords8_storeShaCtx {m : MemoryState} (hm : InBounds m c 
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> bv_decide
 
 /-- `p` of a stored struct. -/
-theorem MemoryState.readAt_storeShaCtx_p {m : MemoryState} (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeShaCtx_p {m : MemoryState} (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) : (m.storeShaCtx c v).readAt (c.add 80#64) 1024 = v.p := by
   rw [MemoryState.readAt_storeShaCtx hm hc (by decide)]
   simp only [Sha512Ctx.bits, Sha512Ctx.low, BitVec.toNat_ofNat]
@@ -358,32 +358,32 @@ theorem Sha512Ctx.low_lo (v : Sha512Ctx) : v.low.extractLsb' 576 64 = v.lo := by
 
 /-- The struct's fields but `p`, of a stored struct. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeShaCtx_low (hm : InBounds m c 1664) :
+theorem MemoryState.readAt_storeShaCtx_low (hm : Room m c 1664) :
     (m.storeShaCtx c v).readAt c 640 = v.low := by
   rw [MemoryState.storeShaCtx, MemoryState.readAt_overlay_le hm (by decide), Sha512Ctx.bits]
   bv_decide
 
 @[mlir_read]
-theorem MemoryState.readAt_storeShaCtx_num (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeShaCtx_num (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) : (m.storeShaCtx c v).readAt (c.add 64#64) 16 = v.num := by
   rw [MemoryState.readAt_storeShaCtx hm hc (by decide)]
   splice_bits
 
 @[mlir_read]
-theorem MemoryState.readAt_storeShaCtx_mdLen (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeShaCtx_mdLen (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) :
     (m.storeShaCtx c v).readAt (c.add 66#64) 16 = v.mdLen := by
   rw [MemoryState.readAt_storeShaCtx hm hc (by decide)]
   splice_bits
 
 @[mlir_read]
-theorem MemoryState.readAt_storeShaCtx_hi (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeShaCtx_hi (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) : (m.storeShaCtx c v).readAt (c.add 68#64) 32 = v.hi := by
   rw [MemoryState.readAt_storeShaCtx hm hc (by decide)]
   splice_bits
 
 @[mlir_read]
-theorem MemoryState.readAt_storeShaCtx_lo (hm : InBounds m c 1664)
+theorem MemoryState.readAt_storeShaCtx_lo (hm : Room m c 1664)
     (hc : ¬c.offset.uaddOverflow 208#64) : (m.storeShaCtx c v).readAt (c.add 72#64) 64 = v.lo := by
   rw [MemoryState.readAt_storeShaCtx hm hc (by decide)]
   splice_bits

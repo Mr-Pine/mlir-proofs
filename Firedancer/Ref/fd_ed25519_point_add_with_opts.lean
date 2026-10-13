@@ -195,22 +195,23 @@ theorem fd_ed25519_point_add_with_opts.last_block (r r1 r2 r3 r4 r5 r6 r7 r8 t :
       MemoryState.eraseFrom_lifetimeEnd_of_le hnt, MemoryState.eraseFrom_storeLimbs]
     rfl
 
--- the nine temporaries' lifetime starts, then their facts through every step: about 300000
--- heartbeats
-set_option maxHeartbeats 400000 in
+-- the nine temporaries' lifetime starts, then their facts through every step, and the 9 s
+-- `addressof`: over 400000 heartbeats
+set_option maxHeartbeats 500000 in
 /-- `fd_ed25519_point_add_with_opts` stores `spec` of the points at `a` and `b` at `r` and returns
-`r`. `r` may alias `a` or `b`: every read of them comes before the first store to `r`. The global
-`fd_f25519_k` and the nine temporaries count ten blocks. -/
+`r`. `r` may alias `a` or `b`: every read of them comes before the first store to `r`.
+The nine temporaries count nine blocks. -/
 public theorem fd_ed25519_point_add_with_opts.call_eq (r a b : Pointer)
     (b_Z_is_one b_is_precomputed skip_last_mul : BitVec 32) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointRoom r) (ha : s.mem.PointFit a) (hb : s.mem.PointFit b) :
+    (hg : s.mem.Globals fd_ed25519_point_add_with_opts.globals) (hr : s.mem.PointRoom r)
+    (ha : s.mem.PointFit a) (hb : s.mem.PointFit b) :
     fd_ed25519_point_add_with_opts.call
         (fd_ed25519_point_add_with_opts.args (.value r) (.value a) (.value b) (.value b_Z_is_one)
           (.value b_is_precomputed) (.value skip_last_mul))
         s =
       .value
         (.cons (.value r) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 10⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 9⟩,
             mem :=
               s.mem.storePoint r
                 (fd_ed25519_point_add_with_opts.spec (s.mem.readPoint a) (s.mem.readPoint b)

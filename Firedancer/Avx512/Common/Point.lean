@@ -267,8 +267,10 @@ abbrev MemoryState.QuadRoom (m : MemoryState) (p : Pointer) : Prop :=
 
 attribute [mlir_mem] MemoryState.QuadFit MemoryState.QuadRoom
 
-theorem MemoryState.QuadFit.room {m : MemoryState} (h : m.QuadFit p) : m.QuadRoom p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.room⟩
+/-- A point known in a writable block has room. -/
+theorem MemoryState.QuadFit.room {m : MemoryState} (h : m.QuadFit p) (hw : Writable m p) :
+    m.QuadRoom p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.room (hw.of_id_eq rfl)⟩
 
 /-! ### Lanes -/
 
@@ -790,8 +792,8 @@ theorem MemoryState.QuadFit.fits_25 {m : MemoryState} (h : m.QuadFit p) :
 /-- `P14` and `P25` together, as `memset` writes them. -/
 theorem MemoryState.QuadRoom.room_14_25 {m : MemoryState} (h : m.QuadRoom p) :
     Room m (p.add 64#64) 1024 := by
-  obtain ⟨blk, hblk, hl, hsz⟩ := h.2.2.2
-  refine ⟨blk, hblk, hl, ?_⟩
+  obtain ⟨blk, hblk, hl, hsz, hwr⟩ := h.2.2.2.block
+  refine Room.of_block (by simpa [Pointer.add_id] using hblk) hl ?_ hwr
   have h1 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 64#64) (by decide))
   have h2 := Pointer.offsetInBits_add (p := p) (h.no_wrap (off := 128#64) (by decide))
   simp only [BitVec.toNat_ofNat] at h1 h2
@@ -824,6 +826,9 @@ theorem Fits.storeQuad {m : MemoryState} (h : Fits m p w) : Fits (m.storeQuad q 
 @[mlir_mem, mlir_transport]
 theorem Room.storeQuad {m : MemoryState} (h : Room m p w) : Room (m.storeQuad q P) p w :=
   (h.storeAt.storeAt.storeAt : Room (((m.storeAt _ _).storeAt _ _).storeAt _ _) p w)
+
+theorem Writable.storeQuad {m : MemoryState} (h : Writable m p) : Writable (m.storeQuad q P) p :=
+  (h.storeAt.storeAt.storeAt : Writable (((m.storeAt _ _).storeAt _ _).storeAt _ _) p)
 
 @[mlir_mem, mlir_transport]
 theorem InBounds.storeQuad {m : MemoryState} (h : InBounds m p w) :
@@ -980,9 +985,9 @@ theorem MemoryState.readQuad_storeQuad_self {m : MemoryState} {p : Pointer} (h :
   rw [Pointer.add_zero_quad] at d01 d02
   simp only [MemoryState.readQuad, MemoryState.storeQuad, MemoryState.readVec, MemoryState.storeVec]
   rw [MemoryState.readAt_storeAt_disjoint d02.symm, MemoryState.readAt_storeAt_disjoint d01.symm,
-    MemoryState.readAt_storeAt_self h.2.1.inBounds, MemoryState.readAt_storeAt_disjoint d12.symm,
-    MemoryState.readAt_storeAt_self h.2.2.1.inBounds.storeAt,
-    MemoryState.readAt_storeAt_self h.2.2.2.inBounds.storeAt.storeAt]
+    MemoryState.readAt_storeAt_self h.2.1, MemoryState.readAt_storeAt_disjoint d12.symm,
+    MemoryState.readAt_storeAt_self h.2.2.1.storeAt,
+    MemoryState.readAt_storeAt_self h.2.2.2.storeAt.storeAt]
   simp only [Ty.extractVecElem_packLanes]
   rcases P with ⟨a, b, c⟩
   congr <;> ext i hi <;> simp
@@ -1052,8 +1057,7 @@ theorem MemoryState.storeAt_swap {m : MemoryState} {p q : Pointer} {x : BitVec v
     (m.storeAt p x).storeAt q y = (m.storeAt q y).storeAt p x := by
   by_cases hid : p.id = q.id
   · simp only [Range.Disjoint, Range.of, hid, ne_eq, not_true_eq_false, false_or] at h
-    simp only [MemoryState.storeAt, hid,
-      MemoryState.modifyBlock_modifyBlock_self]
+    simp only [MemoryState.storeAt, hid, MemoryState.modifyBlock_modifyBlock_self, implies_true]
     congr 1
     funext blk
     simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]

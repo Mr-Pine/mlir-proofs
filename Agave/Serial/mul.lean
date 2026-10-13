@@ -7,6 +7,7 @@ public import Agave.Serial.mul.Loop
 public import Agave.Serial.mul.Spec
 public import Firedancer.Common.Tactics
 public import MLIR.Run.Tactic
+import Agave.Common.Copy
 import all MLIR.Ty
 
 namespace MLIR.Agave.Serial
@@ -37,10 +38,8 @@ theorem limbsFit_of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 320)
 /-- Limbs at `p`, from the 320 bits there. -/
 theorem readLimbs_of_readAt {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVec 64}
     (hf : Fits m p 320) (ho : p.offset.toNat + 32 < 2 ^ 64) (h : m.readAt p 320 = limbsBits l) :
-    m.readLimbs p = l := by
-  have hr : m.LimbsRoom p := (limbsFit_of_fits hf ho).room
-  rw [← MemoryState.storeAt_readAt_self hf, h, ← storeLimbs_eq_storeAt ho]
-  exact MemoryState.readLimbs_storeLimbs_self hr
+    m.readLimbs p = l :=
+  readLimbs_of_readAt_limbsBits hf.inBounds ho h
 
 /-- `X`'s bits after the `memset`: `ZERO`'s limbs'. -/
 theorem zero_bits : (0#320 : BitVec 320) = limbsBits FieldElement51.ZERO := by decide +kernel
@@ -91,9 +90,10 @@ set_option maxHeartbeats 1000000 in
 `out`, the `sret` slot. Every read of `a`, `A` and `b` comes before the first store to `out`, so
 `out` may alias them. Scalars below `2^255` keep the digits in the tables' bounds. -/
 public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PointRoom out) (ha : Fits s.mem a 256) (ha_off : ¬a.offset.uaddOverflow 32#64)
-    (hA : s.mem.PointFit A) (hb : Fits s.mem b 256) (hb_off : ¬b.offset.uaddOverflow 32#64)
-    (hda : (s.mem.readAt a 256).toNat < 2 ^ 255) (hdb : (s.mem.readAt b 256).toNat < 2 ^ 255) :
+    (hg : s.mem.Globals mul.globals) (hout : s.mem.PointRoom out) (ha : Fits s.mem a 256)
+    (ha_off : ¬a.offset.uaddOverflow 32#64) (hA : s.mem.PointFit A) (hb : Fits s.mem b 256)
+    (hb_off : ¬b.offset.uaddOverflow 32#64) (hda : (s.mem.readAt a 256).toNat < 2 ^ 255)
+    (hdb : (s.mem.readAt b 256).toNat < 2 ^ 255) :
     mul.call (mul.args (.value out) (.value a) (.value A) (.value b)) s =
       .value
         (.nil,
@@ -116,23 +116,18 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
   -- the globals: `ONE`, the panics' locations, `AFFINE_ODD_MULTIPLES_OF_BASEPOINT`
   step_addressof anon_042b818bc72209407b52bd0e4d6c8368_1.value_eq with one
   iterate 2 step_pure
-  have hone_ne := GlobalState.ne_allocaPtr_of_inBounds hwf hone_fits.inBounds
   step_addressof anon_042b818bc72209407b52bd0e4d6c8368_10 with locA
-  checkpoint hck0
-  rename' S => S₁
   iterate 2 step_pure
-  have hone_ne := GlobalState.ne_allocaPtr_of_inBounds hwf hone_fits.inBounds
-  have hlocA_ne := GlobalState.ne_allocaPtr_of_inBounds hwf hlocA_room.inBounds
   step_addressof anon_042b818bc72209407b52bd0e4d6c8368_74 with locB
-  checkpoint hck1
+  step_addressof anon_042b818bc72209407b52bd0e4d6c8368_73.value_eq with table_B
+  checkpoint hck0
   rename' S => S₂
   obtain ⟨N₂, hN₂⟩ : ∃ n, S₂.alloc.nextFreeBlock = n := ⟨_, rfl⟩
   have houtLt : out.id.id < N₂ := hN₂ ▸ GlobalState.WF.id_lt_of_inBounds hwf hout.2.1.2.1.inBounds
-  have hS₂ : N₂ = S₀.alloc.nextFreeBlock + 3 := by
-    subst hck1 hck0
-    rw [← hN₂]
-    rfl
-  step_addressof anon_042b818bc72209407b52bd0e4d6c8368_73.value_eq with table_B
+  have htable_B_lt : table_B.id.id < N₂ := hN₂ ▸ hwf.global_lt hglobal_table_B
+  have hS₂ : N₂ = S₀.alloc.nextFreeBlock := by
+    subst hck0
+    exact hN₂.symm
   -- the slots
   step_alloca with aaZ2
   step_alloca with aaTxy2d
@@ -174,9 +169,9 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
             a_naf⟩ :
           Slots).At
       S₂ :=
-    ⟨htable_B, haaZ2, haaTxy2d, haaMM, haaPP, haaYmX, haaYpX, hasZ2, hasTxy2d, hasMP, hasPM, hasYmX,
-      hasYpX, hnsZZ2, hnsZZ, hnsTT2d, hnsMP, hnsPM, hnsYmX, hnsYpX, hxBm, hxBp, hxAm, hxAp, ht, hr,
-      htable_A, hb_naf, ha_naf⟩
+    ⟨⟨htable_B_off, hN₂ ▸ htable_B_lt⟩, haaZ2, haaTxy2d, haaMM, haaPP, haaYmX, haaYpX, hasZ2,
+      hasTxy2d, hasMP, hasPM, hasYmX, hasYpX, hnsZZ2, hnsZZ, hnsTT2d, hnsMP, hnsPM, hnsYmX, hnsYpX,
+      hxBm, hxBp, hxAm, hxAp, ht, hr, htable_A, hb_naf, ha_naf⟩
   -- for j in (0..256).rev() { i = j; if a_naf[i] != 0 || b_naf[i] != 0 { break; } }
   refine
     search_loop out a A b locA locB one
@@ -213,6 +208,10 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
         (hread_r_40.trans one_bits),
       readLimbs_of_readAt hfits_r_80 (Pointer.coord_offset_le (a := 80) ho (by omega))
         (hread_r_80.trans one_bits)]
+  have hw : ∀ k, k ≤ 24 → Writable S.mem (S₂.slot k) := by
+    refine
+      hσ.writable ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ <;>
+      (dsimp only; mem_fact)
   have hsl : SlotsIn S.mem S₂ :=
     SlotsIn.of_bounds (haaZ2 ▸ haaZ2_bounds) (haaTxy2d ▸ haaTxy2d_bounds) (haaMM ▸ haaMM_bounds)
       (haaPP ▸ haaPP_bounds) (haaYmX ▸ haaYmX_bounds) (haaYpX ▸ haaYpX_bounds)
@@ -222,6 +221,7 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
       (hnsMP ▸ hnsMP_bounds) (hnsPM ▸ hnsPM_bounds) (hnsYmX ▸ hnsYmX_bounds)
       (hnsYpX ▸ hnsYpX_bounds) (hxBm ▸ hxBm_bounds) (hxBp ▸ hxBp_bounds) (hxAm ▸ hxAm_bounds)
       (hxAp ▸ hxAp_bounds) (ht ▸ ht_bounds)
+      hw
   have hF :
     LoopFacts S
       ⟨table_B, aaZ2, aaTxy2d, aaMM, aaPP, aaYmX, aaYpX, asZ2, asTxy2d, asMP, asPM, asYmX, asYpX,
@@ -230,7 +230,7 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
       S₂ out P (Scalar_non_adjacent_form.spec xa 5) (Scalar_non_adjacent_form.spec xb 8) :=
     ⟨hwf, hout, hr_fit, hsl, hfits_a_naf, hread_a_naf, hfits_b_naf, hread_b_naf, hN₂ ▸ houtLt,
       hfits_table_A, hread_table_A, htable_B_fits, hread_table_B⟩
-  have hSa : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 106 := by
+  have hSa : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 94 := by
     rw [hS]
     simp [GlobalState.alloca, hN₂, hS₂]
   have hS₂le : S₀.alloc.nextFreeBlock ≤ S₂.alloc.nextFreeBlock := by omega
@@ -243,7 +243,7 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
   rw [exit_block out a A b locA locB _ S₂ hσ P _ _ S₀.alloc.nextFreeBlock hS₂le _ S₃ E₃ h₁ hR₃ hF₃
       hrv₃]
   have hmem : S₃.mem.eraseFrom S₀.alloc.nextFreeBlock = S₀.mem := by
-    rw [← eraseFrom_eraseFrom_of_le hS₂le, he₃, eraseFrom_eraseFrom_of_le hS₂le, hS, ← hck1, ← hck0]
+    rw [← eraseFrom_eraseFrom_of_le hS₂le, he₃, eraseFrom_eraseFrom_of_le hS₂le, hS, ← hck0]
     erase_frame
   rw [hmem, show S₃.alloc = ⟨S₃.alloc.nextFreeBlock⟩ from rfl, ha₃, hSa, ← hQ, ← hk]
   simp only [blocks, spec]

@@ -723,7 +723,7 @@ theorem MemoryState.readNaf5_storeNaf5 {m : MemoryState} {p : Pointer} {T : Fin 
         rw [Naf5.entry_offset ho]; omega)
       ?_
   rw [MemoryState.readAt_add_of_readAt hf.inBounds hov (by omega)
-      (MemoryState.readAt_storeAt_self h.inBounds _),
+      (MemoryState.readAt_storeAt_self h _),
     hk]
   obtain ⟨e0, e1, e2, e3, e4, e5, e6, e7⟩ :=
     extract_append8 (fe4xBits (T 0)) (fe4xBits (T 1)) (fe4xBits (T 2)) (fe4xBits (T 3))

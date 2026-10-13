@@ -1,6 +1,7 @@
 module
 
 public import Firedancer.Common.Point
+public import Firedancer.Common.Writable
 import Std.Data.ExtHashMap.Lemmas
 import MLIR.Run.Tactic.Memory
 import Mathlib.Tactic.FinCases
@@ -90,6 +91,23 @@ def MemoryState.storeCached (m : MemoryState) (p : Pointer) (P : GeCached) : Mem
         P.Z).storeLimbs
     (p.add 120#64) P.T2d
 
+/-- A `ge_p2` store keeps every block's writability. -/
+theorem Writable.storeP2 {m : MemoryState} (h : Writable m p) : Writable (m.storeP2 q P) p :=
+  h.storeLimbs.storeLimbs.storeLimbs
+
+/-- A `ge_p3` store keeps every block's writability. -/
+theorem Writable.storeP3 {m : MemoryState} (h : Writable m p) : Writable (m.storeP3 q P) p :=
+  h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+/-- A `ge_p1p1` store keeps every block's writability. -/
+theorem Writable.storeP1p1 {m : MemoryState} (h : Writable m p) : Writable (m.storeP1p1 q P) p :=
+  h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
+/-- A `ge_cached` store keeps every block's writability. -/
+theorem Writable.storeCached {m : MemoryState} (h : Writable m p) :
+    Writable (m.storeCached q P) p :=
+  h.storeLimbs.storeLimbs.storeLimbs.storeLimbs
+
 /-- The three field elements at `p` fit (`ge_p2`, `ge_precomp`): offsets do not wrap, each fits. -/
 abbrev MemoryState.Fe3Fit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 120 ≤ 2 ^ 64 ∧ m.LimbsFit p ∧ m.LimbsFit (p.add 40#64) ∧ m.LimbsFit (p.add 80#64)
@@ -99,8 +117,10 @@ abbrev MemoryState.Fe3Room (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 120 ≤ 2 ^ 64 ∧
     m.LimbsRoom p ∧ m.LimbsRoom (p.add 40#64) ∧ m.LimbsRoom (p.add 80#64)
 
-theorem MemoryState.Fe3Fit.room {m : MemoryState} (h : m.Fe3Fit p) : m.Fe3Room p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.room⟩
+/-- Known field elements in a writable block have room. -/
+theorem MemoryState.Fe3Fit.room {m : MemoryState} (h : m.Fe3Fit p) (hw : Writable m p) :
+    m.Fe3Room p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.room (hw.of_id_eq rfl)⟩
 
 @[mlir_transport]
 theorem MemoryState.Fe3Fit.limbsFit_0 {m : MemoryState} (h : m.Fe3Fit p) : m.LimbsFit p :=

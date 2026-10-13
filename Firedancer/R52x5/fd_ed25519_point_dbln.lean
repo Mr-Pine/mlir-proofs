@@ -58,7 +58,7 @@ abbrev hdr (E : ⟪Γ⟫) (P : Quad5) (k : Nat) : ⟪Γ⟫ :=
     %4395 := Ty.wrap P.P0, %4396 := .value (BitVec.ofNat 8 k)]
 
 /-- The loop's facts about a state: well-formed, room for the point `r`, the ten temporaries in
-bounds (dead between their uses). -/
+bounds and writable (dead between their uses). -/
 abbrev Inv (S : GlobalState) (r z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Pointer) : Prop :=
   S.WF ∧
     S.mem.Quad5Room r ∧
@@ -68,7 +68,17 @@ abbrev Inv (S : GlobalState) (r z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Pointer) : Prop 
     InBounds S.mem z3 256 ∧
     InBounds S.mem z4 256 ∧
     InBounds S.mem z5 256 ∧
-    InBounds S.mem z6 256 ∧ InBounds S.mem z7 256 ∧ InBounds S.mem z8 256 ∧ InBounds S.mem z9 256
+    InBounds S.mem z6 256 ∧
+    InBounds S.mem z7 256 ∧
+    InBounds S.mem z8 256 ∧
+    InBounds S.mem z9 256 ∧
+    Writable S.mem z0 ∧
+    Writable S.mem z1 ∧
+    Writable S.mem z2 ∧
+    Writable S.mem z3 ∧
+    Writable S.mem z4 ∧
+    Writable S.mem z5 ∧
+    Writable S.mem z6 ∧ Writable S.mem z7 ∧ Writable S.mem z8 ∧ Writable S.mem z9
 
 /-- The temporaries: five distinct blocks each for the square and the product, all from block `b`
 on. -/
@@ -120,7 +130,8 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
           ¬((BitVec.ofNat 8 k + 1#8).setWidth 32).ult n = true →
           (fd_ed25519_point_dbln.runFrom E' 1 S' >>= g) = K) :
     (fd_ed25519_point_dbln.runFrom (hdr E P k) 3 S >>= g) = K := by
-  obtain ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hI
+  obtain
+    ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, w0, w1, w2, w3, w4, w5, w6, w7, w8, w9⟩ := hI
   obtain ⟨hne, hne', hb0, hb1, hb2, hb3, hb4, hb5, hb6, hb7, hb8, hb9⟩ := hZ
   block_init
   -- FD_R52X5_QUAD_PERMUTE( _ta, 1,0,3,2, P1 ), FD_R52X5_QUAD_ADD_FAST( _ta, _ta, P1 )
@@ -164,7 +175,8 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
   · step_loop using hback
     · exact (BitVec.ofNat_add _ _).symm
     · rw [← hS]
-      exact ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩
+      exact
+        ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, w0, w1, w2, w3, w4, w5, w6, w7, w8, w9⟩
     · rw [MemoryState.eraseFrom_callTmp5_of_le hb5 hb6 hb7 hb8 hb9,
         MemoryState.eraseFrom_callTmp5_of_le hb0 hb1 hb2 hb3 hb4]
   · step_loop using hexit
@@ -305,8 +317,10 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     have hI :
       fd_ed25519_point_dbln.Inv S r (S₀.slot 10) (S₀.slot 11) (S₀.slot 12) (S₀.slot 13) (S₀.slot 14)
         (S₀.slot 15) (S₀.slot 16) (S₀.slot 17) (S₀.slot 18) (S₀.slot 19) :=
-      ⟨hwf, hr.room, hv22_bounds, hv23_bounds, hv24_bounds, hv25_bounds, hv26_bounds, hv27_bounds,
-        hv28_bounds, hv29_bounds, hv30_bounds, hv31_bounds⟩
+      ⟨hwf, by mem_fact, hv22_bounds, hv23_bounds, hv24_bounds, hv25_bounds, hv26_bounds,
+        hv27_bounds, hv28_bounds, hv29_bounds, hv30_bounds, hv31_bounds, by mem_fact, by mem_fact,
+        by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact,
+        by mem_fact⟩
     step_loop using
       fd_ed25519_point_dbln.loop r a n _ _ _ _ _ _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ hZ hrb
         (n.toNat - 2) 1

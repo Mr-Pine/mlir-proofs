@@ -92,7 +92,7 @@ def affineAt (t : BitVec n) (o : Nat) : AffineNielsPoint :=
   ⟨fun k => t.extractLsb' (o + 64 * k.val) 64, fun k => t.extractLsb' (o + 320 + 64 * k.val) 64,
     fun k => t.extractLsb' (o + 640 + 64 * k.val) 64⟩
 
-/-- `table_B[j]`: entry `j` of the bits `addressof` stores, 120 bytes each. -/
+/-- `table_B[j]`: entry `j` of the global's bits, 120 bytes each. -/
 def tableB (j : Nat) : AffineNielsPoint :=
   affineAt (Ty.flatBits anon_042b818bc72209407b52bd0e4d6c8368_73.lit (w := 61440) (hw := rfl))
     (960 * j)
@@ -164,12 +164,12 @@ def mul.spec (a : BitVec 256) (A : EdwardsPoint) (b : BitVec 256) : EdwardsPoint
       (start a_naf b_naf 255) ProjectivePoint_identity.spec)
 
 open mul in
-/-- The blocks the function allocates, its callees' included: 106 before the main loop (28 slots,
-4 globals, the NAFs' one each, `table_A`'s 72). -/
+/-- The blocks the function allocates, its callees' included: 94 before the main loop (28 slots,
+the NAFs' one each, `table_A`'s 64). -/
 def mul.blocks (a b : BitVec 256) : Nat :=
   let a_naf := Scalar_non_adjacent_form.spec a 5
   let b_naf := Scalar_non_adjacent_form.spec b 8
-  106 + ladderBlocks a_naf (start a_naf b_naf 255)
+  94 + ladderBlocks a_naf (start a_naf b_naf 255)
 
 end
 

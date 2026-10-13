@@ -49,15 +49,17 @@ theorem crypto_hash_sha512_init_sha512_initial_state.flatBits_lit
 /-- `crypto_hash_sha512_init` sets up the struct at `st` (`spec`, its `buf` kept, defined or not)
 and returns `0`. -/
 public theorem crypto_hash_sha512_init.call_eq (st : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hroom : Room s.mem st 1664) (hsto : ¬st.offset.uaddOverflow 208#64) :
+    (hg : s.mem.Globals crypto_hash_sha512_init.globals) (hroom : Room s.mem st 1664)
+    (hsto : ¬st.offset.uaddOverflow 208#64) :
     crypto_hash_sha512_init.call (crypto_hash_sha512_init.args (.value st)) s =
       .value
         (.cons (.value 0#32) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
+          { s with
             mem :=
               s.mem.storeHashState st
                 (crypto_hash_sha512_init.spec (s.mem.readHashState st)) }) := by
   func_init
+  have hroom₀ : Room S₀.mem st 1664 := hS ▸ hroom
   block_init
   iterate 3 step_pure
   step_addressof crypto_hash_sha512_init_sha512_initial_state.value_eq with iv
@@ -67,8 +69,7 @@ public theorem crypto_hash_sha512_init.call_eq (st : Pointer) (s : GlobalState) 
   step_memcpy
   finish_block
   subst hS
-  erase_frame
-  clear hfits_st hread_st hread_st_64 hread_iv hfits_st_64 hwf hroom hiv_room hiv_fits
+  clear hfits_st hread_st hread_st_64 hread_iv hfits_st_64 hwf hroom hiv_live hiv_fits
   erw [crypto_hash_sha512_init_sha512_initial_state.flatBits_lit]
   congr 3
   generalize hx : S₀.mem.readAt st 1664 = X

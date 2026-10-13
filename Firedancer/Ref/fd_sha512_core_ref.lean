@@ -53,9 +53,13 @@ abbrev MemoryState.Words8Room (m : MemoryState) (p : Pointer) : Prop :=
 
 attribute [mlir_mem] MemoryState.Words8Fit MemoryState.Words8Room
 
-theorem MemoryState.Words8Fit.room {m : MemoryState} (h : m.Words8Fit p) : m.Words8Room p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.1.room,
-    h.2.2.2.2.2.2.1.room, h.2.2.2.2.2.2.2.1.room, h.2.2.2.2.2.2.2.2.room⟩
+/-- Words known in a writable block have room. -/
+theorem MemoryState.Words8Fit.room {m : MemoryState} (h : m.Words8Fit p) (hw : Writable m p) :
+    m.Words8Room p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.2.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.2.2.2.2.room (hw.of_id_eq rfl)⟩
 
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Words8Fit.storeAt (h : MemoryState.Words8Fit m p) :
@@ -166,6 +170,11 @@ theorem InBounds.storeWords8 {m : MemoryState} (h : InBounds m p w) :
   h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
 
 @[mlir_transport]
+theorem Writable.storeWords8 {m : MemoryState} (h : Writable m p) :
+    Writable (m.storeWords8 q v) p :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+
+@[mlir_transport]
 theorem MemoryState.Words8Fit.storeWords8 (h : MemoryState.Words8Fit m p) :
     MemoryState.Words8Fit (m.storeWords8 q v) p :=
   h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
@@ -201,7 +210,7 @@ open Memory in
 theorem MemoryState.storeWords8_storeWords8_self {m : MemoryState} {p : Pointer} :
     (m.storeWords8 p v).storeWords8 p v' = m.storeWords8 p v' := by
   simp only [MemoryState.storeWords8, MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true, Function.comp_apply]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits, MemoryBlock.mk.injEq, true_and, and_true]
@@ -643,10 +652,10 @@ theorem slot_offsetInBits {X : Pointer} (hX : X.offset = 0) {k : Nat} (hk : k < 
   omega
 
 theorem readAt_slot_storeAt_self {m : MemoryState} {X : Pointer} (hX : X.offset = 0)
-    (hf : InBounds m X 1024) {k : Nat} (hk : k < 16) (x : BitVec 64) :
+    (hf : Room m X 1024) {k : Nat} (hk : k < 16) (x : BitVec 64) :
     (m.storeAt (slot X k) x).readAt (slot X k) 64 = x :=
   MemoryState.readAt_storeAt_self
-    (InBounds.add_of_le
+    (Room.add_of_le
       (by
         simp [BitVec.uaddOverflow, hX]; omega)
       (by
@@ -663,12 +672,12 @@ theorem readAt_slot_storeAt_ne {m : MemoryState} {X : Pointer} (hX : X.offset = 
 
 /-- A store into slot `j` sets word `j`. -/
 theorem HoldsX.store {m : MemoryState} {X : Pointer} {Xv : Vector (BitVec 64) 16}
-    (hX : X.offset = 0) (hf : Fits m X 1024) (h : HoldsX m X Xv) {j : Nat} (hj : j < 16)
+    (hX : X.offset = 0) (hf : Room m X 1024) (h : HoldsX m X Xv) {j : Nat} (hj : j < 16)
     (x : BitVec 64) : HoldsX (m.storeAt (slot X j) x) X (Xv.set j x) := by
   intro k hk
   by_cases hjk : j = k
   · subst hjk
-    rw [readAt_slot_storeAt_self hX hf.inBounds hj, Vector.getElem_set_self]
+    rw [readAt_slot_storeAt_self hX hf hj, Vector.getElem_set_self]
   · rw [readAt_slot_storeAt_ne hX hj hk hjk, h k hk, Vector.getElem_set_ne _ _ hjk]
 
 /-- The memory after the first loop's rounds `i … i + n - 1` stored
@@ -722,6 +731,16 @@ theorem Room.mem1 {m : MemoryState} (h : Room m p w) : Room (mem1 X block i n m)
 
 theorem Room.mem2 {m : MemoryState} (h : Room m p w) : Room (mem2 X i n Xv m) p w :=
   room_mem2.2 h
+
+theorem Writable.mem1 {m : MemoryState} (h : Writable m p) : Writable (mem1 X block i n m) p := by
+  induction n generalizing i m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+theorem Writable.mem2 {m : MemoryState} (h : Writable m p) : Writable (mem2 X i n Xv m) p := by
+  induction n generalizing i Xv m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
 
 theorem InBounds.mem1 {m : MemoryState} (h : InBounds m p w) : InBounds (mem1 X block i n m) p w :=
   inBounds_mem1.2 h
@@ -813,7 +832,7 @@ theorem WF_mem2 {s : GlobalState} (h : s.WF) :
   | succ n ih => exact ih (s := { s with mem := _ }) h.storeAt
 
 attribute [local mlir_transport] Fits.mem1 Fits.mem2 Room.mem1 Room.mem2 InBounds.mem1 InBounds.mem2
-  Words8Fit.mem1 Words8Fit.mem2 WF_mem1 WF_mem2
+  Writable.mem1 Writable.mem2 Words8Fit.mem1 Words8Fit.mem2 WF_mem1 WF_mem2
 
 attribute [local mlir_read] readAt_mem1 readAt_mem2
 
@@ -823,12 +842,12 @@ theorem WF_mem12 {s : GlobalState} (h : s.WF) :
   WF_mem2 (s := { s with mem := mem1 X block i' n' s.mem }) (WF_mem1 h)
 
 /-- After the first loop, `X` holds the block's words, byte-swapped. -/
-theorem holdsX_mem1 {m : MemoryState} {X : Pointer} (hX : X.offset = 0) (hf : InBounds m X 1024)
+theorem holdsX_mem1 {m : MemoryState} {X : Pointer} (hX : X.offset = 0) (hf : Room m X 1024)
     (block : BitVec 1024) : HoldsX (mem1 X block 0 16 m) X (X0 block) := by
   suffices
     ∀ n i (m : MemoryState),
       i + n = 16 →
-        InBounds m X 1024 →
+        Room m X 1024 →
         (∀ k (hk : k < 16), k < i → m.readAt (slot X k) 64 = (X0 block)[k]) →
         HoldsX (mem1 X block i n m) X (X0 block)
     from this 16 0 m rfl hf (fun _ _ hk => absurd hk (by omega))
@@ -1004,7 +1023,8 @@ round on it; then `^bb4` after round `79`, else round `i + 1`. -/
 theorem schedule_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitVec 64) (i : Nat)
     (hi : i < 80) (a b c d e f g h x0 x1 x9 x14 k : BitVec 64) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState)) (hwf : S.WF) (hX : X.offset = 0) (hKo : Kp.offset = 0)
-    (hXK : X.id ≠ Kp.id) (hXf : Fits S.mem X 1024) (hKf : Fits S.mem Kp 5120)
+    (hXK : X.id ≠ Kp.id) (hXf : Fits S.mem X 1024) (hXr : Room S.mem X 1024)
+    (hKf : Fits S.mem Kp 5120)
     (h1 : S.mem.readAt (X.add (BitVec.ofNat 64 ((i + 1) % 16 * 8))) 64 = x1)
     (h14 : S.mem.readAt (X.add (BitVec.ofNat 64 ((i + 14) % 16 * 8))) 64 = x14)
     (h9 : S.mem.readAt (X.add (BitVec.ofNat 64 ((i + 9) % 16 * 8))) 64 = x9)
@@ -1132,6 +1152,7 @@ theorem schedule_loop (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : B
       i + n + 1 = 80 →
         S.WF →
         Fits S.mem X 1024 →
+        Room S.mem X 1024 →
         Fits S.mem Kp 5120 →
         HoldsX S.mem X Xv →
         S.mem.readAt Kp 5120 = Ty.flatBits fd_sha512_core_ref_K.lit (hw := hw) →
@@ -1144,10 +1165,10 @@ theorem schedule_loop (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : B
   intro n
   induction n with
   | zero =>
-    intro i v Xv S E hi hwf hXf hKf hXv hKr hK
+    intro i v Xv S E hi hwf hXf hXr hKf hXv hKr hK
     refine
       schedule_iter st X Kp Wp H cnt i (by omega) v[0] v[1] v[2] v[3] v[4] v[5] v[6] v[7] Xv[i % 16]
-        Xv[(i + 1) % 16] Xv[(i + 9) % 16] Xv[(i + 14) % 16] K[i] S E R hwf hX hKo hXK hXf hKf
+        Xv[(i + 1) % 16] Xv[(i + 9) % 16] Xv[(i + 14) % 16] K[i] S E R hwf hX hKo hXK hXf hXr hKf
         (hXv _ (Nat.mod_lt _ (by decide))) (hXv _ (Nat.mod_lt _ (by decide)))
         (hXv _ (Nat.mod_lt _ (by decide))) (hXv _ (Nat.mod_lt _ (by decide)))
         (readAt_K hKf hKo hKr (by omega)) (fun _ E' hE' => ?_) (fun h => absurd h (by omega))
@@ -1155,18 +1176,18 @@ theorem schedule_loop (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : B
     rw [loop2_lt (by omega), show i + 1 = 80 by omega, loop2_80] at this
     exact this
   | succ n ih =>
-    intro i v Xv S E hi hwf hXf hKf hXv hKr hK
+    intro i v Xv S E hi hwf hXf hXr hKf hXv hKr hK
     refine
       schedule_iter st X Kp Wp H cnt i (by omega) v[0] v[1] v[2] v[3] v[4] v[5] v[6] v[7] Xv[i % 16]
-        Xv[(i + 1) % 16] Xv[(i + 9) % 16] Xv[(i + 14) % 16] K[i] S E R hwf hX hKo hXK hXf hKf
+        Xv[(i + 1) % 16] Xv[(i + 9) % 16] Xv[(i + 14) % 16] K[i] S E R hwf hX hKo hXK hXf hXr hKf
         (hXv _ (Nat.mod_lt _ (by decide))) (hXv _ (Nat.mod_lt _ (by decide)))
         (hXv _ (Nat.mod_lt _ (by decide))) (hXv _ (Nat.mod_lt _ (by decide)))
         (readAt_K hKf hKo hKr (by omega)) (fun h => absurd h (by omega)) (fun _ E' hE' => ?_)
     refine
       ih (i + 1) (round v (xNext Xv i) K[i]) (Xv.set (i % 16) (xNext Xv i))
         { S with mem := S.mem.storeAt (slot X (i % 16)) (xNext Xv i) } E' (by omega) hwf.storeAt
-        hXf.storeAt hKf.storeAt (hXv.store hX hXf (Nat.mod_lt _ (by decide)) (xNext Xv i)) ?_
-        fun E'' hE'' => ?_
+        hXf.storeAt hXr.storeAt hKf.storeAt
+        (hXv.store hX hXr (Nat.mod_lt _ (by decide)) (xNext Xv i)) ?_ fun E'' hE'' => ?_
     · rw [MemoryState.readAt_storeAt_disjoint (p := slot X (i % 16)) (Range.disjoint_of_id_ne hXK)]
       exact hKr
     · have := hK E'' (hE''.trans hE')
@@ -1194,7 +1215,7 @@ theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
     (h0 h1 h2 h3 h4 h5 h6 h7 a b c d e f g h : BitVec 64) (r : Nat) (S : GlobalState) (E : ⟪Γ⟫)
     (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (fd_sha512_core_ref.args (.value st) (.value data) (.value n)).get)
-    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hstX : st.id ≠ X.id)
+    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hstw : Writable S.mem st) (hstX : st.id ≠ X.id)
     (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hr : r + 1 < 2 ^ 63)
     (hexit :
       r = 0 →
@@ -1322,6 +1343,10 @@ theorem Words8Fit.memBlock {m : MemoryState} (h : m.Words8Fit p) (hne : p.id ≠
     (memBlock st X block H m).Words8Fit p :=
   (Words8Fit.mem2 (Words8Fit.mem1 (h.lifetimeStart hne))).storeWords8.lifetimeEnd hne
 
+theorem Writable.memBlock {m : MemoryState} (h : Writable m p) :
+    Writable (memBlock st X block H m) p :=
+  (Writable.mem2 (Writable.mem1 h.lifetimeStart)).storeWords8.lifetimeEnd
+
 theorem InBounds.memBlock {m : MemoryState} (h : InBounds m p w) :
     InBounds (memBlock st X block H m) p w :=
   (InBounds.mem2 (InBounds.mem1 h.lifetimeStart)).storeWords8.lifetimeEnd
@@ -1374,7 +1399,7 @@ theorem eraseFrom_memBlocks {m : MemoryState} {D : BitVec w} (h : B ≤ X.id.id)
 theorem update_block_vec (st data X Kp Wp : Pointer) (n : BitVec 64) (H v : Vector (BitVec 64) 8)
     (r : Nat) (S : GlobalState) (E : ⟪Γ⟫) (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (fd_sha512_core_ref.args (.value st) (.value data) (.value n)).get)
-    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hstX : st.id ≠ X.id)
+    (hwf : S.WF) (hst : S.mem.Words8Fit st) (hstw : Writable S.mem st) (hstX : st.id ≠ X.id)
     (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hr : r + 1 < 2 ^ 63)
     (hexit :
       r = 0 →
@@ -1393,7 +1418,7 @@ theorem update_block_vec (st data X Kp Wp : Pointer) (n : BitVec 64) (H v : Vect
               R) :
     fd_sha512_core_ref.runFrom (exit3v st X Kp Wp H (BitVec.ofNat 64 (r + 1)) E v) 4 S = R :=
   update_block st data X Kp Wp n H[0] H[1] H[2] H[3] H[4] H[5] H[6] H[7] v[0] v[1] v[2] v[3] v[4]
-    v[5] v[6] v[7] r S E R hArgs hwf hst hstX hWo hr hexit hback
+    v[5] v[6] v[7] r S E R hArgs hwf hst hstw hstX hWo hr hexit hback
 
 -- the continuation's 48 env reads through the loops' envs, and `X`'s lifetime start: just over
 -- 200000 heartbeats
@@ -1403,8 +1428,8 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
     (block : BitVec 1024) (S : GlobalState) (E₁ : ⟪Γ⟫) (R : PoisonOr (Vals [] × GlobalState))
     {hw : (Ty.array 80 (.bv 64)).width = 5120} (hwf : S.WF) (hX : X.offset = 0)
     (hKo : Kp.offset = 0) (hWo : Wp.offset.toNat + 128 < 2 ^ 64) (hXK : X.id ≠ Kp.id)
-    (hXW : X.id ≠ Wp.id) (hXb : InBounds S.mem X 1024) (hKf : Fits S.mem Kp 5120)
-    (hWf : Fits S.mem Wp 1024) (hW : S.mem.readAt Wp 1024 = block)
+    (hXW : X.id ≠ Wp.id) (hXb : InBounds S.mem X 1024) (hXw : Writable S.mem X)
+    (hKf : Fits S.mem Kp 5120) (hWf : Fits S.mem Wp 1024) (hW : S.mem.readAt Wp 1024 = block)
     (hKr : S.mem.readAt Kp 5120 = Ty.flatBits fd_sha512_core_ref_K.lit (hw := hw))
     (hcont :
       ∀ E' : ⟪Γ⟫,
@@ -1418,6 +1443,8 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
   block_init
   -- "llvm.intr.lifetime.start"
   step_pure
+  -- `X`'s room has its writability: a `Writable` fact would be carried by unfolding `mem1`, `mem2`
+  clear hXw
   finish_block
   -- the args through the env's writes, so the loops' continuations chain them without unfolding
   have hA : E.args = E₁.args := by
@@ -1430,8 +1457,11 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
     exact fits_mem1 hX hXr
   have hXv : HoldsX S.mem X (X0 block) := by
     rw [hS]
-    exact holdsX_mem1 hX hXr.inBounds block
-  clear hXr hroom_X
+    exact holdsX_mem1 hX hXr block
+  replace hXr : Room S.mem X 1024 := by
+    rw [hS]
+    exact Room.mem1 hXr
+  clear hroom_X
   have hA : E.args = E₁.args := by
     rw [hE]; simp only [Env.write_args]; exact hArgs₀
   step_loop using schedule_loop st X Kp Wp H cnt R hX hKo hXK 63 16 (loop1 block 0 H) (X0 block)
@@ -1451,7 +1481,9 @@ theorem blocks_loop (st data X Kp : Pointer) (n : BitVec 64) (N : Nat) (D : BitV
         E.args = (fd_sha512_core_ref.args (.value st) (.value data) (.value n)).get →
         S.WF →
         S.mem.Words8Fit st →
+        Writable S.mem st →
         InBounds S.mem X 1024 →
+        Writable S.mem X →
         Fits S.mem Kp 5120 →
         Fits S.mem data (1024 * N) →
         S.mem.readAt data (1024 * N) = D →
@@ -1467,29 +1499,30 @@ theorem blocks_loop (st data X Kp : Pointer) (n : BitVec 64) (N : Nat) (D : BitV
   intro r
   induction r with
   | zero =>
-    intro j H S E hj hA hwf hst hXb hKf hdf hD hKr hK
+    intro j H S E hj hA hwf hst hstw hXb hXw hKf hdf hD hKr hK
     exact
       rounds_block st X Kp _ H _ _ S E R hwf hX hKo
         (by
           rw [block_offset hdo (by omega)]; omega)
-        hXK hXd hXb hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
+        hXK hXd hXb hXw hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
         fun E₁ h₁ =>
         update_block_vec st data X Kp _ n H _ 0 _ E₁ R (h₁.trans hA) (WF_mem12 hwf.lifetimeStart)
-          (Words8Fit.mem2 (Words8Fit.mem1 (hst.lifetimeStart hstX))) hstX
+          (Words8Fit.mem2 (Words8Fit.mem1 (hst.lifetimeStart hstX)))
+          (Writable.mem2 (Writable.mem1 hstw.lifetimeStart)) hstX
           (by
             rw [block_offset hdo (by omega)]; omega)
           (by decide) (fun _ E₂ h₂ => hK E₂ (h₂.trans h₁)) (fun h => absurd rfl h)
   | succ r ih =>
-    intro j H S E hj hA hwf hst hXb hKf hdf hD hKr hK
+    intro j H S E hj hA hwf hst hstw hXb hXw hKf hdf hD hKr hK
     refine
       rounds_block st X Kp _ H _ _ S E R hwf hX hKo
         (by
           rw [block_offset hdo (by omega)]; omega)
-        hXK hXd hXb hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
+        hXK hXd hXb hXw hKf (fits_block hdf hdo (by omega)) (readAt_block hdf hdo (by omega) hD) hKr
         fun E₁ h₁ =>
         update_block_vec st data X Kp _ n H _ (r + 1) _ E₁ R (h₁.trans hA)
           (WF_mem12 hwf.lifetimeStart) (Words8Fit.mem2 (Words8Fit.mem1 (hst.lifetimeStart hstX)))
-          hstX
+          (Writable.mem2 (Writable.mem1 hstw.lifetimeStart)) hstX
           (by
             rw [block_offset hdo (by omega)]; omega)
           (by omega) (fun h => absurd h (by omega)) (fun _ E₂ h₂ => ?_)
@@ -1504,7 +1537,9 @@ theorem blocks_loop (st data X Kp : Pointer) (n : BitVec 64) (N : Nat) (D : BitV
     · exact h₂.trans (h₁.trans hA)
     · exact WF_memBlock hwf
     · exact Words8Fit.memBlock hst hstX
+    · exact Writable.memBlock hstw
     · exact InBounds.memBlock hXb
+    · exact Writable.memBlock hXw
     · exact Fits.memBlock hKf hXK.symm
     · exact Fits.memBlock hdf hXd.symm
     · rw [readAt_memBlock hst.1 hsep hXd.symm]
@@ -1513,14 +1548,10 @@ theorem blocks_loop (st data X Kp : Pointer) (n : BitVec 64) (N : Nat) (D : BitV
       exact hKr
     · exact fun E₃ h₃ => hK E₃ (h₃.trans (h₂.trans h₁))
 
-/-- A read of the entry state's memory, through `K`'s block and `X`'s `alloca`. -/
-theorem readAt_frame {s : GlobalState} {x : BitVec v} (hwf : s.WF) (h : InBounds s.mem q w) :
-    (({ alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem.addBlock ⟨s.alloc.nextFreeBlock⟩ k x } :
-                GlobalState).alloca
-            b d).mem.readAt
-        q w =
-      s.mem.readAt q w := by
-  rw [MemoryState.readAt_alloca hwf.addBlock (h.addBlock hwf), MemoryState.readAt_addBlock hwf h]
+/-- A read of the entry state's memory, through `X`'s `alloca`. -/
+theorem readAt_frame {s : GlobalState} (hwf : s.WF) (h : InBounds s.mem q w) :
+    (s.alloca b d).mem.readAt q w = s.mem.readAt q w :=
+  MemoryState.readAt_alloca hwf h
 
 end fd_sha512_core_ref
 
@@ -1532,16 +1563,17 @@ public theorem fd_sha512_core_ref_K.value_eq (s : GlobalState) :
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
 /-- `fd_sha512_core_ref` compresses the `n` 128-byte blocks at `data` into the eight state words
-at `st` and stores the result there. The state and the blocks must not overlap; `K` and `X` leave
-two blocks counted. -/
+at `st` and stores the result there. The state and the blocks must not overlap; `X` leaves one
+block counted. -/
 public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s : GlobalState)
-    (hwf : s.WF) (hst : s.mem.Words8Fit st) (hn : n ≠ 0) (hdata : Fits s.mem data (1024 * n.toNat))
+    (hwf : s.WF) (hg : s.mem.Globals fd_sha512_core_ref.globals) (hst : s.mem.Words8Fit st)
+    (hstw : Writable s.mem st) (hn : n ≠ 0) (hdata : Fits s.mem data (1024 * n.toNat))
     (hdo : data.offset.toNat + 128 * n.toNat < 2 ^ 64)
     (hsep : (Range.of st 512).Disjoint (Range.of data (1024 * n.toNat))) :
     fd_sha512_core_ref.call (fd_sha512_core_ref.args (.value st) (.value data) (.value n)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem :=
               s.mem.storeWords8 st
                 (fd_sha512_core_ref.spec (s.mem.readWords8 st)
@@ -1565,8 +1597,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
       (Nat.pos_of_ne_zero
         (by
           intro h; exact hn (BitVec.eq_of_toNat_eq h)))
-  have hXK : X.id ≠ Kp.id := by
-    rw [hX, hKp]; exact GlobalState.slot_id_ne (by decide)
+  have hXK : X.id ≠ Kp.id := hKp_ne_X.symm
   have hrun :
     fd_sha512_core_ref.runFrom E 1 S =
       .value
@@ -1587,8 +1618,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
   rw [eraseFrom_memBlocks
       (by
         rw [hX]; simp),
-    GlobalState.eraseFrom_alloca_of_le (by simp),
-    MemoryState.eraseFrom_addBlock_of_le (Nat.le_refl _), hwf₀.eraseFrom, hN]
+    GlobalState.eraseFrom_alloca_of_le (by simp), hwf₀.eraseFrom, hN]
   rfl
 
 end Proof

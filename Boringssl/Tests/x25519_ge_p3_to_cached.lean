@@ -26,7 +26,7 @@ private def fe (k : Nat) : Fin 5 → BitVec 64 := fun i =>
 private def eqCached (a b : GeCached) : Bool :=
   limbsEq a.YplusX b.YplusX && limbsEq a.YminusX b.YminusX && limbsEq a.Z b.Z && limbsEq a.T2d b.T2d
 
-/-- The output in block 1, `P` in block 2; the output after the call, or
+/-- The output in block 1, `P` in block 2, the globals after; the output after the call, or
 `none` for UB. -/
 private def run (P : GeP3) : Option GeCached :=
   let s : GlobalState :=
@@ -36,7 +36,7 @@ private def run (P : GeP3) : Option GeCached :=
             (⟨2⟩, blk 160 (bytesOf P.T ++ bytesOf P.Z ++ bytesOf P.Y ++ bytesOf P.X))]⟩⟩
   match
     x25519_ge_p3_to_cached.call (x25519_ge_p3_to_cached.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩))
-      s with
+      (s.withGlobals x25519_ge_p3_to_cached.globals) with
   | .value (_, s') => some (s'.mem.readCached ⟨⟨1⟩, 0⟩)
   | _ => none
 

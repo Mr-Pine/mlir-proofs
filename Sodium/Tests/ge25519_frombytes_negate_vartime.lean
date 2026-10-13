@@ -63,7 +63,8 @@ private def run (s : BitVec 256) : Option (BitVec 32 × List Nat) :=
   let st : GlobalState := ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, blk 160 0), (⟨2⟩, blk 32 s)]⟩⟩
   match
     ge25519_frombytes_negate_vartime.call
-      (ge25519_frombytes_negate_vartime.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩)) st with
+      (ge25519_frombytes_negate_vartime.args (.value ⟨⟨1⟩, 0⟩) (.value ⟨⟨2⟩, 0⟩))
+      (st.withGlobals ge25519_frombytes_negate_vartime.globals) with
   | .value (.cons (.value r) .nil, s') =>
     let P := s'.mem.readP3 ⟨⟨1⟩, 0⟩
     some (r, [P.X, P.Y, P.Z, P.T].map fun l => natOf l % p)

@@ -25,15 +25,15 @@ theorem Pointer.not_uaddOverflow_of_limbs {p : Pointer} (h : p.offset.toNat + 32
 theorem Room.append {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off) (hv : off.toNat * 8 = v)
     (hu : v + w = u) (h₁ : Room m p v) (h₂ : Room m (p.add off) w) : Room m p u := by
   subst hu
-  obtain ⟨blk, hblk, hl, hsz⟩ := h₁
-  obtain ⟨blk', hblk', _, hsz'⟩ := h₂
+  obtain ⟨⟨blk, hblk, hl, hsz⟩, hw⟩ := h₁
+  obtain ⟨⟨blk', hblk', _, hsz'⟩, -⟩ := h₂
   have hb : blk' = blk := by
     have : m[p.id]? = some blk' := hblk'
     rw [hblk] at this
     exact (Option.some.inj this).symm
   subst hb
   rw [Pointer.offsetInBits_add hov] at hsz'
-  exact ⟨blk', hblk, hl, by omega⟩
+  exact ⟨⟨blk', hblk, hl, by omega⟩, hw⟩
 
 /-- The first limb pair fits. -/
 theorem MemoryState.LimbsFit.fits_lo {m : MemoryState} (h : m.LimbsFit p) : Fits m p 128 :=
@@ -95,7 +95,7 @@ theorem MemoryState.storeAt_pair {m : MemoryState} {p : Pointer} (hov : ¬p.offs
     m.storeAt p x =
       (m.storeAt p (x.extractLsb' 0 64)).storeAt (p.add 8#64) (x.extractLsb' 64 64) := by
   simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov, MemoryBlock.mk.injEq, true_and,
@@ -163,7 +163,7 @@ theorem MemoryState.storeAt_append {m : MemoryState} {p : Pointer} {off : BitVec
     {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
     m.storeAt p (y ++ x) = (m.storeAt p x).storeAt (p.add off) y := by
   simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
@@ -252,7 +252,7 @@ theorem MemoryState.storeLimbs_storeAt_self {m : MemoryState} {p : Pointer}
         | 3 => l 3
         | 4 => l 4 := by
   simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true, Function.comp_apply]
   congr 1
   funext blk
   have ho (k : Nat) (hk : k ≤ 32) := Pointer.offsetInBits_add_limb (p := p) h hk

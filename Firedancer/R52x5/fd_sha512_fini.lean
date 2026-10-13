@@ -27,9 +27,10 @@ abbrev hdr2 (sha : Pointer) (lo hi x : BitVec 64) (E : ⟪Γ⟫) : ⟪Γ⟫ :=
 theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) (v : ShaState)
     (S₁ : GlobalState) (E : ⟪Γ⟫)
     (hArgs : E.args = (fd_sha512_fini.args (.value sha) (.value hash)).get) (hwf : S₁.WF)
-    (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hh : S₁.mem.Words8Room hash)
-    (hsep : hash.id ≠ sha.id) (hx : x.toNat ≤ 112) (hlo : v.bitCntLo = lo) (hhi : v.bitCntHi = hi)
-    (g : Vals [.ptr] × GlobalState → PoisonOr β) (K : PoisonOr β)
+    (hM : S₁.mem = M.storeSha sha v) (hMf : M.ShaFit sha) (hMw : Writable M sha)
+    (hh : S₁.mem.Words8Room hash) (hsep : hash.id ≠ sha.id) (hx : x.toNat ≤ 112)
+    (hlo : v.bitCntLo = lo) (hhi : v.bitCntHi = hi) (g : Vals [.ptr] × GlobalState → PoisonOr β)
+    (K : PoisonOr β)
     (hK :
       (PoisonOr.value
             (.cons (.value hash) .nil,
@@ -42,6 +43,7 @@ theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) 
     (fd_sha512_fini.runFrom (hdr2 sha lo hi x E) 2 S₁ >>= g) = K := by
   subst hK
   have hSf : S₁.mem.ShaFit sha := hM ▸ hMf.storeSha
+  have hSw : Writable S₁.mem sha := hM ▸ hMw.storeSha
   have hov : ¬sha.offset.uaddOverflow x :=
     BitVec.not_uaddOverflow_of_le hMf.2
       (by
@@ -86,7 +88,7 @@ theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) 
   have h1d : (Range.of (sha.add 128#64) 512).Disjoint (Range.of sha (1024 * (1#64).toNat)) :=
     (Range.disjoint_sha_base hMf.2 (b := 128) (by decide) (by decide)).symm
   step_call using fd_sha512_core_avx2.call_eq consuming hst h1 h1o h1d
-  rw [MemoryState.readWords8_storeSha_state hMf, MemoryState.readAt_storeSha_buf hMf,
+  rw [MemoryState.readWords8_storeSha_state hMf hMw, MemoryState.readAt_storeSha_buf hMf hMw,
     MemoryState.storeSha_storeWords8_state] at hS
   replace hS : S = { alloc := ⟨S₁.alloc.nextFreeBlock + 2⟩, mem := M.storeSha sha (last v x) } := by
     rw [hS]
@@ -95,12 +97,12 @@ theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) 
   -- the struct's value left opaque, so the loads' values stay `vF.state[k]`
   generalize last v x = vF at hS ⊢
   -- hash[k] = fd_ulong_bswap( state[k] );
-  step_load [MemoryState.readAt_storeSha_state hMf]
+  step_load [MemoryState.readAt_storeSha_state hMf hMw]
   step_call using fd_ulong_bswap.call_eq
   step_store
   iterate 7 
     step_pure
-    step_load [MemoryState.readAt_storeSha_state hMf]
+    step_load [MemoryState.readAt_storeSha_state hMf hMw]
     step_call using fd_ulong_bswap.call_eq
     step_pure
     step_store
@@ -114,8 +116,9 @@ end fd_sha512_fini
 stores the state's words, byte-swapped, at `hash` (64 bytes); returns `hash`. Each
 `fd_sha512_core` call leaves two blocks counted; `hash` is in another block than `sha`. -/
 public theorem fd_sha512_fini.call_eq (sha hash : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hsha : s.mem.ShaFit sha) (hu : (s.mem.readSha sha).bufUsed.toNat < 128)
-    (hh : s.mem.Words8Room hash) (hsep : hash.id ≠ sha.id) :
+    (hsha : s.mem.ShaFit sha) (hshaw : Writable s.mem sha)
+    (hu : (s.mem.readSha sha).bufUsed.toNat < 128) (hh : s.mem.Words8Room hash)
+    (hsep : hash.id ≠ sha.id) :
     fd_sha512_fini.call (fd_sha512_fini.args (.value sha) (.value hash)) s =
       .value
         (.cons (.value hash) .nil,
@@ -199,8 +202,8 @@ public theorem fd_sha512_fini.call_eq (sha hash : Pointer) (s : GlobalState) (hw
           rw [hx1]; omega)] at hS
     -- fd_sha512_core( state, buf, 1UL );
     step_call using fd_sha512_core_avx2.call_eq consuming hst h1 h1o h1d
-    rw [MemoryState.readWords8_storeSha_state hsha₀, MemoryState.readAt_storeSha_buf hsha₀,
-      MemoryState.storeSha_storeWords8_state] at hS
+    rw [MemoryState.readWords8_storeSha_state hsha₀ hshaw₀,
+      MemoryState.readAt_storeSha_buf hsha₀ hshaw₀, MemoryState.storeSha_storeWords8_state] at hS
     have hM := congrArg GlobalState.mem hS
     dsimp only at hM
     finish_block

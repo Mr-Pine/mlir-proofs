@@ -68,7 +68,8 @@ public theorem ZigVerify.blocksOf_ne {c : BitVec 16} (h : c ≠ 0#16) (M S oa oR
 /-- `Verifier.init`'s `call_eq` on a failure, on the bytes `r`, `S`, `A` read at `sig`, `sig + 32`,
 `pk`: the code alone. -/
 theorem Verifier_init.call_eq_err (out sig pk : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : Room s.mem out 4752) (hoo : out.offset.toNat + 594 ≤ 2 ^ 64) (hsig : Fits s.mem sig 512)
+    (hg : s.mem.Globals Verifier_init.globals) (hout : Room s.mem out 4752)
+    (hoo : out.offset.toNat + 594 ≤ 2 ^ 64) (hsig : Fits s.mem sig 512)
     (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
     (hpo : pk.offset.toNat + 32 < 2 ^ 64) (hr : s.mem.readAt sig 256 = r)
     (hS : s.mem.readAt (sig.add 32#64) 256 = S) (hA : s.mem.readAt pk 256 = A)
@@ -79,12 +80,13 @@ theorem Verifier_init.call_eq_err (out sig pk : Pointer) (s : GlobalState) (hwf 
           { alloc := ⟨s.alloc.nextFreeBlock + Verifier.init.blocks r S A⟩,
             mem := s.mem.storeAt (out.add 592#64) (Verifier.init.code r S A) }) := by
   subst hr hS hA
-  rw [Verifier_init.call_eq out sig pk s hwf hout hoo hsig hso hpk hpo, Verifier.init.mem]
+  rw [Verifier_init.call_eq out sig pk s hwf hg hout hoo hsig hso hpk hpo, Verifier.init.mem]
   simp only [hc, ↓reduceIte]
 
 /-- `Verifier.init`'s `call_eq` on success: the code `0`, the `Verifier`'s bits. -/
 theorem Verifier_init.call_eq_ok (out sig pk : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : Room s.mem out 4752) (hoo : out.offset.toNat + 594 ≤ 2 ^ 64) (hsig : Fits s.mem sig 512)
+    (hg : s.mem.Globals Verifier_init.globals) (hout : Room s.mem out 4752)
+    (hoo : out.offset.toNat + 594 ≤ 2 ^ 64) (hsig : Fits s.mem sig 512)
     (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
     (hpo : pk.offset.toNat + 32 < 2 ^ 64) (hr : s.mem.readAt sig 256 = r)
     (hS : s.mem.readAt (sig.add 32#64) 256 = S) (hA : s.mem.readAt pk 256 = A)
@@ -97,7 +99,7 @@ theorem Verifier_init.call_eq_ok (out sig pk : Pointer) (s : GlobalState) (hwf :
               (s.mem.storeAt (out.add 592#64) 0#16).storeDef out (Verifier.init.bits r S A)
                 Verifier.init.defs }) := by
   subst hr hS hA
-  rw [Verifier_init.call_eq out sig pk s hwf hout hoo hsig hso hpk hpo, Verifier.init.mem]
+  rw [Verifier_init.call_eq out sig pk s hwf hg hout hoo hsig hso hpk hpo, Verifier.init.mem]
   simp only [hc, ↓reduceIte]
 
 /-- The signature copied into the 64-byte slot `sg`: its halves `r`, `S`. -/
@@ -114,7 +116,7 @@ theorem sig_copy {m : MemoryState} {sg : Pointer} (hr : Room m sg 512) (ho : sg.
   exact
     ⟨Fits.append hov rfl rfl hf.storeAt (Fits.storeAt_self h32),
       (MemoryState.readAt_storeAt_disjoint hdj _).trans h,
-      MemoryState.readAt_storeAt_self h32.inBounds _⟩
+      MemoryState.readAt_storeAt_self h32 _⟩
 
 /-- `0 - zext c` does not overflow for a 16-bit code. -/
 theorem neg_code_noOverflow (c : BitVec 16) :
@@ -132,19 +134,17 @@ theorem init_ok_facts {m : MemoryState} {vi : Pointer} {x dd : BitVec 4736} (hr 
   have hdj : (Range.of vi 4736).Disjoint (Range.of (vi.add 592#64) 16) := by
     right; left
     simp [Range.of, Pointer.offsetInBits, Pointer.add, ho]
-  have hi : InBounds (m.storeAt (vi.add 592#64) 0#16) vi 4736 :=
-    (hr.inBounds.mono (by omega)).storeAt
+  have hi : Room (m.storeAt (vi.add 592#64) 0#16) vi 4736 := (hr.mono (by omega)).storeAt
   exact
     ⟨Fits.storeDef_of_disjoint (Fits.storeAt_self h592) hdj,
       (MemoryState.readAt_storeDef_disjoint hdj _ _).trans
-        (MemoryState.readAt_storeAt_self h592.inBounds _),
+        (MemoryState.readAt_storeAt_self h592 _),
       MemoryState.readAt_storeDef_self hi _ _, MemoryState.definedAt_storeDef_self hi _ _⟩
 
 /-- A copy of `x`, defined `d`, into the 592 bytes at `v`: read back. -/
 theorem copy_facts {m : MemoryState} {v : Pointer} {x dd : BitVec 4736} (hr : Room m v 4736) :
     (m.storeDef v x dd).readAt v 4736 = x ∧ (m.storeDef v x dd).definedAt v 4736 = dd :=
-  ⟨MemoryState.readAt_storeDef_self hr.inBounds _ _,
-    MemoryState.definedAt_storeDef_self hr.inBounds _ _⟩
+  ⟨MemoryState.readAt_storeDef_self hr _ _, MemoryState.definedAt_storeDef_self hr _ _⟩
 
 /-- What `update` keeps of the `Verifier` at `d`: its object has absorbed the message after `M`,
 the points and the scalar past it alike. -/
@@ -183,10 +183,9 @@ theorem upd_facts {s : GlobalState} {d b : Pointer} {n : BitVec 64} {M : List (B
       ⟨h.1, Sha512_update.Fits.post h.2.1, Sha512_update.Fits.post h.2.2.1,
         Sha512_update.Fits.post h.2.2.2.1, Sha512_update.Fits.post h.2.2.2.2.1,
         Sha512_update.Fits.post h.2.2.2.2.2⟩
-    have hpr : (Sha512_update.post s d b n).mem.PtRoom (d.add k) :=
-      ⟨ho, Sha512_update.room_post.2 hr'⟩
-    refine ⟨⟨ho, hpr.2, hl _ hx, hl _ hy, hl _ hz, hl _ ht⟩, ?_⟩
-    refine MemoryState.readPt_of_readAt (hpr.2.inBounds.mono (by omega)) ho ?_
+    have hpl : Live (Sha512_update.post s d b n).mem (d.add k) 1344 := Sha512_update.live_post.2 hr'
+    refine ⟨⟨ho, hpl, hl _ hx, hl _ hy, hl _ hz, hl _ ht⟩, ?_⟩
+    refine MemoryState.readPt_of_readAt (hpl.inBounds.mono (by omega)) ho ?_
     rw [MemoryState.readAt_of_readAt_le (w := 1280) (by omega)
         (Sha512_update.post_readAt hr hdo hbl' (hdj k 1344 hk hkw)),
       BitVec.setWidth_eq_extractLsb' (by omega)]
@@ -202,6 +201,7 @@ theorem upd_facts {s : GlobalState} {d b : Pointer} {n : BitVec 64} {M : List (B
 
 /-- `Verifier.verify`'s `call_eq` on the named scalar `Sc` and points `a`, `R`. -/
 theorem Verifier_verify.call_eq_of (self : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals Verifier_verify.globals)
     (hself : Room s.mem self 4736) (hso : self.offset.toNat + 592 < 2 ^ 64) (M : List (BitVec 8))
     (hd : Sha512Obj.Fit s.mem self) (hM : Sha512Obj.Absorbed s.mem self M)
     (hpa : s.mem.PtLimbsFit (self.add 224#64)) (hpr : s.mem.PtLimbsFit (self.add 392#64))
@@ -214,7 +214,7 @@ theorem Verifier_verify.call_eq_of (self : Pointer) (s : GlobalState) (hwf : s.W
           { alloc := ⟨s.alloc.nextFreeBlock + Verifier.verify.blocks M Sc a R⟩,
             mem := Verifier.verify.finalMem s.mem self }) := by
   subst hAd hRd hSd
-  exact Verifier_verify.call_eq self s hwf hself hso M hd hM hpa hpr hsf hA hR
+  exact Verifier_verify.call_eq self s hwf hg hself hso M hd hM hpa hpr hsf hA hR
 
 /-- The return block: the slots' lifetimes ended, `0 - zext c` for the code `c` it is passed. -/
 theorem ret_block (g : Vals [.bv 32] × GlobalState → PoisonOr β) (K : PoisonOr β) (S : GlobalState)
@@ -247,9 +247,9 @@ attribute [local mlir_transport] Room.updPost Sha512_update.Fits.post Sha512_upd
 /-- `zig_ed25519_verify` returns `-code` for `ZigVerify.code` on the message, `r`, `S` and the key,
 and leaves memory as it found it. -/
 public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig pk : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * len.toNat))
-    (hmo : msg.offset.toNat + len.toNat < 2 ^ 64) (hsig : Fits s.mem sig 512)
-    (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals zig_ed25519_verify.globals)
+    (hmsg : Fits s.mem msg (8 * len.toNat)) (hmo : msg.offset.toNat + len.toNat < 2 ^ 64)
+    (hsig : Fits s.mem sig 512) (hso : sig.offset.toNat + 64 < 2 ^ 64) (hpk : Fits s.mem pk 256)
     (hpo : pk.offset.toNat + 32 < 2 ^ 64) (hlen : len.toNat + 128 < 2 ^ 63) :
     zig_ed25519_verify.call
         (zig_ed25519_verify.args (.value msg) (.value len) (.value sig) (.value pk)) s =
@@ -360,14 +360,18 @@ public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig
             X.mem.readAt (v2.add 560#64) 256 = S.mem.readAt (v2.add 560#64) 256) ∧
           X.alloc.nextFreeBlock = S.alloc.nextFreeBlock + 2 * ((64 + len.toNat) / 128))
     rw [hM, hpaP, hprP, hsfr] at hupd
-    step_call using Sha512_update.call_eq consuming hFit hbuf hmsg hsep hbl hT hAbs hpa hpr hsf
+    have hgp := fun X (hX : X = Sha512_update.post S v2 msg len) =>
+      (hX ▸ Sha512_update.Globals.post hg : X.mem.Globals _)
+    step_call using Sha512_update.call_eq consuming hFit hbuf hmsg hsep hbl hT hAbs hpa hpr hsf hg
+      hwritable_vi hwritable_v1 hwritable_v2
     obtain ⟨hFit2, hAbs2, ⟨hpa2, hpaP2⟩, ⟨hpr2, hprP2⟩, ⟨hsf2, hsfr2⟩, hupa⟩ := hupd S hS
-    clear hupd
+    have hg := hgp S hS
+    clear hupd hgp
     have hv2o : v2.offset.toNat + 592 < 2 ^ 64 := by simp [hv2_off]
     have ha53 : a.Lt (2 ^ 53) := hal.mono53
     have hR53 : R.Lt (2 ^ 53) := hRl.mono53
     step_call using Verifier_verify.call_eq_of consuming hroom_v2 hFit2 hAbs2 hpa2 hpr2 hsf2 hpaP2
-      hprP2 hsfr2 ha53 hR53 hroom_v1 hwf
+      hprP2 hsfr2 ha53 hR53 hroom_v1 hwf hg
     finish_block
     refine ret_block _ _ S E _ v1 v2 (by env_reads) ?_
     dsimp only
@@ -395,8 +399,7 @@ public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig
           ⟨Fits.storeAt_self
               (Room.add_of_le (by simp [BitVec.uaddOverflow, hvi_off]) (by simp) hroom_vi),
             MemoryState.readAt_storeAt_self
-              (Room.add_of_le (by simp [BitVec.uaddOverflow, hvi_off]) (by simp) hroom_vi).inBounds
-              _⟩ :
+              (Room.add_of_le (by simp [BitVec.uaddOverflow, hvi_off]) (by simp) hroom_vi) _⟩ :
         Fits m' (vi.add 592#64) 16 ∧ m'.readAt (vi.add 592#64) 16 = Verifier.init.code r Sv A)
     step_call using Verifier_init.call_eq_err consuming hsgf hsgr hsgS hvi4752
     obtain ⟨hcf, hcr⟩ := hcode _ (congrArg GlobalState.mem hS)

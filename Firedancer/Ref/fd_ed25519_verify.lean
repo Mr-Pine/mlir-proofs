@@ -30,7 +30,7 @@ def fd_ed25519_verify.spec (tbl : Nat → PointLimbs) (msgSz : BitVec 64)
   -- the three locals' blocks, and `frombytes_2x`'s
   let frame := 3
   let fb (A? : Option PointLimbs) (R? : Option PointLimbs) : Nat :=
-    if A?.isSome then 79 + if R?.isSome then 79 else 57 else 57
+    if A?.isSome then 76 + if R?.isSome then 76 else 54 else 54
   if !fd_curve25519_scalar_validate.spec S then ⟨-1#32, none, frame⟩
   else
     let A? := fd_ed25519_point_frombytes.spec publicKey
@@ -39,15 +39,15 @@ def fd_ed25519_verify.spec (tbl : Nat → PointLimbs) (msgSz : BitVec 64)
     match A?, R? with
     | some Aprime, some R =>
       let blocks := frame + fb A? R?
-      if fd_ed25519_affine_is_small_order.spec Aprime ≠ 0#32 then ⟨-2#32, none, blocks + 8⟩
+      if fd_ed25519_affine_is_small_order.spec Aprime ≠ 0#32 then ⟨-2#32, none, blocks + 6⟩
       else
-        if fd_ed25519_affine_is_small_order.spec R ≠ 0#32 then ⟨-1#32, none, blocks + 16⟩
+        if fd_ed25519_affine_is_small_order.spec R ≠ 0#32 then ⟨-1#32, none, blocks + 12⟩
         else
           let (sha4, kw) := fd_ed25519_verify.hash buf0 r publicKey msgSz msg
           let k := fd_curve25519_scalar_reduce.spec (Words8.bits kw)
           ⟨if fd_ed25519_verify_equation.spec tbl k Aprime S R = 0#32 then -3#32 else 0#32,
             some sha4,
-            blocks + 16 + fd_ed25519_verify.hashBlocks buf0 r publicKey msgSz msg +
+            blocks + 12 + fd_ed25519_verify.hashBlocks buf0 r publicKey msgSz msg +
               fd_ed25519_verify_equation.blocks k S⟩
     | _, _ => ⟨if res = -1#32 then -2#32 else -1#32, none, frame + fb A? R?⟩
 
@@ -97,7 +97,7 @@ attribute [local mlir_erase high] MemoryState.eraseFrom_hashMem_of_le
 
 attribute [local mlir_fresh] Fits.hashMem_k
 
-attribute [local mlir_transport] MemoryState.Words8Room.storeSha InBounds.hashMem
+attribute [local mlir_transport] MemoryState.Words8Room.storeSha InBounds.hashMem Room.hashMem
   MemoryState.Words8Room.hashMem
 
 /-- `fd_sha512_fini( fd_sha512_append( fd_sha512_append( fd_sha512_append( fd_sha512_init( sha ),
@@ -110,11 +110,12 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
       E.args =
         (fd_ed25519_verify.args (.value msg) (.value msgSz) (.value sig) (.value pk)
             (.value sha)).get)
-    (hR : E ⊨ [%780 := 32#64, %788 := k]) (hwf : S.WF) (hsha : S.mem.ShaFit sha)
-    (hsig : Fits S.mem sig (8 * 32)) (hsig_off : ¬sig.offset.uaddOverflow 32#64)
-    (hpk : Fits S.mem pk (8 * 32)) (hpk_off : ¬pk.offset.uaddOverflow 32#64)
-    (hmsg : Fits S.mem msg (8 * msgSz.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgSz)
-    (hmsgSz : msgSz.toNat < 2 ^ 63)
+    (hR : E ⊨ [%780 := 32#64, %788 := k]) (hwf : S.WF)
+    (hg : S.mem.Globals fd_ed25519_verify.globals) (hsha : S.mem.ShaFit sha)
+    (hshaw : Writable S.mem sha) (hsig : Fits S.mem sig (8 * 32))
+    (hsig_off : ¬sig.offset.uaddOverflow 32#64) (hpk : Fits S.mem pk (8 * 32))
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hmsg : Fits S.mem msg (8 * msgSz.toNat))
+    (hmsg_off : ¬msg.offset.uaddOverflow msgSz) (hmsgSz : msgSz.toNat < 2 ^ 63)
     (hk : S.mem.Words8Room k) (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id)
     (hmsg_sha : msg.id ≠ sha.id) (hk_sha : k.id ≠ sha.id)
     (hK :
@@ -136,7 +137,7 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
         K) :
     (fd_ed25519_verify.bb5.runBodyFrom E 1 S >>= g) = K := by
   -- the hash object `init` leaves, an equation that stays about the state before it
-  have hinit := fd_sha512_init.readSha hsha
+  have hinit := fd_sha512_init.readSha hsha hshaw
   obtain ⟨hsha_fits, hsha_off⟩ := hsha
   step_call using fd_sha512_init.call_eq
   rename_i S₀
@@ -180,12 +181,12 @@ theorem fd_ed25519_verify.hash_run {E : ⟪fd_ed25519_verify.Γ⟫} {S : GlobalS
 /-- `fd_ed25519_verify` returns `spec`'s code and leaves `spec`'s hash object; its frame is freed.
 The signature, key and message are only read, the hash object only written by the SHA-512 calls. -/
 public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (sig pk sha : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hmsg : Fits s.mem msg (8 * msgSz.toNat))
-    (hmsg_off : ¬msg.offset.uaddOverflow msgSz) (hmsgSz : msgSz.toNat < 2 ^ 63)
-    (hsig : Fits s.mem sig (8 * 64))
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals fd_ed25519_verify.globals)
+    (hmsg : Fits s.mem msg (8 * msgSz.toNat)) (hmsg_off : ¬msg.offset.uaddOverflow msgSz)
+    (hmsgSz : msgSz.toNat < 2 ^ 63) (hsig : Fits s.mem sig (8 * 64))
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hpk : Fits s.mem pk (8 * 32))
-    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsha : s.mem.ShaFit sha) (hmsg_sha : msg.id ≠ sha.id)
-    (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id) :
+    (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hsha : s.mem.ShaFit sha) (hshaw : Writable s.mem sha)
+    (hmsg_sha : msg.id ≠ sha.id) (hsig_sha : sig.id ≠ sha.id) (hpk_sha : pk.id ≠ sha.id) :
     fd_ed25519_verify.call
         (fd_ed25519_verify.args (.value msg) (.value msgSz) (.value sig) (.value pk) (.value sha))
         s =
@@ -258,6 +259,15 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
     have hR₀ := hS ▸ hR_pt
     -- int res = fd_ed25519_point_frombytes_2x( Aprime, public_key, R, r );
     step_call using fd_ed25519_point_frombytes_2x.call_eq
+    -- the globals and the writable blocks past `storePointOpt`, which the step does not see through
+    any_goals
+      subst hS'
+      first
+      |
+        exact
+          hg.mono (MemoryState.globals_storePointOpt.trans MemoryState.globals_storePointOpt)
+            fun _ h => h
+      | exact Writable.storePointOpt (Writable.storePointOpt (by assumption))
     step_pure
     finish_block
     case isFalse =>
@@ -334,7 +344,7 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
           --   r, 32UL ), public_key, 32UL ), msg, msg_sz ), k );
           have hsha : S.mem.ShaFit sha := ⟨hsha_fits, hsha_off⟩
           have hk_w := MemoryState.Words8Room.of_room hroom_k hk_off
-          clear hroom_k hA_pt hR_pt
+          clear hA_pt hR_pt
           step_pattern using fd_ed25519_verify.hash_run
           obtain ⟨⟨sha4, kw⟩, hH⟩ :
             ∃ H,
@@ -343,7 +353,7 @@ public theorem fd_ed25519_verify.call_eq (msg : Pointer) (msgSz : BitVec 64) (si
                 H :=
             ⟨_, rfl⟩
           rw [hH] at hS hread_k
-          clear hsha hk_w
+          clear hsha hk_w hroom_k
           -- fd_curve25519_scalar_reduce( k, k );
           have hk32 : ¬k.offset.uaddOverflow 32#64 := by simp [BitVec.uaddOverflow, hk_off]
           have hk64 : ¬k.offset.uaddOverflow 64#64 := by simp [BitVec.uaddOverflow, hk_off]

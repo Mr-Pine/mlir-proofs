@@ -48,8 +48,11 @@ abbrev MemoryState.LimbsRoom (m : MemoryState) (p : Pointer) : Prop :=
 -- `simp [mlir_mem]` unfolds them, so goals and facts split into the same conjuncts
 attribute [mlir_mem] MemoryState.LimbsFit MemoryState.LimbsRoom
 
-theorem MemoryState.LimbsFit.room {m : MemoryState} (h : m.LimbsFit p) : m.LimbsRoom p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.room⟩
+/-- Limbs known in a writable block have room. -/
+theorem MemoryState.LimbsFit.room {m : MemoryState} (h : m.LimbsFit p) (hw : Writable m p) :
+    m.LimbsRoom p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.2.2.room (hw.of_id_eq rfl)⟩
 
 /-- `storeLimbs` keeps the set of blocks, so the state stays `WF`. -/
 @[mlir_transport]
@@ -76,7 +79,7 @@ open Memory in
 theorem MemoryState.storeLimbs_storeLimbs_self {m : MemoryState} {p : Pointer} :
     (m.storeLimbs p l).storeLimbs p l' = m.storeLimbs p l' := by
   simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true, Function.comp_apply]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits, MemoryBlock.mk.injEq, true_and, and_true]
@@ -109,9 +112,7 @@ theorem MemoryState.LimbsFit.alloca {s : GlobalState} (hne : p.id ≠ s.allocaPt
 theorem MemoryState.LimbsRoom.alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id)
     (h : s.mem.LimbsRoom p) : (s.alloca n d).mem.LimbsRoom p := by
   have hf : ∀ {q : Pointer} {w}, q.id = p.id → Room s.mem q w → Room (s.alloca n d).mem q w :=
-    fun hq ⟨b, hb, hl, hs⟩ =>
-    ⟨b, by
-      rw [GlobalState.getElem?_alloca (hq ▸ hne)]; exact hb, hl, hs⟩
+    fun hq h => h.of_getElem?_eq (GlobalState.getElem?_alloca (hq ▸ hne))
   obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
   exact ⟨ho, hf rfl h0, hf rfl h1, hf rfl h2, hf rfl h3, hf rfl h4⟩
 

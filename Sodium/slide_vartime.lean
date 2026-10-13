@@ -42,7 +42,8 @@ theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off
     intro i hi
     simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
     grind
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
+    implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
@@ -81,7 +82,7 @@ theorem byte_offset {r : Pointer} (hov : ¬r.offset.uaddOverflow 256#64) (hj : j
 
 /-- `r[j]`, read from the stored digits. -/
 theorem readAt_byte {m : MemoryState} {r : Pointer} {v : Vector (BitVec 8) 256}
-    (hr : InBounds m r 2048) (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) :
+    (hr : Room m r 2048) (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) :
     (m.storeAt r (BitVec.packLanes v)).readAt (r.add (BitVec.ofNat 64 j)) 8 = v[j] := by
   obtain ⟨h8, hov'⟩ := byte_offset hov hj
   rw [MemoryState.readAt_storeAt_add hr hov' (by omega), h8, BitVec.extractLsb'_packLanes v j hj]
@@ -312,7 +313,7 @@ theorem carry6_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -338,7 +339,7 @@ theorem carry6_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -386,7 +387,7 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   -- if (r[i + b])
   block_init
   step_pure [Nat.mod_lt]
-  step_load [readAt_byte hr.inBounds hr_off hib]
+  step_load [readAt_byte hr hr_off hib]
   step_pure
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
@@ -398,7 +399,7 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   step_pure
   step_pure [sext_shl _ (by decide : 6 = 1 ∨ 6 = 2 ∨ 6 = 3 ∨ 6 = 4 ∨ 6 = 5 ∨ 6 = 6)]
-  step_load [readAt_byte hr.inBounds hr_off hi0]
+  step_load [readAt_byte hr hr_off hi0]
   step_pure
   step_pure [sext_add _ _ (by decide : 6 = 1 ∨ 6 = 2 ∨ 6 = 3 ∨ 6 = 4 ∨ 6 = 5 ∨ 6 = 6)]
   step_pure
@@ -452,7 +453,7 @@ theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -478,7 +479,7 @@ theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -527,7 +528,7 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   -- if (r[i + b])
   block_init
   step_pure [Nat.mod_lt]
-  step_load [readAt_byte hr.inBounds hr_off hib]
+  step_load [readAt_byte hr hr_off hib]
   step_pure
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
@@ -539,7 +540,7 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   step_pure
   step_pure [sext_shl _ (by decide : 5 = 1 ∨ 5 = 2 ∨ 5 = 3 ∨ 5 = 4 ∨ 5 = 5 ∨ 5 = 6)]
-  step_load [readAt_byte hr.inBounds hr_off hi0]
+  step_load [readAt_byte hr hr_off hi0]
   step_pure
   step_pure [sext_add _ _ (by decide : 5 = 1 ∨ 5 = 2 ∨ 5 = 3 ∨ 5 = 4 ∨ 5 = 5 ∨ 5 = 6)]
   step_pure
@@ -593,7 +594,7 @@ theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -619,7 +620,7 @@ theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -668,7 +669,7 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   -- if (r[i + b])
   block_init
   step_pure [Nat.mod_lt]
-  step_load [readAt_byte hr.inBounds hr_off hib]
+  step_load [readAt_byte hr hr_off hib]
   step_pure
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
@@ -680,7 +681,7 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   step_pure
   step_pure [sext_shl _ (by decide : 4 = 1 ∨ 4 = 2 ∨ 4 = 3 ∨ 4 = 4 ∨ 4 = 5 ∨ 4 = 6)]
-  step_load [readAt_byte hr.inBounds hr_off hi0]
+  step_load [readAt_byte hr hr_off hi0]
   step_pure
   step_pure [sext_add _ _ (by decide : 4 = 1 ∨ 4 = 2 ∨ 4 = 3 ∨ 4 = 4 ∨ 4 = 5 ∨ 4 = 6)]
   step_pure
@@ -734,7 +735,7 @@ theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -760,7 +761,7 @@ theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -809,7 +810,7 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   -- if (r[i + b])
   block_init
   step_pure [Nat.mod_lt]
-  step_load [readAt_byte hr.inBounds hr_off hib]
+  step_load [readAt_byte hr hr_off hib]
   step_pure
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
@@ -821,7 +822,7 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   step_pure
   step_pure [sext_shl _ (by decide : 3 = 1 ∨ 3 = 2 ∨ 3 = 3 ∨ 3 = 4 ∨ 3 = 5 ∨ 3 = 6)]
-  step_load [readAt_byte hr.inBounds hr_off hi0]
+  step_load [readAt_byte hr hr_off hi0]
   step_pure
   step_pure [sext_add _ _ (by decide : 3 = 1 ∨ 3 = 2 ∨ 3 = 3 ∨ 3 = 4 ∨ 3 = 5 ∨ 3 = 6)]
   step_pure
@@ -875,7 +876,7 @@ theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -901,7 +902,7 @@ theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -950,7 +951,7 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   -- if (r[i + b])
   block_init
   step_pure [Nat.mod_lt]
-  step_load [readAt_byte hr.inBounds hr_off hib]
+  step_load [readAt_byte hr hr_off hib]
   step_pure
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
@@ -962,7 +963,7 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   step_pure
   step_pure [sext_shl _ (by decide : 2 = 1 ∨ 2 = 2 ∨ 2 = 3 ∨ 2 = 4 ∨ 2 = 5 ∨ 2 = 6)]
-  step_load [readAt_byte hr.inBounds hr_off hi0]
+  step_load [readAt_byte hr hr_off hi0]
   step_pure
   step_pure [sext_add _ _ (by decide : 2 = 1 ∨ 2 = 2 ∨ 2 = 3 ∨ 2 = 4 ∨ 2 = 5 ∨ 2 = 6)]
   step_pure
@@ -1015,7 +1016,7 @@ theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -1041,7 +1042,7 @@ theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hk' : k < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hk']
+    step_load [readAt_byte hr hr_off hk']
     step_pure
     finish_block
     · rw [carry_set hk' hbr] at hK
@@ -1085,7 +1086,7 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   have C := carry1_loop r a Sb hr hr_off i K (255 - (i + 1)) (i + 1)
   -- if (r[i + b])
   step_pure [Nat.mod_lt]
-  step_load [readAt_byte hr.inBounds hr_off hib]
+  step_load [readAt_byte hr hr_off hib]
   step_pure
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
@@ -1097,7 +1098,7 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   step_pure
   step_pure [sext_shl _ (by decide : 1 = 1 ∨ 1 = 2 ∨ 1 = 3 ∨ 1 = 4 ∨ 1 = 5 ∨ 1 = 6)]
-  step_load [readAt_byte hr.inBounds hr_off hi0]
+  step_load [readAt_byte hr hr_off hi0]
   step_pure
   step_pure [sext_add _ _ (by decide : 1 = 1 ∨ 1 = 2 ∨ 1 = 3 ∨ 1 = 4 ∨ 1 = 5 ∨ 1 = 6)]
   step_pure
@@ -1235,7 +1236,7 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hi0 : i < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hi0]
+    step_load [readAt_byte hr hr_off hi0]
     step_pure
     step_pure
     step_pure
@@ -1251,7 +1252,7 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     have hi0 : i < 256 := by omega
     block_init
     step_pure [Nat.mod_lt]
-    step_load [readAt_byte hr.inBounds hr_off hi0]
+    step_load [readAt_byte hr hr_off hi0]
     step_pure
     step_pure
     step_pure
@@ -1285,7 +1286,7 @@ theorem overlay_storeAt_add {m : MemoryState} {p : Pointer} {u d : BitVec wu} {o
       m.overlay p (Memory.spliceBits u (off.toNat * 8) y)
         (Memory.spliceBits d (off.toNat * 8) (BitVec.allOnes wy)) := by
   simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
   simp only [Function.comp_apply, Pointer.offsetInBits_add hov,

@@ -12,15 +12,15 @@ namespace MLIR.Agave.Avx2
 section Proof
 
 /-- `BASEPOINT_ODD_LOOKUP_TABLE.select(x)` stores entry `x / 2` of the table at `out`; `x ≥ 128`
-panics. The panic's `Location` and the table take a block each. -/
+panics. -/
 public theorem NafLookupTable8_CachedPoint_select.call_eq (out : Pointer) (x : BitVec 64)
-    (s : GlobalState) (hwf : s.WF) (hx : x.toNat < 128) (hout : Room s.mem out 1280)
-    (ho : out.offset.toNat + 160 ≤ 2 ^ 64) :
+    (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals NafLookupTable8_CachedPoint_select.globals)
+    (hx : x.toNat < 128) (hout : Room s.mem out 1280) (ho : out.offset.toNat + 160 ≤ 2 ^ 64) :
     NafLookupTable8_CachedPoint_select.call
         (NafLookupTable8_CachedPoint_select.args (.value out) (.value x)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
+          { s with
             mem := s.mem.storeFe4x out (BASEPOINT_ODD_LOOKUP_TABLE.point (x.toNat / 2)) }) := by
   func_init
   block_init
@@ -37,7 +37,6 @@ public theorem NafLookupTable8_CachedPoint_select.call_eq (out : Pointer) (x : B
     step_memcpy
     finish_block
     subst hS
-    erase_frame
     have hk : (BitVec.ofNat 64 (x.toNat >>> 1 * 160)).toNat * 8 = 1280 * (x.toNat / 2) := by
       rw [BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow, Nat.mod_eq_of_lt (by omega)]
       omega

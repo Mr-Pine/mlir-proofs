@@ -32,9 +32,8 @@ noncomputable mlir_def tableBase := {
 
 end
 
-example (s : GlobalState) (hwf : s.WF) :
-    ivLen.call ivLen.args s =
-      .value (.cons (.value 0#8) .nil, { s with alloc := ⟨s.alloc.nextFreeBlock + 1⟩ }) := by
+example (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals ivLen.globals) :
+    ivLen.call ivLen.args s = .value (.cons (.value 0#8) .nil, s) := by
   func_init
   block_init
   step_addressof Sha512_iv.value_eq with iv
@@ -43,12 +42,10 @@ example (s : GlobalState) (hwf : s.WF) :
   step_load with v
   finish_block
   subst hS hv
-  erase_frame
   rfl
 
-example (s : GlobalState) (hwf : s.WF) :
-    ivLen.call ivLen.args s =
-      .value (.cons (.value 0#8) .nil, { s with alloc := ⟨s.alloc.nextFreeBlock + 1⟩ }) := by
+example (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals ivLen.globals) :
+    ivLen.call ivLen.args s = .value (.cons (.value 0#8) .nil, s) := by
   func_init
   block_init
   step_addressof Sha512_iv with iv
@@ -56,12 +53,10 @@ example (s : GlobalState) (hwf : s.WF) :
   step_load with v
   finish_block
   subst hS hv
-  erase_frame
   rfl
 
-example (s : GlobalState) (hwf : s.WF) :
-    tableBase.call tableBase.args s =
-      .value (.cons (.value 0#1) .nil, { s with alloc := ⟨s.alloc.nextFreeBlock + 1⟩ }) := by
+example (s : GlobalState) (hwf : s.WF) (hg : s.mem.Globals tableBase.globals) :
+    tableBase.call tableBase.args s = .value (.cons (.value 0#1) .nil, s) := by
   func_init
   block_init
   step_addressof Edwards25519_basePointPc with t
@@ -69,7 +64,6 @@ example (s : GlobalState) (hwf : s.WF) :
   step_load with v
   finish_block
   subst hS hv
-  erase_frame
   rfl
 
 end MLIR.Zig.Tests.Globals

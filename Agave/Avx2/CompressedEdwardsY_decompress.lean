@@ -53,12 +53,12 @@ theorem readAt_storeLimbs_add8 {m : MemoryState} {p : Pointer} {l : Fin 5 → Bi
 
 /-- `sqrt_ratio_i`'s `Choice` read back from below its `r`. -/
 theorem readAt_flag {m : MemoryState} {p : Pointer} {x : BitVec 8} {l : Fin 5 → BitVec 64}
-    (ho : p.offset = 0) (hb : InBounds ((m.storeAt p x).storeLimbs (p.add 8#64) l) p 8) :
+    (ho : p.offset = 0) (hb : Room ((m.storeAt p x).storeLimbs (p.add 8#64) l) p 8) :
     ((m.storeAt p x).storeLimbs (p.add 8#64) l).readAt p 8 = x := by
   have hl : (p.add 8#64).offset.toNat + 32 < 2 ^ 64 := by simp [Pointer.add, ho]
   rw [readAt_storeLimbs_add8 ho]
-  rw [storeLimbs_eq_storeAt hl, InBounds.storeAt_iff] at hb
-  exact MemoryState.readAt_storeAt_self (InBounds.storeAt_iff.mp hb) x
+  rw [storeLimbs_eq_storeAt hl, Room.storeAt_iff] at hb
+  exact MemoryState.readAt_storeAt_self (Room.storeAt_iff.mp hb) x
 
 /-- `(repr[31] >> 7) as u8` from the word at byte 24: its sign bit, truncated without loss. -/
 theorem sign_trunc_zext (x : BitVec 64) : ((x >>> 63).setWidth 8).setWidth 64 = x >>> 63 := by
@@ -86,7 +86,7 @@ theorem fits_point {m : MemoryState} {p : Pointer} (ho : p.offset = 0) (h0 : Fit
 theorem readAt_point_stores {m : MemoryState} {p : Pointer} {X Y Z T : Fin 5 → BitVec 64}
     {z : BitVec 320}
     (hb :
-      InBounds
+      Room
         ((((m.storeAt p (limbsBits X)).storeLimbs (p.add 120#64) T).storeAt (p.add 40#64)
               (limbsBits Y)).storeAt
           (p.add 80#64) z)
@@ -101,32 +101,32 @@ theorem readAt_point_stores {m : MemoryState} {p : Pointer} {X Y Z T : Fin 5 →
   have hp : p.offset.toNat + 160 ≤ 2 ^ 64 := by simp [ho]
   have hl : (p.add 120#64).offset.toNat + 32 < 2 ^ 64 := by simp [Pointer.add, ho]
   rw [storeLimbs_eq_storeAt hl] at hb ⊢
-  simp only [InBounds.storeAt_iff] at hb
+  simp only [Room.storeAt_iff] at hb
   have d (a b : Nat) (ha : a ≤ 120) (hb : b ≤ 120) (hab : a + 40 ≤ b ∨ b + 40 ≤ a) :=
     Range.disjoint_coords hp ha hb hab
   have d0 (b : Nat) (hb : b ≤ 120) (hab : 40 ≤ b) := by
     simpa only [Pointer.add_zero'] using d 0 b (by omega) hb (by omega)
   have d0' (a : Nat) (ha : a ≤ 120) (hab : 40 ≤ a) := by
     simpa only [Pointer.add_zero'] using d a 0 ha (by omega) (by omega)
-  have i (k : BitVec 64) (hk : k.toNat ≤ 120) : InBounds m (p.add k) 320 :=
-    InBounds.add_of_le
+  have i (k : BitVec 64) (hk : k.toNat ≤ 120) : Room m (p.add k) 320 :=
+    Room.add_of_le
       (by
         simp [ho, BitVec.uaddOverflow]; omega)
       (by omega) hb
-  apply readAt_edwardsBits (by simpa only [InBounds.storeAt_iff] using hb) hp
+  apply readAt_edwardsBits (by simpa only [InBounds.storeAt_iff] using hb.inBounds) hp
   · rw [MemoryState.readAt_storeAt_disjoint (d0' 80 (by omega) (by omega)),
       MemoryState.readAt_storeAt_disjoint (d0' 40 (by omega) (by omega)),
       MemoryState.readAt_storeAt_disjoint (d0' 120 (by omega) (by omega)),
       MemoryState.readAt_storeAt_self (hb.mono (by decide))]
   · rw [MemoryState.readAt_storeAt_disjoint (d 80 40 (by omega) (by omega) (by omega)),
       MemoryState.readAt_storeAt_self
-        (by simpa only [InBounds.storeAt_iff] using i 40#64 (by decide))]
+        (by simpa only [Room.storeAt_iff] using i 40#64 (by decide))]
   · rw [MemoryState.readAt_storeAt_self
-        (by simpa only [InBounds.storeAt_iff] using i 80#64 (by decide))]
+        (by simpa only [Room.storeAt_iff] using i 80#64 (by decide))]
   · rw [MemoryState.readAt_storeAt_disjoint (d 80 120 (by omega) (by omega) (by omega)),
       MemoryState.readAt_storeAt_disjoint (d 40 120 (by omega) (by omega) (by omega)),
       MemoryState.readAt_storeAt_self
-        (by simpa only [InBounds.storeAt_iff] using i 120#64 (by decide))]
+        (by simpa only [Room.storeAt_iff] using i 120#64 (by decide))]
 
 /-- `start p`: the slot `p`'s lifetime starts, with room for its limbs. -/
 local macro "start " p:ident : tactic => `(tactic| (step_pure; limbs_room $p))
@@ -176,14 +176,15 @@ local macro "drop " p:ident : tactic => do
 
 -- a long chain of calls: the state cut from the entry state every so often (`rir.stateDepth`)
 set_option rir.stateDepth 64 in
--- about 150 steps over a frame of 13 blocks and 13 calls: past the default heartbeats
+-- about 150 steps over a frame of 11 blocks and 13 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
 /-- `repr.decompress()` for the 32 bytes at `repr`: stores the point of
 `Serial.CompressedEdwardsY_decompress.spec` at `out + 8` and the tag `1` at `out`, or only the tag
-`0` when the spec is `none`. The temporaries', globals' and callees' blocks are freed again: only
-the counter moves on, by 162 blocks (161 for `none`). -/
+`0` when the spec is `none`. The temporaries' and callees' blocks are freed again: only the counter
+moves on, by 159 blocks (158 for `none`). -/
 public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : s.mem.OptEdwardsRoom out) (hrepr : Fits s.mem repr 256)
+    (hwf : s.WF) (hg : s.mem.Globals CompressedEdwardsY_decompress.globals)
+    (hout : s.mem.OptEdwardsRoom out) (hrepr : Fits s.mem repr 256)
     (hrepr_off : ¬repr.offset.uaddOverflow 32#64) :
     CompressedEdwardsY_decompress.call
         (CompressedEdwardsY_decompress.args (.value out) (.value repr)) s =
@@ -193,8 +194,8 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
             alloc :=
               ⟨s.alloc.nextFreeBlock +
                   if (Serial.CompressedEdwardsY_decompress.spec (s.mem.readAt repr 256)).isSome then
-                    162
-                  else 161⟩,
+                    159
+                  else 158⟩,
             mem :=
               s.mem.storeOptEdwards out
                 (Serial.CompressedEdwardsY_decompress.spec (s.mem.readAt repr 256)) }) := by
@@ -276,7 +277,7 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
   clear hread_D hread_one
   limbs_fit D
   have hone_limbs := MemoryState.LimbsFit.of_fits hone_fits hone_off
-  clear hone_room
+  clear hone_live
   -- let YY = Y.square();
   start pYY
   fe_call FieldElement51_square.call_eq YY pYY
@@ -299,7 +300,7 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
   step_call using FieldElement51_sqrt_ratio_i.call_eq
   name_limbs X0
   have hflag : S.mem.readAt st1 8 = (Serial.FieldElement51_sqrt_ratio_i.spec u v).1 := by
-    have hb := hst1_bounds
+    have hb := hroom_st1
     rw [hS] at hb ⊢
     exact readAt_flag hst1_off (hb.mono (by decide))
   step_load with is_valid_y_coord consuming hflag
@@ -371,7 +372,7 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
     step_memcpy
     step_pure
     have hpt_bits : S.mem.readAt pt 1280 = edwardsBits ⟨X, Y, Serial.FieldElement51.ONE, T⟩ := by
-      have hb := hroom_pt.inBounds
+      have hb := hroom_pt
       rw [hS] at hb ⊢
       exact readAt_point_stores hb hpt_off one_bits
     have hpt_fits := fits_point hpt_off hfits_pt hfits_pt_40 hfits_pt_80 (fits_of_limbsFit hpt120)

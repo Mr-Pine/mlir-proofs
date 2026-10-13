@@ -85,6 +85,20 @@ public theorem Room.pairsLoop {m : MemoryState} (h : Room m q v) :
   | succ c ih => exact ih (Room.tMem (Room.pairsMem h))
 
 @[mlir_transport]
+public theorem Live.pairsLoop {m : MemoryState} (h : Live m q v) :
+    Live (pairsLoop ms2 t2 D i c m) q v := by
+  induction c generalizing i m with
+  | zero => exact h
+  | succ c ih => exact ih (Live.tMem (Live.pairsMem h))
+
+@[mlir_transport]
+public theorem Writable.pairsLoop {m : MemoryState} (h : Writable m q) :
+    Writable (pairsLoop ms2 t2 D i c m) q := by
+  induction c generalizing i m with
+  | zero => exact h
+  | succ c ih => exact ih (Writable.tMem (Writable.pairsMem h))
+
+@[mlir_transport]
 public theorem InBounds.pairsLoop {m : MemoryState} (h : InBounds m q v) :
     InBounds (pairsLoop ms2 t2 D i c m) q v := by
   induction c generalizing i m with
@@ -412,7 +426,7 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
     rw [hmem]
     have :=
       HoldsR.pairsMem (W := bsched (X.extractLsb' 0 1024)) (p := 0) (n := 8) (lo := 0) hmo
-        hms2.inBounds (Nat.le_refl _) (by decide) (fun _ _ h => absurd h (Nat.not_lt_zero _))
+        hms2 (Nat.le_refl _) (by decide) (fun _ _ h => absurd h (Nat.not_lt_zero _))
     exact HoldsR.tMem (by simpa using this) hne3
   have hR6 :
     HoldsR
@@ -422,7 +436,7 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
     rw [hmem, e40]
     have :=
       HoldsR.pairsMem (W := bsched (X.extractLsb' 0 1024)) (p := 0) (n := 40) (lo := 0) (mem := M)
-        hmo hms2.inBounds (Nat.le_refl _) (by decide) (fun _ _ h => absurd h (Nat.not_lt_zero _))
+        hmo hms2 (Nat.le_refl _) (by decide) (fun _ _ h => absurd h (Nat.not_lt_zero _))
     exact HoldsR.tMem (by simpa using this) hne3
   have hT :
     HoldsT
@@ -431,7 +445,7 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
       t2 (bsched (X.extractLsb' 1024 1024)) 80 := by
     rw [hmem, e40]
     exact
-      HoldsT.tMem hto (InBounds.pairsMem ht2.inBounds) (p := 0) (n := 40) (by decide)
+      HoldsT.tMem hto (Room.pairsMem ht2) (p := 0) (n := 40) (by decide)
         (fun _ h => absurd h (Nat.not_lt_zero _))
   have hFt :
     Fits
@@ -454,6 +468,7 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
       (sched_bsched _) 31 0
   simp only [Nat.mul_zero, Nat.zero_add, rounds_zero, Nat.zero_div, Nat.zero_mod] at L
   step_loop using L
+  · exact Writable.tMem (Writable.pairsMem hms2.writable)
   intro hL
   clear L
   -- rounds_64_79(&mut current_state, &ms);

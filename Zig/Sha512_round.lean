@@ -349,7 +349,7 @@ theorem HoldsW.store {m : MemoryState} {W : Pointer} {f : Nat → BitVec 64} {n 
   by_cases e : t = n
   · subst e
     have hr' := room_slot hWo hN hr hn
-    exact ⟨Fits.storeAt_self hr', MemoryState.readAt_storeAt_self hr'.inBounds _⟩
+    exact ⟨Fits.storeAt_self hr', MemoryState.readAt_storeAt_self hr' _⟩
   · refine ⟨(h t (by omega)).1.storeAt, ?_⟩
     rw [MemoryState.readAt_storeAt_disjoint]
     · exact (h t (by omega)).2
@@ -363,6 +363,11 @@ theorem room_stores {m : MemoryState} : Room (stores W f i n m) p w ↔ Room m p
   | succ n ih => simp [stores, ih]
 
 theorem Fits.stores {m : MemoryState} (h : Fits m p w) : Fits (stores W f i n m) p w := by
+  induction n generalizing i m with
+  | zero => exact h
+  | succ n ih => exact ih h.storeAt
+
+theorem Writable.stores {m : MemoryState} (h : Writable m p) : Writable (stores W f i n m) p := by
   induction n generalizing i m with
   | zero => exact h
   | succ n ih => exact ih h.storeAt
@@ -639,6 +644,7 @@ theorem loop3 (d V : Pointer) (Hf vf : Nat → BitVec 64) (R : PoisonOr (Vals []
       i + m = 8 →
         S.WF →
         Fits S.mem d 640 →
+        Writable S.mem d →
         HoldsW S.mem V vf 8 →
         (∀ j, i ≤ j → j < 8 → S.mem.readAt (d.add (16#64 + BitVec.ofNat 64 (8 * j))) 64 = Hf j) →
         .value (.nil, { S with mem := Sha512Obj.storeWords d (fun j => Hf j + vf j) i m S.mem }) =
@@ -647,7 +653,7 @@ theorem loop3 (d V : Pointer) (Hf vf : Nat → BitVec 64) (R : PoisonOr (Vals []
   intro m
   induction m with
   | zero =>
-    intro i S E hi hwf hdf hV hd hR
+    intro i S E hi hwf hdf hdw hV hd hR
     obtain rfl : i = 8 := by omega
     block_init
     step_pure
@@ -656,7 +662,7 @@ theorem loop3 (d V : Pointer) (Hf vf : Nat → BitVec 64) (R : PoisonOr (Vals []
     finish_block
     exact hR
   | succ m ih =>
-    intro i S E hi hwf hdf hV hd hR
+    intro i S E hi hwf hdf hdw hV hd hR
     obtain ⟨-, -, -, h4, h5, -, h7⟩ := shl3_facts (i := i) (by omega)
     obtain ⟨o1, o2⟩ := counter_overflow (i := i) (by omega)
     obtain ⟨fv, rv⟩ := hV i (by omega)
@@ -853,8 +859,8 @@ open Sha512_round in
 /-- `Sha512.round` compresses the 128-byte block at `b` into the state words of the object at `d`
 (FIPS 180-4 `Sha512.compress`, the block's bytes in memory order); its frame takes two blocks. -/
 public theorem Sha512_round.call_eq (d b : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hdf : Fits s.mem d 640) (hdo : d.offset.toNat + 80 < 2 ^ 64) (hbf : Fits s.mem b 1024)
-    (hbo : b.offset.toNat + 128 < 2 ^ 64) :
+    (hdf : Fits s.mem d 640) (hdw : Writable s.mem d) (hdo : d.offset.toNat + 80 < 2 ^ 64)
+    (hbf : Fits s.mem b 1024) (hbo : b.offset.toNat + 128 < 2 ^ 64) :
     Sha512_round.call (Sha512_round.args (.value d) (.value b)) s =
       .value
         (.nil,
@@ -968,6 +974,8 @@ public theorem Sha512_round.call_eq (d b : Pointer) (s : GlobalState) (hwf : s.W
                 S₀.mem.readAt (d.add 64#64) 64, S₀.mem.readAt (d.add 72#64) 64])[j]!)
         _ hV_off hdo hd_ne_V.symm 8 0 _ E₃ rfl (wf_stores 8 0 _ (wf_stores 64 16 _ hwf1))
         (Fits.stores (Fits.stores (hS ▸ Fits.stores hdf)))
+        (Writable.stores
+          (Writable.stores (hS ▸ Writable.stores ((hdw₀.alloca hwf₀).alloca (hwf₀.alloca)))))
         (HoldsW.stores (N := 8) hV_off (by decide) 8 0 hV2 holdsW_zero (by omega))
         (fun j _ hj => ?_) ?_
     · rw [readAt_stores_ne (q := d.add _) hd_ne_V, readAt_stores_ne (q := d.add _) hd_ne_W, hS]

@@ -24,9 +24,10 @@ private def bits (x : V) : BitVec 320 :=
 
 /-- Block 0 free (the null pointer's); `out` a 48-byte zeroed block, `u` and `v` holding limbs. -/
 private def state (ub vb : V) : GlobalState :=
-  ⟨⟨4⟩,
-    ⟨Std.ExtHashMap.ofList
-        [(⟨1⟩, .ofBytes 48 0), (⟨2⟩, .ofBytes 40 (bits ub)), (⟨3⟩, .ofBytes 40 (bits vb))]⟩⟩
+  GlobalState.withGlobals FieldElement51_sqrt_ratio_i.globals
+    ⟨⟨4⟩,
+      ⟨Std.ExtHashMap.ofList
+          [(⟨1⟩, .ofBytes 48 0), (⟨2⟩, .ofBytes 40 (bits ub)), (⟨3⟩, .ofBytes 40 (bits vb))]⟩⟩
 
 private def sq (x : V) : V :=
   Vector.ofFn (FieldElement51_square.spec x.get)

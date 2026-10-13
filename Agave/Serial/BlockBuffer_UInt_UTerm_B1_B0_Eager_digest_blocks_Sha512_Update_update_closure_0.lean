@@ -54,7 +54,7 @@ def updateMem (m : MemoryState) (self data : Pointer) (len : BitVec 64) : Memory
       tailMem (compressMem m1 self 1#128 (bytesLE (m1.readAt self 1024))) self (data.add rem)
         (len - rem)
 
-/-- `update`'s `compress512` calls, each leaving one block counted. -/
+/-- `update`'s `compress512` calls. -/
 def updateCalls (m : MemoryState) (self : Pointer) (len : BitVec 64) : Nat :=
   let P := m.readAt (self.add 127#64) 8
   let rem := 128#64 - P.setWidth 64
@@ -188,14 +188,12 @@ theorem wf_tailMem {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalS
   · exact GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk h)
   · exact GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk (wf_compressMem h))
 
-/-- Nothing at or above a well-formed state's counter. -/
-theorem eraseFrom_of_wf {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    m.eraseFrom a.nextFreeBlock = m :=
-  h.eraseFrom
-
 /-- `^bb3` on `n` bytes at `inp`, the buffer empty: `tailMem`. -/
 theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) (E : ⟪Γ⟫)
     (hwf : S.WF)
+    (hg :
+      S.mem.Globals
+        BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.globals)
     (hArgs :
       E.args = (args (.value self) (.value data) (.value len) (.value (self.add 128#64))).get)
     (hR :
@@ -208,7 +206,7 @@ theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) 
     BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.runFrom E 3 S =
       .value
         (.nil,
-          { alloc := ⟨S.alloc.nextFreeBlock + tailCalls n⟩, mem := tailMem S.mem self inp n }) := by
+          { S with mem := tailMem S.mem self inp n }) := by
   have hfov := noOverflow_of_le (and_mask_le n) hio
   have hso8 : ¬self.offset.uaddOverflow 208#64 := by
     simp [BitVec.uaddOverflow]; omega
@@ -239,7 +237,7 @@ theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) 
     block_init
     finish_block
     subst_vars
-    simp only [tailMem, tailCalls, hbr, ↓reduceIte, Nat.add_zero]
+    simp only [tailMem, hbr, ↓reduceIte]
   case isFalse =>
     have hnbn : nb.toNat = n.toNat / 128 := by rw [hnb, nb_toNat]
     have hnb56 : nb.toNat < 2 ^ 56 := by omega
@@ -269,13 +267,26 @@ theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) 
     block_init
     finish_block
     subst_vars
-    simp only [tailMem, tailCalls, compressMem, hbr, ↓reduceIte]
+    simp only [tailMem, compressMem, hbr, ↓reduceIte]
+
+/-- `update`'s memory keeps a state well-formed. -/
+public theorem wf_updateMem {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
+    (⟨a, updateMem m self data len⟩ : GlobalState).WF := by
+  dsimp only [updateMem]
+  split
+  · exact GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk h)
+  split
+  · exact wf_tailMem h
+  · exact wf_tailMem (wf_compressMem (GlobalState.WF.storeAt_mk h))
 
 /-- `<BlockBuffer<U128, Eager>>::digest_blocks(data, |blocks| compress512(core, blocks))`, as
 `<Sha512 as Update>::update` calls it: `len` bytes at `data` absorbed by sha2's `Sha512` at
 `self`, the core's state and block count at `self + 128` (`updateMem`). The buffer's length (its
 last byte) is below `128` and as many first bytes known; `self` is apart from `data`. -/
 public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState) (hwf : s.WF)
+    (hg :
+      s.mem.Globals
+        BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0.globals)
     (hself : Room s.mem self 1664) (hso : self.offset.toNat + 208 < 2 ^ 64)
     (hpos : Fits s.mem (self.add 127#64) 8) (hP128 : (s.mem.readAt (self.add 127#64) 8).toNat < 128)
     (hbuf : Fits s.mem self (8 * (s.mem.readAt (self.add 127#64) 8).toNat))
@@ -286,13 +297,15 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
         (args (.value self) (.value data) (.value len) (.value (self.add 128#64))) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + updateCalls s.mem self len⟩
-            mem := updateMem s.mem self data len }) := by
+          { s with mem := updateMem s.mem self data len }) := by
   generalize hP : s.mem.readAt (self.add 127#64) 8 = P at hP128 hbuf
-  simp only [updateMem, updateCalls]
-  simp only [hP]
+  -- the end state's `WF`, for `func_init`'s frame-free form
+  have hwfU : ({ s with mem := updateMem s.mem self data len } : GlobalState).WF :=
+    wf_updateMem (a := s.alloc) hwf
   func_init
+  clear hwfU
   have hP₀ : S₀.mem.readAt (self.add 127#64) 8 = P := hS ▸ hP
+  simp only [updateMem, hP₀]
   block_init
   iterate 10 step_pure
   step_load
@@ -326,8 +339,7 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
     block_init
     finish_block
     subst hS
-    erase_frame
-    simp only [hbr, ↓reduceIte, Nat.add_zero]
+    simp only [hbr, ↓reduceIte]
   case
     isFalse =>
     have hL : 128 - P.toNat ≤ len.toNat := by
@@ -339,11 +351,10 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
     finish_block
     case isTrue =>
       subst hbr
-      rw [tail_eq self data data len len S E hwf hArgs (by env_reads) hself hso hst hbl hdata hdo
+      rw [tail_eq self data data len len S E hwf hg hArgs (by env_reads) hself hso hst hbl hdata hdo
           hlen hsd]
       subst hS
-      simp only [PoisonOr.value_bind, hbr0, ↓reduceIte, Bool.false_eq_true,
-        eraseFrom_of_wf (wf_tailMem hwf)]
+      simp only [hbr0, ↓reduceIte, Bool.false_eq_true]
     case
       isFalse =>
       have hrov : ¬data.offset.uaddOverflow rem := noOverflow_of_le (k := len.toNat) (by omega) hdo
@@ -388,16 +399,12 @@ public theorem call_eq (self data : Pointer) (len : BitVec 64) (s : GlobalState)
         simp only [Pointer.add, BitVec.toNat_add]
         rw [Nat.mod_eq_of_lt (by omega)]
         omega
-      rw [tail_eq self data (data.add rem) len (len - rem) S E hwf hArgs (by env_reads) hself hso
+      rw [tail_eq self data (data.add rem) len (len - rem) S E hwf hg hArgs (by env_reads) hself hso
           hst hbl hinp hio (by omega) (by simpa [Pointer.add_id] using hsd)]
       subst hS
-      simp only [PoisonOr.value_bind, hbr0, hbr, ↓reduceIte, Bool.false_eq_true]
-      rw [eraseFrom_of_wf
-          (wf_tailMem
-            (GlobalState.WF.storeSha512_mk
-              (GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk hwf₀))))]
+      simp only [hbr0, hbr, ↓reduceIte, Bool.false_eq_true]
       rw [hP₀, ← hrem]
-      simp only [compressMem, Nat.add_assoc]
+      simp only [compressMem]
 
 /-! ## The absorbed bytes -/
 
@@ -450,7 +457,7 @@ theorem absorbed_short {m : MemoryState} {self data : Pointer} {len : BitVec 64}
       (by
         simp [BitVec.uaddOverflow]; omega)
       (by omega) hroom
-  have hroom127 : Room m (self.add 127#64) 8 := hpf.room
+  have hroom127 : Room m (self.add 127#64) 8 := hpf.room (hroom.writable.of_id_eq rfl)
   have hsf' :=
     (hsf.storeAt (q := self.add (P.setWidth 64)) (x := D)).storeAt (q := self.add 127#64) (x :=
       P + len.setWidth 8)
@@ -469,7 +476,7 @@ theorem absorbed_short {m : MemoryState} {self data : Pointer} {len : BitVec 64}
   refine
     ⟨hso, hroom.storeAt.storeAt, Fits.storeAt_self hroom127.storeAt, ?_, ?_, ?_, hsf', ?_,
       hcf.storeAt.storeAt, ?_⟩
-  · rw [MemoryState.readAt_storeAt_self hroom127.storeAt.inBounds, hml]
+  · rw [MemoryState.readAt_storeAt_self hroom127.storeAt, hml]
     simp only [BitVec.toNat_add, BitVec.toNat_setWidth]
     omega
   · rw [hml]
@@ -490,7 +497,7 @@ theorem absorbed_short {m : MemoryState} {self data : Pointer} {len : BitVec 64}
       MemoryState.readAt_storeAt_disjoint
         (rng_disj0 hso (b := P.setWidth 64) (by omega) (by omega)).symm,
       hb, MemoryState.readAt_storeAt_disjoint d1.symm,
-      MemoryState.readAt_storeAt_self hroomP.inBounds, List.drop_append_of_le_length (by omega)]
+      MemoryState.readAt_storeAt_self hroomP, List.drop_append_of_le_length (by omega)]
   · have hs128 : (self.add 128#64).offset.toNat + 56 < 2 ^ 64 := by
       simp only [Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat]; omega
     rw [Sha512.compressBlocks_append_short
@@ -544,12 +551,12 @@ theorem blocks_compress {m : MemoryState} {self : Pointer} {M bytes : List (BitV
   have d192 : (Range.of (self.add 192#64) 128).Disjoint (Range.of (self.add 128#64) 512) :=
     rng_disj hso (by decide) (by decide) (by simp)
   have hb128 :
-    InBounds (m.storeAt (self.add 192#64) (m.readAt (self.add 192#64) 128 + c)) (self.add 128#64)
+    Room (m.storeAt (self.add 192#64) (m.readAt (self.add 192#64) 128 + c)) (self.add 128#64)
       512 :=
-    (InBounds.add_of_le
+    (Room.add_of_le
         (by
           simp [BitVec.uaddOverflow]; omega)
-        (by decide) hroom.inBounds).storeAt
+        (by decide) hroom).storeAt
   refine ⟨hso, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact (hroom.storeAt).storeSha512
   · exact (hsf.storeAt).storeSha512
@@ -560,7 +567,8 @@ theorem blocks_compress {m : MemoryState} {self : Pointer} {M bytes : List (BitV
   · exact (hcf.storeAt).storeSha512
   · simp only [compressMem]
     rw [MemoryState.readAt_storeSha512_of_disjoint hs128 d192.symm,
-      MemoryState.readAt_storeAt_self hcf.inBounds, hcnt, hc, ← BitVec.ofNat_add]
+      MemoryState.readAt_storeAt_self (hcf.room (hroom.writable.of_id_eq rfl)), hcnt, hc,
+      ← BitVec.ofNat_add]
     congr 1
     simp only [List.length_append]
     omega
@@ -594,9 +602,9 @@ theorem absorbed_rest {m : MemoryState} {self : Pointer} {M : List (BitVec 8)} {
         (rng_disj0 hso (by decide)
           (by
             simp; omega)),
-      MemoryState.readAt_storeAt_self hroom127.inBounds, hpv, hml]
+      MemoryState.readAt_storeAt_self hroom127, hpv, hml]
   · rw [hml]; exact Fits.storeAt_self hroomt
-  · rw [hml, hmd, MemoryState.readAt_storeAt_self hroomt.inBounds,
+  · rw [hml, hmd, MemoryState.readAt_storeAt_self hroomt,
       List.drop_append_of_le_length (by omega), show M.length / 128 * 128 = M.length by omega,
       List.drop_length, List.nil_append]
   · rw [MemoryState.readSha512_storeAt_of_disjoint hs128
@@ -747,7 +755,7 @@ theorem blocks_fill {m : MemoryState} {self data : Pointer} {len : BitVec 64} {M
         simp [BitVec.uaddOverflow]; omega)
       (by omega) (by omega),
     MemoryState.readAt_storeAt_disjoint (rng_disj0 hso (by omega) (by omega)).symm, hb,
-    MemoryState.readAt_storeAt_self hroomP.inBounds, MemoryState.readAt_of_readAt_le (by omega) hD,
+    MemoryState.readAt_storeAt_self hroomP, MemoryState.readAt_of_readAt_le (by omega) hD,
     bytesLE_setWidth _ (by omega) (by omega), show 8 * rem.toNat / 8 = rem.toNat by omega, ←
     List.append_assoc, List.take_append_drop]
 
@@ -806,6 +814,40 @@ public theorem updateMem_absorbed {m : MemoryState} {self data : Pointer} {len :
         simp only [List.length_drop, length_bytesLE]; omega),
     List.take_append_drop]
 
+/-- `tailMem` keeps the globals table. -/
+public theorem globals_tailMem {m : MemoryState} {self inp : Pointer} {n : BitVec 64} :
+    (tailMem m self inp n).globals = m.globals := by
+  simp only [tailMem]
+  split <;> rfl
+
+/-- `update`'s memory keeps the globals table (the steps do not see through its `if`s). -/
+public theorem globals_updateMem {m : MemoryState} {self data : Pointer} {len : BitVec 64} :
+    (updateMem m self data len).globals = m.globals := by
+  dsimp only [updateMem]
+  split
+  · rfl
+  split
+  · exact globals_tailMem
+  · exact globals_tailMem
+
+/-- `update`'s memory keeps every block's writability (the steps do not see through its `if`s). -/
+public theorem writable_updateMem {m : MemoryState} {self data p : Pointer} {len : BitVec 64}
+    (h : Writable m p) : Writable (updateMem m self data len) p := by
+  have hc {m : MemoryState} {c b} (h : Writable m p) : Writable (compressMem m self c b) p := by
+    simp only [compressMem, MemoryState.storeSha512]
+    exact h.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt.storeAt
+  have ht {m : MemoryState} {inp n} (h : Writable m p) : Writable (tailMem m self inp n) p := by
+    simp only [tailMem]
+    split
+    · exact h.storeAt.storeAt
+    · exact (hc h).storeAt.storeAt
+  dsimp only [updateMem]
+  split
+  · exact h.storeAt.storeAt
+  split
+  · exact ht h
+  · exact ht (hc h.storeAt)
+
 /-- `update`'s memory keeps room where there was. -/
 public theorem room_updateMem {m : MemoryState} {self data p : Pointer} {len : BitVec 64}
     (h : Room m p w) : Room (updateMem m self data len) p w := by
@@ -822,16 +864,6 @@ public theorem room_updateMem {m : MemoryState} {self data p : Pointer} {len : B
   split
   · exact ht h
   · exact ht (hc h.storeAt)
-
-/-- `update`'s memory keeps a state well-formed. -/
-public theorem wf_updateMem {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    (⟨a, updateMem m self data len⟩ : GlobalState).WF := by
-  dsimp only [updateMem]
-  split
-  · exact GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk h)
-  split
-  · exact wf_tailMem h
-  · exact wf_tailMem (wf_compressMem (GlobalState.WF.storeAt_mk h))
 
 end Proof
 

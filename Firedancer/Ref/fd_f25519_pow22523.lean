@@ -68,7 +68,7 @@ set_option hygiene false in
 /-- An iteration: square, count, test; then exit or go around. -/
 local macro "iter_proof" : tactic =>
   `(tactic|
-    ( intro i S E hwf ht hi hexit hback
+    ( intro i S E hwf ht htr hi hexit hback
       dsimp only [hdr2, hdr4, hdr6, hdr8, hdr10, hdr12, hdr14]
       block_init
       step_call using fd_f25519_sqr.call_eq
@@ -222,6 +222,7 @@ abbrev LoopIter (k exit : Fin 15) (t : Pointer) (N : Nat) (envIn : ⟪Γ⟫ → 
   ∀ i (S : GlobalState) (E : ⟪Γ⟫),
     S.WF →
       S.mem.LimbsFit t →
+      S.mem.LimbsRoom t →
       i + 1 ≤ N →
       (i + 1 = N →
         ∀ E' : ⟪Γ⟫,
@@ -239,6 +240,7 @@ abbrev Loop (k exit : Fin 15) (t : Pointer) (N : Nat) (envIn : ⟪Γ⟫ → Nat 
   ∀ n i (S : GlobalState) (E : ⟪Γ⟫),
     S.WF →
       S.mem.LimbsFit t →
+      S.mem.LimbsRoom t →
       i + n + 1 = N →
       (∀ E' : ⟪Γ⟫,
         E'.args = E.args →
@@ -254,14 +256,15 @@ theorem loop_of_iter (h : LoopIter k exit t N envIn envOut g K) :
   intro n
   induction n with
   | zero =>
-    intro i S E hwf ht hi hK
-    exact h i S E hwf ht (by omega) (fun _ => hK) (by omega)
+    intro i S E hwf ht htr hi hK
+    exact h i S E hwf ht htr (by omega) (fun _ => hK) (by omega)
   | succ n ih =>
-    intro i S E hwf ht hi hK
-    refine h i S E hwf ht (by omega) (by omega) fun _ E' hE' => ?_
-    refine ih (i + 1) (sqAt t S) E' hwf.storeLimbs ht.storeLimbs (by omega) fun E'' hE'' => ?_
-    simp only [MemoryState.readLimbs_storeLimbs_self ht.room,
-      MemoryState.storeLimbs_storeLimbs_self]
+    intro i S E hwf ht htr hi hK
+    refine h i S E hwf ht htr (by omega) (by omega) fun _ E' hE' => ?_
+    refine
+      ih (i + 1) (sqAt t S) E' hwf.storeLimbs ht.storeLimbs htr.storeLimbs (by omega)
+        fun E'' hE'' => ?_
+    simp only [MemoryState.readLimbs_storeLimbs_self htr, MemoryState.storeLimbs_storeLimbs_self]
     exact hK E'' (hE''.trans hE')
 
 /-- `^bb2`: square `t1`, `5` times in all, then `^bb1`. -/

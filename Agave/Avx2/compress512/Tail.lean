@@ -64,9 +64,10 @@ public theorem tail (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (i₀ : N
     (hArgs : E.args = (compress512.args (.value st) (.value blocks) (.value n)).get) (hC : Consts E)
     (hP : Ptrs Kp ms t2 ms2 E) (hi₀ : i₀ ≤ n.toNat) (heven : (n.toNat - i₀) % 2 = 0)
     (hn56 : n.toNat < 2 ^ 56) (hdo : blocks.offset.toNat + 128 * n.toNat < 2 ^ 64)
-    (hst : S₀.mem.Sha512Fit st) (hH : S₀.mem.readSha512 st = H)
+    (hst : S₀.mem.Sha512Fit st) (hstw : Writable S₀.mem st) (hH : S₀.mem.readSha512 st = H)
     (hB : Fits S₀.mem blocks (1024 * n.toNat)) (hBr : S₀.mem.readAt blocks (1024 * n.toNat) = D)
-    (hms2 : InBounds S₀.mem ms2 1024) (ht2 : InBounds S₀.mem t2 5120) (hmo : ms2.offset = 0)
+    (hms2 : InBounds S₀.mem ms2 1024) (hms2w : Writable S₀.mem ms2) (ht2 : InBounds S₀.mem t2 5120)
+    (ht2w : Writable S₀.mem t2) (hmo : ms2.offset = 0)
     (hto : t2.offset = 0) (hKo : Kp.offset = 0) (hKf : Fits S₀.mem Kp 5120) (hK : KPairs S₀.mem Kp)
     (hne1 : ms2.id ≠ Kp.id) (hne2 : t2.id ≠ Kp.id) (hne3 : t2.id ≠ ms2.id)
     (hbm : blocks.id ≠ ms2.id) (hbt : blocks.id ≠ t2.id) (hsm : st.id ≠ ms2.id)
@@ -145,6 +146,7 @@ public theorem tail (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (i₀ : N
     step_loop using L
     intro _ _ _
     clear L
+    have hstw' : Writable S.mem st := by rw [hS]; exact Writable.pairsLoop hstw
     -- `*state = current_state` (`^bb17`), then the buffers' ends (`^bb18`)
     block_init
     iterate 8 step_store

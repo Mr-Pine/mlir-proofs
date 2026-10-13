@@ -6,6 +6,7 @@ public import Zig.Common.Sha512
 public import Zig.Sha512_round
 public import Zig.Mlir.Sha512_update
 import Std.Tactic.BVDecide
+import Std.Data.ExtHashMap.Lemmas
 
 /-! `Sha512.update`: the state it leaves (`post`), and that the object then has absorbed the bytes
 (`absorbed`). Its loop over whole blocks calls `Sha512.round` (`Sha512_round.call_eq`). -/
@@ -111,6 +112,15 @@ public theorem Fits.storeWords {m : MemoryState} {d : Pointer} {f : Nat → BitV
   | succ n ih =>
     intro i; exact ih h.storeAt (i + 1)
 
+public theorem Writable.storeWords {m : MemoryState} {d : Pointer} {f : Nat → BitVec 64}
+    (h : Writable m p) : ∀ n i, Writable (Sha512Obj.storeWords d f i n m) p := by
+  intro n
+  induction n generalizing m with
+  | zero =>
+    intro _; exact h
+  | succ n ih =>
+    intro i; exact ih h.storeAt (i + 1)
+
 public theorem inBounds_storeWords {m : MemoryState} {d : Pointer} {f : Nat → BitVec 64} :
     ∀ n i, InBounds (Sha512Obj.storeWords d f i n m) p w ↔ InBounds m p w := by
   intro n
@@ -129,6 +139,20 @@ public theorem room_storeWords {m : MemoryState} {d : Pointer} {f : Nat → BitV
   | succ n ih =>
     intro i; rw [Sha512Obj.storeWords, ih]; simp
 
+/-- A store keeps every block, its length and lifetime. -/
+public theorem live_storeAt_iff {m : MemoryState} {x : BitVec v} :
+    Live (m.storeAt q x) p w ↔ Live m p w := by
+  rw [MemoryState.storeAt_eq_storeDef]; exact Live.storeDef_iff
+
+public theorem live_storeWords {m : MemoryState} {d : Pointer} {f : Nat → BitVec 64} :
+    ∀ n i, Live (Sha512Obj.storeWords d f i n m) p w ↔ Live m p w := by
+  intro n
+  induction n generalizing m with
+  | zero =>
+    intro _; rfl
+  | succ n ih =>
+    intro i; rw [Sha512Obj.storeWords, ih, live_storeAt_iff]
+
 public theorem wf_storeWords {s : GlobalState} {d : Pointer} {f : Nat → BitVec 64} :
     ∀ n i (m : MemoryState),
       ({ s with mem := m } : GlobalState).WF →
@@ -144,12 +168,18 @@ public theorem roundState_wf {s : GlobalState} (h : s.WF) : (roundState s d p).W
   have h' :=
     wf_storeWords (s := s) (d := d) (f := fun i =>
       (Sha512.compress (Sha512Obj.state s.mem d) (bytesLE (s.mem.readAt p 1024)))[i]!) 8 0 s.mem h
-  obtain ⟨hb, hp, hn⟩ := h'
-  exact ⟨fun k hk => Nat.lt_of_lt_of_le (hb k hk) (by simp [roundState]), by simp [roundState], hn⟩
+  obtain ⟨hb, hp, hn, hg, hm⟩ := h'
+  exact
+    ⟨fun k hk => Nat.lt_of_lt_of_le (hb k hk) (by simp [roundState]), by simp [roundState], hn, hg,
+      hm⟩
 
 public theorem Fits.roundState {s : GlobalState} (h : Fits s.mem q w) :
     Fits (Sha512_update.roundState s d p).mem q w :=
   Fits.storeWords h 8 0
+
+public theorem Writable.roundState {s : GlobalState} (h : Writable s.mem q) :
+    Writable (Sha512_update.roundState s d p).mem q :=
+  Writable.storeWords h 8 0
 
 public theorem InBounds.roundState {s : GlobalState} (h : InBounds s.mem q w) :
     InBounds (Sha512_update.roundState s d p).mem q w :=
@@ -162,6 +192,10 @@ public theorem inBounds_roundState {s : GlobalState} :
 public theorem room_roundState {s : GlobalState} :
     Room (roundState s d p).mem q w ↔ Room s.mem q w :=
   room_storeWords 8 0
+
+public theorem live_roundState {s : GlobalState} :
+    Live (roundState s d p).mem q w ↔ Live s.mem q w :=
+  live_storeWords 8 0
 
 public theorem roundState_readAt {s : GlobalState} (hdo : d.offset.toNat + 80 < 2 ^ 64)
     (h : (Range.of (d.add 16#64) 512).Disjoint (Range.of q w)) :
@@ -181,7 +215,7 @@ theorem loop_iter (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) 
     (R : PoisonOr (Vals [] × GlobalState))
     (hArgs : E.args = (Sha512_update.args (.value d) (.value b) (.value n)).get)
     (hoffn : off ≤ n.toNat) (hn : n.toNat + 128 < 2 ^ 63) (hwf : S.WF) (hdf : Fits S.mem d 640)
-    (hdo : d.offset.toNat + 80 < 2 ^ 64) (hbf : Fits S.mem b (8 * n.toNat))
+    (hdw : Writable S.mem d) (hdo : d.offset.toNat + 80 < 2 ^ 64) (hbf : Fits S.mem b (8 * n.toNat))
     (hbo : b.offset.toNat + n.toNat < 2 ^ 64)
     (hexit :
       n.toNat < off + 128 →
@@ -222,7 +256,7 @@ theorem loop_iter (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) 
     have hbo' : (b.add (BitVec.ofNat 64 off)).offset.toNat + 128 < 2 ^ 64 := by
       simp [Pointer.add, BitVec.toNat_add]; omega
     block_init
-    step_call using Sha512_round.call_eq consuming hwf hdf hfb hbf
+    step_call using Sha512_round.call_eq consuming hwf hdf hdw hfb hbf
     finish_block
     step_loop using hback hoff
 
@@ -236,6 +270,7 @@ theorem loop (d b : Pointer) (n : BitVec 64) (R : PoisonOr (Vals [] × GlobalSta
         E.args = (Sha512_update.args (.value d) (.value b) (.value n)).get →
         S.WF →
         Fits S.mem d 640 →
+        Writable S.mem d →
         Fits S.mem b (8 * n.toNat) →
         (∀ E' : ⟪Γ⟫,
           E'.args = (Sha512_update.args (.value d) (.value b) (.value n)).get →
@@ -244,18 +279,18 @@ theorem loop (d b : Pointer) (n : BitVec 64) (R : PoisonOr (Vals [] × GlobalSta
   intro c
   induction c with
   | zero =>
-    intro off S E h1 h2 hArgs hwf hdf hbf hK
+    intro off S E h1 h2 hArgs hwf hdf hdw hbf hK
     exact
-      loop_iter d b n off S E R hArgs (by omega) hn hwf hdf hdo hbf hbo (fun _ E' g => hK E' g)
+      loop_iter d b n off S E R hArgs (by omega) hn hwf hdf hdw hdo hbf hbo (fun _ E' g => hK E' g)
         (fun h => absurd h (by omega))
   | succ c ih =>
-    intro off S E h1 h2 hArgs hwf hdf hbf hK
+    intro off S E h1 h2 hArgs hwf hdf hdw hbf hK
     refine
-      loop_iter d b n off S E R hArgs (by omega) hn hwf hdf hdo hbf hbo
+      loop_iter d b n off S E R hArgs (by omega) hn hwf hdf hdw hdo hbf hbo
         (fun h => absurd h (by omega)) fun _ E' g => ?_
     refine
       ih (off + 128) _ E' (by omega) (by omega) g (roundState_wf hwf) (Fits.roundState hdf)
-        (Fits.roundState hbf) fun E'' k => ?_
+        (Writable.roundState hdw) (Fits.roundState hbf) fun E'' k => ?_
     rw [show off + 128 + 128 * c = off + 128 * (c + 1) by omega]
     exact hK E'' k
 
@@ -386,6 +421,15 @@ theorem room_blocksState {d b : Pointer} :
   | succ c ih =>
     intro off s; rw [blocksState, ih]; exact room_roundState
 
+theorem live_blocksState {d b : Pointer} :
+    ∀ c off (s : GlobalState), Live (blocksState d b off c s).mem q w ↔ Live s.mem q w := by
+  intro c
+  induction c with
+  | zero =>
+    intro _ _; rfl
+  | succ c ih =>
+    intro off s; rw [blocksState, ih]; exact live_roundState
+
 theorem inBounds_blocksState {d b : Pointer} :
     ∀ c off (s : GlobalState), InBounds (blocksState d b off c s).mem q w ↔ InBounds s.mem q w := by
   intro c
@@ -489,9 +533,11 @@ public theorem SameBlocks.headState {s : GlobalState} {m' : MemoryState} (h : Sa
 /-- Erasing from a `WF` state's counter keeps a memory with its blocks. -/
 public theorem SameBlocks.eraseFrom {s : GlobalState} {m : MemoryState} (hwf : s.WF)
     (h : SameBlocks m s.mem) : m.eraseFrom s.alloc.nextFreeBlock = m := by
-  have hw : ({ s with mem := m } : GlobalState).WF :=
-    ⟨fun k hk => hwf.bound k ((h k).1 hk), hwf.pos, fun hk => hwf.null ((h _).1 hk)⟩
-  exact congrArg GlobalState.mem (GlobalState.eraseFrom_self hw)
+  rw [MemoryState.eraseFrom]
+  congr 1
+  rw [Std.ExtHashMap.filter_eq_self_iff]
+  intro k hk
+  simpa using hwf.bound k ((h k).1 hk)
 
 theorem headState_wf {s : GlobalState} (h : s.WF) : (headState s d b bl).WF :=
   GlobalState.WF.storeAt (roundState_wf (GlobalState.WF.storeAt h))
@@ -499,6 +545,10 @@ theorem headState_wf {s : GlobalState} (h : s.WF) : (headState s d b bl).WF :=
 theorem room_headState {s : GlobalState} : Room (headState s d b bl).mem q w ↔ Room s.mem q w := by
   simp only [headState]
   rw [Room.storeAt_iff, room_roundState, Room.storeAt_iff]
+
+theorem live_headState {s : GlobalState} : Live (headState s d b bl).mem q w ↔ Live s.mem q w := by
+  simp only [headState]
+  rw [live_storeAt_iff, live_roundState, live_storeAt_iff]
 
 theorem inBounds_headState {s : GlobalState} :
     InBounds (headState s d b bl).mem q w ↔ InBounds s.mem q w := by
@@ -517,7 +567,7 @@ theorem headState_bufLen {s : GlobalState} (hr : Room s.mem d 1792)
       (Room.add_of_le
           (by
             simp [BitVec.uaddOverflow]; omega)
-          (by simp) (room_roundState.2 hr.storeAt)).inBounds
+          (by simp) (room_roundState.2 hr.storeAt))
       _
 
 theorem headState_totalLen {s : GlobalState} (hdo : d.offset.toNat + 224 < 2 ^ 64)
@@ -698,7 +748,7 @@ public structure Pend (m : MemoryState) (d : Pointer) (P : List (BitVec 8)) : Pr
 
 /-- No bits are known when there is room for none. -/
 public theorem fits_zero {m : MemoryState} {p : Pointer} (h : Room m p 0) : Fits m p 0 := by
-  obtain ⟨b, hb, hl, hw⟩ := h
+  obtain ⟨⟨b, hb, hl, hw⟩, -⟩ := h
   exact ⟨b, hb, hl, hw, BitVec.eq_of_getLsbD_eq fun i hi => by omega⟩
 
 /-- The bytes of a splice into `buf` at byte `bl`: `buf`'s first `bl`, then `x`'s. -/
@@ -794,7 +844,7 @@ public theorem readAt_storeWords_word {m : MemoryState} {d : Pointer} {f : Nat �
                 simp [BitVec.uaddOverflow]; omega)
               (by
                 simp; omega)
-              hr).inBounds
+              hr)
           _
     · by_cases r : i + 1 ≤ j ∧ j < i + 1 + n
       · rw [ite_eq_left_of_eq_true _ _ (eq_true r),
@@ -900,11 +950,11 @@ public theorem buf_storeAt {m : MemoryState} {d : Pointer} (hr : Room m d 1792)
     (hdo : d.offset.toNat + 224 < 2 ^ 64) {bl k : Nat} (h : bl + k ≤ 128) (x : BitVec (8 * k)) :
     Sha512Obj.buf (m.storeAt (d.add (80#64 + BitVec.ofNat 64 bl)) x) d =
       Memory.spliceBits (Sha512Obj.buf m d) (8 * bl) x := by
-  have hf80 : InBounds m (d.add 80#64) 1024 :=
+  have hf80 : Room m (d.add 80#64) 1024 :=
     (Room.add_of_le
         (by
           simp [BitVec.uaddOverflow]; omega)
-        (by simp) hr).inBounds
+        (by simp) hr)
   rw [Sha512Obj.buf, ← Pointer.add_add,
     MemoryState.readAt_add_storeAt hf80
       (by
@@ -1039,7 +1089,7 @@ theorem pend_head {s : GlobalState} {d b : Pointer} {n : Nat} {M : List (BitVec 
             (Room.add_of_le
               (by
                 simp [BitVec.uaddOverflow]; omega)
-              (by simp) hr1)).inBounds
+              (by simp) hr1))
   · rw [show (M ++ _).length % 128 = 0 by
         simp; omega,
       List.take_zero, List.drop_eq_nil_of_le]
@@ -1132,17 +1182,17 @@ theorem absorbed_tail {m : MemoryState} {d b : Pointer} {n : BitVec 64} {off : N
         rw [hoffb, hkn]; omega)
       hr
   have hf208 :
-    InBounds (m.storeAt (d.add (80#64 + BitVec.ofNat 64 bl8.toNat)) X) (d.add 208#64) 8 :=
+    Room (m.storeAt (d.add (80#64 + BitVec.ofNat 64 bl8.toNat)) X) (d.add 208#64) 8 :=
     (Room.add_of_le
         (by
           simp [BitVec.uaddOverflow]; omega)
-        (by simp) hr).storeAt.inBounds
+        (by simp) hr).storeAt
   have hf0 :
-    InBounds
+    Room
       ((m.storeAt (d.add (80#64 + BitVec.ofNat 64 bl8.toNat)) X).storeAt (d.add 208#64)
         (bl8 + BitVec.ofNat 8 (n.toNat - off)))
       d 128 :=
-    (hr.mono (by omega)).storeAt.storeAt.inBounds
+    (hr.mono (by omega)).storeAt.storeAt
   have hlen : (M ++ D).length % 128 = bl8.toNat + (BitVec.ofNat 64 (n.toNat - off)).toNat := by
     simp [hDl, hkn]; omega
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
@@ -1288,6 +1338,30 @@ public theorem Fits.post {s : GlobalState} (h : Fits s.mem q w) :
 public theorem room_post {s : GlobalState} : Room (post s d b n).mem q w ↔ Room s.mem q w := by
   simp only [post]
   split <;> simp only [fromState, tailMem, Room.storeAt_iff, room_blocksState, room_headState]
+
+public theorem live_post {s : GlobalState} : Live (post s d b n).mem q w ↔ Live s.mem q w := by
+  simp only [post]
+  split <;> simp only [fromState, tailMem, live_storeAt_iff, live_blocksState, live_headState]
+
+theorem globals_blocksState {d b : Pointer} :
+    ∀ c off (s : GlobalState), (blocksState d b off c s).mem.globals = s.mem.globals := by
+  intro c
+  induction c with
+  | zero =>
+    intro _ _; rfl
+  | succ c ih =>
+    intro off s; exact ih _ _
+
+/-- `post` only stores: the global table is kept (the steps cannot see it through its `if` and
+its rounds). -/
+public theorem Globals.post {s : GlobalState} {G : List Global} (h : s.mem.Globals G) :
+    (Sha512_update.post s d b n).mem.Globals G :=
+  h.mono
+    (by
+      unfold Sha512_update.post fromState
+      dsimp only
+      split <;> exact globals_blocksState _ _ _)
+    fun _ h => h
 
 public theorem post_wf {s : GlobalState} (h : s.WF) : (post s d b n).WF := by
   simp only [post]

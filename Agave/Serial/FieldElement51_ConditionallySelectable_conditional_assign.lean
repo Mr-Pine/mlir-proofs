@@ -42,7 +42,8 @@ theorem neg_zext_no_ssubOverflow (c : BitVec 8) : ¬(0#64).ssubOverflow (c.setWi
 four limbs as two vector pairs. `other` is apart from `self`. -/
 public theorem FieldElement51_ConditionallySelectable_conditional_assign.call_eq
     (self other : Pointer) (choice : BitVec 8) (s : GlobalState) (hwf : s.WF)
-    (hself : s.mem.LimbsFit self) (hother : s.mem.LimbsFit other) (hsep : self.id ≠ other.id) :
+    (hself : s.mem.LimbsFit self) (hselfw : Writable s.mem self) (hother : s.mem.LimbsFit other)
+    (hsep : self.id ≠ other.id) :
     FieldElement51_ConditionallySelectable_conditional_assign.call
         (FieldElement51_ConditionallySelectable_conditional_assign.args (.value self) (.value other)
           (.value choice))

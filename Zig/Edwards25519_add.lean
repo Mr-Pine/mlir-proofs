@@ -46,14 +46,6 @@ public theorem Edwards25519.add.spec_lt (P Q : ZPt) : (Edwards25519.add.spec P Q
 section Proof
 
 set_option hygiene false in
-/-- `step_alloca` below the `2d` global's block `g`, apart from the new slot by hand. -/
-local macro "alloca_g " x:ident : tactic =>
-  `(tactic|
-    ( have hg_ne : g.id ≠ S.allocaPtr.id := by
-        subst hg hS; simp [GlobalState.allocaPtr, GlobalState.slot, GlobalState.alloca] <;> omega
-      step_alloca with $x:ident))
-
-set_option hygiene false in
 /-- `hS` kept reversed as `hck`: later states build on an opaque `S`, not on its frame's layers. -/
 local macro "checkpoint " hck:ident : tactic => `(tactic| (have $hck:ident := hS.symm; clear hS))
 
@@ -75,16 +67,19 @@ local macro "drop " x:ident : tactic => do
         clear_facts $x:ident))
 
 -- one 160-instruction block: 19 slots, 15 calls and 25 loads, each step carrying the facts
+
+-- one 160-instruction block: 19 slots, 15 calls and 25 loads, each step carrying the facts
 set_option maxHeartbeats 3000000 in
 /-- `Edwards25519.add` stores `spec P Q` at `out`, `is_base` false, for limbs below `2^53`. It
 reads `p` and `q` before writing `out`, so `out` may alias them. -/
 public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PtRoom out) (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q)
-    (hP : (s.mem.readPt p).Lt (2 ^ 53)) (hQ : (s.mem.readPt q).Lt (2 ^ 53)) :
+    (hg : s.mem.Globals Edwards25519_add.globals) (hout : s.mem.PtRoom out)
+    (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q) (hP : (s.mem.readPt p).Lt (2 ^ 53))
+    (hQ : (s.mem.readPt q).Lt (2 ^ 53)) :
     Edwards25519_add.call (Edwards25519_add.args (.value out) (.value p) (.value q)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 38⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 37⟩,
             mem :=
               s.mem.storePt out (Edwards25519.add.spec (s.mem.readPt p) (s.mem.readPt q))
                 0#1 }) := by
@@ -107,25 +102,25 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   limbs_fit g
   clear hread_g
   iterate 2 step_pure
-  alloca_g ot
-  alloca_g oz
-  alloca_g oy
-  alloca_g ox
-  alloca_g t
-  alloca_g z
-  alloca_g y
-  alloca_g x
-  alloca_g d
-  alloca_g c
-  alloca_g tt
-  alloca_g b
-  alloca_g qs
-  alloca_g ps
-  alloca_g a
-  alloca_g qd
-  alloca_g pd
-  alloca_g qc
-  alloca_g pc
+  step_alloca with ot
+  step_alloca with oz
+  step_alloca with oy
+  step_alloca with ox
+  step_alloca with t
+  step_alloca with z
+  step_alloca with y
+  step_alloca with x
+  step_alloca with d
+  step_alloca with c
+  step_alloca with tt
+  step_alloca with b
+  step_alloca with qs
+  step_alloca with ps
+  step_alloca with a
+  step_alloca with qd
+  step_alloca with pd
+  step_alloca with qc
+  step_alloca with pc
   checkpoint hck1
   have hpcR := MemoryState.PtRoom.of_room hpc_room hpc_off
   have hqcR := MemoryState.PtRoom.of_room hqc_room hqc_off
@@ -417,16 +412,16 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
 
 /-- `call_eq` on the points `P`, `Q` read at `p`, `q`. -/
 public theorem Edwards25519_add.call_eq_of (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PtRoom out) (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q)
-    (hPd : s.mem.readPt p = P) (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53))
-    (hQ : Q.Lt (2 ^ 53)) :
+    (hg : s.mem.Globals Edwards25519_add.globals) (hout : s.mem.PtRoom out)
+    (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q) (hPd : s.mem.readPt p = P)
+    (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53)) (hQ : Q.Lt (2 ^ 53)) :
     Edwards25519_add.call (Edwards25519_add.args (.value out) (.value p) (.value q)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 38⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 37⟩,
             mem := s.mem.storePt out (Edwards25519.add.spec P Q) 0#1 }) := by
   subst hPd hQd
-  exact Edwards25519_add.call_eq out p q s hwf hout hp hq hP hQ
+  exact Edwards25519_add.call_eq out p q s hwf hg hout hp hq hP hQ
 
 end Proof
 

@@ -274,6 +274,7 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
       m + n + 1 = 32 →
         Live1 st Kp ms t2 ms2 H E →
         Fits S.mem ms 1024 →
+        Writable S.mem ms →
         Fits S.mem Kp 5120 →
         KPairs S.mem Kp →
         HoldsR S.mem ms W (2 * m) (2 * m + 16) →
@@ -291,7 +292,7 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
               5 S >>=
             g) =
           K := by
-  have hw (S : GlobalState) (m : Nat) (hf : Fits S.mem ms 1024)
+  have hw (S : GlobalState) (m : Nat) (hf : Fits S.mem ms 1024) (hfw : Writable S.mem ms)
     (hR : HoldsR S.mem ms W (2 * m) (2 * m + 16)) :
     (Fits S.mem (ms.add (BitVec.ofNat 64 (m % 8 * 16))) 64 ∧
         S.mem.readAt (ms.add (BitVec.ofNat 64 (m % 8 * 16))) 64 = wk W (2 * m)) ∧
@@ -302,7 +303,7 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
     have e1 := hR (2 * m + 1) (by omega) (by omega)
     rw [show 2 * m % 16 * 8 = m % 8 * 16 by omega] at e0
     rw [show (2 * m + 1) % 16 * 8 = m % 8 * 16 + 8 by omega, BitVec.ofNat_add] at e1
-    refine ⟨⟨Fits.add_of_le ?_ ?_ hf, e0⟩, ⟨?_, e1⟩, Room.add_of_le ?_ ?_ hf.room⟩
+    refine ⟨⟨Fits.add_of_le ?_ ?_ hf, e0⟩, ⟨?_, e1⟩, Room.add_of_le ?_ ?_ (hf.room hfw)⟩
     · simp [BitVec.uaddOverflow, hmo]; omega
     · simp; omega
     · rw [← BitVec.ofNat_add]
@@ -316,12 +317,17 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
     · simp [BitVec.uaddOverflow, hmo]; omega
     · simp; omega
   have hst (S : GlobalState) (m : Nat) (hm : m < 32) (hf : Fits S.mem ms 1024)
+    (hfw : Writable S.mem ms)
     (hKf : Fits S.mem Kp 5120) (hK : KPairs S.mem Kp)
     (hR : HoldsR S.mem ms W (2 * m) (2 * m + 16)) :
     Fits
         (S.mem.storeAt (ms.add (BitVec.ofNat 64 (m % 8 * 16)))
           (BitVec.packLanes #v[wk W (2 * m + 16), wk W (2 * m + 17)]))
         ms 1024 ∧
+      Writable
+        (S.mem.storeAt (ms.add (BitVec.ofNat 64 (m % 8 * 16)))
+          (BitVec.packLanes #v[wk W (2 * m + 16), wk W (2 * m + 17)]))
+        ms ∧
       Fits
         (S.mem.storeAt (ms.add (BitVec.ofNat 64 (m % 8 * 16)))
           (BitVec.packLanes #v[wk W (2 * m + 16), wk W (2 * m + 17)]))
@@ -334,11 +340,11 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
         (S.mem.storeAt (ms.add (BitVec.ofNat 64 (m % 8 * 16)))
           (BitVec.packLanes #v[wk W (2 * m + 16), wk W (2 * m + 17)]))
         ms W (2 * (m + 1)) (2 * (m + 1) + 16) := by
-    refine ⟨hf.storeAt, hKf.storeAt, fun k hk => ?_, ?_⟩
+    refine ⟨hf.storeAt, hfw.storeAt, hKf.storeAt, fun k hk => ?_, ?_⟩
     · rw [MemoryState.readAt_storeAt_disjoint (Range.disjoint_of_id_ne (by simpa using hne))]
       exact hK k hk
     · have :=
-        HoldsR.pairsMem (p := m + 8) (n := 1) (lo := 2 * m) hmo hf.inBounds (by omega) (by omega)
+        HoldsR.pairsMem (p := m + 8) (n := 1) (lo := 2 * m) hmo (hf.room hfw) (by omega) (by omega)
           (fun t h1 h2 => hR t h1 (by omega))
       rw [show max (2 * m) (2 * (m + 8 + 1) - 16) = 2 * (m + 1) by omega,
         show 2 * (m + 8 + 1) = 2 * (m + 1) + 16 by omega] at this
@@ -347,8 +353,8 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
   intro n
   induction n with
   | zero =>
-    intro m S E hm hL hf hKf hK hR hcont
-    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hR
+    intro m S E hm hL hf hfw hKf hK hR hcont
+    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hfw hR
     refine
       iter5 st Kp ms t2 ms2 H (m / 8) (m % 8) (16 + 2 * m) (by omega) (by omega) (by omega) _ _ _ _
         _ _ _ _ _ _ _ _ _ S E g K hL hmo hKo
@@ -367,9 +373,9 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
     simpa [pairsMem, show (m + 8) % 8 = m % 8 by omega,
       show 2 * (m + 8) = 2 * m + 16 by omega] using this
   | succ n ih =>
-    intro m S E hm hL hf hKf hK hR hcont
-    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hR
-    obtain ⟨hf', hKf', hK', hR'⟩ := hst S m (by omega) hf hKf hK hR
+    intro m S E hm hL hf hfw hKf hK hR hcont
+    obtain ⟨⟨hw0f, hw0⟩, ⟨hw1f, hw1⟩, hroom⟩ := hw S m hf hfw hR
+    obtain ⟨hf', hfw', hKf', hK', hR'⟩ := hst S m (by omega) hf hfw hKf hK hR
     refine
       iter5 st Kp ms t2 ms2 H (m / 8) (m % 8) (16 + 2 * m) (by omega) (by omega) (by omega) _ _ _ _
         _ _ _ _ _ _ _ _ _ S E g K hL hmo hKo
@@ -390,7 +396,7 @@ public theorem loop5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (W :
             mem :=
               S.mem.storeAt (ms.add (BitVec.ofNat 64 (m % 8 * 16)))
                 (BitVec.packLanes #v[wk W (2 * m + 16), wk W (2 * m + 17)]) }
-          E' (by omega) hL' hf' hKf' hK' hR'
+          E' (by omega) hL' hf' hfw' hKf' hK' hR'
           (fun E'' hE'' hL'' => by
             have := hcont E'' (hE''.trans hE') hL''
             rw [pairsMem_succ, show m + 8 + 1 = m + 1 + 8 by omega,

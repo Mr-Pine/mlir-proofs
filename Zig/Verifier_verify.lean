@@ -78,11 +78,11 @@ on success. -/
 def blocksOf (r : Option ZPt) (R : ZPt) : Nat :=
   match r with
   | none => 0
-  | some Q => 87 + 47 + if Fe.isZero.spec (check Q R).x = 1#1 then 4 else 3
+  | some Q => 87 + 44 + if Fe.isZero.spec (check Q R).x = 1#1 then 4 else 3
 
 /-- Blocks the function allocates, its callees' included. -/
 def blocks (M : List (BitVec 8)) (sb : BitVec 256) (A R : ZPt) : Nat :=
-  8 + (if 111 < M.length % 128 then 4 else 2) + 5 + 7 + 87 + 7 +
+  8 + (if 111 < M.length % 128 then 4 else 2) + 5 + 7 + 87 + 5 +
     Edwards25519.mulDoubleBasePublic.blocks (scalar.mul8.spec sb) 0#1 (negA A)
       (scalar.reduce64.spec (digestBits M)) +
     blocksOf (sbAh M sb A) R
@@ -250,9 +250,9 @@ theorem post_pt {s : GlobalState} {d out p : Pointer} (hdo : d.offset.toNat + 22
     ⟨h.1, Sha512_final.Fits.post h.2.1, Sha512_final.Fits.post h.2.2.1,
       Sha512_final.Fits.post h.2.2.2.1, Sha512_final.Fits.post h.2.2.2.2.1,
       Sha512_final.Fits.post h.2.2.2.2.2⟩
-  have hpr : (Sha512_final.post s d out).mem.PtRoom p := ⟨ho, Sha512_final.room_post.2 hr⟩
-  refine ⟨⟨ho, hpr.2, hl _ hx, hl _ hy, hl _ hz, hl _ ht⟩, ?_⟩
-  refine MemoryState.readPt_of_readAt (hpr.2.inBounds.mono (by omega)) ho ?_
+  have hpl : Live (Sha512_final.post s d out).mem p 1344 := Sha512_final.live_post.2 hr
+  refine ⟨⟨ho, hpl, hl _ hx, hl _ hy, hl _ hz, hl _ ht⟩, ?_⟩
+  refine MemoryState.readPt_of_readAt (hpl.inBounds.mono (by omega)) ho ?_
   rw [MemoryState.readAt_of_readAt_le (w := 1280) (by omega)
       (Sha512_final.post_readAt hdo hoo hbl h1 h2),
     BitVec.setWidth_eq_extractLsb' (by omega)]
@@ -282,7 +282,7 @@ theorem eq_digestBits {x : BitVec 512} (h : bytesLE x = Sha512.digest M) : x = d
     Nat.mod_eq_of_lt x.isLt]
 
 /-- Definedness over `out`'s word `j`: set. -/
-theorem definedAt_storeAt_out {m : MemoryState} {out : Pointer} (hfo : InBounds m out 512)
+theorem definedAt_storeAt_out {m : MemoryState} {out : Pointer} (hfo : Room m out 512)
     (hoo : out.offset.toNat + 64 < 2 ^ 64) {j : Nat} (hj : j < 8) (x : BitVec 64) :
     (m.storeAt (out.add (BitVec.ofNat 64 (8 * j))) x).definedAt out 512 =
       Memory.spliceBits (m.definedAt out 512) (64 * j) (BitVec.allOnes 64) := by
@@ -299,17 +299,17 @@ theorem definedAt_storeAt_out {m : MemoryState} {out : Pointer} (hfo : InBounds 
 theorem fits_outStores {X : MemoryState} {out : Pointer} {f : Nat → BitVec 64}
     (h : Room (Sha512_final.outStores out f 0 8 X) out 512) (hoo : out.offset.toNat + 64 < 2 ^ 64) :
     Fits (Sha512_final.outStores out f 0 8 X) out 512 := by
-  refine Fits.of_definedAt h ?_
+  refine Fits.of_definedAt h.live ?_
   simp only [Sha512_final.outStores] at h ⊢
   simp only [Room.storeAt_iff] at h
-  have hfo := h.inBounds
-  rw [definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 7) (by omega),
-    definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 6) (by omega),
-    definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 5) (by omega),
-    definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 4) (by omega),
-    definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 3) (by omega),
-    definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 2) (by omega),
-    definedAt_storeAt_out (by simp [InBounds.storeAt_iff, hfo]) hoo (j := 1) (by omega),
+  have hfo := h
+  rw [definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 7) (by omega),
+    definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 6) (by omega),
+    definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 5) (by omega),
+    definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 4) (by omega),
+    definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 3) (by omega),
+    definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 2) (by omega),
+    definedAt_storeAt_out (by simp [Room.storeAt_iff, hfo]) hoo (j := 1) (by omega),
     definedAt_storeAt_out hfo hoo (j := 0) (by omega)]
   generalize X.definedAt out 512 = D
   simp only [spliceBits_eq]
@@ -372,16 +372,17 @@ theorem Edwards25519_clearCofactor.call_eq_of (out p : Pointer) (s : GlobalState
 
 /-- `sub`'s `call_eq` on the points `P`, `Q` read at `p`, `q`. -/
 theorem Edwards25519_sub.call_eq_of (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PtRoom out) (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q)
+    (hg : s.mem.Globals Edwards25519_sub.globals) (hout : s.mem.PtRoom out)
+    (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q)
     (hPd : s.mem.readPt p = P) (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53))
     (hQ : Q.Lt (2 ^ 53)) :
     Edwards25519_sub.call (Edwards25519_sub.args (.value out) (.value p) (.value q)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 47⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 44⟩,
             mem := s.mem.storePtCopy out (Edwards25519.sub.spec P Q) 0#1 }) := by
   subst hPd hQd
-  exact Edwards25519_sub.call_eq out p q s hwf hout hp hq hP hQ
+  exact Edwards25519_sub.call_eq out p q s hwf hg hout hp hq hP hQ
 
 /-- `isIdentity`'s `call_eq` on the point `P` read at `p`. -/
 theorem Verifier_isIdentity.call_eq_of (p : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -398,7 +399,8 @@ theorem Verifier_isIdentity.call_eq_of (p : Pointer) (s : GlobalState) (hwf : s.
 
 /-- `mulDoubleBasePublic`'s `call_eq` on named inputs, a weak key: the `WeakPublicKey` copy. -/
 theorem Edwards25519_mulDoubleBasePublic.call_eq_none (out s1 p2 s2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64)
+    (hwf : s.WF) (hg : s.mem.Globals Edwards25519_mulDoubleBasePublic.globals)
+    (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64)
     (hs1 : Fits s.mem s1 256) (hs1o : ¬s1.offset.uaddOverflow 32#64)
     (hx1 : s.mem.readAt s1 256 = x1) (hm1 : x1.msb = false) (hp2 : s.mem.PtFit p2)
     (hP2d : s.mem.readPt p2 = P2) (hb : s.mem.readBase p2 = b) (hP2 : P2.Lt (2 ^ 53))
@@ -414,14 +416,15 @@ theorem Edwards25519_mulDoubleBasePublic.call_eq_none (out s1 p2 s2 : Pointer) (
               s.mem.storeDef out Edwards25519_mulDoubleBasePublic_weak.bits
                 Edwards25519.mulDoubleBasePublic.weakDef }) := by
   subst hx1 hx2 hP2d hb
-  rw [Edwards25519_mulDoubleBasePublic.call_eq out s1 p2 s2 s hwf hout hoo hs1 hs1o hm1 hp2 hP2 hs2
-      hs2o hm2,
+  rw [Edwards25519_mulDoubleBasePublic.call_eq out s1 p2 s2 s hwf hg hout hoo hs1 hs1o hm1 hp2 hP2
+      hs2 hs2o hm2,
     hres]
   rfl
 
 /-- `mulDoubleBasePublic`'s `call_eq` on named inputs, a point `Q`: error code `0`, `Q`. -/
 theorem Edwards25519_mulDoubleBasePublic.call_eq_some (out s1 p2 s2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64)
+    (hwf : s.WF) (hg : s.mem.Globals Edwards25519_mulDoubleBasePublic.globals)
+    (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64)
     (hs1 : Fits s.mem s1 256) (hs1o : ¬s1.offset.uaddOverflow 32#64)
     (hx1 : s.mem.readAt s1 256 = x1) (hm1 : x1.msb = false) (hp2 : s.mem.PtFit p2)
     (hP2d : s.mem.readPt p2 = P2) (hb : s.mem.readBase p2 = b) (hP2 : P2.Lt (2 ^ 53))
@@ -435,8 +438,8 @@ theorem Edwards25519_mulDoubleBasePublic.call_eq_some (out s1 p2 s2 : Pointer) (
           { alloc := ⟨s.alloc.nextFreeBlock + Edwards25519.mulDoubleBasePublic.blocks x1 b P2 x2⟩,
             mem := (s.mem.storeAt (out.add 168#64) 0#16).storePtCopy out Q 0#1 }) := by
   subst hx1 hx2 hP2d hb
-  rw [Edwards25519_mulDoubleBasePublic.call_eq out s1 p2 s2 s hwf hout hoo hs1 hs1o hm1 hp2 hP2 hs2
-      hs2o hm2,
+  rw [Edwards25519_mulDoubleBasePublic.call_eq out s1 p2 s2 s hwf hg hout hoo hs1 hs1o hm1 hp2 hP2
+      hs2 hs2o hm2,
     hres]
   rfl
 
@@ -456,7 +459,7 @@ theorem weak_code {m : MemoryState} {p : Pointer} (hr : Room m p 1408)
           (p.add 168#64) 16 =
         4#16 := by
   refine ⟨Fits.storeDef_of_mask hr hov (by simp) (by decide +kernel), ?_⟩
-  rw [MemoryState.readAt_storeDef_add hr.inBounds hov (by simp)]
+  rw [MemoryState.readAt_storeDef_add hr hov (by simp)]
   exact weak_code_val
 
 /-- What `mulDoubleBasePublic` leaves for a point `Q`: error code `0`, `Q`. -/
@@ -476,7 +479,7 @@ theorem some_code {m : MemoryState} {p : Pointer} (hr : Room m p 1408) (ho : p.o
   refine
     ⟨Fits.storeDef_of_disjoint (Fits.storeAt_self h168) hdj, ?_,
       (MemoryState.PtFit.storePtCopy_self hpr).ptLimbsFit, MemoryState.readPt_storePtCopy_self hpr⟩
-  rw [MemoryState.readAt_storeDef_disjoint hdj, MemoryState.readAt_storeAt_self h168.inBounds]
+  rw [MemoryState.readAt_storeDef_disjoint hdj, MemoryState.readAt_storeAt_self h168]
 
 /-- `ladder` keeps limbs below `2^53`. -/
 theorem ladder_lt {T : Nat → ZPt} {x1 x2 : BitVec 256} :
@@ -527,6 +530,16 @@ theorem Room.post {s : GlobalState} {d out q : Pointer} (h : Room s.mem q w) :
     Room (Sha512_final.post s d out).mem q w :=
   Sha512_final.room_post.2 h
 
+/-- `post` only stores: the global table is kept (the steps cannot see it through its `if`). -/
+theorem Globals.post {s : GlobalState} {d out : Pointer} {G : List Global} (h : s.mem.Globals G) :
+    (Sha512_final.post s d out).mem.Globals G :=
+  h.mono
+    (by
+      unfold Sha512_final.post
+      dsimp only
+      split <;> rfl)
+    fun _ h => h
+
 attribute [local mlir_transport] Room.post Sha512_final.Fits.post Sha512_final.post_wf
 
 set_option hygiene false in
@@ -537,6 +550,7 @@ local macro "checkpoint " hck:ident : tactic => `(tactic| (have $hck:ident := hS
 scalar's bytes (`+560`) and points (`+224`, `+392`, limbs below `2^53`); the hash object is left
 as `finalMem`, the rest of memory as it was. -/
 public theorem Verifier_verify.call_eq (self : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals Verifier_verify.globals)
     (hself : Room s.mem self 4736) (hso : self.offset.toNat + 592 < 2 ^ 64) (M : List (BitVec 8))
     (hd : Sha512Obj.Fit s.mem self) (hM : Sha512Obj.Absorbed s.mem self M)
     (hpa : s.mem.PtLimbsFit (self.add 224#64)) (hpr : s.mem.PtLimbsFit (self.add 392#64))
@@ -604,7 +618,7 @@ public theorem Verifier_verify.call_eq (self : Pointer) (s : GlobalState) (hwf :
       X.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 8 + if 111 < M.length % 128 then 4 else 2)
   have hpost := fun X (hX : X = Sha512_final.post S self h64) =>
     (hX ▸
-        ⟨eq_digestBits (Sha512_final.digest hM' ⟨hdo, hdr, hdf, hdf208⟩ hh64_room.inBounds hoo),
+        ⟨eq_digestBits (Sha512_final.digest hM' ⟨hdo, hdr, hdf, hdf208⟩ hh64_room hoo),
           fits_post_out hh64_room hoo,
           post_pt hdo hoo (hbl'.symm ▸ hbl) (hdisj 224#64 1344 (by decide) (by decide))
             (hdisj' 224#64 1344) hpa,
@@ -622,9 +636,14 @@ public theorem Verifier_verify.call_eq (self : Pointer) (s : GlobalState) (hwf :
           X.mem.readAt (self.add 560#64) 256 = S.mem.readAt (self.add 560#64) 256))
   rw [hAe, hRe, hSe] at hpost
   have hFit : Sha512Obj.Fit S.mem self := ⟨hdo, hdr, hdf, hdf208⟩
+  have hgp := fun X (hX : X = Sha512_final.post S self h64) =>
+    (hX ▸ Globals.post hg : X.mem.Globals _)
   step_call using Sha512_final.call_eq_of consuming hM' hbl' hbuf hsep hpa hpr hsf hdf hdf208 hFit
+    hg
   obtain ⟨hdig, hf64, ⟨hpa, hAd⟩, ⟨hpr, hRd⟩, ⟨hsf, hSd⟩⟩ := hpost S hS
   have hXa := hXa S hS
+  have hg := hgp S hS
+  clear hgp
   clear hpost
   have hpo64 : h64.offset.toNat + 64 < 2 ^ 64 := hoo
   step_call using scalar_reduce64.call_eq_of consuming hf64 hdig hpo64
@@ -688,8 +707,8 @@ public theorem Verifier_verify.call_eq (self : Pointer) (s : GlobalState) (hwf :
       generalize (if 111 < M.length % 128 then 4 else 2) = r1
       generalize Edwards25519.mulDoubleBasePublic.blocks _ _ _ _ = r2
       rw [show
-          S₀.alloc.nextFreeBlock + 8 + r1 + 5 + 7 + 87 + 7 + r2 =
-            S₀.alloc.nextFreeBlock + (8 + r1 + 5 + 7 + 87 + 7 + r2 + 0)
+          S₀.alloc.nextFreeBlock + 8 + r1 + 5 + 7 + 87 + 5 + r2 =
+            S₀.alloc.nextFreeBlock + (8 + r1 + 5 + 7 + 87 + 5 + r2 + 0)
           by omega]
   · have hcode := fun m' (hm : m' = (S.mem.storeAt (sa.add 168#64) 0#16).storePtCopy sa Q 0#1) =>
       hm ▸ some_code hsa_room hsa_off Q
@@ -732,8 +751,8 @@ public theorem Verifier_verify.call_eq (self : Pointer) (s : GlobalState) (hwf :
     generalize Edwards25519.mulDoubleBasePublic.blocks _ _ _ _ = r2
     generalize (if Fe.isZero.spec (check Q R).x = 1#1 then 4 else 3) = r3
     rw [show
-        S₀.alloc.nextFreeBlock + 8 + r1 + 5 + 7 + 87 + 7 + r2 + 87 + 47 + r3 =
-          S₀.alloc.nextFreeBlock + (8 + r1 + 5 + 7 + 87 + 7 + r2 + (87 + 47 + r3))
+        S₀.alloc.nextFreeBlock + 8 + r1 + 5 + 7 + 87 + 5 + r2 + 87 + 44 + r3 =
+          S₀.alloc.nextFreeBlock + (8 + r1 + 5 + 7 + 87 + 5 + r2 + (87 + 44 + r3))
         by omega]
 
 end Proof

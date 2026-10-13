@@ -25,14 +25,15 @@ section Proof
 attribute [local mlir_state] MemoryState.readLimbs_storeLimbs_self
   MemoryState.readLimbs_storeLimbs_of_id_ne MemoryState.readLimbs_alloca
 
-/-- `fe_isnonzero` (of a `fe_loose`) returns `spec f`. The tight copy and `fe_isnonzero`'s 23
+/-- `fe_isnonzero` (of a `fe_loose`) returns `spec f`. The tight copy and `fe_isnonzero`'s 22
 blocks are freed again: only the counter moves on. -/
 public theorem fe_isnonzero_fe_loose.call_eq (f : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals fe_isnonzero_fe_loose.globals)
     (hf : s.mem.LimbsFit f) :
     fe_isnonzero_fe_loose.call (fe_isnonzero_fe_loose.args (.value f)) s =
       .value
         (.cons (.value (fe_isnonzero_fe_loose.spec (s.mem.readLimbs f))) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 24⟩, mem := s.mem }) := by
+          { alloc := ⟨s.alloc.nextFreeBlock + 23⟩, mem := s.mem }) := by
   func_init
   block_init
   step_pure

@@ -176,9 +176,21 @@ theorem inBounds_slot1 {S : GlobalState} (hwf : S.WF) : InBounds (slots4 S).mem 
   rw [GlobalState.allocaPtr_eq_slot, GlobalState.alloca_slot] at h
   exact (h.alloca (n := 64) hwf.alloca.alloca).alloca (n := 64) hwf.alloca.alloca.alloca
 
+theorem writable_slot0 {S : GlobalState} (hwf : S.WF) : Writable (slots4 S).mem (S.slot 0) := by
+  have h : Writable (S.alloca 32 true).mem S.allocaPtr := Writable.allocaPtr
+  exact
+    ((h.alloca (n := 32) hwf.alloca).alloca (n := 64) hwf.alloca.alloca).alloca (n := 64)
+      hwf.alloca.alloca.alloca
+
+theorem writable_slot1 {S : GlobalState} (hwf : S.WF) : Writable (slots4 S).mem (S.slot 1) := by
+  have h : Writable ((S.alloca 32 true).alloca 32 true).mem (S.alloca 32 true).allocaPtr :=
+    Writable.allocaPtr
+  rw [GlobalState.allocaPtr_eq_slot, GlobalState.alloca_slot] at h
+  exact (h.alloca (n := 64) hwf.alloca.alloca).alloca (n := 64) hwf.alloca.alloca.alloca
+
 /-- The copy at `pa`, its top word replaced, read back as four lanes. -/
-theorem readWv_copy_a {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id)
-    (ha : InBounds m pa 256) (ho : pa.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
+theorem readWv_copy_a {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id) (ha : Room m pa 256)
+    (ho : pa.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
     ((((m.storeAt pa xa).storeAt pb xb).storeAt (pa.add 24#64) ya).storeAt (pb.add 24#64) yb).readWv
         pa =
       Vector.ofFn fun i => Ty.extractVecElem 4 64 i (Memory.spliceBits xa 192 ya) := by
@@ -193,8 +205,8 @@ theorem readWv_copy_a {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id
   rfl
 
 /-- `readWv_copy_a` for the copy at `pb`. -/
-theorem readWv_copy_b {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id)
-    (hb : InBounds m pb 256) (ho : pb.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
+theorem readWv_copy_b {m : MemoryState} {pa pb : Pointer} (hab : pa.id ≠ pb.id) (hb : Room m pb 256)
+    (ho : pb.offset = 0) (xa xb : BitVec 256) (ya yb : BitVec 64) :
     ((((m.storeAt pa xa).storeAt pb xb).storeAt (pa.add 24#64) ya).storeAt (pb.add 24#64) yb).readWv
         pb =
       Vector.ofFn fun i => Ty.extractVecElem 4 64 i (Memory.spliceBits xb 192 yb) := by
@@ -493,13 +505,15 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   have hwva :=
     readWv_copy_a (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide)) (m :=
       ((slots4 S₀).mem.lifetimeStart (S₀.slot 0)).lifetimeStart (S₀.slot 1))
-      (inBounds_slot0 hwf).lifetimeStart.lifetimeStart rfl (S₀.mem.readAt sa 256)
-      (S₀.mem.readAt sb 256)
+      ((Room.lifetimeStart_self (inBounds_slot0 hwf) (writable_slot0 hwf)).lifetimeStart
+        (GlobalState.slot_id_ne (by decide)))
+      rfl (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)
   have hwvb :=
     readWv_copy_b (GlobalState.slot_id_ne (i := 0) (j := 1) (by decide)) (m :=
       ((slots4 S₀).mem.lifetimeStart (S₀.slot 0)).lifetimeStart (S₀.slot 1))
-      (inBounds_slot1 hwf).lifetimeStart.lifetimeStart rfl (S₀.mem.readAt sa 256)
-      (S₀.mem.readAt sb 256)
+      (Room.lifetimeStart_self (inBounds_slot1 hwf).lifetimeStart
+        (writable_slot1 hwf).lifetimeStart)
+      rfl (S₀.mem.readAt sa 256) (S₀.mem.readAt sb 256)
   block_init
   -- `one`, `d`, `sqrt_m1`, the fold's and `fd_r43x6_neg`'s constants
   iterate 36 step_pure
@@ -705,7 +719,7 @@ variable {m : MemoryState} {P Q : Quad}
 
 include hids
 
-theorem readAt_storeOut_a03 (hf : InBounds m a03 512) :
+theorem readAt_storeOut_a03 (hf : Room m a03 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a03 512 = BitVec.packLanes P.P03 := by
   obtain ⟨⟨h01, h02, h03, h04, h05⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h05),
@@ -713,34 +727,34 @@ theorem readAt_storeOut_a03 (hf : InBounds m a03 512) :
     readAt_storeAt_ne (Ne.symm h02), readAt_storeAt_ne (Ne.symm h01),
     MemoryState.readAt_storeAt_self hf]
 
-theorem readAt_storeOut_a14 (hf : InBounds m a14 512) :
+theorem readAt_storeOut_a14 (hf : Room m a14 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a14 512 = BitVec.packLanes P.P14 := by
   obtain ⟨-, ⟨h12, h13, h14, h15⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h15),
     readAt_storeAt_ne (Ne.symm h14), readAt_storeAt_ne (Ne.symm h13),
     readAt_storeAt_ne (Ne.symm h12), MemoryState.readAt_storeAt_self hf.storeAt]
 
-theorem readAt_storeOut_a25 (hf : InBounds m a25 512) :
+theorem readAt_storeOut_a25 (hf : Room m a25 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a25 512 = BitVec.packLanes P.P25 := by
   obtain ⟨-, -, ⟨h23, h24, h25⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h25),
     readAt_storeAt_ne (Ne.symm h24), readAt_storeAt_ne (Ne.symm h23),
     MemoryState.readAt_storeAt_self hf.storeAt.storeAt]
 
-theorem readAt_storeOut_b03 (hf : InBounds m b03 512) :
+theorem readAt_storeOut_b03 (hf : Room m b03 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b03 512 = BitVec.packLanes Q.P03 := by
   obtain ⟨-, -, -, ⟨h34, h35⟩, -⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h35),
     readAt_storeAt_ne (Ne.symm h34), MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt]
 
-theorem readAt_storeOut_b14 (hf : InBounds m b14 512) :
+theorem readAt_storeOut_b14 (hf : Room m b14 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b14 512 = BitVec.packLanes Q.P14 := by
   obtain ⟨-, -, -, -, h45⟩ := ids_ne hids
   simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h45),
     MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt.storeAt]
 
 omit hids in
-theorem readAt_storeOut_b25 (hf : InBounds m b25 512) :
+theorem readAt_storeOut_b25 (hf : Room m b25 512) :
     (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b25 512 = BitVec.packLanes Q.P25 := by
   simp only [storeOut, MemoryState.storeVec,
     MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt.storeAt.storeAt]

@@ -71,7 +71,7 @@ def point (s : BitVec 256) (x : Fin 5 → BitVec 64) : GeP3 :=
 
 /-- The blocks the call uses on each path. -/
 def blocks (s : BitVec 256) : Nat :=
-  if check₁ s = 0#32 then 58 else if check₂ s = 0#32 then 82 else 60
+  if check₁ s = 0#32 then 55 else if check₂ s = 0#32 then 78 else 56
 
 end x25519_ge_frombytes_vartime
 
@@ -102,6 +102,7 @@ set_option maxHeartbeats 400000 in
 candidate `(x : y : 1)`. `h` is in another block than `buf`. The globals', temporaries' and callees'
 blocks are freed again: only the counter moves on, by `blocks`. -/
 public theorem x25519_ge_frombytes_vartime.call_eq (h buf : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals x25519_ge_frombytes_vartime.globals)
     (hh : s.mem.PointRoom h) (hbuf : Fits s.mem buf (8 * 32))
     (hbuf_off : ¬buf.offset.uaddOverflow 32#64) (hsep : h.id ≠ buf.id) :
     x25519_ge_frombytes_vartime.call (x25519_ge_frombytes_vartime.args (.value h) (.value buf)) s =

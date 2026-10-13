@@ -30,9 +30,9 @@ open
 
 /-! ### Slots, registers and facts -/
 
-/-- The function's slots in `alloca` order: the identity's global block, the digits' `select`
-outputs and sums (`b_naf` negative, positive, `a_naf` negative, positive), `Q.double()`, `Q`,
-`table_A` and the NAFs. -/
+/-- The function's pointers: the identity's global, then its slots in `alloca` order: the digits'
+`select` outputs and sums (`b_naf` negative, positive, `a_naf` negative, positive), `Q.double()`,
+`Q`, `table_A` and the NAFs. -/
 public structure Slots where
   idp : Pointer
   selBm : Pointer
@@ -49,22 +49,22 @@ public structure Slots where
   b_naf : Pointer
   a_naf : Pointer
 
-/-- `σ`'s slots are `B`'s, from its counter on. -/
+/-- `σ`'s slots are `B`'s, from its counter on; the identity's block is below it. -/
 public structure Slots.At (σ : Slots) (B : GlobalState) : Prop where
-  idp : σ.idp = B.slot 0
-  selBm : σ.selBm = B.slot 1
-  sumBm : σ.sumBm = B.slot 2
-  selBp : σ.selBp = B.slot 3
-  sumBp : σ.sumBp = B.slot 4
-  selAm : σ.selAm = B.slot 5
-  sumAm : σ.sumAm = B.slot 6
-  selAp : σ.selAp = B.slot 7
-  sumAp : σ.sumAp = B.slot 8
-  dbl : σ.dbl = B.slot 9
-  Q : σ.Q = B.slot 10
-  table_A : σ.table_A = B.slot 11
-  b_naf : σ.b_naf = B.slot 12
-  a_naf : σ.a_naf = B.slot 13
+  idp : σ.idp.id.id < B.alloc.nextFreeBlock
+  selBm : σ.selBm = B.slot 0
+  sumBm : σ.sumBm = B.slot 1
+  selBp : σ.selBp = B.slot 2
+  sumBp : σ.sumBp = B.slot 3
+  selAm : σ.selAm = B.slot 4
+  sumAm : σ.sumAm = B.slot 5
+  selAp : σ.selAp = B.slot 6
+  sumAp : σ.sumAp = B.slot 7
+  dbl : σ.dbl = B.slot 8
+  Q : σ.Q = B.slot 9
+  table_A : σ.table_A = B.slot 10
+  b_naf : σ.b_naf = B.slot 11
+  a_naf : σ.a_naf = B.slot 12
 
 /-- The registers the function's loops read: constants and the slots. -/
 public abbrev BaseRegs (σ : Slots) (E : ⟪Γ⟫) : Prop :=
@@ -168,40 +168,50 @@ public theorem search_loop (out a A b : Pointer) (σ : Slots) (an bn : BitVec (8
 
 /-! ### The loop's facts -/
 
-/-- The loop's temporaries from `B`'s counter on are in bounds: slots `1 … 9`. -/
+/-- The loop's temporaries from `B`'s counter on are in bounds: slots `0 … 8`; they and `Q` (slot
+`9`) are writable. -/
 @[expose]
 public def SlotsIn (m : MemoryState) (B : GlobalState) : Prop :=
-  ∀ k, 1 ≤ k → k ≤ 9 → InBounds m (B.slot k) 1280
+  (∀ k, k ≤ 8 → InBounds m (B.slot k) 1280) ∧ ∀ k, k ≤ 9 → Writable m (B.slot k)
 
 section Slots
 
 variable {m : MemoryState} {B : GlobalState}
 
 /-- A temporary's slot. -/
-public theorem SlotsIn.at (h : SlotsIn m B) (k : Nat) (h1 : 1 ≤ k := by decide)
-    (h9 : k ≤ 9 := by decide) : InBounds m (B.slot k) 1280 :=
-  h k h1 h9
+public theorem SlotsIn.at (h : SlotsIn m B) (k : Nat) (h8 : k ≤ 8 := by decide) :
+    InBounds m (B.slot k) 1280 :=
+  h.1 k h8
+
+/-- A writable slot. -/
+public theorem SlotsIn.writable (h : SlotsIn m B) (k : Nat) (h9 : k ≤ 9 := by decide) :
+    Writable m (B.slot k) :=
+  h.2 k h9
+
+/-- Registers' stores keep every block's writability. -/
+theorem _root_.MLIR.Writable.storeFe4x (h : Writable m p) : Writable (m.storeFe4x q v) p :=
+  h.storeAt.storeAt.storeAt.storeAt.storeAt
 
 @[mlir_transport]
 public theorem SlotsIn.lifetimeStart (h : SlotsIn m B) : SlotsIn (m.lifetimeStart q) B :=
-  fun k h1 h2 => (h k h1 h2).lifetimeStart
+  ⟨fun k hk => (h.1 k hk).lifetimeStart, fun k hk => (h.2 k hk).lifetimeStart⟩
 
 @[mlir_transport]
-public theorem SlotsIn.lifetimeEnd (h : SlotsIn m B) : SlotsIn (m.lifetimeEnd q) B := fun k h1 h2 =>
-  (h k h1 h2).lifetimeEnd
+public theorem SlotsIn.lifetimeEnd (h : SlotsIn m B) : SlotsIn (m.lifetimeEnd q) B :=
+  ⟨fun k hk => (h.1 k hk).lifetimeEnd, fun k hk => (h.2 k hk).lifetimeEnd⟩
 
 @[mlir_transport]
-public theorem SlotsIn.storeFe4x (h : SlotsIn m B) : SlotsIn (m.storeFe4x q v) B := fun k h1 h2 =>
-  (h k h1 h2).storeFe4x
+public theorem SlotsIn.storeFe4x (h : SlotsIn m B) : SlotsIn (m.storeFe4x q v) B :=
+  ⟨fun k hk => (h.1 k hk).storeFe4x, fun k hk => (h.2 k hk).storeFe4x⟩
 
 @[mlir_transport]
 public theorem SlotsIn.storeAt {x : BitVec w} (h : SlotsIn m B) : SlotsIn (m.storeAt q x) B :=
-  fun k h1 h2 => (h k h1 h2).storeAt
+  ⟨fun k hk => (h.1 k hk).storeAt, fun k hk => (h.2 k hk).storeAt⟩
 
 end Slots
 
 /-- What the loop needs of a state: room at `out`, `Q` known, the temporaries in bounds, the
-NAFs' bytes and `table_A` in place. -/
+NAFs' bytes and `table_A` in place, the globals. -/
 public structure LoopFacts (S : GlobalState) (σ : Slots) (B : GlobalState) (out : Pointer)
     (P : EdwardsPoint) (an bn : BitVec (8 * 256)) : Prop where
   wf : S.WF
@@ -216,6 +226,7 @@ public structure LoopFacts (S : GlobalState) (σ : Slots) (B : GlobalState) (out
   outLt : out.id.id < B.alloc.nextFreeBlock
   tAF : Fits S.mem σ.table_A 10240
   tAR : S.mem.readAt σ.table_A 10240 = naf5Bits (tableSpec P)
+  globals : S.mem.Globals impl_mul.globals
 
 open Lean Elab Tactic Meta in
 /-- `tag_slots h₁ …`: the equations `x = B.slot k`, tagged as a step's named values, so the steps
@@ -233,11 +244,11 @@ set_option hygiene false in
 local macro "open_slots " hσ:ident : tactic =>
   `(tactic|
     ( obtain
-        ⟨hidp, hselBm, hsumBm, hselBp, hsumBp, hselAm, hsumAm, hselAp, hsumAp, hdbl, hQ, htable_A,
+        ⟨-, hselBm, hsumBm, hselBp, hsumBp, hselAm, hsumAm, hselAp, hsumAp, hdbl, hQ, htable_A,
           hb_naf, ha_naf⟩ :=
         $hσ
       dsimp only at *
-      tag_slots hidp hselBm hsumBm hselBp hsumBp hselAm hsumAm hselAp hsumAp hdbl hQ htable_A hb_naf
+      tag_slots hselBm hsumBm hselBp hsumBp hselAm hsumAm hselAp hsumAp hdbl hQ htable_A hb_naf
         ha_naf))
 
 /-! ### Calls on known bits -/
@@ -314,7 +325,8 @@ theorem sub_call_eq (out p q : Pointer) (s : GlobalState) (hwf : s.WF) (hout : s
 
 /-- `table_A.select(x)`, `x / 2 = k`, on a table of known bits: `tableA P k`. -/
 theorem selA_call_eq (out tbl : Pointer) (x : BitVec 64) (s : GlobalState) (hwf : s.WF)
-    {P : EdwardsPoint} {k : Nat} (hk : x.toNat / 2 = k) (hx : x.toNat < 16)
+    (hg : s.mem.Globals NafLookupTable5_CachedPoint_select.globals) {P : EdwardsPoint} {k : Nat}
+    (hk : x.toNat / 2 = k) (hx : x.toNat < 16)
     (hout : Room s.mem out 1280) (hoo : out.offset = 0) (hf : Fits s.mem tbl 10240)
     (hto : tbl.offset = 0) (hr : s.mem.readAt tbl 10240 = naf5Bits (tableSpec P))
     (hsep : out.id ≠ tbl.id) :
@@ -322,24 +334,24 @@ theorem selA_call_eq (out tbl : Pointer) (x : BitVec 64) (s : GlobalState) (hwf 
         (NafLookupTable5_CachedPoint_select.args (.value out) (.value tbl) (.value x)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩, mem := s.mem.storeFe4x out (tableA P k) }) := by
-  rw [NafLookupTable5_CachedPoint_select.call_eq out tbl x s hwf hx hout (by simp [hoo])
+          { s with mem := s.mem.storeFe4x out (tableA P k) }) := by
+  rw [NafLookupTable5_CachedPoint_select.call_eq out tbl x s hwf hg hx hout (by simp [hoo])
       ⟨by simp [hto], hf⟩ hsep,
     readNaf5_of_readAt hf hto hr]
   subst hk
   rfl
 
 /-- `table_B.select(x)`, `x / 2 = k`: `BASEPOINT_ODD_LOOKUP_TABLE`'s entry `k`. -/
-theorem selB_call_eq (out : Pointer) (x : BitVec 64) (s : GlobalState) (hwf : s.WF) {k : Nat}
-    (hk : x.toNat / 2 = k) (hx : x.toNat < 128) (hout : Room s.mem out 1280)
+theorem selB_call_eq (out : Pointer) (x : BitVec 64) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals NafLookupTable8_CachedPoint_select.globals) {k : Nat} (hk : x.toNat / 2 = k)
+    (hx : x.toNat < 128) (hout : Room s.mem out 1280)
     (hoo : out.offset = 0) :
     NafLookupTable8_CachedPoint_select.call
         (NafLookupTable8_CachedPoint_select.args (.value out) (.value x)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
-            mem := s.mem.storeFe4x out (BASEPOINT_ODD_LOOKUP_TABLE.point k) }) := by
-  rw [NafLookupTable8_CachedPoint_select.call_eq out x s hwf hx hout (by simp [hoo]), hk]
+          { s with mem := s.mem.storeFe4x out (BASEPOINT_ODD_LOOKUP_TABLE.point k) }) := by
+  rw [NafLookupTable8_CachedPoint_select.call_eq out x s hwf hg hx hout (by simp [hoo]), hk]
 
 /-! ### Digits and indices -/
 
@@ -419,15 +431,17 @@ theorem headA_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
           LoopFacts S' σ B out P an bn →
           S'.mem.readAt σ.Q 1280 =
             fe4xBits (addDigit (tableA P) (digit an i) (ExtendedPoint_double_impl_double.spec v)) →
-          S'.alloc.nextFreeBlock = S.alloc.nextFreeBlock + 4 + digitBlocks 1 (digit an i) →
+          S'.alloc.nextFreeBlock = S.alloc.nextFreeBlock + 4 + digitBlocks (digit an i) →
           S'.mem.eraseFrom B.alloc.nextFreeBlock = S.mem.eraseFrom B.alloc.nextFreeBlock →
           (impl_mul.runFrom E' ^bb8 S' >>= g) = K) :
     (impl_mul.runFrom E ^bb4 S >>= g) = K := by
   rcases σ with
     ⟨idp, selBm, sumBm, selBp, sumBp, selAm, sumAm, selAp, sumAp, dbl, Q, table_A, b_naf, a_naf⟩
-  obtain ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ := hF
+  obtain ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ := hF
   open_slots hσ
-  have hdbl_b : InBounds S.mem dbl 1280 := hdbl ▸ hsl.at 9
+  have hQ_w : Writable S.mem Q := hQ ▸ hsl.writable 9
+  have hdbl_b : InBounds S.mem dbl 1280 := hdbl ▸ hsl.at 8
+  have hdbl_w : Writable S.mem dbl := hdbl ▸ hsl.writable 8
   have hdbl_off : dbl.offset = 0 := by
     rw [hdbl]; rfl
   have hQ_off : Q.offset = 0 := by
@@ -453,8 +467,10 @@ theorem headA_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     step_pure [hdd, hneg]
     finish_block
     switch_drop
-    have hsumAm_b : InBounds S.mem sumAm 1280 := hsumAm ▸ hsl.at 6
-    have hselAm_b : InBounds S.mem selAm 1280 := hselAm ▸ hsl.at 5
+    have hsumAm_b : InBounds S.mem sumAm 1280 := hsumAm ▸ hsl.at 5
+    have hsumAm_w : Writable S.mem sumAm := hsumAm ▸ hsl.writable 5
+    have hselAm_b : InBounds S.mem selAm 1280 := hselAm ▸ hsl.at 4
+    have hselAm_w : Writable S.mem selAm := hselAm ▸ hsl.writable 4
     have hsumAm_off : sumAm.offset = 0 := by
       rw [hsumAm]; rfl
     have hselAm_off : selAm.offset = 0 := by
@@ -483,7 +499,7 @@ theorem headA_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     finish_block
     refine
       hK E S hArgs (by env_reads) (by env_reads)
-        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ ?_ ?_ ?_
+        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ ?_ ?_ ?_
     · rw [hread_Q]
       simp only [addDigit, not_pos_of_neg hneg, hneg, Bool.false_eq_true, ↓reduceIte]
     · rw [hS]
@@ -498,7 +514,7 @@ theorem headA_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     switch_drop
     refine
       hK E S hArgs (by env_reads) (by env_reads)
-        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ ?_
+        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ ?_
         (by
           rw [hS]; simp [digitBlocks, hz])
         (by
@@ -513,8 +529,10 @@ theorem headA_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     step_pure [hdd, hpos, ne_zero_of_pos hpos, not_neg_of_pos hpos]
     finish_block
     switch_drop
-    have hsumAp_b : InBounds S.mem sumAp 1280 := hsumAp ▸ hsl.at 8
-    have hselAp_b : InBounds S.mem selAp 1280 := hselAp ▸ hsl.at 7
+    have hsumAp_b : InBounds S.mem sumAp 1280 := hsumAp ▸ hsl.at 7
+    have hsumAp_w : Writable S.mem sumAp := hsumAp ▸ hsl.writable 7
+    have hselAp_b : InBounds S.mem selAp 1280 := hselAp ▸ hsl.at 6
+    have hselAp_w : Writable S.mem selAp := hselAp ▸ hsl.writable 6
     have hsumAp_off : sumAp.offset = 0 := by
       rw [hsumAp]; rfl
     have hselAp_off : selAp.offset = 0 := by
@@ -542,7 +560,7 @@ theorem headA_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     finish_block
     refine
       hK E S hArgs (by env_reads) (by env_reads)
-        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ ?_ ?_ ?_
+        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ ?_ ?_ ?_
     · rw [hread_Q]
       simp only [addDigit, hpos, ↓reduceIte]
     · rw [hS]
@@ -568,14 +586,15 @@ theorem headB_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
           LoopFacts S' σ B out P an bn →
           S'.mem.readAt σ.Q 1280 =
             fe4xBits (addDigit BASEPOINT_ODD_LOOKUP_TABLE.point (digit bn i) v) →
-          S'.alloc.nextFreeBlock = S.alloc.nextFreeBlock + digitBlocks 2 (digit bn i) →
+          S'.alloc.nextFreeBlock = S.alloc.nextFreeBlock + digitBlocks (digit bn i) →
           S'.mem.eraseFrom B.alloc.nextFreeBlock = S.mem.eraseFrom B.alloc.nextFreeBlock →
           (impl_mul.runFrom E' ^bb10 S' >>= g) = K) :
     (impl_mul.runFrom E ^bb8 S >>= g) = K := by
   rcases σ with
     ⟨idp, selBm, sumBm, selBp, sumBp, selAm, sumAm, selAp, sumAp, dbl, Q, table_A, b_naf, a_naf⟩
-  obtain ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ := hF
+  obtain ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ := hF
   open_slots hσ
+  have hQ_w : Writable S.mem Q := hQ ▸ hsl.writable 9
   have hQ_off : Q.offset = 0 := by
     rw [hQ]; rfl
   have hb_naf_off : b_naf.offset = 0 := by
@@ -590,8 +609,10 @@ theorem headB_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     step_pure [hdd, hneg]
     finish_block
     switch_drop
-    have hsumBm_b : InBounds S.mem sumBm 1280 := hsumBm ▸ hsl.at 2
-    have hselBm_b : InBounds S.mem selBm 1280 := hselBm ▸ hsl.at 1
+    have hsumBm_b : InBounds S.mem sumBm 1280 := hsumBm ▸ hsl.at 1
+    have hsumBm_w : Writable S.mem sumBm := hsumBm ▸ hsl.writable 1
+    have hselBm_b : InBounds S.mem selBm 1280 := hselBm ▸ hsl.at 0
+    have hselBm_w : Writable S.mem selBm := hselBm ▸ hsl.writable 0
     have hsumBm_off : sumBm.offset = 0 := by
       rw [hsumBm]; rfl
     have hselBm_off : selBm.offset = 0 := by
@@ -618,7 +639,7 @@ theorem headB_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     finish_block
     refine
       hK E S hArgs (by env_reads) (by env_reads)
-        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ ?_ ?_ ?_
+        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ ?_ ?_ ?_
     · rw [hread_Q]
       simp only [addDigit, not_pos_of_neg hneg, hneg, Bool.false_eq_true, ↓reduceIte]
     · rw [hS]
@@ -633,7 +654,7 @@ theorem headB_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     switch_drop
     refine
       hK E S hArgs (by env_reads) (by env_reads)
-        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ ?_
+        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ ?_
         (by
           rw [hS]; simp [digitBlocks, hz])
         (by rw [hS])
@@ -644,8 +665,10 @@ theorem headB_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     step_pure [hdd, hpos, ne_zero_of_pos hpos, not_neg_of_pos hpos]
     finish_block
     switch_drop
-    have hsumBp_b : InBounds S.mem sumBp 1280 := hsumBp ▸ hsl.at 4
-    have hselBp_b : InBounds S.mem selBp 1280 := hselBp ▸ hsl.at 3
+    have hsumBp_b : InBounds S.mem sumBp 1280 := hsumBp ▸ hsl.at 3
+    have hsumBp_w : Writable S.mem sumBp := hsumBp ▸ hsl.writable 3
+    have hselBp_b : InBounds S.mem selBp 1280 := hselBp ▸ hsl.at 2
+    have hselBp_w : Writable S.mem selBp := hselBp ▸ hsl.writable 2
     have hsumBp_off : sumBp.offset = 0 := by
       rw [hsumBp]; rfl
     have hselBp_off : selBp.offset = 0 := by
@@ -675,7 +698,7 @@ theorem headB_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : 
     finish_block
     refine
       hK E S hArgs (by env_reads) (by env_reads)
-        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ ?_ ?_ ?_
+        ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, hgl⟩ ?_ ?_ ?_
     · rw [hread_Q]
       simp only [addDigit, hpos, ↓reduceIte]
     · rw [hS]
@@ -737,7 +760,7 @@ theorem main_iter (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : σ
               fe4xBits
                 (step (tableA P) BASEPOINT_ODD_LOOKUP_TABLE.point (digit an i) (digit bn i) v) →
             S'.alloc.nextFreeBlock =
-              S.alloc.nextFreeBlock + 4 + digitBlocks 1 (digit an i) + digitBlocks 2 (digit bn i) →
+              S.alloc.nextFreeBlock + 4 + digitBlocks (digit an i) + digitBlocks (digit bn i) →
             S'.mem.eraseFrom B.alloc.nextFreeBlock = S.mem.eraseFrom B.alloc.nextFreeBlock →
             (impl_mul.runFrom E' ^bb12 S' >>= g) = K)
     (hback :
@@ -752,8 +775,8 @@ theorem main_iter (out a A b : Pointer) (σ : Slots) (B : GlobalState) (hσ : σ
                 fe4xBits
                   (step (tableA P) BASEPOINT_ODD_LOOKUP_TABLE.point (digit an i) (digit bn i) v) →
               S'.alloc.nextFreeBlock =
-                S.alloc.nextFreeBlock + 4 + digitBlocks 1 (digit an i) +
-                  digitBlocks 2 (digit bn i) →
+                S.alloc.nextFreeBlock + 4 + digitBlocks (digit an i) +
+                  digitBlocks (digit bn i) →
               S'.mem.eraseFrom B.alloc.nextFreeBlock = S.mem.eraseFrom B.alloc.nextFreeBlock →
               (impl_mul.runFrom E' ^bb4 S' >>= g) = K) :
     (impl_mul.runFrom E ^bb4 S >>= g) = K := by
@@ -958,7 +981,7 @@ public theorem exit_block (out a A b : Pointer) (σ : Slots) (B : GlobalState) (
             GlobalState)) := by
   rcases σ with
     ⟨idp, selBm, sumBm, selBp, sumBp, selAm, sumAm, selAp, sumAp, dbl, Q, table_A, b_naf, a_naf⟩
-  obtain ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR⟩ := hF
+  obtain ⟨hwf, hout, hout_off, hsl, hQF, haF, haR, hbF, hbR, houtLt, htAF, htAR, -⟩ := hF
   open_slots hσ
   have hQ_off : Q.offset = 0 := by
     rw [hQ]; rfl

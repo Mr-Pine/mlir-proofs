@@ -43,7 +43,7 @@ private def out (h : Vector (BitVec 64) 8) (bytes : BitVec 1024) : Option (Vecto
   match
     SHA512_Transform.eval 20
       (SHA512_Transform.args (.value st) (.value blk) (.value tmp) (.value (tmp.add 640#64)))
-      (state h bytes) with
+      ((state h bytes).withGlobals SHA512_Transform.globals) with
   | .value (some .nil, s) => some (s.mem.readWords8 st)
   | _ => none
 

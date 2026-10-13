@@ -46,11 +46,11 @@ elab "clear_facts" xs:(ppSpace colGt ident)+ : tactic =>
     replaceMainGoal [g]
 
 /-- `limbs_fit x`: the global `x`'s limbs fit (`hx_limbs`), from its block's `Fits` and offset,
-which are dropped with its `Room`. -/
+which are dropped with its `Live`. -/
 macro "limbs_fit " x:ident : tactic => do
   let n := x.getId.toString
   let fits := Lean.mkIdent (.mkSimple s!"h{n}_fits")
-  let room := Lean.mkIdent (.mkSimple s!"h{n}_room")
+  let room := Lean.mkIdent (.mkSimple s!"h{n}_live")
   let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
   `(tactic| (have $limbs :=MemoryState.LimbsFit.of_fits $fits $off; clear $fits $room $off))

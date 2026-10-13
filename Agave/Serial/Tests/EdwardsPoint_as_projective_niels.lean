@@ -14,7 +14,8 @@ private def a : Pointer :=
 
 /-- Block 0 free (the null pointer's); `out` a zeroed 160-byte block, `a` holding `aBytes`. -/
 private def state (aBytes : BitVec 1280) : GlobalState :=
-  ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 160 aBytes)]⟩⟩
+  GlobalState.withGlobals EdwardsPoint_as_projective_niels.globals
+    ⟨⟨3⟩, ⟨Std.ExtHashMap.ofList [(⟨1⟩, .ofBytes 160 0), (⟨2⟩, .ofBytes 160 aBytes)]⟩⟩
 
 /-- A field element from its limbs, lowest first. -/
 private def fe (l0 l1 l2 l3 l4 : Nat) : BitVec 320 :=

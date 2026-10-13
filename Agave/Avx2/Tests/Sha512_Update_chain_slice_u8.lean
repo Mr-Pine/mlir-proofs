@@ -32,13 +32,15 @@ private def input (n : Nat) : List (BitVec 8) :=
 private def bits (l : List (BitVec 8)) : BitVec (8 * l.length) :=
   (BitVec.ofNat (8 * l.length) (l.foldr (fun b acc => b.toNat + 256 * acc) 0))
 
-/-- sha2's `Sha512::new()` at `self`, the `n` input bytes at `data`, room at `out`. -/
+/-- sha2's `Sha512::new()` at `self`, the `n` input bytes at `data`, room at `out`; then the
+globals'. -/
 private def state (n : Nat) : GlobalState :=
   let m : MemoryState :=
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩, .ofBytes 208 0), (⟨2⟩, .ofBytes n ((bits (input n)).cast (by simp [input]))),
           (⟨3⟩, .ofBytes 208 0)]⟩
-  ⟨⟨4⟩, m.storeSha512 (self.add 128#64) Sha512.IV⟩
+  GlobalState.withGlobals Sha512_Update_chain_slice_u8.globals
+    ⟨⟨4⟩, m.storeSha512 (self.add 128#64) Sha512.IV⟩
 
 /-- The object at `out`: state words, buffered bytes, their count, blocks counted. -/
 private def obj (m : MemoryState) : Vector (BitVec 64) 8 × List (BitVec 8) × Nat × Nat :=
@@ -59,7 +61,7 @@ private def agrees (n : Nat) : Bool :=
       obj s'.mem ==
         (Sha512.compressBlocks Sha512.IV (input n), (input n).drop (n / 128 * 128), n % 128,
           n / 128) &&
-      s'.alloc.nextFreeBlock == s.alloc.nextFreeBlock + 4 * updateCalls s.mem self len
+      s'.alloc.nextFreeBlock == s.alloc.nextFreeBlock + 3 * updateCalls s.mem self len
   | _ => false
 
 #guard [3, 128, 200, 300].all agrees

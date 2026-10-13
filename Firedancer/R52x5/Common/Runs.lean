@@ -651,6 +651,9 @@ theorem runBodyFrom_qpMulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
       InBounds S.mem Z0 256 ∧
         InBounds S.mem Z1 256 ∧
         InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hZw :
+      Writable S.mem Z0 ∧
+        Writable S.mem Z1 ∧ Writable S.mem Z2 ∧ Writable S.mem Z3 ∧ Writable S.mem Z4)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -672,6 +675,7 @@ theorem runBodyFrom_qpMulRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hZw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   iterate 5 step_pure
   step_call using fd_r52x5_quad_mul_fast.call_eq
@@ -709,14 +713,12 @@ def qpMulGepRun (z0 z1 z2 z3 z4 : Dst Γ .ptr) (x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 : 
                                 (.cons (.val y3.i y3.h) (.cons (.val y4.i y4.h) .nil)))))))))))))))
       .nil,
     .load q0 (.val z0.i z0.h), .load q1 (.val z1.i z1.h),
-    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p,
-    .load q2 (.val z2.i z2.h), .unop (.gepConst { nusw := true, nuw := true } 64) g2 p,
-    .load q3 (.val z3.i z3.h),
+    .unop (.gepConst { nusw := true, nuw := true } 32) g1 p, .load q2 (.val z2.i z2.h),
+    .unop (.gepConst { nusw := true, nuw := true } 64) g2 p, .load q3 (.val z3.i z3.h),
     .unop (.gepConst { nusw := true, nuw := true } 96) g3 p, .load q4 (.val z4.i z4.h),
-    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p,
-    .lifetimeEnd (.val z4.i z4.h) 32, .lifetimeEnd (.val z3.i z3.h) 32,
-    .lifetimeEnd (.val z2.i z2.h) 32, .lifetimeEnd (.val z1.i z1.h) 32,
-    .lifetimeEnd (.val z0.i z0.h) 32]
+    .unop (.gepConst { nusw := true, nuw := true } 128) g4 p, .lifetimeEnd (.val z4.i z4.h) 32,
+    .lifetimeEnd (.val z3.i z3.h) 32, .lifetimeEnd (.val z2.i z2.h) 32,
+    .lifetimeEnd (.val z1.i z1.h) 32, .lifetimeEnd (.val z0.i z0.h) 32]
 
 /-- `runBodyFrom_qpMulRun` for `qpMulGepRun`, `p` holding the point `P`: also `P + 32 k` in
 `gk`. -/
@@ -740,6 +742,9 @@ theorem runBodyFrom_qpMulGepRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
       InBounds S.mem Z0 256 ∧
         InBounds S.mem Z1 256 ∧
         InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hZw :
+      Writable S.mem Z0 ∧
+        Writable S.mem Z1 ∧ Writable S.mem Z2 ∧ Writable S.mem Z3 ∧ Writable S.mem Z4)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -761,6 +766,7 @@ theorem runBodyFrom_qpMulGepRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hZw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   obtain ⟨hP0, hP1, hP2, hP3, hP4⟩ := hPZ
   obtain ⟨hp1, hp2, hp3⟩ := hp
@@ -816,6 +822,9 @@ theorem runBodyFrom_qpSqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
       InBounds S.mem Z0 256 ∧
         InBounds S.mem Z1 256 ∧
         InBounds S.mem Z2 256 ∧ InBounds S.mem Z3 256 ∧ InBounds S.mem Z4 256)
+    (hZw :
+      Writable S.mem Z0 ∧
+        Writable S.mem Z1 ∧ Writable S.mem Z2 ∧ Writable S.mem Z3 ∧ Writable S.mem Z4)
     (hne :
       Z1.id ≠ Z0.id ∧
         Z2.id ≠ Z0.id ∧
@@ -837,6 +846,7 @@ theorem runBodyFrom_qpSqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨hz0, hz1, hz2, hz3, hz4⟩ := hZ
+  obtain ⟨hw0, hw1, hw2, hw3, hw4⟩ := hZw
   obtain ⟨h10, h20, h30, h40, h21, h31, h41, h32, h42, h43⟩ := hne
   iterate 5 step_pure
   step_call using fd_r52x5_quad_sqr_fast.call_eq
@@ -908,9 +918,8 @@ def packLimbRun (o : Int) (tx ty tz tt : Reg Γ .ptr) (n1 n2 n3 : Reg Γ (.bv 64
     (gx gy gz gt : Dst Γ .ptr) (vx : Dst Γ Ty4x64) (vy vz vt : Dst Γ (.bv 64))
     (w1 w2 w3 : Dst Γ Ty4x64) : List (Instr Γ) :=
   [.unop (.gepConst { nusw := true, nuw := true } o) gx tx, .load vx (.val gx.i gx.h),
-    .unop (.gepConst { nusw := true, nuw := true } o) gy ty,
-    .load vy (.val gy.i gy.h), .unop (.gepConst { nusw := true, nuw := true } o) gz tz,
-    .load vz (.val gz.i gz.h),
+    .unop (.gepConst { nusw := true, nuw := true } o) gy ty, .load vy (.val gy.i gy.h),
+    .unop (.gepConst { nusw := true, nuw := true } o) gz tz, .load vz (.val gz.i gz.h),
     .unop (.gepConst { nusw := true, nuw := true } o) gt tt, .load vt (.val gt.i gt.h),
     .ternop .insertelement w1 (.val vx.i vx.h) (.val vy.i vy.h) n1,
     .ternop .insertelement w2 (.val w1.i w1.h) (.val vz.i vz.h) n2,

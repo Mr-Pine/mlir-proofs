@@ -40,10 +40,13 @@ set_option hygiene false in
 /-- The frame's slots' ids apart, or in the frame. -/
 local macro "slots" : tactic =>
   `(tactic|
-    ( dsimp only
-      simp only [ht11, ht12, ht13, ht14, ht15, ht16, ht17, hacc, he2, he1, hpc, hbp, hwk, hidp,
-        GlobalState.slot, ne_eq, BlockId.mk.injEq, h3]
-      omega))
+    first
+    | assumption
+    | exact Ne.symm (by assumption)
+    | ( dsimp only
+        simp only [ht11, ht12, ht13, ht14, ht15, ht16, ht17, hacc, he2, he1, hpc,
+          GlobalState.slot, ne_eq, BlockId.mk.injEq, h3]
+        omega))
 
 set_option hygiene false in
 /-- The temporaries' room and clear padding, from the slots' facts. -/
@@ -100,9 +103,9 @@ def ladder (tbl : Nat → ZPt) (x1 x2 : BitVec 256) : Nat → ZPt → ZPt
   | 0, Q => posStep tbl x1 x2 0 Q
   | i + 1, Q => ladder tbl x1 x2 i (dbl4 (posStep tbl x1 x2 (i + 1) Q))
 
-/-- Blocks a digit's call allocates: `add`'s 38, `sub`'s 47. -/
+/-- Blocks a digit's call allocates: `add`'s 37, `sub`'s 44. -/
 def digitBlocks (d : BitVec 8) : Nat :=
-  if 0 < d.toInt then 38 else if d.toInt < 0 then 47 else 0
+  if 0 < d.toInt then 37 else if d.toInt < 0 then 44 else 0
 
 /-- Blocks the loop allocates from `pos = i` down: the digits', and four `dbl`s' 28 but after
 `0`. -/
@@ -123,8 +126,8 @@ def spec (x1 : BitVec 256) (b : BitVec 1) (P2 : ZPt) (x2 : BitVec 256) : Option 
 
 /-- Blocks the function allocates, its callees' included. -/
 def blocks (x1 : BitVec 256) (b : BitVec 1) (P2 : ZPt) (x2 : BitVec 256) : Nat :=
-  if b = 1#1 then 20 + ladderBlocks x1 x2 63
-  else if rejectIdentity.spec (pcTbl P2 4) = 0#16 then 251 + ladderBlocks x1 x2 63 else 245
+  if b = 1#1 then 17 + ladderBlocks x1 x2 63
+  else if rejectIdentity.spec (pcTbl P2 4) = 0#16 then 244 + ladderBlocks x1 x2 63 else 238
 
 /-- `error.WeakPublicKey`'s definedness: its code's bits only. -/
 def weakDef : BitVec 1408 :=
@@ -168,11 +171,10 @@ theorem Fits.congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?)
   obtain ⟨b, hb, hl, hw, hd⟩ := hf
   exact ⟨b, h.trans hb, hl, hw, hd⟩
 
-/-- Room alike in blocks held alike. -/
-theorem Room.congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?) (hf : Room m p w) :
-    Room m' p w := by
-  obtain ⟨b, hb, hl, hw⟩ := hf
-  exact ⟨b, h.trans hb, hl, hw⟩
+/-- Liveness alike in blocks held alike. -/
+theorem Live.congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?) (hf : Live m p w) :
+    Live m' p w :=
+  hf.of_getElem?_eq h
 
 /-- Field elements alike in blocks held alike. -/
 theorem LimbsFit.congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?)
@@ -187,7 +189,7 @@ theorem PtLimbsFit.congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p
     (hf : m.PtLimbsFit p) : m'.PtLimbsFit p :=
   have h' (k : BitVec 64) : m'[(p.add k).id]? = m[(p.add k).id]? := by
     rw [Pointer.add_id]; exact h
-  ⟨hf.1, Room.congr h hf.2.1, LimbsFit.congr h hf.2.2.1, LimbsFit.congr (h' _) hf.2.2.2.1,
+  ⟨hf.1, Live.congr h hf.2.1, LimbsFit.congr h hf.2.2.1, LimbsFit.congr (h' _) hf.2.2.2.1,
     LimbsFit.congr (h' _) hf.2.2.2.2.1, LimbsFit.congr (h' _) hf.2.2.2.2.2⟩
 
 /-- A point alike in blocks held alike. -/
@@ -276,7 +278,7 @@ theorem fits_entries {m : MemoryState} {p : Pointer} (h0 : Fits m p 1281)
   · simpa using h8
 
 /-- The base point's table global's block (`step_addressof`'s facts): `TableAt`. -/
-theorem tableAt_base {m : MemoryState} {p : Pointer} (hr : Room m p 21504) (ho : p.offset = 0)
+theorem tableAt_base {m : MemoryState} {p : Pointer} (hr : Live m p 21504) (ho : p.offset = 0)
     (h : m.readAt p 21504 = Edwards25519.basePointPc.bits)
     (hf : ∀ k < 9, Fits m (p.add (BitVec.ofNat 64 (k * 168))) 1281) : TableAt m p baseTbl :=
   fun k hk => by
@@ -286,10 +288,10 @@ theorem tableAt_base {m : MemoryState} {p : Pointer} (hr : Room m p 21504) (ho :
 
 /-- Definedness inside a masked store: the stored mask's bits. -/
 theorem definedAt_storeDef_add {m : MemoryState} {p : Pointer} {off : BitVec 64}
-    (hi : InBounds m p v) (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ v)
+    (hi : Room m p v) (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ v)
     (x d : BitVec v) :
     (m.storeDef p x d).definedAt (p.add off) w = d.extractLsb' (off.toNat * 8) w :=
-  MemoryState.definedAt_add_of_definedAt hi.storeDef hov hw
+  MemoryState.definedAt_add_of_definedAt hi.inBounds.storeDef hov hw
     (MemoryState.definedAt_storeDef_self hi _ _)
 
 /-- Entry `k`'s offset in a table at a block's start: no wrap. -/
@@ -332,11 +334,11 @@ theorem tableAt_pc {m : MemoryState} {c : Pointer} (hr : Room m c 12096) (ho : c
     rw [hk']; omega
   have hb :=
     (MemoryState.readAt_storeDef_add (x := Edwards25519.precompute.bits P R) (d :=
-          Edwards25519.precompute.defs D) hr.inBounds hov hw).trans
+          Edwards25519.precompute.defs D) hr hov hw).trans
       (by rw [e8, pc_bits_lane hk])
   have hd :=
     (definedAt_storeDef_add (x := Edwards25519.precompute.bits P R) (d :=
-          Edwards25519.precompute.defs D) hr.inBounds hov hw).trans
+          Edwards25519.precompute.defs D) hr hov hw).trans
       (by rw [e8, pc_defs_lane hk])
   have hpr :
     (m.storeDef c (Edwards25519.precompute.bits P R) (Edwards25519.precompute.defs D)).PtRoom
@@ -346,7 +348,7 @@ theorem tableAt_pc {m : MemoryState} {c : Pointer} (hr : Room m c 12096) (ho : c
       rw [show (0 : BitVec 64) + BitVec.ofNat 64 (k * 168) = BitVec.ofNat 64 (k * 168) by simp, hk']
       omega, Room.add_of_le hov hw hr.storeDef⟩
   refine
-    ⟨.of_definedAt hpr ?_,
+    ⟨.of_definedAt hpr.ptLive ?_,
       MemoryState.readPt_of_readAt (hpr.2.inBounds.mono (by omega)) hpr.1
         ((MemoryState.readAt_of_readAt_le (by omega) hb).trans ?_)⟩
   · rw [hd]
@@ -411,10 +413,11 @@ structure Layout (P : Ptrs) (N : Nat) : Prop where
   bpo : P.bp.offset.toNat + 1512 ≤ 2 ^ 64
   tbo : P.tb.offset.toNat + 1512 ≤ 2 ^ 64
 
-/-- What the loop needs of a state: the digits' and tables' blocks as `M` holds them, room in the
-temporaries and the accumulator, their padding a fresh slot's. -/
+/-- What the loop needs of a state: its globals, the digits' and tables' blocks as `M` holds them,
+room in the temporaries and the accumulator, their padding a fresh slot's. -/
 structure Facts (P : Ptrs) (M : MemoryState) (S : GlobalState) : Prop where
   wf : S.WF
+  globals : S.mem.Globals Edwards25519_mulDoubleBasePublic.globals
   e1 : S.mem[P.e1.id]? = M[P.e1.id]?
   e2 : S.mem[P.e2.id]? = M[P.e2.id]?
   bp : S.mem[P.bp.id]? = M[P.bp.id]?
@@ -425,7 +428,7 @@ structure Facts (P : Ptrs) (M : MemoryState) (S : GlobalState) : Prop where
 /-- A slot holding `A`: its field elements known, the point `A`. -/
 theorem Holds.pt {m : MemoryState} {t : Pointer} {A : ZPt} (hr : m.PtRoom t) (h : Holds m t A) :
     m.PtLimbsFit t ∧ m.readPt t = A :=
-  ⟨.of_definedAt hr
+  ⟨.of_definedAt hr.ptLive
       (by
         rw [h.2]; exact ZPt.rawDef_low),
     MemoryState.readPt_of_readAt (hr.2.inBounds.mono (by omega)) hr.1
@@ -454,7 +457,8 @@ theorem eq_of_id {u v : Pointer} (hu : u.offset = 0) (hv : v.offset = 0) (h : u.
 /-- A `WF` state stays so with its counter advanced. -/
 theorem wf_bump {s : GlobalState} (h : s.WF) (hn : s.alloc.nextFreeBlock ≤ n) :
     (⟨⟨n⟩, s.mem⟩ : GlobalState).WF :=
-  ⟨fun k hk => Nat.lt_of_lt_of_le (h.bound k hk) hn, Nat.lt_of_lt_of_le h.pos hn, h.null⟩
+  ⟨fun k hk => Nat.lt_of_lt_of_le (h.bound k hk) hn, Nat.lt_of_lt_of_le h.pos hn, h.null, h.global,
+    h.merged⟩
 
 /-- A point's stores leave other blocks alone. -/
 theorem getElem?_storePt_ne' {m : MemoryState} {p q : Pointer} (h : q.id ≠ p.id) :
@@ -467,6 +471,7 @@ theorem getElem?_storePt_ne' {m : MemoryState} {p q : Pointer} (h : q.id ≠ p.i
 room carried, `t`'s padding clear after. -/
 theorem Facts.of_store {P : Ptrs} {M : MemoryState} {S S' : GlobalState} (hF : Facts P M S)
     (hL : Layout P N) (ht : t ∈ P.acc :: P.temps) (hwf : S'.WF)
+    (hgl : S'.mem.globals = S.mem.globals)
     (hsame : ∀ q : Pointer, q.id ≠ t.id → S'.mem[q.id]? = S.mem[q.id]?)
     (hroom : ∀ q w, Room S.mem q w → Room S'.mem q w) (hpad : S'.mem.PadClear t) :
     Facts P M S' := by
@@ -477,8 +482,8 @@ theorem Facts.of_store {P : Ptrs} {M : MemoryState} {S S' : GlobalState} (hF : F
     · rw [eq_of_id (hL.temp u hu).1 (hL.temp t ht).1 h]; exact hpad
     · exact ⟨(readAt_congr (hsame u h)).symm ▸ hc.1, (definedAt_congr (hsame u h)).symm ▸ hc.2⟩
   refine
-    ⟨hwf, (hne P.e1 ?_).trans hF.e1, (hne P.e2 ?_).trans hF.e2, (hne P.bp ?_).trans hF.bp,
-      (hne P.tb ?_).trans hF.tb, fun u hu => ?_, ?_⟩
+    ⟨hwf, hF.globals.mono hgl fun _ h => h, (hne P.e1 ?_).trans hF.e1, (hne P.e2 ?_).trans hF.e2,
+      (hne P.bp ?_).trans hF.bp, (hne P.tb ?_).trans hF.tb, fun u hu => ?_, ?_⟩
   · exact ((hL.temp t ht).2.2.1).symm
   · exact ((hL.temp t ht).2.2.2.1).symm
   · exact ((hL.temp t ht).2.2.2.2.1).symm
@@ -500,7 +505,7 @@ theorem Facts.storePt {P : Ptrs} {M : MemoryState} {S : GlobalState} (hF : Facts
       (S.mem.storePt t A 0#1)[P.acc.id]? = S.mem[P.acc.id]? := by
   obtain ⟨⟨ho, hr⟩, hc⟩ := hF.temps t ht
   exact
-    ⟨hF.of_store hL (List.mem_cons_of_mem _ ht) (GlobalState.WF.storePt_mk (wf_bump hF.wf hn))
+    ⟨hF.of_store hL (List.mem_cons_of_mem _ ht) (GlobalState.WF.storePt_mk (wf_bump hF.wf hn)) rfl
         (fun _ hq => getElem?_storePt_ne' hq.symm) (fun _ _ h => Room.storePt h)
         (MemoryState.PadClear.storePt_self ⟨ho, hr⟩ hc),
       ⟨MemoryState.readAt_storePt_padClear ⟨ho, hr⟩ hc,
@@ -515,10 +520,10 @@ theorem Facts.storePtCopy {P : Ptrs} {M : MemoryState} {S : GlobalState} (hF : F
       (S.mem.storePtCopy t A 0#1)[P.acc.id]? = S.mem[P.acc.id]? := by
   have hr := (hF.temps t ht).1.2
   have hH : Holds (S.mem.storePtCopy t A 0#1) t A :=
-    ⟨MemoryState.readAt_storeDef_self hr.inBounds _ _,
-      MemoryState.definedAt_storeDef_self hr.inBounds _ _⟩
+    ⟨MemoryState.readAt_storeDef_self hr _ _,
+      MemoryState.definedAt_storeDef_self hr _ _⟩
   exact
-    ⟨hF.of_store hL (List.mem_cons_of_mem _ ht) (GlobalState.WF.storeDef_mk (wf_bump hF.wf hn))
+    ⟨hF.of_store hL (List.mem_cons_of_mem _ ht) (GlobalState.WF.storeDef_mk (wf_bump hF.wf hn)) rfl
         (fun _ hq => MemoryState.getElem?_storeDef_ne hq) (fun _ _ h => Room.storeDef h)
         hH.padClear,
       hH, MemoryState.getElem?_storeDef_ne (hL.ne_acc ht)⟩
@@ -529,10 +534,10 @@ theorem Facts.copy {P : Ptrs} {M : MemoryState} {S : GlobalState} (hF : Facts P 
     Facts P M ⟨S.alloc, S.mem.storeDef P.acc (S.mem.readAt t 1344) (S.mem.definedAt t 1344)⟩ ∧
       Holds (S.mem.storeDef P.acc (S.mem.readAt t 1344) (S.mem.definedAt t 1344)) P.acc A := by
   have hH : Holds (S.mem.storeDef P.acc (S.mem.readAt t 1344) (S.mem.definedAt t 1344)) P.acc A :=
-    ⟨(MemoryState.readAt_storeDef_self hF.acc.1.2.inBounds _ _).trans hA.1,
-      (MemoryState.definedAt_storeDef_self hF.acc.1.2.inBounds _ _).trans hA.2⟩
+    ⟨(MemoryState.readAt_storeDef_self hF.acc.1.2 _ _).trans hA.1,
+      (MemoryState.definedAt_storeDef_self hF.acc.1.2 _ _).trans hA.2⟩
   exact
-    ⟨hF.of_store hL (List.mem_cons_self) (GlobalState.WF.storeDef_mk hF.wf)
+    ⟨hF.of_store hL (List.mem_cons_self) (GlobalState.WF.storeDef_mk hF.wf) rfl
         (fun _ hq => MemoryState.getElem?_storeDef_ne hq) (fun _ _ h => Room.storeDef h)
         hH.padClear,
       hH⟩
@@ -541,7 +546,7 @@ theorem Facts.copy {P : Ptrs} {M : MemoryState} {S : GlobalState} (hF : Facts P 
 theorem Facts.storePt_acc {P : Ptrs} {M : MemoryState} {S : GlobalState} (hF : Facts P M S)
     (hL : Layout P N) (hn : S.alloc.nextFreeBlock ≤ n) (A : ZPt) :
     Facts P M ⟨⟨n⟩, S.mem.storePt P.acc A 0#1⟩ ∧ Holds (S.mem.storePt P.acc A 0#1) P.acc A :=
-  ⟨hF.of_store hL (List.mem_cons_self) (GlobalState.WF.storePt_mk (wf_bump hF.wf hn))
+  ⟨hF.of_store hL (List.mem_cons_self) (GlobalState.WF.storePt_mk (wf_bump hF.wf hn)) rfl
       (fun _ hq => getElem?_storePt_ne' hq.symm) (fun _ _ h => Room.storePt h)
       (MemoryState.PadClear.storePt_self hF.acc.1 hF.acc.2),
     MemoryState.readAt_storePt_padClear hF.acc.1 hF.acc.2,
@@ -556,16 +561,16 @@ theorem entry_nov {p : Pointer} (h : p.offset.toNat + 1512 ≤ 2 ^ 64) (hk : k �
 
 /-- `sub`'s `call_eq` on the points `P`, `Q` read at `p`, `q`. -/
 theorem Edwards25519_sub.call_eq_of (out p q : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.PtRoom out) (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q)
-    (hPd : s.mem.readPt p = P) (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53))
-    (hQ : Q.Lt (2 ^ 53)) :
+    (hg : s.mem.Globals Edwards25519_sub.globals) (hout : s.mem.PtRoom out)
+    (hp : s.mem.PtLimbsFit p) (hq : s.mem.PtLimbsFit q) (hPd : s.mem.readPt p = P)
+    (hQd : s.mem.readPt q = Q) (hP : P.Lt (2 ^ 53)) (hQ : Q.Lt (2 ^ 53)) :
     Edwards25519_sub.call (Edwards25519_sub.args (.value out) (.value p) (.value q)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 47⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 44⟩,
             mem := s.mem.storePtCopy out (Edwards25519.sub.spec P Q) 0#1 }) := by
   subst hPd hQd
-  exact Edwards25519_sub.call_eq out p q s hwf hout hp hq hP hQ
+  exact Edwards25519_sub.call_eq out p q s hwf hg hout hp hq hP hQ
 
 /-- A positive digit, `d ≤ 8`. -/
 theorem digit_pos {d : BitVec 8} (h1 : (0#8).slt d = true) (h2 : d.toInt ≤ 8) :
@@ -612,6 +617,7 @@ theorem digit1_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (x
   dsimp only [Regs] at hR
   have he1o := hD1.2.1
   have hwf := hF.wf
+  have hgl := hF.globals
   block_init
   step_pure [Nat.mod_lt i (by decide : 0 < 18446744073709551616)]
   step_load consuming hf1 hl1
@@ -635,12 +641,12 @@ theorem digit1_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (x
       subst hS'
       exact (hF.storePt hL (by simp [Ptrs.temps]) (by omega) _).1
     obtain ⟨-, hH, -⟩ :=
-      hF₀.storePt hL (t := P.t17) (by simp [Ptrs.temps]) (Nat.le_add_right _ 38)
+      hF₀.storePt hL (t := P.t17) (by simp [Ptrs.temps]) (Nat.le_add_right _ 37)
         (Edwards25519.add.spec Q (baseTbl d.toNat))
     replace hH : Holds S.mem P.t17 (Edwards25519.add.spec Q (baseTbl d.toNat)) := by
       rw [hS]; exact hH
     have hra : Room S.mem P.acc 1344 := hF.acc.1.2
-    have hr17 : Room S.mem P.t17 1344 := h17.2.1
+    have hr17 : Room S.mem P.t17 1344 := by mem_fact
     checkpoint hck
     have hcp :=
       fun (S' : GlobalState)
@@ -693,12 +699,12 @@ theorem digit1_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (x
         subst hS'
         exact (hF.storePtCopy hL (by simp [Ptrs.temps]) (by omega) _).1
       obtain ⟨-, hH, -⟩ :=
-        hF₀.storePtCopy hL (t := P.t16) (by simp [Ptrs.temps]) (Nat.le_add_right _ 47)
+        hF₀.storePtCopy hL (t := P.t16) (by simp [Ptrs.temps]) (Nat.le_add_right _ 44)
           (Edwards25519.sub.spec Q (baseTbl m.toNat))
       replace hH : Holds S.mem P.t16 (Edwards25519.sub.spec Q (baseTbl m.toNat)) := by
         rw [hS]; exact hH
       have hra : Room S.mem P.acc 1344 := hF.acc.1.2
-      have hr16 : Room S.mem P.t16 1344 := h16.2.1
+      have hr16 : Room S.mem P.t16 1344 := by mem_fact
       checkpoint hck
       have hcp :
         ∀ S' : GlobalState,
@@ -771,6 +777,7 @@ theorem digit2_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (x
   dsimp only [Regs] at hR
   have he2o := hD2.2.1
   have hwf := hF.wf
+  have hgl := hF.globals
   block_init
   step_pure [Nat.mod_lt i (by decide : 0 < 18446744073709551616)]
   step_load consuming hf1 hl1
@@ -794,12 +801,12 @@ theorem digit2_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (x
       subst hS'
       exact (hF.storePt hL (by simp [Ptrs.temps]) (by omega) _).1
     obtain ⟨-, hH, -⟩ :=
-      hF₀.storePt hL (t := P.t15) (by simp [Ptrs.temps]) (Nat.le_add_right _ 38)
+      hF₀.storePt hL (t := P.t15) (by simp [Ptrs.temps]) (Nat.le_add_right _ 37)
         (Edwards25519.add.spec Q (T d.toNat))
     replace hH : Holds S.mem P.t15 (Edwards25519.add.spec Q (T d.toNat)) := by
       rw [hS]; exact hH
     have hra : Room S.mem P.acc 1344 := hF.acc.1.2
-    have hr15 : Room S.mem P.t15 1344 := h15.2.1
+    have hr15 : Room S.mem P.t15 1344 := by mem_fact
     checkpoint hck
     have hcp :=
       fun (S' : GlobalState)
@@ -852,12 +859,12 @@ theorem digit2_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (x
         subst hS'
         exact (hF.storePtCopy hL (by simp [Ptrs.temps]) (by omega) _).1
       obtain ⟨-, hH, -⟩ :=
-        hF₀.storePtCopy hL (t := P.t14) (by simp [Ptrs.temps]) (Nat.le_add_right _ 47)
+        hF₀.storePtCopy hL (t := P.t14) (by simp [Ptrs.temps]) (Nat.le_add_right _ 44)
           (Edwards25519.sub.spec Q (T m.toNat))
       replace hH : Holds S.mem P.t14 (Edwards25519.sub.spec Q (T m.toNat)) := by
         rw [hS]; exact hH
       have hra : Room S.mem P.acc 1344 := hF.acc.1.2
-      have hr14 : Room S.mem P.t14 1344 := h14.2.1
+      have hr14 : Room S.mem P.t14 1344 := by mem_fact
       checkpoint hck
       have hcp :
         ∀ S' : GlobalState,
@@ -977,6 +984,7 @@ theorem tail_block (P : Ptrs) (N : Nat) (hL : Layout P N) (M : MemoryState) (out
               (Edwards25519_mulDoubleBasePublic.runFrom E' ^bb5 S' >>= g) = K) :
     (Edwards25519_mulDoubleBasePublic.runFrom E ^bb12 S >>= g) = K := by
   have hwf := hF.wf
+  have hgl := hF.globals
   dsimp only [Regs] at hR
   block_init
   step_pure
@@ -1211,12 +1219,13 @@ theorem from_bb2 (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (T 
     (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β) (S : GlobalState)
     (E : ⟪Edwards25519_mulDoubleBasePublic.Γ⟫) (hArgs : Args E out s1 p2 s2) (hR : Regs P E)
     (hR' : E ⊨ [%3488 := idp, %3490 := 63#64]) (hwf : S.WF)
+    (hgl : S.mem.Globals Edwards25519_mulDoubleBasePublic.globals)
     (htemps : ∀ u ∈ P.acc :: P.temps, S.mem.PtRoom u ∧ S.mem.PadClear u) (he1 : Room S.mem P.e1 512)
     (he1o : P.e1.offset = 0) (he2 : Room S.mem P.e2 512) (he2o : P.e2.offset = 0)
     (hs1 : Fits S.mem s1 256) (hs1o : ¬s1.offset.uaddOverflow 32#64)
     (hx1 : S.mem.readAt s1 256 = x1) (hs2 : Fits S.mem s2 256)
     (hs2o : ¬s2.offset.uaddOverflow 32#64) (hx2 : S.mem.readAt s2 256 = x2)
-    (ht1 : TableAt S.mem P.bp baseTbl) (ht2 : TableAt S.mem P.tb T) (hid : Room S.mem idp 1344)
+    (ht1 : TableAt S.mem P.bp baseTbl) (ht2 : TableAt S.mem P.tb T) (hid : Live S.mem idp 1344)
     (hidb : S.mem.readAt idp 1344 = Edwards25519.identityBits)
     (hidd : S.mem.definedAt idp 1344 = Edwards25519.identityDef) (h12 : P.e1.id ≠ P.e2.id)
     (h1s : P.e1.id ≠ s2.id) (h1b : P.e1.id ≠ P.bp.id) (h1t : P.e1.id ≠ P.tb.id)
@@ -1271,8 +1280,8 @@ theorem from_bb2 (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (T 
   have hcp :=
     fun m' (hm : m' = S₁.mem.storeDef P.acc Edwards25519.identityBits Edwards25519.identityDef) =>
     (hm ▸
-        ⟨(MemoryState.readAt_storeDef_self hra.2.inBounds _ _).trans identityBits_eq,
-          (MemoryState.definedAt_storeDef_self hra.2.inBounds _ _).trans identityDef_eq⟩ :
+        ⟨(MemoryState.readAt_storeDef_self hra.2 _ _).trans identityBits_eq,
+          (MemoryState.definedAt_storeDef_self hra.2 _ _).trans identityDef_eq⟩ :
       Holds m' P.acc Edwards25519.identity)
   step_memcpy consuming hidb hidd hd
   have hH := hcp _ (congrArg GlobalState.mem hS)
@@ -1281,7 +1290,7 @@ theorem from_bb2 (P : Ptrs) (N : Nat) (hL : Layout P N) (x1 x2 : BitVec 256) (T 
     rw [hS]; exact MemoryState.getElem?_storeDef_ne hq
   have hF : Facts P S₁.mem S := by
     refine
-      ⟨hwf, hsame _ (hL.temp P.acc List.mem_cons_self).2.2.1.symm,
+      ⟨hwf, hgl, hsame _ (hL.temp P.acc List.mem_cons_self).2.2.1.symm,
         hsame _ (hL.temp P.acc List.mem_cons_self).2.2.2.1.symm,
         hsame _ (hL.temp P.acc List.mem_cons_self).2.2.2.2.1.symm,
         hsame _ (hL.temp P.acc List.mem_cons_self).2.2.2.2.2.symm, fun u hu => ?_, hra, hH.padClear⟩
@@ -1334,7 +1343,7 @@ theorem exit_block (P : Ptrs) (out s1 p2 s2 : Pointer) (g : Vals [] × GlobalSta
 theorem weak_block (out s1 p2 s2 wk : Pointer) (g : Vals [] × GlobalState → PoisonOr β)
     (K : PoisonOr β) (S : GlobalState) (E : ⟪Edwards25519_mulDoubleBasePublic.Γ⟫)
     (hArgs : Args E out s1 p2 s2) (hR : E ⊨ [%3486 := wk, %3487 := 176#64]) (hwf : S.WF)
-    (hFo : Room S.mem out 1408) (hFw : Room S.mem wk 1408) (hne : out.id ≠ wk.id)
+    (hFo : Room S.mem out 1408) (hFw : Live S.mem wk 1408) (hne : out.id ≠ wk.id)
     (hwb : S.mem.readAt wk 1408 = Edwards25519_mulDoubleBasePublic_weak.bits)
     (hwd : S.mem.definedAt wk 1408 = weakDef)
     (hK :
@@ -1378,18 +1387,21 @@ theorem digit_bound {x : BitVec 256} (h : x.msb = false) (k : Nat) (hk : k < 64)
   simp only [Edwards25519.slide.spec, Fin.getElem_fin, Vector.getElem_ofFn] at this
   exact ⟨this.1, this.2.1⟩
 
-/-- The frame's slots: the temporaries `0 … 7`, the digits `8`, `9` of the slots' state `S₁`, the
-globals of `S₀`'s; the second table the base point's (`S₀`'s slot `0`) or `S₁`'s slot `10`. -/
+/-- The frame's slots: the temporaries `0 … 7`, the digits `8`, `9` of the slots' state `S₁`; the
+base point's table `bp` a global's block, below them; the second table `bp` or `S₁`'s slot `10`. -/
 theorem layout_of_slots {S₀ S₁ : GlobalState}
-    (h : S₁.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 3) (tb : Pointer)
-    (htb : tb = S₀.slot 0 ∨ tb = S₁.slot 10) :
+    (h : S₁.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock) (bp : Pointer)
+    (hbp : bp.id.id < S₀.alloc.nextFreeBlock) (hbo : bp.offset = 0) (tb : Pointer)
+    (htb : tb = bp ∨ tb = S₁.slot 10) :
     Layout
       ⟨S₁.slot 0, S₁.slot 1, S₁.slot 2, S₁.slot 3, S₁.slot 4, S₁.slot 5, S₁.slot 6, S₁.slot 7,
-        S₁.slot 8, S₁.slot 9, S₀.slot 0, tb⟩
+        S₁.slot 8, S₁.slot 9, bp, tb⟩
       S₀.alloc.nextFreeBlock := by
   have hne (i j : Nat) (hij : i ≠ j) : (S₁.slot i).id ≠ (S₁.slot j).id := GlobalState.slot_id_ne hij
-  have hb (i : Nat) : (S₁.slot i).id ≠ (S₀.slot 0).id := by
-    simp [GlobalState.slot, h]; omega
+  have hb (i : Nat) : (S₁.slot i).id ≠ bp.id := by
+    intro he
+    have := congrArg BlockId.id he
+    simp [GlobalState.slot, h] at this; omega
   have ht (i : Nat) (hi : i ≠ 10) : (S₁.slot i).id ≠ tb.id := by
     rcases htb with rfl | rfl
     · exact hb i
@@ -1405,8 +1417,8 @@ theorem layout_of_slots {S₀ S₁ : GlobalState}
   · intro u hu
     simp only [Ptrs.temps, List.mem_cons, List.not_mem_nil, or_false] at hu
     rcases hu with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact hne _ _ (by decide)
-  · simp [GlobalState.slot]
-  · rcases htb with rfl | rfl <;> simp [GlobalState.slot]
+  · simp [hbo]
+  · rcases htb with rfl | rfl <;> simp [GlobalState.slot, hbo]
 
 end Edwards25519_mulDoubleBasePublic
 
@@ -1420,10 +1432,10 @@ set_option maxHeartbeats 2000000 in
 `2^255`) and the point at `p2` (limbs below `2^53`, `is_base` known): `s1 B + s2 P2` with error code
 `0`, or `error.WeakPublicKey`'s result. -/
 public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64)
-    (hs1 : Fits s.mem s1 256) (hs1o : ¬s1.offset.uaddOverflow 32#64)
-    (hm1 : (s.mem.readAt s1 256).msb = false) (hp2 : s.mem.PtFit p2)
-    (hP2 : (s.mem.readPt p2).Lt (2 ^ 53)) (hs2 : Fits s.mem s2 256)
+    (hwf : s.WF) (hg : s.mem.Globals Edwards25519_mulDoubleBasePublic.globals)
+    (hout : Room s.mem out 1408) (hoo : out.offset.toNat + 176 ≤ 2 ^ 64) (hs1 : Fits s.mem s1 256)
+    (hs1o : ¬s1.offset.uaddOverflow 32#64) (hm1 : (s.mem.readAt s1 256).msb = false)
+    (hp2 : s.mem.PtFit p2) (hP2 : (s.mem.readPt p2).Lt (2 ^ 53)) (hs2 : Fits s.mem s2 256)
     (hs2o : ¬s2.offset.uaddOverflow 32#64) (hm2 : (s.mem.readAt s2 256).msb = false) :
     Edwards25519_mulDoubleBasePublic.call
         (Edwards25519_mulDoubleBasePublic.args (.value out) (.value s1) (.value p2) (.value s2)) s =
@@ -1455,32 +1467,26 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
   step_pure
   step_addressof Edwards25519_basePointPc with bp
   have htb1 : TableAt S.mem bp baseTbl :=
-    tableAt_base hbp_room hbp_off (hread_bp.trans (by decide +kernel))
+    tableAt_base hbp_live hbp_off (hread_bp.trans (by decide +kernel))
       (fits_entries hbp_fits hbp_fits_168 hbp_fits_336 hbp_fits_504 hbp_fits_672 hbp_fits_840
         hbp_fits_1008 hbp_fits_1176 hbp_fits_1344)
   clear hread_bp hbp_fits hbp_fits_168 hbp_fits_336 hbp_fits_504 hbp_fits_672 hbp_fits_840
     hbp_fits_1008 hbp_fits_1176 hbp_fits_1344 hbp_fits_1512 hbp_fits_1680 hbp_fits_1848
-    hbp_fits_2016 hbp_fits_2184 hbp_fits_2352 hbp_fits_2520
+    hbp_fits_2016 hbp_fits_2184 hbp_fits_2352 hbp_fits_2520 hdefined_bp
+  have hbpN : bp.id.id < S₀.alloc.nextFreeBlock := hS ▸ hwf.global_lt hglobal_bp
   step_pure
   step_addressof Edwards25519_mulDoubleBasePublic_weak.value_eq with wk
   have hwb : S.mem.readAt wk 1408 = Edwards25519_mulDoubleBasePublic_weak.bits :=
     hread_wk.trans (by decide +kernel)
-  have hwd : S.mem.definedAt wk 1408 = weakDef := by
-    rw [hS, hwk]
-    exact
-      (MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega)) _ _).trans
-        (by decide +kernel)
-  clear hread_wk
+  have hwd : S.mem.definedAt wk 1408 = weakDef := hdefined_wk.trans (by decide +kernel)
+  clear hread_wk hdefined_wk
   step_pure
   step_addressof Edwards25519_identityElement.value_eq with idp
   have hidb : S.mem.readAt idp 1344 = Edwards25519.identityBits :=
     hread_idp.trans (by decide +kernel)
-  have hidd : S.mem.definedAt idp 1344 = Edwards25519.identityDef := by
-    rw [hS, hidp]
-    exact
-      (MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega)) _ _).trans
-        (by decide +kernel)
-  clear hread_idp
+  have hidd : S.mem.definedAt idp 1344 = Edwards25519.identityDef :=
+    hdefined_idp.trans (by decide +kernel)
+  clear hread_idp hdefined_idp
   checkpoint hck0
   rename' S => S₁
   iterate 5 step_pure
@@ -1495,7 +1501,7 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
   step_alloca with e2
   step_alloca with e1
   step_alloca with pc
-  have hz (t : Pointer) (h : S.mem[t.id]? = some ⟨168, 0, 0, true, fun _ => none⟩) :
+  have hz (t : Pointer) (h : S.mem[t.id]? = some ⟨168, 0, 0, true, fun _ => none, true⟩) :
     S.mem.PadClear t :=
     .of_fresh (by simp [MemoryState.readAt, h]) (by simp [MemoryState.definedAt, h])
   have hc11 := hz t11 (by fresh_slot ht11)
@@ -1511,31 +1517,30 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
   have hbr' : S.mem.readAt (p2.add 160#64) 1 = b := hb
   step_pure
   step_load only [hbr'] consuming hbase hbr'
-  have h3 : S₁.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 3 := by
-    rw [← hck0]; simp [GlobalState.alloca]
-  have hL (tb : Pointer) (htb : tb = S₀.slot 0 ∨ tb = S₁.slot 10) :
+  have h3 : S₁.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock := by rw [← hck0]
+  have hL (tb : Pointer) (htb : tb = bp ∨ tb = S₁.slot 10) :
     Layout ⟨t11, t12, t13, t14, t15, t16, t17, acc, e2, e1, bp, tb⟩ S₀.alloc.nextFreeBlock := by
-    rw [ht11, ht12, ht13, ht14, ht15, ht16, ht17, hacc, he2, he1, hbp]
-    exact layout_of_slots h3 tb htb
+    rw [ht11, ht12, ht13, ht14, ht15, ht16, ht17, hacc, he2, he1]
+    exact layout_of_slots h3 bp hbpN hbp_off tb htb
   finish_block
   case isTrue =>
     rw [hbr] at hRes hk
     simp only [spec, blocks, ↓reduceIte] at hRes hk
     have hEr : S.mem.eraseFrom S₀.alloc.nextFreeBlock = S₀.mem := by
       rw [hS, ← hck0]; erase_frame
-    have hAl : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 14 := by
+    have hAl : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 11 := by
       rw [hS, ← hck0]; simp [GlobalState.alloca]
     refine
-      from_bb2 _ _ (hL bp (.inl hbp)) x1 x2 baseTbl baseTbl_lt baseTbl_lt (digit_bound hm1)
+      from_bb2 _ _ (hL bp (.inl rfl)) x1 x2 baseTbl baseTbl_lt baseTbl_lt (digit_bound hm1)
         (digit_bound hm2) hm1 hm2 out s1 p2 s2 idp _ _ S E hArgs (by env_reads) (by env_reads) hwf
-        (by temps_facts) he1_room he1_off he2_room he2_off hs1 hs1o hx1 hs2 hs2o hx2 htb1 htb1
-        hidp_room hidb hidd (by slots) (hs2_ne_e1.symm) (by slots) (by slots) (by slots) (by slots)
+        hg (by temps_facts) he1_room he1_off he2_room he2_off hs1 hs1o hx1 hs2 hs2o hx2 htb1 htb1
+        hidp_live hidb hidd (by slots) (hs2_ne_e1.symm) (by slots) (by slots) (by slots) (by slots)
         (by slots) (by slots) (by slots) (by slots) (by slots)
         fun E' S' hA' hR' hwf' hacc' hQ' hn' he' => ?_
     have hlt : out.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt (Room.mem hout₀)
     refine
       exit_block _ out s1 p2 s2 _ _ _ S' E' hA' hR' hwf' hacc' hQ'
-        (Room.congr (getElem?_of_eraseFrom he' hlt) hout) hoo hout_ne_acc fun E'' S'' hS'' => ?_
+        (hout.of_getElem?_eq (getElem?_of_eraseFrom he' hlt)) hoo hout_ne_acc fun E'' S'' hS'' => ?_
     block_init
     finish_block
     rw [hS'', ← hRes, ← hk]
@@ -1544,8 +1549,8 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
       show S'.alloc = ⟨S'.alloc.nextFreeBlock⟩ from rfl, hn', hAl]
     simp only [store]
     rw [show
-        S₀.alloc.nextFreeBlock + 14 + 6 + ladderBlocks x1 x2 63 =
-          S₀.alloc.nextFreeBlock + (20 + ladderBlocks x1 x2 63)
+        S₀.alloc.nextFreeBlock + 11 + 6 + ladderBlocks x1 x2 63 =
+          S₀.alloc.nextFreeBlock + (17 + ladderBlocks x1 x2 63)
         by omega]
   case isFalse =>
     simp only [spec, blocks, hbr, ↓reduceIte] at hRes hk
@@ -1575,7 +1580,7 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
     step_pure
     have hEr : S.mem.eraseFrom S₀.alloc.nextFreeBlock = S₀.mem := by
       rw [hS]; dsimp only; rw [← hckp, ← hck0]; erase_frame
-    have hAl : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 245 := by
+    have hAl : S.alloc.nextFreeBlock = S₀.alloc.nextFreeBlock + 238 := by
       rw [hS]; dsimp only; rw [← hckp, ← hck0]; simp [GlobalState.alloca]
     finish_block
     case isTrue =>
@@ -1583,14 +1588,15 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
       refine
         from_bb2 _ _ (hL pc (.inr hpc)) x1 x2 (pcTbl P2) baseTbl_lt (pcTbl_lt hP2) (digit_bound hm1)
           (digit_bound hm2) hm1 hm2 out s1 p2 s2 idp _ _ S E hArgs (by env_reads) (by env_reads) hwf
-          (by temps_facts) he1_room he1_off he2_room he2_off hs1 hs1o hx1 hs2 hs2o hx2 htb1 htb2
-          hidp_room hidb hidd (by slots) (hs2_ne_e1.symm) (by slots) (by slots) (by slots)
+          hg (by temps_facts) he1_room he1_off he2_room he2_off hs1 hs1o hx1 hs2 hs2o hx2 htb1 htb2
+          hidp_live hidb hidd (by slots) (hs2_ne_e1.symm) (by slots) (by slots) (by slots)
           (by slots) (by slots) (by slots) (by slots) (by slots) (by slots)
           fun E' S' hA' hR' hwf' hacc' hQ' hn' he' => ?_
       have hlt : out.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt (Room.mem hout₀)
       refine
         exit_block _ out s1 p2 s2 _ _ _ S' E' hA' hR' hwf' hacc' hQ'
-          (Room.congr (getElem?_of_eraseFrom he' hlt) hout) hoo hout_ne_acc fun E'' S'' hS'' => ?_
+          (hout.of_getElem?_eq (getElem?_of_eraseFrom he' hlt)) hoo hout_ne_acc fun E'' S'' hS'' =>
+          ?_
       block_init
       finish_block
       rw [hS'', ← hRes, ← hk]
@@ -1599,16 +1605,13 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
         show S'.alloc = ⟨S'.alloc.nextFreeBlock⟩ from rfl, hn', hAl]
       simp only [store]
       rw [show
-          S₀.alloc.nextFreeBlock + 245 + 6 + ladderBlocks x1 x2 63 =
-            S₀.alloc.nextFreeBlock + (251 + ladderBlocks x1 x2 63)
+          S₀.alloc.nextFreeBlock + 238 + 6 + ladderBlocks x1 x2 63 =
+            S₀.alloc.nextFreeBlock + (244 + ladderBlocks x1 x2 63)
           by omega]
     case isFalse =>
       simp only [hbr, ↓reduceIte] at hRes hk
-      have hout_ne_wk : out.id ≠ wk.id := by
-        have := hwf₀.lt (Room.mem hout₀)
-        rw [hwk]; intro h; simp only [GlobalState.slot] at h; rw [h] at this; simp at this
       refine
-        weak_block out s1 p2 s2 wk _ _ S E hArgs (by env_reads) hwf hout hwk_room hout_ne_wk hwb hwd
+        weak_block out s1 p2 s2 wk _ _ S E hArgs (by env_reads) hwf hout hwk_live hout_ne_wk hwb hwd
           fun E' S' hS' => ?_
       block_init
       finish_block

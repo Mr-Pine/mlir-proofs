@@ -149,10 +149,15 @@ theorem bb7b_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState} {g : ⟪Γ⟫ ×
   have hz2 := hF.tmp 193
   have hz3 := hF.tmp 194
   have hz4 := hF.tmp 195
+  have hw0 := hF.wr 191
+  have hw1 := hF.wr 192
+  have hw2 := hF.wr 193
+  have hw3 := hF.wr 194
+  have hw4 := hF.wr 195
   iterate 5 step_pure
   step_call using fd_r52x5_quad_mul_fast.call_eq
   iterate 5 step_load [ofFn_extractVecElem_readAt] inline
-  clear hz0 hz1 hz2 hz3 hz4
+  clear hz0 hz1 hz2 hz3 hz4 hw0 hw1 hw2 hw3 hw4
   clear_facts_at (B.slot 191) (B.slot 192) (B.slot 193) (B.slot 194) (B.slot 195)
   iterate 5 step_pure
   rw [← MemoryState.callTmp5.eq_1] at hS
@@ -338,6 +343,8 @@ theorem bb7_run {β : Type} {Ein : ⟪Γ⟫} {S : GlobalState}
       rir_reg% hty 73 := B.slot 30, rir_reg% hty 74 := B.slot 31, rir_reg% hty 75 := B.slot 32,
       rir_reg% hty 76 := B.slot 33, rir_reg% hty 33 := 0#32] := by
     chain_reads
+  have w21 := hF.wr 21
+  have w29 := hF.wr 29
   -- `fd_f25519_mul2( xa, xa, uv3a, xb, xb, uv3b )`
   step_call using fd_f25519_mul2.call_eq
   name_vec xb

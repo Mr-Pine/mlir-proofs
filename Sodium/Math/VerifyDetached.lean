@@ -119,7 +119,8 @@ public theorem _crypto_sign_ed25519_verify_detached.spec_eq (mlen : BitVec 64)
 bytes at `m`, the signature `r ‖ S` at `sig` and the key at `pk`: `0` accepts, `-1` rejects.
 Memory is unchanged; `crypto_verify_32` behaves as `crypto_verify_32.Spec` states. -/
 public theorem crypto_sign_ed25519_verify_detached.call_eq_verify (sig m pk : Pointer)
-    (mlen : BitVec 64) (s : GlobalState) (hwf : s.WF) (hsig : Fits s.mem sig 512)
+    (mlen : BitVec 64) (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals crypto_sign_ed25519_verify_detached.globals) (hsig : Fits s.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hm : Fits s.mem m (8 * mlen.toNat))
     (hm_off : ¬m.offset.uaddOverflow mlen) (hpk : Fits s.mem pk 256)
     (hpk_off : ¬pk.offset.uaddOverflow 32#64) (hv32 : crypto_verify_32.Spec) :
@@ -139,15 +140,16 @@ public theorem crypto_sign_ed25519_verify_detached.call_eq_verify (sig m pk : Po
                     (s.mem.readAt sig 256) (s.mem.readAt (sig.add 32#64) 256)
                     (s.mem.readAt pk 256)⟩,
             mem := s.mem }) := by
-  rw [crypto_sign_ed25519_verify_detached.call_eq_spec sig m pk mlen s hwf hsig hsig_off hm hm_off
-      hpk hpk_off hv32 (hram_digits _ _ _ _) digits_of_lt_ell,
+  rw [crypto_sign_ed25519_verify_detached.call_eq_spec sig m pk mlen s hwf hg hsig hsig_off hm
+      hm_off hpk hpk_off hv32 (hram_digits _ _ _ _) digits_of_lt_ell,
     _crypto_sign_ed25519_verify_detached.spec_eq]
 
 /-- `crypto_sign_ed25519_verify_detached(sig, m, mlen, pk)` returns `Sodium.verify` of the `mlen`
 bytes at `m`, the signature `r ‖ S` at `sig` and the key at `pk`: `0` accepts, `-1` rejects.
 Memory is unchanged. -/
 public theorem crypto_sign_ed25519_verify_detached.call_eq (sig m pk : Pointer) (mlen : BitVec 64)
-    (s : GlobalState) (hwf : s.WF) (hsig : Fits s.mem sig 512)
+    (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals crypto_sign_ed25519_verify_detached.globals) (hsig : Fits s.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hm : Fits s.mem m (8 * mlen.toNat))
     (hm_off : ¬m.offset.uaddOverflow mlen) (hpk : Fits s.mem pk 256)
     (hpk_off : ¬pk.offset.uaddOverflow 32#64) :
@@ -167,7 +169,7 @@ public theorem crypto_sign_ed25519_verify_detached.call_eq (sig m pk : Pointer) 
                     (s.mem.readAt sig 256) (s.mem.readAt (sig.add 32#64) 256)
                     (s.mem.readAt pk 256)⟩,
             mem := s.mem }) :=
-  crypto_sign_ed25519_verify_detached.call_eq_verify sig m pk mlen s hwf hsig hsig_off hm hm_off hpk
-    hpk_off crypto_verify_32.call_eq
+  crypto_sign_ed25519_verify_detached.call_eq_verify sig m pk mlen s hwf hg hsig hsig_off hm hm_off
+    hpk hpk_off crypto_verify_32.call_eq
 
 end MLIR.Sodium

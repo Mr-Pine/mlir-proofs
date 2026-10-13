@@ -9,25 +9,25 @@ namespace MLIR.Zig
 
 open Sha512_update
 
-/-- `m` and `m'` hold the same blocks other than `b`, and the same unspecified choices. -/
+/-- `m` and `m'` hold the same blocks other than `b`, the same unspecified choices and globals. -/
 @[expose]
 public def SameOff (b : BlockId) (m m' : MemoryState) : Prop :=
-  m.unspec = m'.unspec ∧ ∀ k, k ≠ b → m[k]? = m'[k]?
+  m.unspec = m'.unspec ∧ m.table = m'.table ∧ ∀ k, k ≠ b → m[k]? = m'[k]?
 
 theorem SameOff.refl (b : BlockId) (m : MemoryState) : SameOff b m m :=
-  ⟨rfl, fun _ _ => rfl⟩
+  ⟨rfl, rfl, fun _ _ => rfl⟩
 
 theorem SameOff.trans {b : BlockId} {m m' m'' : MemoryState} (h : SameOff b m m')
     (h' : SameOff b m' m'') : SameOff b m m'' :=
-  ⟨h.1.trans h'.1, fun k hk => (h.2 k hk).trans (h'.2 k hk)⟩
+  ⟨h.1.trans h'.1, h.2.1.trans h'.2.1, fun k hk => (h.2.2 k hk).trans (h'.2.2 k hk)⟩
 
 theorem SameOff.storeAt {b : BlockId} {m m' : MemoryState} {p : Pointer} {x : BitVec w}
     (hp : p.id = b) (h : SameOff b m m') : SameOff b (m.storeAt p x) m' :=
-  ⟨MemoryState.unspec_storeAt.trans h.1, fun k hk => by
+  ⟨MemoryState.unspec_storeAt.trans h.1, h.2.1, fun k hk => by
     rw [MemoryState.getElem?_storeAt_ne (p := p) (q := ⟨k, 0⟩)
         (by
           rw [hp]; exact hk)]
-    exact h.2 k hk⟩
+    exact h.2.2 k hk⟩
 
 theorem SameOff.storeWords {d : Pointer} {f : Nat → BitVec 64} :
     ∀ n i {m m' : MemoryState}, SameOff d.id m m' → SameOff d.id (Sha512Obj.storeWords d f i n m) m'
@@ -69,11 +69,12 @@ public theorem SameOff.eraseFrom {b : BlockId} {m m' : MemoryState} (h : SameOff
     by_cases hk : k.id < N
     · have hne : k ≠ b := fun e => by
         subst e; omega
-      have := h.2 k hne
+      have := h.2.2 k hne
       simp only [MemoryState.getElem?_eq] at this
       rw [this]
     · simp [hk]
   · exact h.1
+  · exact h.2.1
 
 /-- `update`'s memory, erased from `N` at or below the object's block: as before it. -/
 public theorem post_eraseFrom_of_le {s : GlobalState} {d b : Pointer} {n : BitVec 64}

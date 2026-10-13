@@ -137,7 +137,7 @@ public theorem _root_.MLIR.MemoryState.storeLimbs_eq_storeAt {m : MemoryState} {
     (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + 8 * k :=
     hp ▸ Pointer.offsetInBits_add_limb h hk
   simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self]
+    MemoryState.modifyBlock_modifyBlock_self, implies_true, Function.comp_apply]
   congr 1
   funext blk
   simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
@@ -173,20 +173,30 @@ public theorem _root_.MLIR.MemoryState.LimbsFit.fits {m : MemoryState} {p : Poin
 /-- Room for limbs is room for their 320 bits. -/
 public theorem _root_.MLIR.MemoryState.LimbsRoom.room {m : MemoryState} {p : Pointer}
     (h : m.LimbsRoom p) : Room m p 320 := by
-  obtain ⟨ho, ⟨blk, hblk, hl, -⟩, -, -, -, ⟨blk', hblk', -, hsz⟩⟩ := h
+  obtain ⟨ho, ⟨⟨blk, hblk, hl, -⟩, hw⟩, -, -, -, ⟨⟨blk', hblk', -, hsz⟩, -⟩⟩ := h
   have hb : blk' = blk := Option.some.inj (hblk'.symm.trans hblk)
   subst hb
   have o32 := Pointer.offsetInBits_add_limb (k := 32) ho (by omega)
   have hp : p.offsetInBits = 8 * p.offset.toNat := rfl
-  refine ⟨blk', hblk, hl, ?_⟩
+  refine ⟨⟨blk', hblk, hl, ?_⟩, hw⟩
   rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl, o32] at hsz
   omega
 
 /-- The 320 bits at limbs that fit: the limbs' bits. -/
 public theorem _root_.MLIR.MemoryState.readAt_eq_limbsBits {m : MemoryState} {p : Pointer}
     (h : m.LimbsFit p) : m.readAt p 320 = limbsBits (m.readLimbs p) := by
-  conv_lhs => rw [← MemoryState.storeLimbs_readLimbs_self h]
-  rw [MemoryState.storeLimbs_eq_storeAt h.1, MemoryState.readAt_storeAt_self h.fits.inBounds]
+  -- in a copy of `m` with `p`'s block writable, which reads the same
+  let m' := m.makeWritable p.id
+  have hr (q : Pointer) (w : Nat) : m'.readAt q w = m.readAt q w := MemoryState.readAt_makeWritable
+  have h' : m'.LimbsFit p :=
+    ⟨h.1, h.2.1.makeWritable, h.2.2.1.makeWritable, h.2.2.2.1.makeWritable,
+      h.2.2.2.2.1.makeWritable, h.2.2.2.2.2.makeWritable⟩
+  have hl : m'.readLimbs p = m.readLimbs p := by
+    funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
+  rw [← hr, ← hl]
+  conv_lhs => rw [← MemoryState.storeLimbs_readLimbs_self h']
+  rw [MemoryState.storeLimbs_eq_storeAt h.1,
+    MemoryState.readAt_storeAt_self (Room.makeWritable_self h.fits.live)]
 
 /-- A field element copied whole (a `memcpy` of 40 bytes): its limbs stored. -/
 public theorem _root_.MLIR.MemoryState.storeAt_readAt_eq_storeLimbs {m m' : MemoryState}
@@ -313,8 +323,9 @@ public theorem _root_.MLIR.MemoryState.WideFit.storeLimbs {m : MemoryState} {p q
     h.2.2.2.2.2.storeLimbs⟩
 
 public theorem _root_.MLIR.MemoryState.WideFit.room {m : MemoryState} {p : Pointer}
-    (h : m.WideFit p) : m.WideRoom p :=
-  ⟨h.1, h.2.1.room, h.2.2.1.room, h.2.2.2.1.room, h.2.2.2.2.1.room, h.2.2.2.2.2.room⟩
+    (h : m.WideFit p) (hw : Writable m p) : m.WideRoom p :=
+  ⟨h.1, h.2.1.room hw, h.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.1.room (hw.of_id_eq rfl),
+    h.2.2.2.2.1.room (hw.of_id_eq rfl), h.2.2.2.2.2.room (hw.of_id_eq rfl)⟩
 
 /-- An 80-byte live block from its start has room for five columns. -/
 public theorem _root_.MLIR.MemoryState.WideRoom.of_room {m : MemoryState} {p : Pointer}

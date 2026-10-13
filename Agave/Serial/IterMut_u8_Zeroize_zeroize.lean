@@ -28,10 +28,11 @@ open Memory in
 /-- A second pointer store to the same place overwrites the first. -/
 theorem storePtr_storePtr_self {m : MemoryState} {p x y : Pointer} :
     (m.storePtr p x).storePtr p y = m.storePtr p y := by
-  simp only [MemoryState.storePtr, MemoryState.modifyBlock_modifyBlock_self]
+  simp only [MemoryState.storePtr, MemoryState.modifyBlock_modifyBlock_self, implies_true]
   congr 1
   funext blk
-  simp only [Function.comp_apply, spliceBits_spliceBits_self, MemoryBlock.mk.injEq, true_and]
+  simp only [Function.comp_apply, spliceBits_spliceBits_self, MemoryBlock.mk.injEq, true_and,
+    and_true]
   refine ⟨HEq.rfl, HEq.rfl, ?_⟩
   funext o
   simp only [MemoryBlock.clearPtrs, show (0#64 = BitVec.allOnes 64) = False by decide, ↓reduceIte]

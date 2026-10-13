@@ -34,7 +34,8 @@ section Proof
 /-- `fd_ed25519_verify_equation` returns `spec` of the scalars at `k`, `S` and the points at `A`,
 `R`, and leaves `A` negated; `Rcmp` is freed. -/
 public theorem fd_ed25519_verify_equation.call_eq (k A S R : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hk : Fits s.mem k (8 * 32)) (hk_off : ¬k.offset.uaddOverflow 32#64) (hA : s.mem.PointFit A)
+    (hg : s.mem.Globals fd_ed25519_verify_equation.globals) (hk : Fits s.mem k (8 * 32))
+    (hk_off : ¬k.offset.uaddOverflow 32#64) (hA : s.mem.PointFit A) (hAw : Writable s.mem A)
     (hS : Fits s.mem S (8 * 32)) (hS_off : ¬S.offset.uaddOverflow 32#64) (hR : s.mem.PointFit R)
     (hkA : k.id ≠ A.id) (hSA : S.id ≠ A.id) (hRA : R.id ≠ A.id) :
     fd_ed25519_verify_equation.call

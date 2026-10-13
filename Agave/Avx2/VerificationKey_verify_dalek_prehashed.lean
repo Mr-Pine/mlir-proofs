@@ -43,13 +43,13 @@ noncomputable def VerificationKey_verify_dalek_prehashed.spec (minus_A : Edwards
 /-- The blocks the function allocates, its callees' included: its 14 slots, then each call's. -/
 def VerificationKey_verify_dalek_prehashed.blocks (minus_A : EdwardsPoint) (r s h : BitVec 256) :
     Nat :=
-  14 + 102 +
+  14 + 101 +
     if Serial.EdwardsPoint_is_small_order.spec minus_A = 1#1 then 0
     else
       match Serial.CompressedEdwardsY_decompress.spec r with
-      | none => 161
+      | none => 158
       | some R =>
-        162 + 102 +
+        159 + 101 +
           if Serial.EdwardsPoint_is_small_order.spec R = 1#1 then 0
           else
             1 + 19 + 33 + 1 +
@@ -80,16 +80,17 @@ attribute [local mlir_read] readAt_storeOptEdwards_of_id_ne readEdwards_storeOpt
 
 /-- `decompress` on bytes that decode to `P`. -/
 theorem decompress_call_eq' {out repr : Pointer} {s : GlobalState} {P : Option EdwardsPoint}
-    (hwf : s.WF) (hout : s.mem.OptEdwardsRoom out) (hrepr : Fits s.mem repr 256)
+    (hwf : s.WF) (hg : s.mem.Globals CompressedEdwardsY_decompress.globals)
+    (hout : s.mem.OptEdwardsRoom out) (hrepr : Fits s.mem repr 256)
     (hrepr_off : ¬repr.offset.uaddOverflow 32#64)
     (hP : Serial.CompressedEdwardsY_decompress.spec (s.mem.readAt repr 256) = P) :
     CompressedEdwardsY_decompress.call
         (CompressedEdwardsY_decompress.args (.value out) (.value repr)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + if P.isSome then 162 else 161⟩
+          { alloc := ⟨s.alloc.nextFreeBlock + if P.isSome then 159 else 158⟩
             mem := s.mem.storeOptEdwards out P }) := by
-  rw [CompressedEdwardsY_decompress.call_eq out repr s hwf hout hrepr hrepr_off, hP]
+  rw [CompressedEdwardsY_decompress.call_eq out repr s hwf hg hout hrepr hrepr_off, hP]
 
 -- about 120 steps over a frame of 14 slots and 16 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
@@ -98,8 +99,10 @@ open VerificationKey_verify_dalek_prehashed in
 `signature` (`r ‖ s`) and the scalar `h < 2^255`: returns `spec`'s byte. Everything it writes is in
 its frame: the memory is unchanged, the counter moves on by `blocks`. -/
 public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Pointer)
-    (s : GlobalState) (hwf : s.WF) (hself : s.mem.PointFit (self.add 32#64))
-    (hself_off : ¬self.offset.uaddOverflow 32#64) (hsig : Fits s.mem sig 512)
+    (s : GlobalState) (hwf : s.WF)
+    (hg : s.mem.Globals VerificationKey_verify_dalek_prehashed.globals)
+    (hself : s.mem.PointFit (self.add 32#64)) (hself_off : ¬self.offset.uaddOverflow 32#64)
+    (hsig : Fits s.mem sig 512)
     (hsig_off : ¬sig.offset.uaddOverflow 64#64) (hh : Fits s.mem h 256)
     (hdh : (s.mem.readAt h 256).toNat < 2 ^ 255) :
     VerificationKey_verify_dalek_prehashed.call
@@ -173,6 +176,13 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
         (decompress_call_eq' (hP :=
           (congrArg Serial.CompressedEdwardsY_decompress.spec hr).trans hdec)) consuming
         hopt
+      -- the globals and the writable blocks past `storeOptEdwards`, which the step does not see
+      -- through
+      any_goals
+        rw [hS']
+        first
+        | exact hg.mono MemoryState.globals_storeOptEdwards fun _ h => h
+        | exact Writable.storeOptEdwards (by assumption)
       step_load
       step_pure
       finish_block
@@ -196,6 +206,13 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
         (decompress_call_eq' (hP :=
           (congrArg Serial.CompressedEdwardsY_decompress.spec hr).trans hdec)) consuming
         hopt
+      -- the globals and the writable blocks past `storeOptEdwards`, which the step does not see
+      -- through
+      any_goals
+        rw [hS']
+        first
+        | exact hg.mono MemoryState.globals_storeOptEdwards fun _ h => h
+        | exact Writable.storeOptEdwards (by assumption)
       step_load
       step_pure
       finish_block

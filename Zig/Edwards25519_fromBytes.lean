@@ -200,32 +200,33 @@ private theorem fe_sqn_call_eq_of (out a : Pointer) (n : BitVec 64) (s : GlobalS
 
 /-- `Fe_neg.call_eq` on the limbs `A` read at `a`. -/
 private theorem fe_neg_call_eq_of (out a : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : s.mem.LimbsRoom out) (ha : s.mem.LimbsFit a) (hA : s.mem.readLimbs a = A)
-    (hA' : Fe.Lt A (2 ^ 63)) :
+    (hg : s.mem.Globals Fe_neg.globals) (hout : s.mem.LimbsRoom out) (ha : s.mem.LimbsFit a)
+    (hA : s.mem.readLimbs a = A) (hA' : Fe.Lt A (2 ^ 63)) :
     Fe_neg.call (Fe_neg.args (.value out) (.value a)) s =
       .value
         (.nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
+          { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem := s.mem.storeLimbs out (Fe.neg.spec A) }) := by
   subst hA
-  exact Fe_neg.call_eq out a s hwf hout ha hA'
+  exact Fe_neg.call_eq out a s hwf hg hout ha hA'
 
 /-- `Fe_reduce.call_eq` on the limbs `A` read at `fe`. -/
 private theorem fe_reduce_call_eq_of (fe : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hfe : s.mem.LimbsFit fe) (hA : s.mem.readLimbs fe = A) (hA' : Fe.Lt A (2 ^ 63)) :
+    (hfe : s.mem.LimbsFit fe) (hfew : Writable s.mem fe) (hA : s.mem.readLimbs fe = A)
+    (hA' : Fe.Lt A (2 ^ 63)) :
     Fe_reduce.call (Fe_reduce.args (.value fe)) s =
       .value (.nil, { s with mem := s.mem.storeLimbs fe (Fe.reduce.spec A) }) := by
   subst hA
-  exact Fe_reduce.call_eq fe s hwf hfe hA'
+  exact Fe_reduce.call_eq fe s hwf hfe hfew hA'
 
 /-- `Fe_cMov.call_eq` on the limbs `F`, `A` read at `fe`, `a`. -/
 private theorem fe_cMov_call_eq_of (fe a : Pointer) (c : BitVec 64) (s : GlobalState) (hwf : s.WF)
-    (hfe : s.mem.LimbsFit fe) (ha : s.mem.LimbsFit a) (hF : s.mem.readLimbs fe = F)
-    (hA : s.mem.readLimbs a = A) (hc : c.toNat < 2) :
+    (hfe : s.mem.LimbsFit fe) (hfew : Writable s.mem fe) (ha : s.mem.LimbsFit a)
+    (hF : s.mem.readLimbs fe = F) (hA : s.mem.readLimbs a = A) (hc : c.toNat < 2) :
     Fe_cMov.call (Fe_cMov.args (.value fe) (.value a) (.value c)) s =
       .value (.nil, { s with mem := s.mem.storeLimbs fe (Fe.cMov.spec F A c) }) := by
   subst hF hA
-  exact Fe_cMov.call_eq fe a c s hwf hfe ha hc
+  exact Fe_cMov.call_eq fe a c s hwf hfe hfew ha hc
 
 /-- The point's fields stored into a 160-byte block (`t` first), read back whole. -/
 theorem readAt_fields {m : MemoryState} {p : Pointer} (hf : Room m p 1280) (ho : p.offset = 0)
@@ -235,7 +236,7 @@ theorem readAt_fields {m : MemoryState} {p : Pointer} (hf : Room m p 1280) (ho :
             (p.add 80#64) (limbsBits z)).readAt
         p 1280 =
       limbsBits t ++ limbsBits z ++ limbsBits y ++ limbsBits x := by
-  have hi : InBounds m p 1280 := hf.inBounds
+  have hi := hf
   have hov (k : BitVec 64) (hk : k.toNat ≤ 160) : ¬p.offset.uaddOverflow k := by
     simp only [BitVec.uaddOverflow, ho, decide_eq_true_eq, Nat.not_le]; simp; omega
   rw [MemoryState.readAt_add_storeAt hi.storeLimbs.storeAt.storeAt (hov _ (by decide)) (by decide),
@@ -351,12 +352,14 @@ theorem Fe.cMov.spec_lt' {F A : Fin 5 → BitVec 64} {c : BitVec 64} {C : Nat} (
 theorem Fe.fromBytes.spec_lt (b : BitVec 256) : Fe.Lt (Fe.fromBytes.spec b) (2 ^ 51) := by
   intro i; fin_cases i <;> exact mask_lt _
 
--- 39 slots and globals, 45 calls, 38 lifetime markers in one block, each step carrying the facts
-set_option maxHeartbeats 4500000 in
+-- 35 slots, 4 globals, 45 calls, 38 lifetime markers in one block, each step carrying the facts
+-- (4500000 before globals became blocks: the globals' facts are carried too)
+set_option maxHeartbeats 6000000 in
 /-- `Edwards25519.fromBytes` stores `spec` of the 32 bytes at `buf` at `out` (`storeFromBytes`):
 the error union, 176 bytes. `buf` is read before `out` is written, so they may alias. -/
 public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hout : Room s.mem out 1408) (hout_off : out.offset.toNat + 176 ≤ 2 ^ 64)
+    (hg : s.mem.Globals Edwards25519_fromBytes.globals) (hout : Room s.mem out 1408)
+    (hout_off : out.offset.toNat + 176 ≤ 2 ^ 64)
     (hbuf : Fits s.mem buf 256) (hbuf_off : buf.offset.toNat + 32 ≤ 2 ^ 64) :
     Edwards25519_fromBytes.call (Edwards25519_fromBytes.args (.value out) (.value buf)) s =
       .value
@@ -364,7 +367,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
           {
             alloc :=
               ⟨s.alloc.nextFreeBlock +
-                  if (Edwards25519.fromBytes.spec (s.mem.readAt buf 256)).isSome then 601 else 595⟩,
+                  if (Edwards25519.fromBytes.spec (s.mem.readAt buf 256)).isSome then 596 else 591⟩,
             mem :=
               s.mem.storeFromBytes out (Edwards25519.fromBytes.spec (s.mem.readAt buf 256)) }) := by
   func_init
@@ -373,23 +376,14 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   block_init
   iterate 7 step_pure
   step_addressof Fe_edwards25519d.value_eq with gd
-  have hgd_ne : gd.id ≠ S.allocaPtr.id := by
-    subst hgd hS; simp [GlobalState.allocaPtr, GlobalState.slot]
   step_addressof Fe_one.value_eq with gone
-  have hgd_ne : gd.id ≠ S.allocaPtr.id := by
-    subst hgd hS; simp [GlobalState.allocaPtr, GlobalState.slot]; omega
-  have hgone_ne : gone.id ≠ S.allocaPtr.id := by
-    subst hgone hS; simp [GlobalState.allocaPtr, GlobalState.slot]
   iterate 8 step_pure
   step_addressof Edwards25519_fromBytes_invalid.value_eq with ginv
   have hginv_b : S.mem.readAt ginv 1408 = Edwards25519_fromBytes_invalid.bits :=
     hread_ginv.trans (by decide +kernel)
-  have hginv_d : S.mem.definedAt ginv 1408 = Edwards25519.fromBytes.invalidDef := by
-    rw [hS, hginv]
-    exact
-      (MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega)) _ _).trans
-        (by decide +kernel)
-  clear hread_ginv
+  have hginv_d : S.mem.definedAt ginv 1408 = Edwards25519.fromBytes.invalidDef :=
+    hdefined_ginv.trans (by decide +kernel)
+  clear hread_ginv hdefined_ginv
   checkpoint hck0
   rename' S => S₁
   step_pure
@@ -504,13 +498,15 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   stash hU
   have htm := hS ▸ hu_limbs
   have htr := hS ▸ hread_u_readLimbs
-  have hdR := hS ▸ hu0_limbs
-  have f1 := hu0_limbs.fits.room
+  have hu0R := hu0_limbs.room (by mem_fact)
+  have hdR := hS ▸ hu0R
+  have f1 := hu0R.room
   have f2 := hu_limbs.fits
+  clear hu0R
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm hdR.1, htr] at hS
   have hru0 : S.mem.readLimbs u0 = U := by
-    rw [hS]; exact MemoryState.readLimbs_storeLimbs_self hdR.room
+    rw [hS]; exact MemoryState.readLimbs_storeLimbs_self hdR
   clear htm htr hdR
   have h1 := V0_lt.mono (by decide : (2 : Nat) ^ 52 ≤ 2 ^ 63)
   have h2 := ONE_lt.mono (by decide : (2 : Nat) ^ 51 ≤ 2 ^ 63)
@@ -766,7 +762,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     have hfd : S.mem.definedAt flag 8 = 1#8 := by
       have h := hflag_room
       rw [hS] at h ⊢
-      rw [MemoryState.definedAt_storeAt_over (Room.storeAt_iff.mp h).inBounds (by omega), ← hfl,
+      rw [MemoryState.definedAt_storeAt_over (Room.storeAt_iff.mp h) (by omega), ← hfl,
         spliceBits_eq]
       decide
     clear hfl

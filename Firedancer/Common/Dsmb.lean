@@ -25,7 +25,8 @@ theorem Range.disjoint_add {p : Pointer} {a b v w : Nat} (ha : p.offset.toNat + 
 /-- A well-formed state stays so with its counter advanced. -/
 theorem GlobalState.WF.bump {s : GlobalState} (h : s.WF) (hn : s.alloc.nextFreeBlock ≤ n) :
     (⟨⟨n⟩, s.mem⟩ : GlobalState).WF :=
-  ⟨fun k hk => Nat.lt_of_lt_of_le (h.bound k hk) hn, Nat.lt_of_lt_of_le h.pos hn, h.null⟩
+  ⟨fun k hk => Nat.lt_of_lt_of_le (h.bound k hk) hn, Nat.lt_of_lt_of_le h.pos hn, h.null, h.global,
+    h.merged⟩
 
 /-- `WF.add_blocks` for a counter advanced twice, as a framed callee's result has it. -/
 theorem GlobalState.WF.add_blocks₂ {s : GlobalState} (h : s.WF) :

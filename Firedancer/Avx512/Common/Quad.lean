@@ -250,8 +250,8 @@ def quadFoldRun
       (.val sh14.i sh14.h)]
 
 /-- Where the body at `pos` is `quadFoldRun`, the constants are in place and `P03 P14 P25`, in
-distinct blocks, hold `X03 X14 X25`: running on from `pos` then `g` gives `K` if it does from
-`pos + 18` with limbs `0 3` and `1 4` folded in memory and limbs `2 5` folded in `r25`. -/
+distinct writable blocks, hold `X03 X14 X25`: running on from `pos` then `g` gives `K` if it does
+from `pos + 18` with limbs `0 3` and `1 4` folded in memory and limbs `2 5` folded in `r25`. -/
 theorem runBodyFrom_quadFoldRun {blk : BasicBlock Γ tRets bp} {E₀ : ⟪Γ⟫} {pos : Nat}
     {s43 s m43 m k ld03 sh03 ld14 sh14 ld25 sh25 c t lo03 r03 ld14' lo14 r14 ld25' lo25 r25 :
       Dst Γ V}
@@ -268,6 +268,7 @@ theorem runBodyFrom_quadFoldRun {blk : BasicBlock Γ tRets bp} {E₀ : ⟪Γ⟫}
         m := quadFoldMask, k := quad19, .arg p03 h03 := P03, .arg p14 h14 := P14, .arg p25 h25 :=
         P25])
     (hf03 : Fits S₀.mem P03 512) (hf14 : Fits S₀.mem P14 512) (hf25 : Fits S₀.mem P25 512)
+    (hw03 : Writable S₀.mem P03) (hw14 : Writable S₀.mem P14) (hw25 : Writable S₀.mem P25)
     (hd0314 : P03.id ≠ P14.id) (hd0325 : P03.id ≠ P25.id) (hd1425 : P14.id ≠ P25.id)
     (hx03 : S₀.mem.readAt P03 512 = BitVec.packLanes X03)
     (hx14 : S₀.mem.readAt P14 512 = BitVec.packLanes X14)

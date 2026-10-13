@@ -42,15 +42,19 @@ def _root_.MLIR.MemoryState.storePt (m : MemoryState) (p : Pointer) (P : ZPt) (b
 abbrev _root_.MLIR.MemoryState.PtRoom (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 168 ≤ 2 ^ 64 ∧ Room m p 1344
 
-/-- The point at `p` is known: room for it, its field elements and `is_base` known. -/
+/-- The point at `p` is live (an input, maybe read-only), its offsets not wrapping. -/
+abbrev _root_.MLIR.MemoryState.PtLive (m : MemoryState) (p : Pointer) : Prop :=
+  p.offset.toNat + 168 ≤ 2 ^ 64 ∧ Live m p 1344
+
+/-- The point at `p` is known: live, its field elements and `is_base` known. -/
 abbrev _root_.MLIR.MemoryState.PtFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 168 ≤ 2 ^ 64 ∧
-    Room m p 1344 ∧
+    Live m p 1344 ∧
     m.LimbsFit p ∧
     m.LimbsFit (p.add 40#64) ∧
     m.LimbsFit (p.add 80#64) ∧ m.LimbsFit (p.add 120#64) ∧ Fits m (p.add 160#64) 1
 
-attribute [mlir_mem] MemoryState.PtRoom MemoryState.PtFit
+attribute [mlir_mem] MemoryState.PtRoom MemoryState.PtFit MemoryState.PtLive
 
 /-- The point's 160 bytes of field elements. -/
 def ZPt.bits (P : ZPt) : BitVec 1280 :=
@@ -167,9 +171,28 @@ public theorem _root_.MLIR.MemoryState.PtFit.fits_base {m : MemoryState} {p : Po
     (h : m.PtFit p) : Fits m (p.add 160#64) 1 :=
   h.2.2.2.2.2.2
 
-public theorem _root_.MLIR.MemoryState.PtFit.room {m : MemoryState} {p : Pointer} (h : m.PtFit p) :
-    m.PtRoom p :=
+/-- A known point in a writable block: room for it. -/
+public theorem _root_.MLIR.MemoryState.PtFit.room {m : MemoryState} {p : Pointer} (h : m.PtFit p)
+    (hw : Writable m p) : m.PtRoom p :=
+  ⟨h.1, h.2.1, hw⟩
+
+/-- A known point is live. -/
+@[mlir_transport]
+public theorem _root_.MLIR.MemoryState.PtFit.ptLive {m : MemoryState} {p : Pointer}
+    (h : m.PtFit p) : m.PtLive p :=
   ⟨h.1, h.2.1⟩
+
+/-- Room for a point: it is live. -/
+@[mlir_transport]
+public theorem _root_.MLIR.MemoryState.PtRoom.ptLive {m : MemoryState} {p : Pointer}
+    (h : m.PtRoom p) : m.PtLive p :=
+  ⟨h.1, h.2.1⟩
+
+/-- A live 168-byte block from its start holds a point (a global's). -/
+@[mlir_transport]
+public theorem _root_.MLIR.MemoryState.PtLive.of_live {m : MemoryState} {p : Pointer}
+    (h : Live m p 1344) (ho : p.offset = 0) : m.PtLive p :=
+  ⟨by simp [ho], h⟩
 
 /-- A 168-byte live block from its start has room for one point. -/
 public theorem _root_.MLIR.MemoryState.PtRoom.of_room {m : MemoryState} {p : Pointer}
@@ -178,7 +201,7 @@ public theorem _root_.MLIR.MemoryState.PtRoom.of_room {m : MemoryState} {p : Poi
 
 /-- A known point from its known bits: the field elements and `is_base`'s. -/
 public theorem _root_.MLIR.MemoryState.PtFit.of_fits {m : MemoryState} {p : Pointer}
-    (hr : Room m p 1344) (hf : Fits m p 1281) (ho : p.offset.toNat + 168 ≤ 2 ^ 64) : m.PtFit p := by
+    (hr : Live m p 1344) (hf : Fits m p 1281) (ho : p.offset.toNat + 168 ≤ 2 ^ 64) : m.PtFit p := by
   have hc (k : BitVec 64) (hk : k.toNat ≤ 120) : m.LimbsFit (p.add k) :=
     .of_fits' (Fits.add_of_le (p.not_uaddOverflow_of_pt ho (by omega)) (by omega) hf)
       (by
@@ -308,7 +331,7 @@ public theorem _root_.MLIR.MemoryState.readBase_storeLimbs_x {m : MemoryState} {
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readBase_storeAt_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) {x : BitVec 1} : (m.storeAt (p.add 160#64) x).readBase p = x :=
-  MemoryState.readAt_storeAt_self h.room_base.inBounds x
+  MemoryState.readAt_storeAt_self h.room_base x
 
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readPt_storePt_self {m : MemoryState} {p : Pointer}
@@ -467,13 +490,13 @@ public theorem _root_.MLIR.MemoryState.readBase_lifetimeEnd {m : MemoryState} :
 /-- A coordinate of a copy: the source's. -/
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readLimbs_copy {m : MemoryState} {p q : Pointer} {a : Nat}
-    (hp : m.PtRoom p) (hq : m.PtRoom q) (ha : a ≤ 120) (d : BitVec 1344) :
+    (hp : m.PtRoom p) (hq : m.PtLive q) (ha : a ≤ 120) (d : BitVec 1344) :
     (m.storeDef p (m.readAt q 1344) d).readLimbs (p.add (BitVec.ofNat 64 a)) =
       m.readLimbs (q.add (BitVec.ofNat 64 a)) := by
   have hrd (k : Nat) (hk : k ≤ a + 32) :
     (m.storeDef p (m.readAt q 1344) d).readAt (p.add (BitVec.ofNat 64 k)) 64 =
       m.readAt (q.add (BitVec.ofNat 64 k)) 64 :=
-    MemoryState.readAt_storeDef_readAt_add hp.2.inBounds hq.2.inBounds
+    MemoryState.readAt_storeDef_readAt_add hp.2 hq.2.inBounds
       (p.not_uaddOverflow_of_pt hp.1
         (by
           simp; omega))
@@ -500,14 +523,14 @@ public theorem _root_.MLIR.MemoryState.readLimbs_copy {m : MemoryState} {p q : P
 /-- `x` of a copy: the source's. -/
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readLimbs_copy_x {m : MemoryState} {p q : Pointer}
-    (hp : m.PtRoom p) (hq : m.PtRoom q) (d : BitVec 1344) :
+    (hp : m.PtRoom p) (hq : m.PtLive q) (d : BitVec 1344) :
     (m.storeDef p (m.readAt q 1344) d).readLimbs p = m.readLimbs q := by
   simpa [Pointer.add_zero'] using MemoryState.readLimbs_copy (a := 0) hp hq (by omega) d
 
 /-- A copy of a point: the source's point. -/
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readPt_copy {m : MemoryState} {p q : Pointer}
-    (hp : m.PtRoom p) (hq : m.PtRoom q) (d : BitVec 1344) :
+    (hp : m.PtRoom p) (hq : m.PtLive q) (d : BitVec 1344) :
     (m.storeDef p (m.readAt q 1344) d).readPt p = m.readPt q := by
   simp only [MemoryState.readPt, MemoryState.readLimbs_copy_x hp hq,
     MemoryState.readLimbs_copy (a := 40) hp hq (by omega),
@@ -517,9 +540,9 @@ public theorem _root_.MLIR.MemoryState.readPt_copy {m : MemoryState} {p q : Poin
 /-- `is_base` of a copy: the source's. -/
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readBase_copy {m : MemoryState} {p q : Pointer}
-    (hp : m.PtRoom p) (hq : m.PtRoom q) (d : BitVec 1344) :
+    (hp : m.PtRoom p) (hq : m.PtLive q) (d : BitVec 1344) :
     (m.storeDef p (m.readAt q 1344) d).readBase p = m.readBase q :=
-  MemoryState.readAt_storeDef_readAt_add hp.2.inBounds hq.2.inBounds
+  MemoryState.readAt_storeDef_readAt_add hp.2 hq.2.inBounds
     (p.not_uaddOverflow_of_pt hp.1 (by decide)) (q.not_uaddOverflow_of_pt hq.1 (by decide))
     (by decide) d
 
@@ -538,7 +561,7 @@ public theorem _root_.MLIR.MemoryState.PtFit.copy {m : MemoryState} {p q : Point
       (by
         simp only [Pointer.add, BitVec.toNat_add]; have := hp.1; omega)
   refine
-    ⟨hp.1, hp.2.storeDef,
+    ⟨hp.1, hp.2.1.storeDef,
       .of_fits' (Fits.storeDef_definedAt_self hp.2 hq.2.2.1.fits (by omega))
         (by
           have := hp.1; omega),
@@ -576,11 +599,8 @@ public theorem _root_.MLIR.MemoryState.PtRoom.storePt {m : MemoryState} {p q : P
 
 @[mlir_mem, mlir_transport]
 public theorem _root_.MLIR.MemoryState.PtRoom.alloca {s : GlobalState} {p : Pointer}
-    (hne : p.id ≠ s.allocaPtr.id) (h : s.mem.PtRoom p) : (s.alloca n d).mem.PtRoom p := by
-  obtain ⟨ho, b, hb, hl, hs⟩ := h
-  exact
-    ⟨ho, b, by
-      rw [GlobalState.getElem?_alloca hne]; exact hb, hl, hs⟩
+    (hne : p.id ≠ s.allocaPtr.id) (h : s.mem.PtRoom p) : (s.alloca n d).mem.PtRoom p :=
+  ⟨h.1, h.2.of_getElem?_eq (GlobalState.getElem?_alloca hne)⟩
 
 @[mlir_transport]
 public theorem _root_.MLIR.MemoryState.PtRoom.addBlock {s : GlobalState} {p : Pointer}
@@ -655,7 +675,8 @@ public theorem _root_.MLIR.MemoryState.PtFit.alloca {s : GlobalState} {p : Point
     ⟨b, by
       rw [GlobalState.getElem?_alloca (hq ▸ hne)]; exact hb, hl, hs, hd⟩
   exact
-    ⟨h.1, (MemoryState.PtRoom.alloca hne h.room).2, h.2.2.1.alloca hne, h.2.2.2.1.alloca (hne' _),
+    ⟨h.1, h.2.1.of_getElem?_eq (GlobalState.getElem?_alloca hne), h.2.2.1.alloca hne,
+      h.2.2.2.1.alloca (hne' _),
       h.2.2.2.2.1.alloca (hne' _), h.2.2.2.2.2.1.alloca (hne' _), hf rfl h.2.2.2.2.2.2⟩
 
 @[mlir_transport]
@@ -699,7 +720,7 @@ public theorem _root_.MLIR.MemoryState.PtFit.storePt_self {m : MemoryState} {p :
       (p.add 120#64) :=
     .storeLimbs_self h.limbsRoom_t.storeLimbs.storeLimbs.storeLimbs
   exact
-    ⟨h.1, (h.storePt (Q := P) (c := b)).2, hX.storeLimbs.storeLimbs.storeLimbs.storeAt,
+    ⟨h.1, (h.storePt (Q := P) (c := b)).2.1, hX.storeLimbs.storeLimbs.storeLimbs.storeAt,
       hY.storeLimbs.storeLimbs.storeAt, hZ.storeLimbs.storeAt, hT.storeAt,
       Fits.storeAt_self h.room_base.storeLimbs.storeLimbs.storeLimbs.storeLimbs⟩
 

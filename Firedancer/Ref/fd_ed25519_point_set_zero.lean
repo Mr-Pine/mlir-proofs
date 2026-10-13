@@ -22,15 +22,13 @@ end
 
 section Proof
 
-/-- `fd_ed25519_point_set_zero` stores the neutral point at `r` and returns `r`; the two globals it
-reads count two blocks. -/
+/-- `fd_ed25519_point_set_zero` stores the neutral point at `r` and returns `r`. -/
 public theorem fd_ed25519_point_set_zero.call_eq (r : Pointer) (s : GlobalState) (hwf : s.WF)
-    (hr : s.mem.PointRoom r) :
+    (hg : s.mem.Globals fd_ed25519_point_set_zero.globals) (hr : s.mem.PointRoom r) :
     fd_ed25519_point_set_zero.call (fd_ed25519_point_set_zero.args (.value r)) s =
       .value
         (.cons (.value r) .nil,
-          { alloc := ⟨s.alloc.nextFreeBlock + 2⟩,
-            mem := s.mem.storePoint r fd_ed25519_point_set_zero.spec }) := by
+          { s with mem := s.mem.storePoint r fd_ed25519_point_set_zero.spec }) := by
   func_init
   block_init
   step_addressof fd_f25519_zero.value_eq with zero
@@ -46,7 +44,6 @@ public theorem fd_ed25519_point_set_zero.call_eq (r : Pointer) (s : GlobalState)
     step_call using (fd_f25519_set.call_eq (hsep := .inr ?_))
   finish_block
   subst hS
-  erase_frame
   rfl
 
 end Proof

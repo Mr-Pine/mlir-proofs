@@ -35,6 +35,8 @@ end
 
 section Proof
 
+-- about 60 steps over a frame of 7 slots and 13 calls: past the default heartbeats
+set_option maxHeartbeats 400000 in
 /-- `&P + &Q` stores `spec P Q` at `out`. Every read of `P` and `Q` comes before the first store to
 `out`, so `out` may alias them. Its seven temporaries count seven blocks. -/
 public theorem EdwardsPoint_Add_ProjectiveNielsPoint_add.call_eq (out p q : Pointer)
