@@ -35,12 +35,12 @@ public theorem FieldElement51_Add_add.call_eq (out a b : Pointer) (s : GlobalSta
   func_init
   have ha₀ : S₀.mem.LimbsFit a := hS ▸ ha
   have hb₀ : S₀.mem.LimbsFit b := hS ▸ hb
-  have ha_lo := fits_pair0 ha
-  have ha_hi := fits_pair ha (k := 16#64) (by decide)
-  have hb_lo := fits_pair0 hb
-  have hb_hi := fits_pair hb (k := 16#64) (by decide)
-  have hout_lo := room_pair0 hout
-  have hout_hi := room_pair hout (k := 16#64) (by decide)
+  have ha_lo := MemoryState.LimbsFit.fits_lo ha
+  have ha_hi := MemoryState.LimbsFit.fits_pair ha (k := 16#64) (by decide)
+  have hb_lo := MemoryState.LimbsFit.fits_lo hb
+  have hb_hi := MemoryState.LimbsFit.fits_pair hb (k := 16#64) (by decide)
+  have hout_lo := MemoryState.LimbsRoom.room_lo hout
+  have hout_hi := MemoryState.LimbsRoom.room_pair hout (k := 16#64) (by decide)
   have hoff := hout.1
   block_init
   -- the last limb
@@ -64,10 +64,11 @@ public theorem FieldElement51_Add_add.call_eq (out a b : Pointer) (s : GlobalSta
   step_pure
   step_store
   finish_block
-  rw [hS, storeAt_pairs_eq_storeLimbs hoff]
-  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, lane0_readAt, lane1_readAt0 ha₀,
-    lane1_readAt0 hb₀, lane1_readAt ha₀ (k := 16#64) (by decide),
-    lane1_readAt hb₀ (k := 16#64) (by decide)]
+  rw [hS, MemoryState.storeAt_packLanes_limbs hoff]
+  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, MemoryState.extractVecElem_zero_readAt,
+    MemoryState.LimbsFit.extractVecElem_one_lo ha₀, MemoryState.LimbsFit.extractVecElem_one_lo hb₀,
+    MemoryState.LimbsFit.extractVecElem_one ha₀ (k := 16#64) (by decide),
+    MemoryState.LimbsFit.extractVecElem_one hb₀ (k := 16#64) (by decide)]
   congr
   funext k
   fin_cases k <;> rfl

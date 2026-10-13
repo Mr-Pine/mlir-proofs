@@ -1,6 +1,6 @@
 module
 
-public import Boringssl.Math.Encode
+public import Ed25519.Encode
 import Mathlib.Tactic.Abel
 
 /-! BoringSSL's `ED25519_verify` as mathematics: its checks in its order, and the variant of

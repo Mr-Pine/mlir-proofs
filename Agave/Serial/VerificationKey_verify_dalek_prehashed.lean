@@ -172,8 +172,8 @@ theorem readEdwards_storeOptEdwards_of_id_ne {m : MemoryState} {p q : Pointer}
     (m.storeOptEdwards p P).readLimbs (q.add k) = m.readLimbs (q.add k) := by
     have h' : p.id ≠ (q.add k).id := by simpa only [Pointer.add_id] using h
     cases P <;> simp only [MemoryState.storeOptEdwards]
-    · exact readLimbs_storeAt_of_id_ne h'
-    · rw [readLimbs_storeAt_of_id_ne h',
+    · exact MemoryState.readLimbs_storeAt_of_id_ne h'
+    · rw [MemoryState.readLimbs_storeAt_of_id_ne h',
         MemoryState.readLimbs_storeEdwards_of_id_ne (by simpa only [Pointer.add_id] using h')]
   have h0 := hl 0#64
   simp only [Pointer.add_zero'] at h0
@@ -249,34 +249,6 @@ theorem bcmp_select {u : Unspecified} {x y : BitVec (8 * 32)} {a b : BitVec 8} :
   rw [h]
   by_cases hxy : x = y <;> simp [hxy]
 
-/-- No wrap at a coordinate's offset. -/
-theorem coord_noOverflow {p : Pointer} (ho : p.offset.toNat + 160 ≤ 2 ^ 64) {k : BitVec 64}
-    (hk : k.toNat < 160) : ¬p.offset.uaddOverflow k := by
-  simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-
-/-- A point's 1280 bits are known where its coordinates are. -/
-theorem fits_of_pointFit {m : MemoryState} {p : Pointer} (h : m.PointFit p) : Fits m p 1280 := by
-  have a1 :=
-    Fits.append (coord_noOverflow h.1 (by decide)) (by decide) rfl (fits_of_limbsFit h.limbsFit_X)
-      (fits_of_limbsFit h.limbsFit_Y)
-  have a2 :=
-    Fits.append (coord_noOverflow h.1 (by decide)) (by decide) rfl a1
-      (fits_of_limbsFit h.limbsFit_T)
-  exact
-    Fits.append (coord_noOverflow h.1 (by decide)) (by decide) rfl a2
-      (fits_of_limbsFit h.limbsFit_Z)
-
-/-- A point's coordinates are known where its 1280 bits are. -/
-public theorem pointFit_of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 1280)
-    (ho : p.offset.toNat + 160 ≤ 2 ^ 64) : m.PointFit p :=
-  ⟨ho, limbsFit_of_fits (h.mono (by decide)) (by omega),
-    limbsFit_of_fits (Fits.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 40) (by omega)),
-    limbsFit_of_fits (Fits.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 80) (by omega)),
-    limbsFit_of_fits (Fits.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 120) (by omega))⟩
-
 /-- The point at `p`, from the 1280 bits there. -/
 public theorem readEdwards_of_readAt {m : MemoryState} {p : Pointer} {P : EdwardsPoint}
     (hf : Fits m p 1280) (ho : p.offset.toNat + 160 ≤ 2 ^ 64)
@@ -292,7 +264,7 @@ public theorem readEdwards_of_readAt {m : MemoryState} {p : Pointer} {P : Edward
   rw [← he, ← MemoryState.storeAt_readAt_self hfw, hr, h, storeAt_edwardsBits ho]
   exact
     MemoryState.readEdwards_storeEdwards_self
-      (pointRoom_of_room (Room.makeWritable_self hf.live) ho)
+      (MemoryState.PointRoom.of_room' (Room.makeWritable_self hf.live) ho)
 
 /-- `decompress` on bytes that decode to `P`. -/
 theorem decompress_call_eq {out repr : Pointer} {s : GlobalState} {P : Option EdwardsPoint}
@@ -435,7 +407,7 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
       block_init
       step_pure
       step_pure
-      memcpy_n 160(fits_of_pointFit hpointFit_popt_8)hread_popt_8
+      memcpy_n 160(MemoryState.PointFit.fits hpointFit_popt_8)hread_popt_8
       step_pure
       step_pure
       step_memcpy
@@ -443,7 +415,7 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
       step_memcpy
       step_pure
       clear hread_pres2_6 hread_pres1_6 hread_popt hread_popt_8_readEdwards hread_popt_8
-      have hR_fit := pointFit_of_fits hfits_pR (by simp [hpR_off])
+      have hR_fit := MemoryState.PointFit.of_fits' hfits_pR (by simp [hpR_off])
       have hR_read := readEdwards_of_readAt hfits_pR (by simp [hpR_off]) hread_pR
       clear hread_pR
       -- if R.is_small_order() { return Err(Error::InvalidSignature); }
@@ -534,18 +506,19 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
           name_limbs t3
           name_limbs t19
           step_pure
-          have hppow_bits := (readAt_eq_limbsBits hppow_limbs).trans (congrArg limbsBits hread_ppow)
-          have hsrc := fits_of_limbsFit hppow_limbs
+          have hppow_bits :=
+            (MemoryState.readAt_eq_limbsBits hppow_limbs).trans (congrArg limbsBits hread_ppow)
+          have hsrc := MemoryState.LimbsFit.fits hppow_limbs
           step_memcpy consuming hsrc hppow_bits
           step_pure
           step_pure
-          memcpy_n 40(fits_of_limbsFit hppow_40)hread_ppow_40
+          memcpy_n 40(MemoryState.LimbsFit.fits hppow_40)hread_ppow_40
           step_pure
           clear hread_ppow hread_ppow_40_readLimbs hread_ppow_40
-          have hpt19_limbs := limbsFit_of_fits hfits_pt19 (by simp [hpt19_off])
+          have hpt19_limbs := MemoryState.LimbsFit.of_fits' hfits_pt19 (by simp [hpt19_off])
           have hpt19_read :=
             readLimbs_of_readAt_limbsBits hfits_pt19.inBounds (by simp [hpt19_off]) hread_pt19
-          have hpt3_limbs := limbsFit_of_fits hfits_pt3 (by simp [hpt3_off])
+          have hpt3_limbs := MemoryState.LimbsFit.of_fits' hfits_pt3 (by simp [hpt3_off])
           have hpt3_read :=
             readLimbs_of_readAt_limbsBits hfits_pt3.inBounds (by simp [hpt3_off]) hread_pt3
           clear hfits_pt19 hread_pt19 hroom_pt19 hfits_pt3 hread_pt3 hroom_pt3

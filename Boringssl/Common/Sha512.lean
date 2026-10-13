@@ -18,25 +18,6 @@ open Memory
 
 /-! ### Masked stores -/
 
-/-- A store inside a masked store's range: one masked store, the new bits spliced in, defined. -/
-theorem MemoryState.overlay_storeAt_add {m : MemoryState} {p : Pointer} {x d : BitVec v}
-    {y : BitVec w} {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off)
-    (hw : off.toNat * 8 + w ≤ v) :
-    (m.overlay p x d).storeAt (p.add off) y =
-      m.overlay p (spliceBits x (off.toNat * 8) y)
-        (spliceBits d (off.toNat * 8) (BitVec.allOnes w)) := by
-  have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
-    simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
-  simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits, ho, MemoryBlock.mk.injEq, true_and,
-    and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [getLsbD_spliceBits] <;>
-    grind
-
 /-! ### The struct -/
 
 /-- A `SHA512_CTX`'s fields, and which bits of `p` are defined. -/

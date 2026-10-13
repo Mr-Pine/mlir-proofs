@@ -24,32 +24,9 @@ namespace MLIR.Agave
 
 open _root_.Ed25519
 
-/-! ## Definitions -/
-
-@[expose] public section
-
-/-- Every limb below `c`. -/
-abbrev Limbs.Lt (l : Fin 5 → BitVec 64) (c : ℕ) : Prop :=
-  ∀ i, (l i).toNat < c
-
-end
-
-public theorem Limbs.Lt.mono {l : Fin 5 → BitVec 64} {c d : ℕ} (h : Limbs.Lt l c) (hcd : c ≤ d) :
-    Limbs.Lt l d := fun i => (h i).trans_le hcd
-
-public theorem Limbs.lt_iff (l : Fin 5 → BitVec 64) (c : ℕ) :
-    Limbs.Lt l c ↔
-      (l 0).toNat < c ∧ (l 1).toNat < c ∧ (l 2).toNat < c ∧ (l 3).toNat < c ∧ (l 4).toNat < c := by
-  refine ⟨fun h => ⟨h 0, h 1, h 2, h 3, h 4⟩, fun h i => ?_⟩
-  fin_cases i <;> simp [h]
-
 namespace Serial
 
 /-! ## Carries -/
-
-/-- `x`'s low 51 bits and its carry, in `ZMod p`. -/
-theorem mod_add_div51 (x : ℕ) : ((x % 2 ^ 51 : ℕ) : ZMod p) + 2 ^ 51 * (x / 2 ^ 51 : ℕ) = x := by
-  exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (Nat.mod_add_div x (2 ^ 51))
 
 /-- `reduce`'s limbs: each limb's low 51 bits plus the carry of the one below, `19` times the top
 carry into limb 0. -/
@@ -237,10 +214,6 @@ theorem toNat_carry128 (x : BitVec 128) : (carry128 x).toNat = x.toNat / 2 ^ 51 
   rw [BitVec.toNat_and, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, ←
     Nat.and_two_pow_sub_one_eq_mod]
   rfl
-
-theorem toNat_shift_setWidth (x : BitVec 128) :
-    ((x >>> 51).setWidth 64).toNat = x.toNat / 2 ^ 51 % 2 ^ 64 := by
-  rw [BitVec.toNat_setWidth, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 /-- dalek's carries after a product's 128-bit column sums `c0 … c4` (`mul`, `pow2k`): each into
 the next at bit 51, `carry * 19` into limb 0, then one carry out of limb 0. -/

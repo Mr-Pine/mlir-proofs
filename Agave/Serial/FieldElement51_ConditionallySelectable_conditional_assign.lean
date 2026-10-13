@@ -35,7 +35,7 @@ public theorem FieldElement51_ConditionallySelectable_conditional_assign.spec_eq
 
 section Proof
 
-theorem neg_zext_no_ssubOverflow (c : BitVec 8) : ¬(0#64).ssubOverflow (c.setWidth 64) := by
+public theorem neg_zext_no_ssubOverflow (c : BitVec 8) : ¬(0#64).ssubOverflow (c.setWidth 64) := by
   bv_decide
 
 /-- `self.conditional_assign(&other, choice)` stores `spec self other choice` at `self`, the first
@@ -58,10 +58,10 @@ public theorem FieldElement51_ConditionallySelectable_conditional_assign.call_eq
   func_init
   have hself₀ : S₀.mem.LimbsFit self := hS ▸ hself
   have hother₀ : S₀.mem.LimbsFit other := hS ▸ hother
-  have hself_lo := fits_pair0 hself
-  have hself_hi := fits_pair hself (k := 16#64) (by decide)
-  have hother_lo := fits_pair0 hother
-  have hother_hi := fits_pair hother (k := 16#64) (by decide)
+  have hself_lo := MemoryState.LimbsFit.fits_lo hself
+  have hself_hi := MemoryState.LimbsFit.fits_pair hself (k := 16#64) (by decide)
+  have hother_lo := MemoryState.LimbsFit.fits_lo hother
+  have hother_hi := MemoryState.LimbsFit.fits_pair hother (k := 16#64) (by decide)
   have hoff := hself.1
   block_init
   iterate 3 step_pure
@@ -83,10 +83,12 @@ public theorem FieldElement51_ConditionallySelectable_conditional_assign.call_eq
   iterate 3 step_pure
   step_store
   finish_block
-  rw [hS, storeAt_pairs_eq_storeLimbs hoff]
-  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, lane0_readAt, lane1_readAt0 hself₀,
-    lane1_readAt0 hother₀, lane1_readAt hself₀ (k := 16#64) (by decide),
-    lane1_readAt hother₀ (k := 16#64) (by decide)]
+  rw [hS, MemoryState.storeAt_packLanes_limbs hoff]
+  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, MemoryState.extractVecElem_zero_readAt,
+    MemoryState.LimbsFit.extractVecElem_one_lo hself₀,
+    MemoryState.LimbsFit.extractVecElem_one_lo hother₀,
+    MemoryState.LimbsFit.extractVecElem_one hself₀ (k := 16#64) (by decide),
+    MemoryState.LimbsFit.extractVecElem_one hother₀ (k := 16#64) (by decide)]
   congr
   funext k
   fin_cases k <;> rfl

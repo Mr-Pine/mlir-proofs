@@ -5,6 +5,7 @@ public import Firedancer.R52x5.Decode2.Frame
 public import Firedancer.R52x5.Decode2.Spec
 public import Firedancer.R52x5.Common.Runs
 import Firedancer.R52x5.Decode2.Tactics
+import Firedancer.Common.Counter
 
 /-! The four squaring loops of `FD_R52X5_POW22523_QUAD`: one iteration each, the loops from it. -/
 
@@ -18,19 +19,6 @@ attribute [-mlir_operation] zipWith_eq_ofFn Operation.vpmadd52l Operation.vpmadd
 
 attribute [local mlir_operation] vpmadd52l_wl zipWith_and_wl zipWith_lshr_wl
   zipWith_add_nsw_nuw_reduce
-
-/-- The counter's `+ 1` does not wrap, signed. -/
-theorem saddOverflow_ofNat_one {i : Nat} (h : i + 1 < 2 ^ 31) :
-    (BitVec.ofNat 32 i).saddOverflow 1#32 = false := by
-  have : (BitVec.ofNat 32 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, this]
-  omega
-
-/-- The counter's `+ 1` does not wrap, unsigned. -/
-theorem uaddOverflow_ofNat_one {i : Nat} (h : i + 1 < 2 ^ 31) :
-    (BitVec.ofNat 32 i).uaddOverflow 1#32 = false := by
-  simp [BitVec.uaddOverflow]
-  omega
 
 /-- The counter's test at `N`, back in `ℕ`. -/
 theorem counter_eq {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
@@ -134,7 +122,7 @@ theorem iter2 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
   block_init
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   qp_sqr 111
-  step_pure [saddOverflow_ofNat_one (i := i) (by omega), uaddOverflow_ofNat_one (i := i) (by omega)]
+  step_pure [saddOverflow_one32 (i := i) (by omega), uaddOverflow_one32 (i := i) (by omega)]
   step_pure
   finish_block
   · refine hexit (counter_eq (by decide) hi hbr) E S ?_ ?_ ⟨hwf, hF, ?_, ?_⟩ ?_
@@ -194,7 +182,7 @@ theorem iter4 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
   block_init
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   qp_sqr 141
-  step_pure [saddOverflow_ofNat_one (i := i) (by omega), uaddOverflow_ofNat_one (i := i) (by omega)]
+  step_pure [saddOverflow_one32 (i := i) (by omega), uaddOverflow_one32 (i := i) (by omega)]
   step_pure
   finish_block
   · refine hexit (counter_eq (by decide) hi hbr) E S ?_ ?_ ⟨hwf, hF, ?_, ?_⟩ ?_
@@ -254,7 +242,7 @@ theorem iter6 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
   block_init
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   qp_sqr 156
-  step_pure [saddOverflow_ofNat_one (i := i) (by omega), uaddOverflow_ofNat_one (i := i) (by omega)]
+  step_pure [saddOverflow_one32 (i := i) (by omega), uaddOverflow_one32 (i := i) (by omega)]
   step_pure
   finish_block
   · refine hexit (counter_eq (by decide) hi hbr) E S ?_ ?_ ⟨hwf, hF, ?_, ?_⟩ ?_
@@ -314,7 +302,7 @@ theorem iter8 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
   block_init
   obtain ⟨hwf, hF, herase, halloc⟩ := hI
   qp_sqr 171
-  step_pure [saddOverflow_ofNat_one (i := i) (by omega), uaddOverflow_ofNat_one (i := i) (by omega)]
+  step_pure [saddOverflow_one32 (i := i) (by omega), uaddOverflow_one32 (i := i) (by omega)]
   step_pure
   finish_block
   · refine hexit (counter_eq (by decide) hi hbr) E S ?_ ?_ ⟨hwf, hF, ?_, ?_⟩ ?_

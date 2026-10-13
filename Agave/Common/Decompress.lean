@@ -80,8 +80,10 @@ public theorem storeAt_edwardsBits {m : MemoryState} {p : Pointer} {P : EdwardsP
     rw [Nat.mod_eq_of_lt (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
     omega
   simp only [MemoryState.storeEdwards, MemoryState.storeFe4]
-  rw [storeLimbs_eq_storeAt (p := p) (by omega), storeLimbs_eq_storeAt (hl 40 (by omega)),
-    storeLimbs_eq_storeAt (hl 80 (by omega)), storeLimbs_eq_storeAt (hl 120 (by omega)),
+  rw [MemoryState.storeLimbs_eq_storeAt (p := p) (by omega),
+    MemoryState.storeLimbs_eq_storeAt (hl 40 (by omega)),
+    MemoryState.storeLimbs_eq_storeAt (hl 80 (by omega)),
+    MemoryState.storeLimbs_eq_storeAt (hl 120 (by omega)),
     MemoryState.storeAt_storeAt_append (k := 40) (hov 40 (by omega)) rfl (by decide),
     MemoryState.storeAt_storeAt_append (k := 80) (hov 80 (by omega)) rfl (by decide),
     MemoryState.storeAt_storeAt_append (k := 120) (hov 120 (by omega)) rfl (by decide)]
@@ -93,29 +95,9 @@ section OptEdwards
 
 variable {m : MemoryState} {p q : Pointer} {P : EdwardsPoint} {P? : Option EdwardsPoint}
 
-/-- Room for 1280 bits that do not wrap: room for a point. -/
-public theorem pointRoom_of_room (h : Room m q 1280) (ho : q.offset.toNat + 160 ≤ 2 ^ 64) :
-    m.PointRoom q := by
-  have hov (k : BitVec 64) (hk : k.toNat ≤ 152) : ¬q.offset.uaddOverflow k := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]
-    omega
-  have hl (k : BitVec 64) (hk : k.toNat ≤ 120) : m.LimbsRoom (q.add k) := by
-    have hr : Room m (q.add k) 320 := Room.add_of_le (hov k (by omega)) (by omega) h
-    have hoff : (q.add k).offset.toNat = q.offset.toNat + k.toNat := by
-      simp only [Pointer.add, BitVec.toNat_add]
-      omega
-    have hov' (off : BitVec 64) (hoff' : off.toNat ≤ 32) : ¬(q.add k).offset.uaddOverflow off := by
-      simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le, hoff]
-      omega
-    refine ⟨by omega, hr.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-      exact Room.add_of_le (hov' _ (by decide)) (by decide) hr
-  exact
-    ⟨ho, by simpa [Pointer.add_zero'] using hl 0#64 (by decide), hl 40#64 (by decide),
-      hl 80#64 (by decide), hl 120#64 (by decide)⟩
-
 /-- The point at `p + 8` of `decompress`'s result. -/
 public theorem optEdwardsRoom_pointRoom (h : m.OptEdwardsRoom p) : m.PointRoom (p.add 8#64) :=
-  pointRoom_of_room h.2.2
+  MemoryState.PointRoom.of_room' h.2.2
     (by
       simp only [Pointer.add, BitVec.toNat_add, show (8#64).toNat = 8 from rfl]; omega)
 

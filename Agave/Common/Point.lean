@@ -83,12 +83,6 @@ theorem Range.disjoint_coords_le {p : Pointer} {a b n : Nat} (hp : p.offset.toNa
     Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
   omega
 
-theorem Pointer.coord_offset_le {p : Pointer} {a n : Nat} (hp : p.offset.toNat + n ≤ 2 ^ 64)
-    (ha : a + 40 ≤ n) : (p.add (BitVec.ofNat 64 a)).offset.toNat + 32 < 2 ^ 64 := by
-  simp only [Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat]
-  rw [Nat.mod_eq_of_lt (by omega : a < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
-  omega
-
 /-- A field element read past a store to another one of the same object. -/
 theorem MemoryState.readLimbs_storeLimbs_coord_le {m : MemoryState} {p : Pointer} {a b n : Nat}
     (hp : p.offset.toNat + n ≤ 2 ^ 64) (ha : a + 40 ≤ n) (hb : b + 40 ≤ n)
@@ -1027,8 +1021,8 @@ theorem MemoryState.readEdwards_storeLimbs_of_id_ne (h : p.id ≠ q.id) :
 theorem MemoryState.readEdwards_storeAt_of_id_ne {x : BitVec w} (h : p.id ≠ q.id) :
     (m.storeAt p x).readEdwards q = m.readEdwards q := by
   have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
-  simp only [MemoryState.readEdwards, Agave.readLimbs_storeAt_of_id_ne h,
-    Agave.readLimbs_storeAt_of_id_ne (h' _)]
+  simp only [MemoryState.readEdwards, MemoryState.readLimbs_storeAt_of_id_ne h,
+    MemoryState.readLimbs_storeAt_of_id_ne (h' _)]
 
 /-- An `EdwardsPoint` elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
@@ -1107,8 +1101,8 @@ theorem MemoryState.readProjective_storeLimbs_of_id_ne (h : p.id ≠ q.id) :
 theorem MemoryState.readProjective_storeAt_of_id_ne {x : BitVec w} (h : p.id ≠ q.id) :
     (m.storeAt p x).readProjective q = m.readProjective q := by
   have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
-  simp only [MemoryState.readProjective, Agave.readLimbs_storeAt_of_id_ne h,
-    Agave.readLimbs_storeAt_of_id_ne (h' _)]
+  simp only [MemoryState.readProjective, MemoryState.readLimbs_storeAt_of_id_ne h,
+    MemoryState.readLimbs_storeAt_of_id_ne (h' _)]
 
 /-- A `ProjectivePoint` elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
@@ -1187,8 +1181,8 @@ theorem MemoryState.readCompleted_storeLimbs_of_id_ne (h : p.id ≠ q.id) :
 theorem MemoryState.readCompleted_storeAt_of_id_ne {x : BitVec w} (h : p.id ≠ q.id) :
     (m.storeAt p x).readCompleted q = m.readCompleted q := by
   have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
-  simp only [MemoryState.readCompleted, Agave.readLimbs_storeAt_of_id_ne h,
-    Agave.readLimbs_storeAt_of_id_ne (h' _)]
+  simp only [MemoryState.readCompleted, MemoryState.readLimbs_storeAt_of_id_ne h,
+    MemoryState.readLimbs_storeAt_of_id_ne (h' _)]
 
 /-- A `CompletedPoint` elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
@@ -1267,8 +1261,8 @@ theorem MemoryState.readNiels_storeLimbs_of_id_ne (h : p.id ≠ q.id) :
 theorem MemoryState.readNiels_storeAt_of_id_ne {x : BitVec w} (h : p.id ≠ q.id) :
     (m.storeAt p x).readNiels q = m.readNiels q := by
   have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
-  simp only [MemoryState.readNiels, Agave.readLimbs_storeAt_of_id_ne h,
-    Agave.readLimbs_storeAt_of_id_ne (h' _)]
+  simp only [MemoryState.readNiels, MemoryState.readLimbs_storeAt_of_id_ne h,
+    MemoryState.readLimbs_storeAt_of_id_ne (h' _)]
 
 /-- A `ProjectiveNielsPoint` elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]

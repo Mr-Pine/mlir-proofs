@@ -11,6 +11,8 @@ import all MLIR.Ty
 
 namespace MLIR.Agave.Avx2
 
+open Serial (storeAt_limbsBits_eq_storeProjective)
+
 /-! ## Proof -/
 
 section Proof
@@ -109,33 +111,12 @@ theorem storeAt_eq_storeEdwards_identity {m : MemoryState} {p : Pointer}
       m.storeEdwards p Serial.EdwardsPoint_identity.spec := by
   have h0 : (0#320 : BitVec 320) = limbsBits Serial.FieldElement51.ZERO := by
     simp [limbsBits, Serial.FieldElement51.ZERO]
-  rw [h0, ← storeLimbs_eq_storeAt (by omega : p.offset.toNat + 32 < 2 ^ 64), ←
-    storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 40) hp (by omega)), ←
-    storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 80) hp (by omega)), ←
-    storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 120) hp (by omega))]
+  rw [h0, ← MemoryState.storeLimbs_eq_storeAt (by omega : p.offset.toNat + 32 < 2 ^ 64), ←
+    MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 40) hp (by omega)), ←
+    MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 80) hp (by omega)), ←
+    MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 120) hp (by omega))]
   rfl
 
-/-- `EdwardsPoint::as_projective`'s copies, `Y`, `Z`, then `X`: a `ProjectivePoint` store. -/
-theorem storeAt_limbsBits_eq_storeProjective {m : MemoryState} {p : Pointer}
-    (hp : p.offset.toNat + 120 ≤ 2 ^ 64) (a b c : Fin 5 → BitVec 64) :
-    ((m.storeAt (p.add 40#64) (limbsBits b)).storeAt (p.add 80#64) (limbsBits c)).storeAt p
-        (limbsBits a) =
-      m.storeProjective p ⟨a, b, c⟩ := by
-  have h0 : p.offset.toNat + 32 < 2 ^ 64 := by omega
-  have h40 := Pointer.coord_offset_le (a := 40) hp (by omega)
-  have h80 := Pointer.coord_offset_le (a := 80) hp (by omega)
-  rw [← storeLimbs_eq_storeAt h40, ← storeLimbs_eq_storeAt h80, ← storeLimbs_eq_storeAt h0,
-    MemoryState.storeLimbs_comm h80 h0
-      (by
-        simpa [Pointer.add_zero'] using
-          Range.disjoint_coords_le (a := 80) (b := 0) hp (by omega) (by omega) (by omega)),
-    MemoryState.storeLimbs_comm h40 h0
-      (by
-        simpa [Pointer.add_zero'] using
-          Range.disjoint_coords_le (a := 40) (b := 0) hp (by omega) (by omega) (by omega))]
-  rfl
-
--- about 90 steps over a frame of 9 slots and 13 calls: past the default heartbeats
 set_option maxHeartbeats 400000 in
 /-- `P.is_small_order()` returns `Serial.EdwardsPoint_is_small_order.spec P`, with
 `as_projective`/`as_extended` inlined. Its slots and its callees' temporaries are freed again: only
@@ -151,11 +132,11 @@ public theorem EdwardsPoint_is_small_order.call_eq (p : Pointer) (s : GlobalStat
   -- `P`'s coordinates, read before the frame's blocks
   have hp₀ : S₀.mem.PointFit p := hS ▸ hp
   have hX : S.mem.readAt p 320 = limbsBits (S₀.mem.readLimbs p) := by
-    rw [hS]; exact readAt_eq_limbsBits hp₀.limbsFit_X
+    rw [hS]; exact MemoryState.readAt_eq_limbsBits hp₀.limbsFit_X
   have hY : S.mem.readAt (p.add 40#64) 320 = limbsBits (S₀.mem.readLimbs (p.add 40#64)) := by
-    rw [hS]; exact readAt_eq_limbsBits hp₀.limbsFit_Y
+    rw [hS]; exact MemoryState.readAt_eq_limbsBits hp₀.limbsFit_Y
   have hZ : S.mem.readAt (p.add 80#64) 320 = limbsBits (S₀.mem.readLimbs (p.add 80#64)) := by
-    rw [hS]; exact readAt_eq_limbsBits hp₀.limbsFit_T
+    rw [hS]; exact MemoryState.readAt_eq_limbsBits hp₀.limbsFit_T
   clear hp₀
   iterate 3 step_pure
   step_addressof Serial.anon_042b818bc72209407b52bd0e4d6c8368_1.value_eq with one
@@ -181,16 +162,16 @@ public theorem EdwardsPoint_is_small_order.call_eq (p : Pointer) (s : GlobalStat
   -- let mut s = self.as_projective();
   step_pure
   step_pure
-  have := room_of_limbsRoom hv10_proj.limbsRoom_Y
-  have := fits_of_limbsFit hp.limbsFit_Y
+  have := MemoryState.LimbsRoom.room320 hv10_proj.limbsRoom_Y
+  have := MemoryState.LimbsFit.fits hp.limbsFit_Y
   step_memcpy
   step_pure
   step_pure
-  have := room_of_limbsRoom hv10_proj.limbsRoom_Z
-  have := fits_of_limbsFit hp.limbsFit_T
+  have := MemoryState.LimbsRoom.room320 hv10_proj.limbsRoom_Z
+  have := MemoryState.LimbsFit.fits hp.limbsFit_T
   step_memcpy
-  have := room_of_limbsRoom hv10_proj.limbsRoom_X
-  have := fits_of_limbsFit hp.limbsFit_X
+  have := MemoryState.LimbsRoom.room320 hv10_proj.limbsRoom_X
+  have := MemoryState.LimbsFit.fits hp.limbsFit_X
   step_memcpy
   rw [storeAt_limbsBits_eq_storeProjective (by simp [hv10_off])] at hS
   obtain ⟨hv10_fit, hread_v10⟩ :
@@ -231,16 +212,16 @@ public theorem EdwardsPoint_is_small_order.call_eq (p : Pointer) (s : GlobalStat
   -- EdwardsPoint::identity()
   step_pure
   have hv8_point := MemoryState.PointRoom.of_room hroom_v8 hv8_off
-  have := room_of_limbsRoom hv8_point.limbsRoom_X
+  have := MemoryState.LimbsRoom.room320 hv8_point.limbsRoom_X
   step_memset
   step_pure
-  have := room_of_limbsRoom hv8_point.limbsRoom_Y
+  have := MemoryState.LimbsRoom.room320 hv8_point.limbsRoom_Y
   step_memcpy
   step_pure
-  have := room_of_limbsRoom hv8_point.limbsRoom_T
+  have := MemoryState.LimbsRoom.room320 hv8_point.limbsRoom_T
   step_memcpy
   step_pure
-  have := room_of_limbsRoom hv8_point.limbsRoom_Z
+  have := MemoryState.LimbsRoom.room320 hv8_point.limbsRoom_Z
   step_memset
   rw [storeAt_eq_storeEdwards_identity (by simp [hv8_off])] at hS
   obtain ⟨hv8_fit, hid_X, hid_Y, hid_Z⟩ :

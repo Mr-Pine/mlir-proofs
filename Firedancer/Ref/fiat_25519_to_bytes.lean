@@ -148,28 +148,13 @@ local macro "store_byte" : tactic =>
     ( step_pure
       step_store
       clear_reads
-      rw [MemoryState.storeAt_storeAt_add (BitVec.not_uaddOverflow_of_le hout1_off (by decide))
+      rw [MemoryState.storeAt_storeAt_concat (BitVec.not_uaddOverflow_of_le hout1_off (by decide))
           (by decide)] at hS))
 
 /-! ## Staged for Common -/
 
-/-- A store right after another: one store of both. -/
-private theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {off : BitVec 64}
-    {x : BitVec v} {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
-    (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
-    true_and, and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
-
 /-- The stored bytes, as the code computes them: `pack`'s. -/
-theorem fiat_25519_to_bytes.pack_eq {x12 x14 x16 x18 x20 x38 x51 x66 x79 : BitVec 64}
+public theorem fiat_25519_to_bytes.pack_eq {x12 x14 x16 x18 x20 x38 x51 x66 x79 : BitVec 64}
     (hx38 : x38 = (x12 >>> 48 &&& 255#64) + x14 <<< 3)
     (hx51 : x51 = (x38 >>> 48 &&& 255#64) + x16 <<< 6) (hx66 : x66 = x51 >>> 56 + x18 <<< 1)
     (hx79 : x79 = (x66 >>> 48 &&& 255#64) + x20 <<< 4) :

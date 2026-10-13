@@ -14,6 +14,8 @@ meta import Std.Tactic.BVDecide.Reflect
 
 namespace MLIR.Agave.Serial
 
+open Sha512VarCore_VariableOutputCore_finalize_variable_core (readBack)
+open compress512 (flatBits_ofFn_bytes)
 open _root_.Ed25519
 
 /-! ## Specification -/
@@ -70,27 +72,6 @@ section Proof
 open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0
   (globals_updateMem writable_updateMem)
 
-/-- A store right before another: one store of both. -/
-theorem storeAt_storeAt_below {m : MemoryState} {p : Pointer} {off : BitVec 64} {x : BitVec v}
-    {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
-    (m.storeAt (p.add off) y).storeAt p x = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
-    true_and, and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
-
-/-- A state's memory after a store, read back there. -/
-theorem readBack {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer} {X : BitVec w}
-    (hS : S = ⟨a, m.storeAt p X⟩) (h : Room S.mem p w) : S.mem.readAt p w = X := by
-  subst hS
-  exact MemoryState.readAt_storeAt_self (Room.storeAt_iff.1 h) _
-
 /-- A state's memory after a store: the stored bits are known. -/
 theorem fitsBack {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer} {X : BitVec w}
     (hS : S = ⟨a, m.storeAt p X⟩) (h : Room S.mem p w) : Fits S.mem p w := by
@@ -113,19 +94,6 @@ public theorem readAt_storeOptEdwards_of_id_ne {m : MemoryState} {p q : Pointer}
       MemoryState.storeLimbs] <;>
     simp only [Tactic.readThroughStore]
 
-/-- A point's limbs that fit: its 1280 bits. -/
-theorem fits_of_pointFit {m : MemoryState} {p : Pointer} (h : m.PointFit p) : Fits m p 1280 := by
-  obtain ⟨ho, h0, h1, h2, h3⟩ := h
-  have hov (k : BitVec 64) (hk : k.toNat ≤ 120) : ¬p.offset.uaddOverflow k := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-  exact
-    Fits.append (off := 120#64) (hov _ (by decide)) rfl rfl
-      (Fits.append (off := 80#64) (hov _ (by decide)) rfl rfl
-        (Fits.append (off := 40#64) (hov _ (by decide)) rfl rfl (fits_of_limbsFit h0)
-          (fits_of_limbsFit h1))
-        (fits_of_limbsFit h2))
-      (fits_of_limbsFit h3)
-
 /-- Room after `decompress`'s result: room before it. -/
 theorem room_of_storeOptEdwards {m : MemoryState} {p q : Pointer} {P? : Option EdwardsPoint}
     (h : Room (m.storeOptEdwards p P?) q w) : Room m q w := by
@@ -140,7 +108,7 @@ theorem point_of_decomp {S : GlobalState} {a : AllocState} {m : MemoryState} {p 
   subst hS
   have hm : m.OptEdwardsRoom p :=
     ⟨h.1, room_of_storeOptEdwards h.2.1, room_of_storeOptEdwards h.2.2⟩
-  exact ⟨readAt_storeOptEdwards_point hm, fits_of_pointFit (pointFit_storeOptEdwards hm)⟩
+  exact ⟨readAt_storeOptEdwards_point hm, MemoryState.PointFit.fits (pointFit_storeOptEdwards hm)⟩
 
 /-- `decompress`'s point result as the tag's and the point bits' stores. -/
 theorem decomp_some_eq {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer}
@@ -155,7 +123,7 @@ theorem decomp_some_eq {S : GlobalState} {a : AllocState} {m : MemoryState} {p :
 theorem edwards_of_bits {m : MemoryState} {p : Pointer} {P : EdwardsPoint} (hf : Fits m p 1280)
     (ho : p.offset.toNat + 160 ≤ 2 ^ 64) (hr : m.readAt p 1280 = edwardsBits P) :
     m.readEdwards p = P ∧ m.PointFit p :=
-  ⟨readEdwards_of_readAt hf ho hr, pointFit_of_fits hf ho⟩
+  ⟨readEdwards_of_readAt hf ho hr, MemoryState.PointFit.of_fits' hf ho⟩
 
 /-- Room for limbs `k` bytes into a slot. -/
 theorem limbsRoom_at {m : MemoryState} {p : Pointer} {k : BitVec 64} (h : Room m p w)
@@ -196,15 +164,17 @@ theorem key_store {m : MemoryState} {p : Pointer} (ho : p.offset = 0) (PK : BitV
     simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
   have e (a b : BitVec 64) (c : BitVec 64) (h : a + b = c) : (p.add a).add b = p.add c := by
     rw [Pointer.add_add, h]
-  rw [storeLimbs_eq_storeAt (by simp [Pointer.add, ho]),
-    storeLimbs_eq_storeAt (by simp [Pointer.add, ho]), ← e 32#64 40#64 72#64 rfl,
-    storeAt_storeAt_add (hov (p.add 32#64) 40#64 (by simp [Pointer.add, ho]) (by decide)) rfl, ←
-    e 32#64 80#64 112#64 rfl,
-    storeAt_storeAt_add (hov (p.add 32#64) 80#64 (by simp [Pointer.add, ho]) (by decide)) rfl, ←
-    e 32#64 120#64 152#64 rfl,
-    storeAt_storeAt_add (p := p.add 32#64) (off := 120#64)
+  rw [MemoryState.storeLimbs_eq_storeAt (by simp [Pointer.add, ho]),
+    MemoryState.storeLimbs_eq_storeAt (by simp [Pointer.add, ho]), ← e 32#64 40#64 72#64 rfl,
+    MemoryState.storeAt_storeAt_concat
+      (hov (p.add 32#64) 40#64 (by simp [Pointer.add, ho]) (by decide)) rfl,
+    ← e 32#64 80#64 112#64 rfl,
+    MemoryState.storeAt_storeAt_concat
+      (hov (p.add 32#64) 80#64 (by simp [Pointer.add, ho]) (by decide)) rfl,
+    ← e 32#64 120#64 152#64 rfl,
+    MemoryState.storeAt_storeAt_concat (p := p.add 32#64) (off := 120#64)
       (by simp [BitVec.uaddOverflow, Pointer.add, ho]) rfl,
-    storeAt_storeAt_below (by simp [BitVec.uaddOverflow, ho]) rfl]
+    MemoryState.storeAt_storeAt_below (by simp [BitVec.uaddOverflow, ho]) rfl]
   rfl
 
 /-- A point's bits: `Y` at bit 320. -/
@@ -236,7 +206,7 @@ theorem sig_reads {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Poin
     (hS : S = ⟨a, (m.storeAt (p.add 1#64) (x ++ y)).storeAt p b⟩) (hb : Room S.mem p 512)
     (ho : p.offset = 0) :
     Fits S.mem p 512 ∧ S.mem.readAt p 256 = y ++ b ∧ S.mem.readAt (p.add 32#64) 256 = x := by
-  rw [storeAt_storeAt_below (by simp [BitVec.uaddOverflow, ho]) rfl] at hS
+  rw [MemoryState.storeAt_storeAt_below (by simp [BitVec.uaddOverflow, ho]) rfl] at hS
   have hf : Fits S.mem p 512 := fitsBack hS hb
   have hr : S.mem.readAt p 512 = (x ++ y) ++ b := readBack hS hb
   refine ⟨hf, ?_, ?_⟩
@@ -249,33 +219,6 @@ theorem sig_reads {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Poin
   · rw [MemoryState.readAt_add_of_readAt hf.inBounds (by simp [BitVec.uaddOverflow, ho]) (by decide)
         hr]
     bv_decide
-
-/-- A byte array literal whose byte `i` is that of `N`: `N`'s bits. -/
-theorem flatBits_ofFn_bytes {n N w : Nat} {hw : (Ty.array n (.bv 8)).width = w} :
-    Ty.flatBits (t := .array n (.bv 8))
-        (Vector.ofFn fun i : Fin n => BitVec.ofNat 8 (N >>> (8 * i.val))) (hw := hw) =
-      BitVec.ofNat w N := by
-  have hw' : w = 8 * n := by
-    rw [← hw]; simp [Ty.width, Ty.padding, Ty.align]
-  subst hw'
-  apply BitVec.eq_of_getLsbD_eq
-  intro j hj
-  have hs : (Ty.bv 8).stride = 8 := rfl
-  have h1 :=
-    congrArg (fun x : BitVec 1 => x.getLsbD 0)
-      (Ty.extractLsb'_flattenRaw_array (s := j) (w := 1)
-        (Vector.ofFn fun i : Fin n => BitVec.ofNat 8 (N >>> (8 * i.val)))
-        (by
-          rw [hs]; omega)
-        (by
-          rw [hs]; have := Nat.mod_lt j (by decide : 0 < 8); simp [Ty.width]; omega))
-  simp only [BitVec.getLsbD_extractLsb', hs, Ty.extractLsb'_flattenRaw_bv, Nat.zero_lt_one,
-    decide_true, Bool.true_and, Nat.add_zero, Vector.getElem_ofFn, BitVec.getLsbD_ofNat,
-    Nat.testBit_shiftRight, show j % 8 < 8 by omega] at h1
-  simp only [Ty.flatBits_eq, BitVec.getLsbD_cast, BitVec.getLsbD_ofNat, hj, decide_true,
-    Bool.true_and, h1]
-  congr 1
-  omega
 
 /-- The IV global's words: SHA-512's `IV`. -/
 theorem iv_words {hw : (Ty.array 64 (.bv 8)).width = 512} :
@@ -659,7 +602,8 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
   step_pure
   step_memcpy
   step_store
-  rw [storeAt_storeAt_below (off := 1#64) (by simp [BitVec.uaddOverflow, hA_bytes_off]) rfl] at hS
+  rw [MemoryState.storeAt_storeAt_below (off := 1#64) (by simp [BitVec.uaddOverflow, hA_bytes_off])
+      rfl] at hS
   have hread_pkb : S.mem.readAt A_bytes 256 = pk1 ++ pk0 := readBack hS hroom_A_bytes
   clear hread_A_bytes hread_A_bytes_1 hfits_A_bytes hfits_A_bytes_1
   have hfits_pkb : Fits S.mem A_bytes 256 := fitsBack hS hroom_A_bytes
@@ -751,7 +695,8 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
     step_pure
     step_memcpy
     rw [hS_bytes₀,
-      storeAt_storeAt_add (off := 31#64) (by simp [BitVec.uaddOverflow, hsig_tail_off]) rfl] at hS
+      MemoryState.storeAt_storeAt_concat (off := 31#64)
+        (by simp [BitVec.uaddOverflow, hsig_tail_off]) rfl] at hS
     clear hread_sig_tail hread_sig_tail_31 hfits_sig_tail hfits_sig_tail_31 hvk_read
     have hst_read : S.mem.readAt sig_tail 504 = _ := readBack hS hroom_sig_tail
     have hst_fits : Fits S.mem sig_tail (8 * (63#64).toNat) := fitsBack hS hroom_sig_tail

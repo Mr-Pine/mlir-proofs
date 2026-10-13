@@ -126,55 +126,13 @@ namespace ge_double_scalarmult_vartime
 
 /-! ### Objects in memory -/
 
-/-- Five limbs `j` bytes into a block from its start, `j + 40` bytes within it. -/
-theorem LimbsRoom.of_room_at {m : MemoryState} {p : Pointer} {n : Nat} {j : BitVec 64}
-    (h : Room m p n) (ho : p.offset = 0) (hj : 8 * (j.toNat + 40) ≤ n)
-    (hj' : j.toNat + 40 ≤ 2 ^ 64) : m.LimbsRoom (p.add j) := by
-  have hr (c : BitVec 64) (hc : c.toNat ≤ 32) : Room m ((p.add j).add c) 64 := by
-    rw [Pointer.add_add]
-    have hjc : (j + c).toNat = j.toNat + c.toNat := by
-      rw [BitVec.toNat_add, Nat.mod_eq_of_lt (show j.toNat + c.toNat < 2 ^ 64 by omega)]
-    exact
-      Room.add_of_le
-        (by
-          simp [ho, BitVec.uaddOverflow]; omega)
-        (by
-          rw [hjc]; omega)
-        h
-  have h0 := hr 0#64 (by decide)
-  rw [Pointer.add_add, BitVec.add_zero] at h0
-  exact
-    ⟨by
-      simp [Pointer.add, ho]; omega, h0, hr _ (by decide), hr _ (by decide), hr _ (by decide),
-      hr _ (by decide)⟩
-
-/-- Room for a point `k` bytes into a block from its start, `k + 160` bytes within it. -/
-theorem PointRoom.of_room_at {m : MemoryState} {p : Pointer} {n : Nat} {k : BitVec 64}
-    (h : Room m p n) (ho : p.offset = 0) (hk : 8 * (k.toNat + 160) ≤ n)
-    (hk' : k.toNat + 160 ≤ 2 ^ 64) : m.PointRoom (p.add k) := by
-  have hl (c : BitVec 64) (hc : c.toNat ≤ 120) : m.LimbsRoom ((p.add k).add c) := by
-    rw [Pointer.add_add]
-    have hkc : (k + c).toNat = k.toNat + c.toNat := by
-      rw [BitVec.toNat_add, Nat.mod_eq_of_lt (show k.toNat + c.toNat < 2 ^ 64 by omega)]
-    exact
-      LimbsRoom.of_room_at h ho
-        (by
-          rw [hkc]; omega)
-        (by
-          rw [hkc]; omega)
-  have h0 := hl 0#64 (by decide)
-  rw [Pointer.add_add, BitVec.add_zero] at h0
-  exact
-    ⟨by
-      simp [Pointer.add, ho]; omega, h0, hl _ (by decide), hl _ (by decide), hl _ (by decide)⟩
-
 /-- Room for entry `k` of eight points from a block's start. -/
-theorem PointRoom.entry {m : MemoryState} {p : Pointer} {k : Nat} (h : Room m p 10240)
+public theorem PointRoom.entry {m : MemoryState} {p : Pointer} {k : Nat} (h : Room m p 10240)
     (ho : p.offset = 0) (hk : k < 8) : m.PointRoom (p.add (BitVec.ofNat 64 (160 * k))) := by
   have e : (BitVec.ofNat 64 (160 * k)).toNat = 160 * k := by
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   exact
-    PointRoom.of_room_at h ho
+    MemoryState.PointRoom.of_room_at h ho
       (by
         rw [e]; omega)
       (by
@@ -182,8 +140,8 @@ theorem PointRoom.entry {m : MemoryState} {p : Pointer} {k : Nat} (h : Room m p 
 
 /-- A field element at byte `b` of the 1280-byte block at `p`, past a `ge_cached` stored at byte
 `a`, apart from it. -/
-theorem readLimbs_storeCached_apart {m : MemoryState} {p : Pointer} {a b : Nat} {C : GeCached}
-    (hp : p.offset.toNat + 1280 ≤ 2 ^ 64) (ha : a + 160 ≤ 1280) (hb : b + 40 ≤ 1280)
+public theorem readLimbs_storeCached_apart {m : MemoryState} {p : Pointer} {a b : Nat}
+    {C : GeCached} (hp : p.offset.toNat + 1280 ≤ 2 ^ 64) (ha : a + 160 ≤ 1280) (hb : b + 40 ≤ 1280)
     (hab : a + 160 ≤ b ∨ b + 40 ≤ a) :
     (m.storeCached (p.add (BitVec.ofNat 64 a)) C).readLimbs (p.add (BitVec.ofNat 64 b)) =
       m.readLimbs (p.add (BitVec.ofNat 64 b)) := by
@@ -194,8 +152,8 @@ theorem readLimbs_storeCached_apart {m : MemoryState} {p : Pointer} {a b : Nat} 
     MemoryState.readLimbs_storeLimbs_fe hp (by omega) hb (by omega)]
 
 /-- A `ge_cached` at byte `b` of the 1280-byte block at `p`, past one stored at byte `a`, apart. -/
-theorem readCached_storeCached_apart {m : MemoryState} {p : Pointer} {a b : Nat} {C : GeCached}
-    (hp : p.offset.toNat + 1280 ≤ 2 ^ 64) (ha : a + 160 ≤ 1280) (hb : b + 160 ≤ 1280)
+public theorem readCached_storeCached_apart {m : MemoryState} {p : Pointer} {a b : Nat}
+    {C : GeCached} (hp : p.offset.toNat + 1280 ≤ 2 ^ 64) (ha : a + 160 ≤ 1280) (hb : b + 160 ≤ 1280)
     (hab : a + 160 ≤ b ∨ b + 160 ≤ a) :
     (m.storeCached (p.add (BitVec.ofNat 64 a)) C).readCached (p.add (BitVec.ofNat 64 b)) =
       m.readCached (p.add (BitVec.ofNat 64 b)) := by
@@ -205,71 +163,28 @@ theorem readCached_storeCached_apart {m : MemoryState} {p : Pointer} {a b : Nat}
     readLimbs_storeCached_apart hp ha (by omega) (by omega),
     readLimbs_storeCached_apart hp ha (by omega) (by omega)]
 
-/-- The limbs at byte `o` of a known read: its bits. -/
-theorem readLimbs_add_of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v} (hf : InBounds m p v)
-    (h : m.readAt p v = x) (hp : p.offset.toNat + o + 40 ≤ 2 ^ 64) (hv : 8 * o + 320 ≤ v) :
-    m.readLimbs (p.add (BitVec.ofNat 64 o)) = fun i => x.extractLsb' (8 * o + 64 * i.val) 64 := by
-  have hr (c : Nat) (hc : c ≤ 32) :
-    m.readAt (p.add (BitVec.ofNat 64 (o + c))) 64 = x.extractLsb' (8 * o + 8 * c) 64 := by
-    rw [MemoryState.readAt_add_of_readAt hf
-        (by
-          simp [BitVec.uaddOverflow]; omega)
-        (by
-          simp; omega)
-        h]
-    congr 1
-    simp
-    omega
-  have h0 := hr 0 (by omega)
-  simp only [Nat.add_zero, Nat.mul_zero] at h0
-  funext i
-  fin_cases i <;> simp only [MemoryState.readLimbs, Firedancer.add_ofNat_add]
-  · exact h0
-  · exact hr 8 (by omega)
-  · exact hr 16 (by omega)
-  · exact hr 24 (by omega)
-  · exact hr 32 (by omega)
-
-/-- Limbs `o` bytes into a block known from its start fit. -/
-theorem LimbsFit.of_fits_at {m : MemoryState} {p : Pointer} {o : Nat} (h : Fits m p v)
-    (ho : p.offset = 0) (hv : 8 * (o + 40) ≤ v) (ho' : o + 40 ≤ 2 ^ 64) :
-    m.LimbsFit (p.add (BitVec.ofNat 64 o)) := by
-  have hf (c : Nat) (hc : c ≤ 32) :
-    Fits m ((p.add (BitVec.ofNat 64 o)).add (BitVec.ofNat 64 c)) 64 := by
-    rw [Firedancer.add_ofNat_add]
-    exact
-      Fits.add_of_le
-        (by
-          simp [ho, BitVec.uaddOverflow]; omega)
-        (by
-          simp; omega)
-        h
-  have h0 := hf 0 (by omega)
-  rw [Pointer.add_zero'] at h0
-  exact
-    ⟨by
-      simp [Pointer.add, ho]; omega, h0, hf 8 (by omega), hf 16 (by omega), hf 24 (by omega),
-      hf 32 (by omega)⟩
-
 /-- The 256 bytes `v` at `p`. -/
-def SlidesAt (m : MemoryState) (p : Pointer) (v : Vector (BitVec 8) 256) : Prop :=
+@[expose]
+public def SlidesAt (m : MemoryState) (p : Pointer) (v : Vector (BitVec 8) 256) : Prop :=
   ∀ k (hk : k < 256),
     Fits m (p.add (BitVec.ofNat 64 k)) 8 ∧ m.readAt (p.add (BitVec.ofNat 64 k)) 8 = v[k]
 
 /-- The `n` `ge_cached` `f 0, …, f (n - 1)` at `p`, 160 bytes apart. -/
-def CachedTable (m : MemoryState) (p : Pointer) (n : Nat) (f : Nat → GeCached) : Prop :=
+@[expose]
+public def CachedTable (m : MemoryState) (p : Pointer) (n : Nat) (f : Nat → GeCached) : Prop :=
   ∀ k < n,
     m.PointFit (p.add (BitVec.ofNat 64 (160 * k))) ∧
       m.readCached (p.add (BitVec.ofNat 64 (160 * k))) = f k
 
 /-- The `n` `ge_precomp` `f 0, …, f (n - 1)` at `p`, 120 bytes apart. -/
-def PrecompTable (m : MemoryState) (p : Pointer) (n : Nat) (f : Nat → GePrecomp) : Prop :=
+@[expose]
+public def PrecompTable (m : MemoryState) (p : Pointer) (n : Nat) (f : Nat → GePrecomp) : Prop :=
   ∀ k < n,
     m.Fe3Fit (p.add (BitVec.ofNat 64 (120 * k))) ∧
       m.readPrecomp (p.add (BitVec.ofNat 64 (120 * k))) = f k
 
 /-- The 256 bytes stored at `p`, lane by lane. -/
-theorem SlidesAt.of_readAt {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 256}
+public theorem SlidesAt.of_readAt {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 256}
     (hf : Fits m p 2048) (ho : p.offset = 0) (h : m.readAt p 2048 = BitVec.packLanes v) :
     SlidesAt m p v := fun k hk => by
   have hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
@@ -291,7 +206,7 @@ theorem SlidesAt.of_readAt {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8
     hk', BitVec.extractLsb'_packLanes _ _ hk]
 
 /-- The eight `ge_precomp` of a known read from `p`'s start. -/
-theorem PrecompTable.of_readAt {m : MemoryState} {p : Pointer} {x : BitVec 7680}
+public theorem PrecompTable.of_readAt {m : MemoryState} {p : Pointer} {x : BitVec 7680}
     (hf : Fits m p 7680) (ho : p.offset = 0) (h : m.readAt p 7680 = x) :
     PrecompTable m p 8 fun k => precompAt x (960 * k) := fun k hk => by
   have hp (o : Nat) (ho' : o + 40 ≤ 960) : p.offset.toNat + o + 40 ≤ 2 ^ 64 := by
@@ -299,16 +214,16 @@ theorem PrecompTable.of_readAt {m : MemoryState} {p : Pointer} {x : BitVec 7680}
   refine
     ⟨⟨by
         simp [Pointer.add, ho]; rw [Nat.mod_eq_of_lt (by omega)]; omega,
-        LimbsFit.of_fits_at hf ho (by omega) (by omega), ?_, ?_⟩,
+        MemoryState.LimbsFit.of_fits_at hf ho (by omega) (by omega), ?_, ?_⟩,
       ?_⟩
   · rw [Firedancer.add_ofNat_add]
-    exact LimbsFit.of_fits_at hf ho (by omega) (by omega)
+    exact MemoryState.LimbsFit.of_fits_at hf ho (by omega) (by omega)
   · rw [Firedancer.add_ofNat_add]
-    exact LimbsFit.of_fits_at hf ho (by omega) (by omega)
+    exact MemoryState.LimbsFit.of_fits_at hf ho (by omega) (by omega)
   · simp only [MemoryState.readPrecomp, Firedancer.add_ofNat_add, precompAt]
-    rw [readLimbs_add_of_readAt hf.inBounds h (hp _ (by omega)) (by omega),
-      readLimbs_add_of_readAt hf.inBounds h (hp _ (by omega)) (by omega),
-      readLimbs_add_of_readAt hf.inBounds h (hp _ (by omega)) (by omega)]
+    rw [MemoryState.readLimbs_add_of_readAt hf.inBounds h (hp _ (by omega)) (by omega),
+      MemoryState.readLimbs_add_of_readAt hf.inBounds h (hp _ (by omega)) (by omega),
+      MemoryState.readLimbs_add_of_readAt hf.inBounds h (hp _ (by omega)) (by omega)]
     congr 1 <;> funext i <;> congr 1 <;> omega
 
 /-! ### Transport past the loop's stores -/
@@ -317,77 +232,77 @@ section Transport
 
 variable {m : MemoryState} {p q : Pointer}
 
-theorem SlidesAt.storeP1p1 (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
+public theorem SlidesAt.storeP1p1 (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
     SlidesAt (m.storeP1p1 q X) p v := fun k hk =>
   ⟨Fits.storeP1p1 (h k hk).1, by
     rw [MemoryState.readAt_storeP1p1_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem SlidesAt.storeP3 (h : SlidesAt m p v) (hne : q.id ≠ p.id) : SlidesAt (m.storeP3 q X) p v :=
-  fun k hk =>
+public theorem SlidesAt.storeP3 (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
+    SlidesAt (m.storeP3 q X) p v := fun k hk =>
   ⟨Fits.storeP3 (h k hk).1, by
     rw [MemoryState.readAt_storeP3_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem SlidesAt.storeP2 (h : SlidesAt m p v) (hne : q.id ≠ p.id) : SlidesAt (m.storeP2 q X) p v :=
-  fun k hk =>
+public theorem SlidesAt.storeP2 (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
+    SlidesAt (m.storeP2 q X) p v := fun k hk =>
   ⟨Fits.storeP2 (h k hk).1, by
     rw [MemoryState.readAt_storeP2_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem SlidesAt.storeCached (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
+public theorem SlidesAt.storeCached (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
     SlidesAt (m.storeCached q X) p v := fun k hk =>
   ⟨Fits.storeCached (h k hk).1, by
     rw [MemoryState.readAt_storeCached_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem CachedTable.storeP1p1 (h : CachedTable m p n f) (hne : q.id ≠ p.id) :
+public theorem CachedTable.storeP1p1 (h : CachedTable m p n f) (hne : q.id ≠ p.id) :
     CachedTable (m.storeP1p1 q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeP1p1, by
     rw [MemoryState.readCached_storeP1p1_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem CachedTable.storeP3 (h : CachedTable m p n f) (hne : q.id ≠ p.id) :
+public theorem CachedTable.storeP3 (h : CachedTable m p n f) (hne : q.id ≠ p.id) :
     CachedTable (m.storeP3 q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeP3, by
     rw [MemoryState.readCached_storeP3_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem CachedTable.storeP2 (h : CachedTable m p n f) (hne : q.id ≠ p.id) :
+public theorem CachedTable.storeP2 (h : CachedTable m p n f) (hne : q.id ≠ p.id) :
     CachedTable (m.storeP2 q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeP2, by
     rw [MemoryState.readCached_storeP2_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem PrecompTable.storeP1p1 (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
+public theorem PrecompTable.storeP1p1 (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
     PrecompTable (m.storeP1p1 q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeP1p1, by
     rw [MemoryState.readPrecomp_storeP1p1_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem PrecompTable.storeP3 (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
+public theorem PrecompTable.storeP3 (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
     PrecompTable (m.storeP3 q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeP3, by
     rw [MemoryState.readPrecomp_storeP3_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem PrecompTable.storeP2 (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
+public theorem PrecompTable.storeP2 (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
     PrecompTable (m.storeP2 q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeP2, by
     rw [MemoryState.readPrecomp_storeP2_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem PrecompTable.storeCached (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
+public theorem PrecompTable.storeCached (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
     PrecompTable (m.storeCached q X) p n f := fun k hk =>
   ⟨(h k hk).1.storeCached, by
     rw [MemoryState.readPrecomp_storeCached_of_id_ne (by simpa [Pointer.add_id] using hne)]
     exact (h k hk).2⟩
 
-theorem SlidesAt.storeCached_add (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
+public theorem SlidesAt.storeCached_add (h : SlidesAt m p v) (hne : q.id ≠ p.id) :
     SlidesAt (m.storeCached (q.add c) X) p v :=
   h.storeCached (by simpa [Pointer.add_id] using hne)
 
-theorem PrecompTable.storeCached_add (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
+public theorem PrecompTable.storeCached_add (h : PrecompTable m p n f) (hne : q.id ≠ p.id) :
     PrecompTable (m.storeCached (q.add c) X) p n f :=
   h.storeCached (by simpa [Pointer.add_id] using hne)
 
@@ -396,7 +311,7 @@ end Transport
 /-! ### Digits and indices -/
 
 /-- A positive digit at most `15` halves to an index below `8`. -/
-theorem idx_lt_pos {d : BitVec 8} (h : (0#8).slt d = true) (h15 : d.toInt ≤ 15) :
+public theorem idx_lt_pos {d : BitVec 8} (h : (0#8).slt d = true) (h15 : d.toInt ≤ 15) :
     (d >>> 1).toNat < 8 := by
   have : d.sle 15#8 = true := by
     simp only [BitVec.sle, decide_eq_true_eq]
@@ -406,7 +321,7 @@ theorem idx_lt_pos {d : BitVec 8} (h : (0#8).slt d = true) (h15 : d.toInt ≤ 15
   exact this
 
 /-- A negative digit at least `-15`, negated, halves to an index below `8`. -/
-theorem idx_lt_neg {d : BitVec 8} (h : d.slt 0#8 = true) (h15 : -15 ≤ d.toInt) :
+public theorem idx_lt_neg {d : BitVec 8} (h : d.slt 0#8 = true) (h15 : -15 ≤ d.toInt) :
     ((-d) >>> 1).toNat < 8 := by
   have : (-15#8).sle d = true := by
     simp only [BitVec.sle, decide_eq_true_eq]
@@ -416,25 +331,25 @@ theorem idx_lt_neg {d : BitVec 8} (h : d.slt 0#8 = true) (h15 : -15 ≤ d.toInt)
   exact this
 
 /-- `aslide[i] / 2`'s byte offset in `Ai`. -/
-theorem idx160 (d : BitVec 8) :
+public theorem idx160 (d : BitVec 8) :
     (d.toNat % 18446744073709551616) >>> 1 * 160 = 160 * (d >>> 1).toNat := by
   rw [Nat.mod_eq_of_lt (by omega), BitVec.toNat_ushiftRight, Nat.mul_comm]
 
 /-- `bslide[i] / 2`'s byte offset in `Bi`. -/
-theorem idx120 (d : BitVec 8) :
+public theorem idx120 (d : BitVec 8) :
     (d.toNat % 18446744073709551616) >>> 1 * 120 = 120 * (d >>> 1).toNat := by
   rw [Nat.mod_eq_of_lt (by omega), BitVec.toNat_ushiftRight, Nat.mul_comm]
 
-theorem eq_zero_of_not {d : BitVec 8} (hp : ¬(0#8).slt d = true) (hn : ¬d.slt 0#8 = true) :
+public theorem eq_zero_of_not {d : BitVec 8} (hp : ¬(0#8).slt d = true) (hn : ¬d.slt 0#8 = true) :
     d = 0#8 := by
   simp only [Bool.not_eq_true] at hp hn
   bv_decide
 
-theorem ne_zero_of_pos {d : BitVec 8} (h : (0#8).slt d = true) : d ≠ 0#8 := by
+public theorem ne_zero_of_pos {d : BitVec 8} (h : (0#8).slt d = true) : d ≠ 0#8 := by
   rintro rfl
   exact absurd h (by decide)
 
-theorem ne_zero_of_neg {d : BitVec 8} (h : d.slt 0#8 = true) : d ≠ 0#8 := by
+public theorem ne_zero_of_neg {d : BitVec 8} (h : d.slt 0#8 = true) : d ≠ 0#8 := by
   rintro rfl
   exact absurd h (by decide)
 
@@ -452,7 +367,7 @@ abbrev LoopRegs (aslide bslide ai bi t u a2 : Pointer) (E : ⟪Γ⟫) : Prop :=
     %404 := t, %405 := u, %406 := a2]
 
 /-- The main loop's objects: blocks apart, the tables and slides from their blocks' starts. -/
-structure Layout (r t u aslide bslide ai bi : Pointer) : Prop where
+public structure Layout (r t u aslide bslide ai bi : Pointer) : Prop where
   rt : r.id ≠ t.id
   ru : r.id ≠ u.id
   ra : r.id ≠ aslide.id
@@ -475,7 +390,7 @@ structure Layout (r t u aslide bslide ai bi : Pointer) : Prop where
 
 /-- What the main loop needs of a state: `r` fits, room for `t` and `u`, the slides and tables in
 place. -/
-structure LoopFacts (S : GlobalState) (r t u aslide bslide ai bi : Pointer)
+public structure LoopFacts (S : GlobalState) (r t u aslide bslide ai bi : Pointer)
     (as bs : Vector (BitVec 8) 256) (AI : Nat → GeCached) (BI : Nat → GePrecomp) : Prop where
   wf : S.WF
   fitR : S.mem.Fe3Fit r
@@ -702,7 +617,7 @@ theorem headB_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
       · rw [hS]
 
 /-- `i - 1` on a small `long` counter does not overflow, `i = 0` included. -/
-theorem saddOverflow_neg_one64 {i : Nat} (h : i < 2 ^ 63) :
+public theorem saddOverflow_neg_one64 {i : Nat} (h : i < 2 ^ 63) :
     (BitVec.ofNat 64 i).saddOverflow 18446744073709551615#64 = false := by
   have hn : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
   have hm : (18446744073709551615#64).toInt = -1 := by decide
@@ -710,7 +625,7 @@ theorem saddOverflow_neg_one64 {i : Nat} (h : i < 2 ^ 63) :
   omega
 
 /-- A small `long` counter not `> 0` is `0`. -/
-theorem eq_zero_of_not_slt64 {i : Nat} (h : i < 2 ^ 63)
+public theorem eq_zero_of_not_slt64 {i : Nat} (h : i < 2 ^ 63)
     (hs : ¬(0#64).slt (BitVec.ofNat 64 i) = true) : i = 0 := by
   by_contra h0
   exact hs (Firedancer.slt_ofNat64 (by omega) h)
@@ -784,8 +699,8 @@ theorem tail_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vecto
     rw [hS, MemoryState.eraseFrom_storeP2]
 
 /-- A `ge_p2` stored twice at `p`: the second. -/
-theorem storeP2_storeP2_self {m : MemoryState} {p : Pointer} (hp : p.offset.toNat + 120 ≤ 2 ^ 64) :
-    (m.storeP2 p P).storeP2 p Q = m.storeP2 p Q := by
+public theorem storeP2_storeP2_self {m : MemoryState} {p : Pointer}
+    (hp : p.offset.toNat + 120 ≤ 2 ^ 64) : (m.storeP2 p P).storeP2 p Q = m.storeP2 p Q := by
   simp only [MemoryState.storeP2]
   rw [MemoryState.storeLimbs_comm_fe_X (n := 120) (a := 80) hp (by omega) (by omega),
     MemoryState.storeLimbs_comm_fe_X (n := 120) (a := 40) hp (by omega) (by omega),
@@ -925,7 +840,7 @@ theorem found_block (r a A b aslide bslide ai bi t u a2 : Pointer)
   exact hK E hArgs (by env_reads) (by env_reads)
 
 /-- `i - 2` on a small `int` counter does not overflow. -/
-theorem saddOverflow_neg_two32 {i : Nat} (h : i < 2 ^ 31) :
+public theorem saddOverflow_neg_two32 {i : Nat} (h : i < 2 ^ 31) :
     (BitVec.ofNat 32 i).saddOverflow 4294967294#32 = false := by
   have hn : (BitVec.ofNat 32 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
   have hm : (4294967294#32).toInt = -2 := by decide
@@ -933,7 +848,7 @@ theorem saddOverflow_neg_two32 {i : Nat} (h : i < 2 ^ 31) :
   omega
 
 /-- `i - 2` on an `int` counter at least `2`. -/
-theorem add_neg_two32 {i : Nat} (h2 : 2 ≤ i) (h : i < 2 ^ 32) :
+public theorem add_neg_two32 {i : Nat} (h2 : 2 ≤ i) (h : i < 2 ^ 32) :
     BitVec.ofNat 32 i + 4294967294#32 = BitVec.ofNat 32 (i - 2) := by
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
@@ -1052,14 +967,14 @@ theorem skip_iter (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vector
     env_reads
 
 open ge_double_scalarmult_vartime in
-theorem start_succ_zero {as bs : Vector (BitVec 8) 256} {i : Nat} (h : i + 1 < 256)
+public theorem start_succ_zero {as bs : Vector (BitVec 8) 256} {i : Nat} (h : i + 1 < 256)
     (h0 : as[i + 1] = 0#8 ∧ bs[i + 1] = 0#8) :
     start as bs (i + 1) h = start as bs i (by omega) := by
   rw [start]
   simp only [h0, and_self, ↓reduceIte]
 
 open ge_double_scalarmult_vartime in
-theorem start_succ_ne {as bs : Vector (BitVec 8) 256} {i : Nat} (h : i + 1 < 256)
+public theorem start_succ_ne {as bs : Vector (BitVec 8) 256} {i : Nat} (h : i + 1 < 256)
     (h0 : ¬(as[i + 1] = 0#8 ∧ bs[i + 1] = 0#8)) : start as bs (i + 1) h = some ⟨i + 1, h⟩ := by
   rw [start]
   simp only [h0, ↓reduceIte]
@@ -1128,7 +1043,7 @@ def tableU (P : GeP3) (j : Nat) : GeP3 :=
   x25519_ge_p1p1_to_p3.spec (x25519_ge_add.spec (A2 P) (aiTbl P (j - 1)))
 
 /-- `WF` past a table step: blocks counted, three stores. -/
-theorem GlobalState.WF.tableStep {s : GlobalState} (h : s.WF) :
+public theorem GlobalState.WF.tableStep {s : GlobalState} (h : s.WF) :
     (⟨⟨s.alloc.nextFreeBlock + k⟩, ((s.mem.storeCached p C).storeP1p1 t X).storeP3 u U⟩ :
         GlobalState).WF :=
   (((GlobalState.WF.add_blocks h).storeCached_mk).storeP1p1_mk).storeP3_mk
@@ -1180,7 +1095,7 @@ theorem runBodyFrom_tableRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
 
 /-- The table loop's objects: blocks apart, `Ai` from its block's start, all in the frame from
 `N` on. -/
-structure TableLayout (r t u aslide bslide ai bi a2 : Pointer) (N : Nat) : Prop where
+public structure TableLayout (r t u aslide bslide ai bi a2 : Pointer) (N : Nat) : Prop where
   tu : t.id ≠ u.id
   ta2 : t.id ≠ a2.id
   ua2 : u.id ≠ a2.id
@@ -1401,7 +1316,7 @@ theorem blocks_of_some {x1 x2 : BitVec 256} {j : Fin 256}
   rw [h]
 
 /-- The eighth entry stored past the seven, and `r` after. -/
-theorem CachedTable.store8 {m : MemoryState} {ai r : Pointer} {f : Nat → GeCached}
+public theorem CachedTable.store8 {m : MemoryState} {ai r : Pointer} {f : Nat → GeCached}
     (h : CachedTable m ai 7 f) (hai : ai.offset = 0) (hr : r.id ≠ ai.id)
     (h7 : m.PointRoom (ai.add 1120#64)) :
     CachedTable ((m.storeCached (ai.add 1120#64) (f 7)).storeP2 r R) ai 8 f := fun k hk => by

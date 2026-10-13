@@ -1,6 +1,6 @@
 module
 
-public import Firedancer.Common.Point
+public import Firedancer.Common.LimbBits
 public import Firedancer.Common.Writable
 import Std.Data.ExtHashMap.Lemmas
 import MLIR.Run.Tactic.Memory
@@ -235,17 +235,7 @@ theorem MemoryState.storeLimbs_comm_fe_X {m : MemoryState} {p : Pointer} {n a : 
   have h := storeLimbs_comm_fe (m := m) (A := A) (B := B) (b := 0) hp ha (by omega) (by omega)
   rwa [Pointer.add_zero'] at h
 
-/-- A field element outside the block of a store: the limbs before it. -/
-@[mlir_read]
-theorem MemoryState.readLimbs_storeAt_of_id_ne {m : MemoryState} {p q : Pointer} {x : BitVec w}
-    (h : p.id ≠ q.id) : (m.storeAt p x).readLimbs q = m.readLimbs q := by
-  have h' (k : BitVec 64) : p.id ≠ (q.add k).id := by simpa [Pointer.add_id] using h
-  have h8 := h' 8#64
-  have h16 := h' 16#64
-  have h24 := h' 24#64
-  have h32 := h' 32#64
-  funext i
-  fin_cases i <;> simp only [MemoryState.readLimbs, Tactic.readThroughStore]
+attribute [mlir_read] MemoryState.readLimbs_storeAt_of_id_ne
 
 /-! ### Three-element objects across writes, `alloca`s and frames -/
 

@@ -51,14 +51,14 @@ theorem split_lanes (x : BitVec 128) :
 /-- The first limb pair of limbs that fit: the two limbs. -/
 theorem readAt_pair0 {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
     m.readAt p 128 = m.readAt (p.add 8#64) 64 ++ m.readAt p 64 := by
-  rw [← lane1_readAt0 h, ← lane0_readAt]
+  rw [← MemoryState.LimbsFit.extractVecElem_one_lo h, ← MemoryState.extractVecElem_zero_readAt]
   exact split_lanes _
 
 /-- The limb pair at byte `k ≤ 24` of limbs that fit: the two limbs. -/
 theorem readAt_pair {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) {k : BitVec 64}
     (hk : k.toNat ≤ 24) :
     m.readAt (p.add k) 128 = m.readAt (p.add (k + 8#64)) 64 ++ m.readAt (p.add k) 64 := by
-  rw [← lane1_readAt h hk, ← lane0_readAt]
+  rw [← MemoryState.LimbsFit.extractVecElem_one h hk, ← MemoryState.extractVecElem_zero_readAt]
   exact split_lanes _
 
 /-- The limbs `square2` leaves: `pow2k(1)`'s, each shifted by one, stored as the pairs at bytes 0
@@ -83,22 +83,23 @@ theorem square2_readLimbs {m : MemoryState} {p : Pointer} (a : Fin 5 → BitVec 
   funext i
   fin_cases i
   · show m.readAt p 64 = _
-    rw [← lane0_readAt, h0, Ty.extractVecElem_packLanes]
+    rw [← MemoryState.extractVecElem_zero_readAt, h0, Ty.extractVecElem_packLanes]
     simp [Ty.extractVecElem_eq, FieldElement51_square2.spec, extractLsb'_append_lo]
   · show m.readAt (p.add 8#64) 64 = _
-    rw [← lane1_readAt0 h, h0, Ty.extractVecElem_packLanes]
+    rw [← MemoryState.LimbsFit.extractVecElem_one_lo h, h0, Ty.extractVecElem_packLanes]
     simp [Ty.extractVecElem_eq, FieldElement51_square2.spec, extractLsb'_append_hi]
   · show m.readAt (p.add 16#64) 64 = _
-    rw [← lane0_readAt, h1, Ty.extractVecElem_packLanes]
+    rw [← MemoryState.extractVecElem_zero_readAt, h1, Ty.extractVecElem_packLanes]
     simp [Ty.extractVecElem_eq, FieldElement51_square2.spec, extractLsb'_append_lo]
   · show m.readAt (p.add 24#64) 64 = _
-    rw [show (24#64 : BitVec 64) = 16#64 + 8#64 from rfl, ← lane1_readAt h (by decide), h1,
-      Ty.extractVecElem_packLanes]
+    rw [show (24#64 : BitVec 64) = 16#64 + 8#64 from rfl, ←
+      MemoryState.LimbsFit.extractVecElem_one h (by decide), h1, Ty.extractVecElem_packLanes]
     simp [Ty.extractVecElem_eq, FieldElement51_square2.spec, extractLsb'_append_hi]
   · exact h2
 
 /-- Field elements stored at bytes 0, 120, 40, 80: `storeFe4`'s. -/
-theorem storeFe4_of_XTYZ {m : MemoryState} {p : Pointer} (hp : p.offset.toNat + 160 ≤ 2 ^ 64) :
+public theorem storeFe4_of_XTYZ {m : MemoryState} {p : Pointer}
+    (hp : p.offset.toNat + 160 ≤ 2 ^ 64) :
     (((m.storeLimbs p a).storeLimbs (p.add 120#64) d).storeLimbs (p.add 40#64) b).storeLimbs
         (p.add 80#64) c =
       m.storeFe4 p a b c d := by
@@ -153,8 +154,8 @@ public theorem ProjectivePoint_double.call_eq (out p : Pointer) (s : GlobalState
   have h4 : S.mem.readAt (zz2.add 32#64) 64 = ZZ 4 := by
     rw [← hread_zz2_readLimbs]
     rfl
-  have hzz2_lo := fits_pair0 hzz2_limbs
-  have hzz2_hi := fits_pair hzz2_limbs (k := 16#64) (by decide)
+  have hzz2_lo := MemoryState.LimbsFit.fits_lo hzz2_limbs
+  have hzz2_hi := MemoryState.LimbsFit.fits_pair hzz2_limbs (k := 16#64) (by decide)
   clear hread_zz2 hread_zz2_readLimbs
   step_load
   step_pure
@@ -199,12 +200,12 @@ public theorem ProjectivePoint_double.call_eq (out p : Pointer) (s : GlobalState
   step_pure
   step_call using FieldElement51_Sub_sub.call_eq consuming hread_zz2_limbs hzz2_limbs
   step_pure
-  have hroom_Y := room_of_limbsRoom hout.limbsRoom_Y
-  have hfits_Y := fits_of_limbsFit hyy_plus_xx_limbs
+  have hroom_Y := MemoryState.LimbsRoom.room320 hout.limbsRoom_Y
+  have hfits_Y := MemoryState.LimbsFit.fits hyy_plus_xx_limbs
   step_memcpy
   step_pure
-  have hroom_Z := room_of_limbsRoom hout.limbsRoom_T
-  have hfits_Z := fits_of_limbsFit hyy_minus_xx_limbs
+  have hroom_Z := MemoryState.LimbsRoom.room320 hout.limbsRoom_T
+  have hfits_Z := MemoryState.LimbsFit.fits hyy_minus_xx_limbs
   step_memcpy
   iterate 7 step_pure
   finish_block
@@ -212,8 +213,9 @@ public theorem ProjectivePoint_double.call_eq (out p : Pointer) (s : GlobalState
   clear_reads
   subst hS
   erase_frame
-  rw [← storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 40) ho (by omega)), ←
-    storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 80) ho (by omega)), storeFe4_of_XTYZ ho]
+  rw [← MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 40) ho (by omega)), ←
+    MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 80) ho (by omega)),
+    storeFe4_of_XTYZ ho]
   subst_vars
   rfl
 

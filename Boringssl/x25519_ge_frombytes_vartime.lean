@@ -19,6 +19,7 @@ public import Boringssl.fe_isnegative
 public import Boringssl.Mlir.x25519_ge_frombytes_vartime
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
+import Firedancer.Common.Counter
 
 namespace MLIR.Boringssl
 
@@ -91,11 +92,6 @@ section Proof
 
 open x25519_ge_frombytes_vartime
 
-/-- A byte shifted right by 7 has a clear sign bit. -/
-private theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
-
--- five paths of up to thirty calls, eight blocks' facts carried through each: about 250000
--- heartbeats
 set_option maxHeartbeats 400000 in
 /-- `x25519_ge_frombytes_vartime` decodes the 32 bytes at `buf` into the `ge_p3` at `h`: when
 `spec` is a point, it stores it and returns 1; else it returns 0, `h`'s `X, Y, Z` holding the
@@ -233,7 +229,7 @@ public theorem x25519_ge_frombytes_vartime.call_eq (h buf : Pointer) (s : Global
     step_pure
     step_load with buf31 consuming hb hbuf
     step_pure with expected_x_sign
-    have hmsb : expected_x_sign.msb = false := hexpected_x_sign ▸ lshr_seven_msb buf31
+    have hmsb : expected_x_sign.msb = false := hexpected_x_sign ▸ Firedancer.lshr_seven_msb buf31
     step_pure [hmsb]
     step_pure
     finish_block

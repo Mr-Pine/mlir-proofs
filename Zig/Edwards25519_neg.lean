@@ -79,13 +79,13 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (by omega), htr] at hS
   clear htm htr
   iterate 2 step_pure
-  have f1 := hout.limbsRoom_y.room
+  have f1 := hout.limbsRoom_y.room320
   have f2 := hp.limbsFit_y.fits
   step_memcpy consuming f1 f2 hfits_out_40
   rw [MemoryState.storeAt_readAt_eq_storeLimbs hpL₀.limbsFit_y
       (Pointer.field_offset ho (a := 40) (by omega))] at hS
   iterate 2 step_pure
-  have f1 := hout.limbsRoom_z.room
+  have f1 := hout.limbsRoom_z.room320
   have f2 := hp.limbsFit_z.fits
   step_memcpy consuming f1 f2 hfits_out_80
   rw [MemoryState.storeAt_readAt_eq_storeLimbs hpL₀.limbsFit_z
@@ -94,7 +94,7 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using fe_neg_call_eq_of consuming hT ht₀
   have htm := hS ▸ ht4_limbs
   have htr := hS ▸ hread_t4_readLimbs
-  have f1 := hout.limbsRoom_t.room
+  have f1 := hout.limbsRoom_t.room320
   have f2 := ht4_limbs.fits
   step_memcpy consuming f1 f2 hread_t4_readLimbs hread_t4 hread_t4_8 hread_t4_16 hread_t4_24
     hread_t4_32 hfits_out_120

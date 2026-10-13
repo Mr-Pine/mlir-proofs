@@ -84,7 +84,7 @@ local macro "copied " p:ident : tactic => do
   let off := Lean.mkIdent (.mkSimple s!"h{n}_off")
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
   `(tactic|
-      ( have $limbs:ident := Agave.limbsFit_of_fits $fits (by simp [$off:ident])
+      ( have $limbs:ident := MemoryState.LimbsFit.of_fits' $fits (by simp [$off:ident])
         have $readL:ident :=
           Agave.readLimbs_of_readAt_limbsBits (Fits.inBounds $fits) (by simp [$off:ident]) $read
         clear $fits $read))
@@ -279,7 +279,7 @@ public theorem Scalar52_from_bytes_wide.call_eq (out bytes : Pointer) (s : Globa
   step_pure
   limbs_room lo_t
   step_call using Scalar52_montgomery_mul.call_eq [hlo_read] consuming hlo_read
-  have hsrc := Agave.fits_of_limbsFit hlo_t_limbs
+  have hsrc := MemoryState.LimbsFit.fits hlo_t_limbs
   step_memcpy consuming hsrc
   copied lo
   clear_facts lo_t
@@ -289,7 +289,7 @@ public theorem Scalar52_from_bytes_wide.call_eq (out bytes : Pointer) (s : Globa
   step_pure
   limbs_room hi_t
   step_call using Scalar52_montgomery_mul.call_eq [hhi_read] consuming hhi_read
-  have hsrc := Agave.fits_of_limbsFit hhi_t_limbs
+  have hsrc := MemoryState.LimbsFit.fits hhi_t_limbs
   step_memcpy consuming hsrc
   copied hi
   clear_facts hi_t

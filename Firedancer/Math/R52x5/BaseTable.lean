@@ -13,9 +13,8 @@ formulas. -/
 
 namespace MLIR.Firedancer.R52x5
 
-open _root_.Ed25519 (p)
-open MLIR.Firedancer.Ref (dN x2N y2N curveOk addOk dblOk natCast_eq dN_eq add_of_ok dbl_of_ok
-  onCurve_of_ok)
+open _root_.Ed25519 (p natCast_eq natCast_ne)
+open MLIR.Firedancer.Ref (dN x2N y2N curveOk addOk dblOk dN_eq add_of_ok dbl_of_ok onCurve_of_ok)
 
 namespace BaseTable
 

@@ -7,6 +7,7 @@ public import Agave.Avx2.ExtendedPoint_double_impl_double
 public import Agave.Avx2.ExtendedPoint_Add_CachedPoint_add_impl_add
 public import Agave.Avx2.CachedPoint_From_ExtendedPoint_from_impl_from
 public import Agave.Avx2.Mlir.NafLookupTable5_CachedPoint_NafLookupTable5_CachedPoint_From_EdwardsPoint_from_impl_from
+import Agave.Serial.NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from
 import Mathlib.Tactic.FinCases
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
@@ -14,6 +15,8 @@ meta import Std.Tactic.BVDecide.Reflect
 namespace MLIR.Agave.Avx2
 
 open Fe2625x4
+open Serial.NafLookupTable5_ProjectiveNielsPoint_From_EdwardsPoint_from (entry_off entry_noOverflow
+  fits_table)
 
 /-! ## Specification -/
 
@@ -110,11 +113,6 @@ theorem entry_off' {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toN
     (t.add k).offset.toNat + 128 < 2 ^ 64 := by
   simp [Pointer.add, ho]; omega
 
-/-- A table entry's offset bound. -/
-theorem entry_off {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toNat ≤ 1120) :
-    (t.add k).offset.toNat + 160 ≤ 2 ^ 64 := by
-  simp [Pointer.add, ho]; omega
-
 /-- `new`'s packed register of limbs `x, y, z, t` as the lifted code computes it. -/
 def packReg (x y z t : BitVec 64) : Vector (BitVec 32) 8 :=
   #v[x.setWidth 32 &&& 67108863#32, y.setWidth 32 &&& 67108863#32, (x >>> 26).setWidth 32,
@@ -176,25 +174,6 @@ theorem new_eq (x0 x1 x2 x3 x4 y0 y1 y2 y3 y4 z0 z1 z2 z3 z4 t0 t1 t2 t3 t4 : Bi
         redReg (packReg x4 y4 z4 t4) (packReg x3 y3 z3 t3)] := by
   simp only [Fe2625x4.new, reduce, pack_reg, Matrix.cons_val_zero, Matrix.cons_val_one,
     Matrix.cons_val, red0_reg, red_reg]
-
-/-- No wrap at a table entry's offset. -/
-theorem entry_noOverflow {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toNat ≤ 1120) :
-    ¬t.offset.uaddOverflow k := by
-  simp [BitVec.uaddOverflow, ho]; omega
-
-/-- A table's 10240 bits fit where its eight entries' do. -/
-theorem fits_table {m : MemoryState} {t : Pointer} (ho : t.offset = 0) (h0 : Fits m t 1280)
-    (h1 : Fits m (t.add 160#64) 1280) (h2 : Fits m (t.add 320#64) 1280)
-    (h3 : Fits m (t.add 480#64) 1280) (h4 : Fits m (t.add 640#64) 1280)
-    (h5 : Fits m (t.add 800#64) 1280) (h6 : Fits m (t.add 960#64) 1280)
-    (h7 : Fits m (t.add 1120#64) 1280) : Fits m t 10240 := by
-  have a1 := Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl h0 h1
-  have a2 := Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl a1 h2
-  have a3 := Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl a2 h3
-  have a4 := Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl a3 h4
-  have a5 := Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl a4 h5
-  have a6 := Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl a5 h6
-  exact Fits.append (entry_noOverflow ho (by decide)) (by decide) rfl a6 h7
 
 /-- A table's 10240 bits, read entry by entry. -/
 theorem readAt_table {m : MemoryState} {t : Pointer} {c0 c1 c2 c3 c4 c5 c6 c7 : Fe2625x4}
@@ -259,30 +238,12 @@ theorem readEdwards_eq {m : MemoryState} {p : Pointer} :
   rw [MemoryState.readEdwards, readLimbs_zero, readLimbs_add 40, readLimbs_add 80,
     readLimbs_add 120]
 
-/-- No wrap at a field element's offset in a point. -/
-theorem coord_noOverflow {p : Pointer} (ho : p.offset.toNat + 160 ≤ 2 ^ 64) {k : BitVec 64}
-    (hk : k.toNat < 160) : ¬p.offset.uaddOverflow k := by
-  simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-
-/-- A point's 1280 bits fit where its coordinates do. -/
-theorem fits_of_pointFit {m : MemoryState} {p : Pointer} (h : m.PointFit p) : Fits m p 1280 := by
-  obtain ⟨ho, hX, hY, hZ, hT⟩ := h
-  have a1 :=
-    Fits.append (coord_noOverflow ho (k := 40#64) (by decide)) (by decide) rfl (fits_of_limbsFit hX)
-      (fits_of_limbsFit hY)
-  have a2 :=
-    Fits.append (coord_noOverflow ho (k := 80#64) (by decide)) (by decide) rfl a1
-      (fits_of_limbsFit hZ)
-  exact
-    Fits.append (coord_noOverflow ho (k := 120#64) (by decide)) (by decide) rfl a2
-      (fits_of_limbsFit hT)
-
 /-- A limb of a point's 1280 bits that fit. -/
 theorem fits_limb {m : MemoryState} {p : Pointer} (h : Fits m p 1280)
     (ho : p.offset.toNat + 160 ≤ 2 ^ 64) (k : Nat) (hk : k ≤ 152) :
     Fits m (p.add (BitVec.ofNat 64 k)) 64 :=
   Fits.add_of_le
-    (coord_noOverflow ho
+    (Pointer.not_uaddOverflow_of_point ho
       (by
         simp; omega))
     (by
@@ -334,7 +295,7 @@ public theorem call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
           { alloc := ⟨s.alloc.nextFreeBlock + 68⟩,
             mem := s.mem.storeNaf5 out (spec (s.mem.readEdwards a)) }) := by
   have hao := ha.1
-  have hfa := fits_of_pointFit ha
+  have hfa := MemoryState.PointFit.fits ha
   have hf0 := hfa.mono (by decide : 64 ≤ 1280)
   have hf40 := fits_limb hfa hao 40 (by decide)
   have hf80 := fits_limb hfa hao 80 (by decide)

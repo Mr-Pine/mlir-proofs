@@ -172,9 +172,11 @@ public theorem fd_ed25519_point_dbln.spec_ext (hP : P.Proj x y) (hc : Ed25519.On
   exact fd_ed25519_point_add_final_mul.spec_ext hi iX iY iT iZ
 
 /-- `k = 2d`, tight. -/
-theorem fd_f25519_k.val : Limbs.val fd_f25519_k.limbs = 2 * Ed25519.d ∧
-    Limbs.Tight fd_f25519_k.limbs := by
-  refine ⟨?_, by rw [Limbs.tight_iff]; decide⟩
+public theorem fd_f25519_k.val :
+    Limbs.val fd_f25519_k.limbs = 2 * Ed25519.d ∧ Limbs.Tight fd_f25519_k.limbs := by
+  refine
+    ⟨?_, by
+      rw [Limbs.tight_iff]; decide⟩
   rw [Limbs.val_eq]
   unfold Ed25519.d
   simp [fd_f25519_k.limbs]

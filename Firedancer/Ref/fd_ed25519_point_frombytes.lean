@@ -14,6 +14,7 @@ public import Firedancer.Ref.fd_f25519_sgn
 public import Firedancer.Ref.fd_f25519_neg
 public import Firedancer.Ref.fd_ed25519_point_from
 public import Firedancer.Ref.Mlir.fd_ed25519_point_frombytes
+import Firedancer.Common.Counter
 
 namespace MLIR.Firedancer.Ref
 
@@ -43,9 +44,6 @@ end
 /-! ## Proof -/
 
 section Proof
-
-/-- A byte shifted right by 7 has a clear sign bit. -/
-private theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
 
 /-- `fd_ed25519_point_frombytes` decodes the 32 bytes at `buf`: when `spec` is a point, it stores it
 at `r` and returns `r`, else it returns null and stores nothing. `buf` is read before `r` is

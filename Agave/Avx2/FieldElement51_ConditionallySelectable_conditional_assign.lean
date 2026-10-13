@@ -9,12 +9,11 @@ meta import Std.Tactic.BVDecide.Reflect
 
 namespace MLIR.Agave.Avx2
 
+open Serial (neg_zext_no_ssubOverflow)
+
 /-! ## Proof -/
 
 section Proof
-
-theorem neg_zext_no_ssubOverflow (c : BitVec 8) : ¬(0#64).ssubOverflow (c.setWidth 64) := by
-  bv_decide
 
 /-- `self.conditional_assign(&other, choice)` stores
 `Serial.FieldElement51_ConditionallySelectable_conditional_assign.spec self other choice` at

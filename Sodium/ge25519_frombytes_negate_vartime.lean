@@ -18,6 +18,7 @@ public import Sodium.fe25519_neg
 public import Sodium.Mlir.ge25519_frombytes_negate_vartime
 import Std.Tactic.BVDecide
 meta import Std.Tactic.BVDecide.Reflect
+import Firedancer.Common.Counter
 
 namespace MLIR.Sodium
 
@@ -106,9 +107,6 @@ section Proof
 
 open ge25519_frombytes_negate_vartime
 
-/-- A byte shifted right by 7 has a clear sign bit. -/
-private theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
-
 namespace ge25519_frombytes_negate_vartime
 
 /-- From `^bb3`, the root `X` at `h->X`: `X` negated when its sign is `s[31] >> 7`, `T = X Y`, then
@@ -143,7 +141,7 @@ theorem tail (h buf u v v3 vxx mrc prc : Pointer) (b : BitVec 256) (X : Fin 5 �
   have hfits31 := Fits.add_of_le (w := 8) hov31 (by decide) hbuf
   step_load with buf31 consuming hb hbuf hfits31
   step_pure with expected_x_sign
-  have hmsb : expected_x_sign.msb = false := hexpected_x_sign ▸ lshr_seven_msb buf31
+  have hmsb : expected_x_sign.msb = false := hexpected_x_sign ▸ Firedancer.lshr_seven_msb buf31
   step_pure [hmsb]
   step_pure
   finish_block

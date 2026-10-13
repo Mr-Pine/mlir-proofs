@@ -1021,15 +1021,6 @@ theorem MemoryState.readQuad_addBlock_of_id_ne {m : MemoryState} {x : BitVec v} 
 
 /-! ### Stores -/
 
-/-- A store of `y ++ x` is a store of `x`, then of `y` right after it. -/
-theorem MemoryState.storeAt_append {m : MemoryState} {p : Pointer} {x : BitVec w} {y : BitVec v}
-    {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 = w) :
-    m.storeAt p (y ++ x) = (m.storeAt p x).storeAt (p.add off) y := by
-  have h :=
-    MemoryState.storeAt_storeAt_append (m := m) (x := x) (y := y) (k := off.toNat)
-      (by simpa using hov) (by omega) off.isLt
-  simpa using h.symm
-
 /-- `memset` of 128 zero bytes at a point's `P14`: its `P14` and `P25` zeroed. -/
 theorem MemoryState.storeAt_zero_14_25 {m : MemoryState} {p : Pointer}
     (h : p.offset.toNat + 192 ≤ 2 ^ 64) :

@@ -104,10 +104,6 @@ theorem toNat_shift_lo (x : BitVec 128) :
     Nat.and_two_pow_sub_one_eq_mod]
   rfl
 
-theorem toNat_shift_setWidth (x : BitVec 128) :
-    ((x >>> 51).setWidth 64).toNat = x.toNat / 2 ^ 51 % 2 ^ 64 := by
-  rw [BitVec.toNat_setWidth, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
-
 /-- fiat's carries after a product's 128-bit column sums: each column carried into the next at
 bit 51, the top carry times 19 into limb 0, then carries out of limbs 0 and 1. -/
 def carryCols (c0 c1 c2 c3 c4 : BitVec 128) : Fin 5 → BitVec 64 :=
@@ -787,30 +783,32 @@ public theorem fd_f25519_tobytes.spec_val {a : Fin 5 → BitVec 64} (ha : Limbs.
   fiat_25519_to_bytes.spec_wide ha hN
 
 /-- `l` is loose with value `z ^ e`, of a positive number if `z`'s is. -/
-def IsPow (l z : Fin 5 → BitVec 64) (e : ℕ) : Prop :=
+@[expose]
+public def IsPow (l z : Fin 5 → BitVec 64) (e : ℕ) : Prop :=
   (Limbs.val l = Limbs.val z ^ e ∧ Limbs.Loose l) ∧ (0 < Limbs.nat z → 0 < Limbs.nat l)
 
-theorem IsPow.self {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) : IsPow z z 1 :=
+public theorem IsPow.self {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) : IsPow z z 1 :=
   ⟨⟨(pow_one _).symm, hz⟩, id⟩
 
-theorem IsPow.sqr (h : IsPow l z e) : IsPow (fd_f25519_sqr.spec l) z (e * 2) := by
+public theorem IsPow.sqr (h : IsPow l z e) : IsPow (fd_f25519_sqr.spec l) z (e * 2) := by
   obtain ⟨hv, ht⟩ := fd_f25519_sqr.spec_val h.1.2
   exact ⟨⟨by rw [hv, h.1.1, pow_mul], ht.loose⟩, fun hz => fd_f25519_sqr.spec_pos h.1.2 (h.2 hz)⟩
 
-theorem IsPow.mul (h : IsPow l z e) (h' : IsPow m z f) :
+public theorem IsPow.mul (h : IsPow l z e) (h' : IsPow m z f) :
     IsPow (fd_f25519_mul.spec l m) z (e + f) := by
   obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h.1.2 h'.1.2
   exact ⟨⟨by rw [hv, h.1.1, h'.1.1, pow_add], ht.loose⟩,
     fun hz => fd_f25519_mul.spec_pos h.1.2 h'.1.2 (h.2 hz) (h'.2 hz)⟩
 
-theorem IsPow.sqrN (h : IsPow l z e) : IsPow (fd_f25519_pow22523.sqrN n l) z (e * 2 ^ n) := by
+public theorem IsPow.sqrN (h : IsPow l z e) :
+    IsPow (fd_f25519_pow22523.sqrN n l) z (e * 2 ^ n) := by
   induction n generalizing l e with
   | zero => simpa [fd_f25519_pow22523.sqrN] using h
   | succ n ih =>
     rw [fd_f25519_pow22523.sqrN, pow_succ', ← mul_assoc]
     exact ih h.sqr
 
-theorem IsPow.mul_tight (h : IsPow l z e) (h' : IsPow m z f) (hg : e + f = g) :
+public theorem IsPow.mul_tight (h : IsPow l z e) (h' : IsPow m z f) (hg : e + f = g) :
     (Limbs.val (fd_f25519_mul.spec l m) = Limbs.val z ^ g ∧
       Limbs.Tight (fd_f25519_mul.spec l m)) ∧
       (0 < Limbs.nat z → 0 < Limbs.nat (fd_f25519_mul.spec l m)) := by

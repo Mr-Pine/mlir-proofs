@@ -14,7 +14,8 @@ m = model()
 c, ins, arg, const, ptr = m['c'], m['ins'], m['arg'], m['const'], m['ptr']
 form, kind, info, names, defs, sib = (m['form'], m['kind'], m['info'], m['names'], m['defs'],
                                        m['sib'])
-OUT = os.path.expanduser('~/mlir-proofs/Sodium/sc25519_reduce.lean')
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'Sodium',
+                   'sc25519_reduce.lean')
 F = 'sc25519_reduce'
 GAM = f'{F}.Γ'
 LO, HI = -2 ** 63, 2 ** 63 - 1

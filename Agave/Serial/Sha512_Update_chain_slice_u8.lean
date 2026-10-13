@@ -37,7 +37,7 @@ section Proof
 attribute [local mlir_transport] room_updateMem wf_updateMem
 
 /-- `copyObj` keeps a state well-formed. -/
-theorem wf_copyObj {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
+public theorem wf_copyObj {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
     (⟨a, copyObj m out self⟩ : GlobalState).WF :=
   GlobalState.WF.storeDef_mk h
 

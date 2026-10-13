@@ -8,6 +8,9 @@ public import Agave.Avx2.Mlir.Sha512_Update_chain_slice_u8
 
 namespace MLIR.Agave.Avx2
 
+open Serial.Sha512_Update_chain_slice_u8 (wf_copyObj)
+open
+  BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (eraseFrom_of_wf)
 open _root_.Ed25519
 
 namespace Sha512_Update_chain_slice_u8
@@ -20,16 +23,6 @@ open Serial.Sha512_Update_chain_slice_u8 (copyObj)
 section Proof
 
 attribute [local mlir_transport] room_updateMem wf_updateMem
-
-/-- Nothing at or above a well-formed state's counter. -/
-theorem eraseFrom_of_wf {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    m.eraseFrom a.nextFreeBlock = m :=
-  h.eraseFrom
-
-/-- `copyObj` keeps a state well-formed. -/
-theorem wf_copyObj {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    (⟨a, copyObj m out self⟩ : GlobalState).WF :=
-  GlobalState.WF.storeDef_mk h
 
 /-- `<Sha512 as Update>::chain(self, data)`: `len` bytes at `data` absorbed by sha2's `Sha512` at
 `self` (`updateMem`), which then moves to `out` (`copyObj`; the serial `chain_absorbed` says what

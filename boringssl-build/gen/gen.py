@@ -1,5 +1,5 @@
-import sys,re
-sys.path.insert(0,'/tmp/w1c')
+import sys,re,os
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from irmodel import model
 c,ins,const,form,kind,info,names,rawload,ptr=model()
 

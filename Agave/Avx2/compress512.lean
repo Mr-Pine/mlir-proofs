@@ -9,6 +9,7 @@ public import Agave.Avx2.compress512.Tail
 namespace MLIR.Agave.Avx2
 
 open _root_.Ed25519 MLIR.Agave compress512
+open MLIR.Agave.Serial.compress512 (compressBlocks_drop compressBlocks_drop_all)
 
 attribute [local mlir_transport] KPairs.storeAt KPairs.lifetimeStart KPairs.lifetimeEnd
 

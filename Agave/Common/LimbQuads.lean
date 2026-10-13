@@ -17,43 +17,39 @@ open Memory
 /-- The limb quad at byte `k ≤ 8` fits. -/
 theorem fits_quad {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) {k : BitVec 64}
     (hk : k.toNat ≤ 8) : Fits m (p.add k) 256 :=
-  Fits.add_of_le (not_uaddOverflow_limb h.1 (by omega)) (by omega) (fits_of_limbsFit h)
+  Fits.add_of_le (Pointer.not_uaddOverflow_of_limbs h.1 (by omega)) (by omega)
+    (MemoryState.LimbsFit.fits h)
 
 /-- Room for the limb quad at byte `k ≤ 8`. -/
 theorem room_quad {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) {k : BitVec 64}
     (hk : k.toNat ≤ 8) : Room m (p.add k) 256 :=
-  Room.add_of_le (not_uaddOverflow_limb h.1 (by omega)) (by omega) (room_of_limbsRoom h)
+  Room.add_of_le (Pointer.not_uaddOverflow_of_limbs h.1 (by omega)) (by omega)
+    (MemoryState.LimbsRoom.room320 h)
 
 /-- The first limb quad fits. -/
 theorem fits_quad0 {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) : Fits m p 256 :=
-  (fits_of_limbsFit h).mono (by decide)
+  (MemoryState.LimbsFit.fits h).mono (by decide)
 
 /-- Room for the first limb quad. -/
 theorem room_quad0 {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) : Room m p 256 :=
-  (room_of_limbsRoom h).mono (by decide)
+  (MemoryState.LimbsRoom.room320 h).mono (by decide)
 
 /-- Lane `i` of the quad at limb 0: limb `i`. -/
 theorem lane_readAt0 {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) (i : Fin 4) :
     Ty.extractVecElem 4 64 i (m.readAt p 256) = m.readLimbs p ⟨i, by omega⟩ := by
-  rw [MemoryState.readAt_of_readAt_le (w := 256) (v := 320) (by decide) (readAt_eq_limbsBits h),
+  rw [MemoryState.readAt_of_readAt_le (w := 256) (v := 320) (by decide)
+      (MemoryState.readAt_eq_limbsBits h),
     Ty.extractVecElem_eq]
   fin_cases i <;> simp only [limbsBits, MemoryState.readLimbs] <;> bv_decide
 
 /-- Lane `i` of the quad at limb 1: limb `i + 1`. -/
 theorem lane_readAt8 {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) (i : Fin 4) :
     Ty.extractVecElem 4 64 i (m.readAt (p.add 8#64) 256) = m.readLimbs p ⟨i + 1, by omega⟩ := by
-  rw [MemoryState.readAt_add_of_readAt (fits_of_limbsFit h).inBounds
-      (not_uaddOverflow_limb h.1 (by decide)) (by decide) (readAt_eq_limbsBits h),
+  rw [MemoryState.readAt_add_of_readAt (MemoryState.LimbsFit.fits h).inBounds
+      (Pointer.not_uaddOverflow_of_limbs h.1 (by decide)) (by decide)
+      (MemoryState.readAt_eq_limbsBits h),
     Ty.extractVecElem_eq]
   fin_cases i <;> simp only [limbsBits, MemoryState.readLimbs] <;> bv_decide
-
-/-- A packed quad: its four lanes, the first lowest. -/
-theorem packLanes_four (v : Vector (BitVec 64) 4) :
-    BitVec.packLanes v = v[3] ++ (v[2] ++ (v[1] ++ v[0])) := by
-  simp only [BitVec.packLanes, Vector.tail_eq_cast_extract, Vector.getElem_cast,
-    Vector.getElem_extract, Nat.reduceAdd]
-  generalize v[0] = a, v[1] = b, v[2] = c, v[3] = d
-  bv_decide
 
 /-- A store of a packed quad: the stores of its four lanes. -/
 theorem storeAt_packLanes4 {m : MemoryState} {q : Pointer} (h : q.offset.toNat + 24 < 2 ^ 64)
@@ -67,7 +63,7 @@ theorem storeAt_packLanes4 {m : MemoryState} {q : Pointer} (h : q.offset.toNat +
     omega
   rw [MemoryState.storeAt_storeAt_append (hov 8 (by omega)) rfl (by decide),
     MemoryState.storeAt_storeAt_append (hov 16 (by omega)) rfl (by decide),
-    MemoryState.storeAt_storeAt_append (hov 24 (by omega)) rfl (by decide), packLanes_four]
+    MemoryState.storeAt_storeAt_append (hov 24 (by omega)) rfl (by decide), BitVec.packLanes_quad]
 
 /-- Limbs stored as the quad at byte 0 and the last limb (`add`, `conditional_assign`). -/
 theorem storeAt_quad_eq_storeLimbs {m : MemoryState} {p : Pointer}

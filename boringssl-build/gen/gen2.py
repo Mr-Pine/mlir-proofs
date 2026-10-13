@@ -1,5 +1,5 @@
-import sys,re
-sys.path.insert(0,'/tmp/w1c')
+import sys,re,os
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from gen import *   # c, ins, const, form, kind, info, names, rawload, ptr, disp, ir_expr, ...
 LO,HI=-2**63,2**63-1
 body=[d for d in ins if d['op']!='func']   # body positions; the return is the exit

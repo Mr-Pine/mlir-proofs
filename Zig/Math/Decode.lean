@@ -117,16 +117,6 @@ public theorem pow2523_lt (a : Fin 5 → BitVec 64) : Fe.Lt (Fe.pow2523.spec a) 
 
 /-! ## Square roots -/
 
-/-- `c² = 1` exactly at `±1`. -/
-theorem sq_eq_one_iff' {c : ZMod p} : c ^ 2 = 1 ↔ c = 1 ∨ c = -1 := by
-  constructor
-  · intro h
-    have : (c - 1) * (c + 1) = 0 := by linear_combination h
-    rcases mul_eq_zero.1 this with h | h
-    · exact .inl (by linear_combination h)
-    · exact .inr (by linear_combination h)
-  · rintro (rfl | rfl) <;> ring
-
 /-- `x = (u v)^((p-5)/8) u` has `v x² = ± u` exactly when `u / v` has a root. -/
 theorem sqrt_alg {u v x : ZMod p} (hv : v ≠ 0) (hx : x = (u * v) ^ (2 ^ 252 - 3) * u) :
     (x ^ 2 * v = u ∨ x ^ 2 * v = -u) ↔ ∃ r, v * r ^ 2 = u := by

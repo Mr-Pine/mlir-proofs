@@ -6485,51 +6485,51 @@ theorem sc25519_reduce.run464 {β : Type} {p : Pointer}
   step_pure
   step_store
   subst hS
-  rw [MemoryState.storeAt_storeAt_add (a := 16) (k := 2)
+  rw [MemoryState.storeAt_storeAt_append (a := 16) (k := 2)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 24) (k := 3)
+    MemoryState.storeAt_storeAt_append (a := 24) (k := 3)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 40) (k := 5)
+    MemoryState.storeAt_storeAt_append (a := 40) (k := 5)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 48) (k := 6)
+    MemoryState.storeAt_storeAt_append (a := 48) (k := 6)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 56) (k := 7)
+    MemoryState.storeAt_storeAt_append (a := 56) (k := 7)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 64) (k := 8)
+    MemoryState.storeAt_storeAt_append (a := 64) (k := 8)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 80) (k := 10)
+    MemoryState.storeAt_storeAt_append (a := 80) (k := 10)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 88) (k := 11)
+    MemoryState.storeAt_storeAt_append (a := 88) (k := 11)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 104) (k := 13)
+    MemoryState.storeAt_storeAt_append (a := 104) (k := 13)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 112) (k := 14)
+    MemoryState.storeAt_storeAt_append (a := 112) (k := 14)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 120) (k := 15)
+    MemoryState.storeAt_storeAt_append (a := 120) (k := 15)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 128) (k := 16)
+    MemoryState.storeAt_storeAt_append (a := 128) (k := 16)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 144) (k := 18)
+    MemoryState.storeAt_storeAt_append (a := 144) (k := 18)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 152) (k := 19)
+    MemoryState.storeAt_storeAt_append (a := 152) (k := 19)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 168) (k := 21)
+    MemoryState.storeAt_storeAt_append (a := 168) (k := 21)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 184) (k := 23)
+    MemoryState.storeAt_storeAt_append (a := 184) (k := 23)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 192) (k := 24)
+    MemoryState.storeAt_storeAt_append (a := 192) (k := 24)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 208) (k := 26)
+    MemoryState.storeAt_storeAt_append (a := 208) (k := 26)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 216) (k := 27)
+    MemoryState.storeAt_storeAt_append (a := 216) (k := 27)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 224) (k := 28)
+    MemoryState.storeAt_storeAt_append (a := 224) (k := 28)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 232) (k := 29)
+    MemoryState.storeAt_storeAt_append (a := 232) (k := 29)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 240) (k := 30)
+    MemoryState.storeAt_storeAt_append (a := 240) (k := 30)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (a := 248) (k := 31)
+    MemoryState.storeAt_storeAt_append (a := 248) (k := 31)
       (BitVec.not_uaddOverflow_of_le hp_off (by decide)) rfl (by decide)]
   exact
     hK _ hArgs

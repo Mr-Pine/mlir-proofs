@@ -15,8 +15,8 @@ public theorem fe25519_copy.call_eq (h f : Pointer) (s : GlobalState) (hwf : s.W
     (hh : s.mem.LimbsRoom h) (hf : s.mem.LimbsFit f) (hsep : h.id ≠ f.id) :
     fe25519_copy.call (fe25519_copy.args (.value h) (.value f)) s =
       .value (.nil, { s with mem := s.mem.storeLimbs h (s.mem.readLimbs f) }) := by
-  have hh320 : Room s.mem h 320 := Agave.room_of_limbsRoom hh
-  have hf320 : Fits s.mem f 320 := Agave.fits_of_limbsFit hf
+  have hh320 : Room s.mem h 320 := MemoryState.LimbsRoom.room320 hh
+  have hf320 : Fits s.mem f 320 := MemoryState.LimbsFit.fits hf
   func_init
   have hf₀ : S₀.mem.LimbsFit f := hS ▸ hf
   block_init
@@ -24,7 +24,7 @@ public theorem fe25519_copy.call_eq (h f : Pointer) (s : GlobalState) (hwf : s.W
   -- memcpy(h, f, 5 * sizeof h[0]);
   step_memcpy
   finish_block
-  rw [hS, Agave.storeAt_readAt_eq_storeLimbs hf₀ hh.1]
+  rw [hS, MemoryState.storeAt_readAt_eq_storeLimbs hf₀ hh.1]
 
 end Proof
 

@@ -500,7 +500,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   have htr := hS ▸ hread_u_readLimbs
   have hu0R := hu0_limbs.room (by mem_fact)
   have hdR := hS ▸ hu0R
-  have f1 := hu0R.room
+  have f1 := hu0R.room320
   have f2 := hu_limbs.fits
   clear hu0R
   step_memcpy consuming f1 f2
@@ -689,7 +689,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     have htr : S₉.mem.readLimbs x = X1 := by
       have h := hread_x_readLimbs; rw [hS] at h; simpa [MemoryState.readLimbs_lifetimeStart] using h
     have hdR := hS ▸ hr_limbs
-    have f1 := hr_limbs.room
+    have f1 := hr_limbs.room320
     have f2 := hx_limbs.fits
     step_memcpy consuming f1 f2
     rw [MemoryState.storeAt_readAt_eq_storeLimbs htm hdR.1, htr] at hS

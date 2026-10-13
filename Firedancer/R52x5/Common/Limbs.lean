@@ -1,7 +1,7 @@
 module
 
 public import Firedancer.Avx512.Common.Vec
-public import Firedancer.Common.Limbs
+public import Firedancer.Common.LimbBits
 import Std.Data.ExtHashMap.Lemmas
 
 /-! A `wl_t` stored in memory, and a `ulong[5]` stored as the compiled code does: limbs 0-3 as one
@@ -193,35 +193,6 @@ theorem MemoryState.readWv_add_of_readAt {m : MemoryState} {p : Pointer} {x : Bi
   omega
 
 /-! ### `storeLimbsV` -/
-
-/-- The five limbs at `p` lie in one live block: room for 320 bits there. -/
-theorem MemoryState.LimbsRoom.room320 {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
-    Room m p 320 := by
-  obtain ⟨ho, -, -, -, -, h4⟩ := h
-  obtain ⟨blk, hblk, hl, hsz, hwr⟩ := h4.block
-  refine Room.of_block (by simpa [Pointer.add_id] using hblk) hl ?_ hwr
-  rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl,
-    Pointer.offsetInBits_add_limb ho (by omega)] at hsz
-  unfold Pointer.offsetInBits
-  omega
-
-/-- The five limbs at `p` known: 320 known bits there. -/
-theorem MemoryState.LimbsFit.fits {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
-    Fits m p 320 := by
-  obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
-  have hov : ∀ off : BitVec 64, off.toNat ≤ 32 → ¬p.offset.uaddOverflow off := by
-    intro off hoff
-    simp [BitVec.uaddOverflow]
-    omega
-  have h01 : Fits m p 128 := Fits.append (hov 8#64 (by decide)) rfl rfl h0 h1
-  have h02 : Fits m p 192 := Fits.append (hov 16#64 (by decide)) rfl rfl h01 h2
-  have h03 : Fits m p 256 := Fits.append (hov 24#64 (by decide)) rfl rfl h02 h3
-  exact Fits.append (hov 32#64 (by decide)) rfl rfl h03 h4
-
-/-- A store of a value cast to an equal width is a store of the value. -/
-theorem MemoryState.storeAt_cast {m : MemoryState} {x : BitVec w} (h : w = w') :
-    m.storeAt p (x.cast h) = m.storeAt p x := by
-  subst h; rfl
 
 /-- Four lanes' bits, lane 0 lowest. -/
 theorem BitVec.packLanes_four (a b c d : BitVec 64) :

@@ -142,7 +142,8 @@ def affine (P : PointLimbs) : ℕ × ℕ :=
     (Limbs.nat P.X + Limbs.nat P.Y) * ((p + 1) / 2) % p)
 
 /-- Every limb at most `c`. -/
-def bounded (c : ℕ) (l : Fin 5 → BitVec 64) : Bool :=
+@[expose]
+public def bounded (c : ℕ) (l : Fin 5 → BitVec 64) : Bool :=
   (l 0).toNat ≤ c && (l 1).toNat ≤ c && (l 2).toNat ≤ c && (l 3).toNat ≤ c && (l 4).toNat ≤ c
 
 /-- `(x, y)` is on the curve: `y² = 1 + d x² y² + x²`. -/
@@ -198,14 +199,6 @@ theorem adds_ok :
 
 /-! ## Soundness -/
 
-/-- Naturals equal mod `p` are equal in `ZMod p`. -/
-public theorem natCast_eq {a b : ℕ} (h : a % p = b % p) : (a : ZMod p) = b :=
-  (ZMod.natCast_eq_natCast_iff' a b p).2 h
-
-/-- Naturals distinct mod `p` are distinct in `ZMod p`. -/
-public theorem natCast_ne {a b : ℕ} (h : a % p ≠ b % p) : (a : ZMod p) ≠ b := fun e =>
-  h ((ZMod.natCast_eq_natCast_iff' a b p).1 e)
-
 /-- `dN` is `d`. -/
 public theorem dN_eq : (dN : ZMod p) = Ed25519.d := by
   unfold dN Ed25519.d
@@ -251,7 +244,7 @@ public theorem onCurve_of_ok {x y : ℕ} (h : curveOk x y = true) : Ed25519.OnCu
   linear_combination e
 
 /-- `bounded c` bounds every limb by `c`. -/
-theorem limbs_of_bounded {c : ℕ} {l : Fin 5 → BitVec 64} (h : bounded c l = true) :
+public theorem limbs_of_bounded {c : ℕ} {l : Fin 5 → BitVec 64} (h : bounded c l = true) :
     ∀ i, (l i).toNat ≤ c := by
   simp only [bounded, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩ := h

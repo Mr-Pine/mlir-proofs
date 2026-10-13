@@ -6,7 +6,7 @@ public import Agave.Serial.compress512
 public import Agave.Serial.copy_from_slice_impl_u8
 public import Agave.Serial.Mlir.Sha512VarCore_VariableOutputCore_finalize_variable_core
 import Firedancer.Common.Memory
-import Firedancer.Common.Point
+import Firedancer.Common.LimbBits
 import Std.Data.ExtHashMap.Lemmas
 import Mathlib.Tactic.Rename
 import Mathlib.Tactic.FinCases
@@ -75,20 +75,6 @@ namespace Sha512VarCore_VariableOutputCore_finalize_variable_core
 
 section Proof
 
-/-- Two lanes packed: lane `1` above lane `0`. -/
-theorem packLanes_two (v : Vector (BitVec 64) 2) : BitVec.packLanes v = v[1] ++ v[0] := by
-  simp only [BitVec.packLanes]
-  have : v.tail[0] = v[1] := by simp only [Vector.tail, Vector.getElem_cast, Vector.getElem_extract]
-  rw [this]
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [BitVec.getLsbD_append]
-  split
-  · rfl
-  · split
-    · rfl
-    · omega
-
 /-- A `<2 x i64>` load at `p`, byte-swapped per lane and stored: the two words swapped. -/
 theorem pair_eq (m : MemoryState) (p : Pointer) (hov : ¬p.offset.uaddOverflow 8#64) :
     BitVec.packLanes
@@ -102,7 +88,7 @@ theorem pair_eq (m : MemoryState) (p : Pointer) (hov : ¬p.offset.uaddOverflow 8
       compress512.bswap64 (m.readAt (p.add 8#64) 64) ++ compress512.bswap64 (m.readAt p 64) := by
   have h : m.readAt p 128 = m.readAt (p.add 8#64) 64 ++ m.readAt p 64 :=
     MemoryState.readAt_append (w := 64) (v := 64) hov rfl
-  rw [packLanes_two, h]
+  rw [BitVec.packLanes_pair, h]
   generalize m.readAt (p.add 8#64) 64 = a
   generalize m.readAt p 64 = b
   simp only [Vector.getElem_ofFn, Ty.extractVecElem_eq, compress512.bswap64, List.range,
@@ -126,120 +112,51 @@ theorem copy_pos {P : BitVec 8} (hP : P.toNat < 128) (dst src loc : Pointer) (s 
   rwa [hP64] at h
 
 /-- The buffer's length is non-negative. -/
-theorem pos_msb {pos : BitVec 8} (h : pos.toNat < 128) : pos.msb = false := by
+public theorem pos_msb {pos : BitVec 8} (h : pos.toNat < 128) : pos.msb = false := by
   have : pos < 128#8 := by
     simp [BitVec.lt_def]; omega
   bv_decide
 
 /-- `(pos as u128) << 3` loses no bits. -/
-theorem shl3_nuw (P : BitVec 8) : P.setWidth 128 <<< 3 >>> 3 = P.setWidth 128 := by bv_decide
+public theorem shl3_nuw (P : BitVec 8) : P.setWidth 128 <<< 3 >>> 3 = P.setWidth 128 := by bv_decide
 
 /-- `(pos as u128) << 3` keeps its sign. -/
-theorem shl3_nsw (P : BitVec 8) : (P.setWidth 128 <<< 3).sshiftRight 3 = P.setWidth 128 := by
+public theorem shl3_nsw (P : BitVec 8) : (P.setWidth 128 <<< 3).sshiftRight 3 = P.setWidth 128 := by
   bv_decide
 
 /-- The block count's bits and the buffer's, shifted to bits, do not meet. -/
-theorem len_disjoint (C : BitVec 128) {P : BitVec 8} (h : P.toNat < 128) :
+public theorem len_disjoint (C : BitVec 128) {P : BitVec 8} (h : P.toNat < 128) :
     C <<< 10 &&& P.setWidth 128 <<< 3 = 0#128 := by
   have : P < 128#8 := by
     simp [BitVec.lt_def]; omega
   bv_decide
 
 /-- `assume(pos > -1)` holds. -/
-theorem pos_slt {pos : BitVec 8} (h : pos.toNat < 128) : (255#8).slt pos = true := by
+public theorem pos_slt {pos : BitVec 8} (h : pos.toNat < 128) : (255#8).slt pos = true := by
   have : pos < 128#8 := by
     simp [BitVec.lt_def]; omega
   bv_decide
 
-/-- A store right after another: one store of both. -/
-theorem storeAt_storeAt_concat {m : MemoryState} {p : Pointer} {off : BitVec 64} {x : BitVec v}
-    {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
-    (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
-    true_and, and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
-
-/-- A splice into a splice that covers it: one splice of the inner value. -/
-theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x : BitVec wx)
-    (y : BitVec wy) (h : k + wy ≤ wx) :
-    Memory.spliceBits (Memory.spliceBits b o x) (o + k) y =
-      Memory.spliceBits b o (Memory.spliceBits x k y) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits]
-  grind
-
-/-- A store inside a stored value: one store, the inner value spliced. -/
-theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off : BitVec 64}
-    (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
-    (m.storeAt p u).storeAt (p.add off) y =
-      m.storeAt p (Memory.spliceBits u (off.toNat * 8) y) := by
-  have hones :
-    Memory.spliceBits (BitVec.allOnes wu) (off.toNat * 8) (BitVec.allOnes wy) =
-      BitVec.allOnes wu := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
-    grind
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
-    spliceBits_spliceBits_add _ _ _ _ _ hw, hones]
-
-/-- A store at a stored value's start: one store, the inner value spliced. -/
-theorem storeAt_storeAt_low {m : MemoryState} {p : Pointer} {u : BitVec wu} (hw : wy ≤ wu)
-    (y : BitVec wy) : (m.storeAt p u).storeAt p y = m.storeAt p (Memory.spliceBits u 0 y) := by
-  have h :=
-    storeAt_storeAt_add (m := m) (p := p) (u := u) (off := 0#64)
-      (by
-        simp [BitVec.uaddOverflow]; exact p.offset.isLt)
-      (by simpa using hw) y
-  rwa [Pointer.add_zero] at h
-
 /-- Storing the known bits a range holds changes nothing. -/
-theorem storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
+public theorem storeAt_readAt_self {m : MemoryState} (h : Fits m p w) :
     m.storeAt p (m.readAt p w) = m :=
   MemoryState.storeAt_readAt_self h
 
 /-- A state's memory with a known range: the same memory, the range's bits stored again. -/
-theorem restore {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer} {X : BitVec w}
-    (hS : S = ⟨a, m⟩) (hf : Fits S.mem p w) (hr : S.mem.readAt p w = X) :
+public theorem restore {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer}
+    {X : BitVec w} (hS : S = ⟨a, m⟩) (hf : Fits S.mem p w) (hr : S.mem.readAt p w = X) :
     S = ⟨a, m.storeAt p X⟩ := by
   subst hS
   rw [← hr, storeAt_readAt_self hf]
 
 /-- A state's memory after a store, read back there. -/
-theorem readBack {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer} {X : BitVec w}
-    (hS : S = ⟨a, m.storeAt p X⟩) (h : Room S.mem p w) : S.mem.readAt p w = X := by
+public theorem readBack {S : GlobalState} {a : AllocState} {m : MemoryState} {p : Pointer}
+    {X : BitVec w} (hS : S = ⟨a, m.storeAt p X⟩) (h : Room S.mem p w) : S.mem.readAt p w = X := by
   subst hS
   exact MemoryState.readAt_storeAt_self (Room.storeAt_iff.1 h) _
 
-/-- A store right before another: one store of both. -/
-theorem storeAt_storeAt_below {m : MemoryState} {p : Pointer} {off : BitVec 64} {x : BitVec v}
-    {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
-    (m.storeAt (p.add off) y).storeAt p x = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
-    true_and, and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
-
 /-- `storeSha512` as one store of the eight words, word `0` lowest. -/
-theorem storeSha512_eq {m : MemoryState} {p : Pointer} {v : Vector (BitVec 64) 8}
+public theorem storeSha512_eq {m : MemoryState} {p : Pointer} {v : Vector (BitVec 64) 8}
     (hp : p.offset.toNat + 56 < 2 ^ 64) :
     m.storeSha512 p v =
       m.storeAt p ((v[7] ++ (v[6] ++ (v[5] ++ (v[4] ++ (v[3] ++ (v[2] ++ v[1])))))) ++ v[0]) := by
@@ -253,25 +170,25 @@ theorem storeSha512_eq {m : MemoryState} {p : Pointer} {v : Vector (BitVec 64) 8
     p.add (BitVec.ofNat 64 k) = (p.add 8#64).add (BitVec.ofNat 64 (k - 8)) := by
     rw [Pointer.add_add, ← BitVec.ofNat_add, show 8 + (k - 8) = k by omega]
   unfold MemoryState.storeSha512
-  rw [e 16 (by decide) (by decide), storeAt_storeAt_concat (hov 8 (by decide)) rfl,
-    e 24 (by decide) (by decide), storeAt_storeAt_concat (hov 16 (by decide)) rfl,
-    e 32 (by decide) (by decide), storeAt_storeAt_concat (hov 24 (by decide)) rfl,
-    e 40 (by decide) (by decide), storeAt_storeAt_concat (hov 32 (by decide)) rfl,
-    e 48 (by decide) (by decide), storeAt_storeAt_concat (hov 40 (by decide)) rfl,
-    e 56 (by decide) (by decide), storeAt_storeAt_concat (hov 48 (by decide)) rfl,
-    storeAt_storeAt_below
+  rw [e 16 (by decide) (by decide), MemoryState.storeAt_storeAt_concat (hov 8 (by decide)) rfl,
+    e 24 (by decide) (by decide), MemoryState.storeAt_storeAt_concat (hov 16 (by decide)) rfl,
+    e 32 (by decide) (by decide), MemoryState.storeAt_storeAt_concat (hov 24 (by decide)) rfl,
+    e 40 (by decide) (by decide), MemoryState.storeAt_storeAt_concat (hov 32 (by decide)) rfl,
+    e 48 (by decide) (by decide), MemoryState.storeAt_storeAt_concat (hov 40 (by decide)) rfl,
+    e 56 (by decide) (by decide), MemoryState.storeAt_storeAt_concat (hov 48 (by decide)) rfl,
+    MemoryState.storeAt_storeAt_below
       (by
         simp [BitVec.uaddOverflow]; omega)
       rfl]
 
 /-- A second `storeSha512` to the same words overwrites the first. -/
-theorem storeSha512_storeSha512 {m : MemoryState} {p : Pointer} {v u : Vector (BitVec 64) 8}
+public theorem storeSha512_storeSha512 {m : MemoryState} {p : Pointer} {v u : Vector (BitVec 64) 8}
     (hp : p.offset.toNat + 56 < 2 ^ 64) :
     (m.storeSha512 p v).storeSha512 p u = m.storeSha512 p u := by
   rw [storeSha512_eq hp, storeSha512_eq hp, storeSha512_eq hp, MemoryState.storeAt_storeAt_self]
 
 /-- `d + k` steps by `j` bytes without wrapping, inside `d`'s 208 bytes. -/
-theorem obj_noOverflow {d : Pointer} (hdo : d.offset.toNat + 208 < 2 ^ 64) (k j : Nat)
+public theorem obj_noOverflow {d : Pointer} (hdo : d.offset.toNat + 208 < 2 ^ 64) (k j : Nat)
     (hk : k + j ≤ 208) : ¬(d.add (BitVec.ofNat 64 k)).offset.uaddOverflow (BitVec.ofNat 64 j) := by
   simp only [Pointer.add, BitVec.uaddOverflow, BitVec.toNat_add, BitVec.toNat_ofNat]
   rw [Nat.mod_eq_of_lt (show k < 2 ^ 64 by omega), Nat.mod_eq_of_lt (show j < 2 ^ 64 by omega),
@@ -280,8 +197,8 @@ theorem obj_noOverflow {d : Pointer} (hdo : d.offset.toNat + 208 < 2 ^ 64) (k j 
   omega
 
 /-- Two state words at `d + k`, `d + k + 8`: their 128 bits. -/
-theorem fits_pair {m : MemoryState} {d : Pointer} (hdo : d.offset.toNat + 208 < 2 ^ 64) (k : Nat)
-    (hk : k + 16 ≤ 208) (h₁ : Fits m (d.add (BitVec.ofNat 64 k)) 64)
+public theorem fits_pair {m : MemoryState} {d : Pointer} (hdo : d.offset.toNat + 208 < 2 ^ 64)
+    (k : Nat) (hk : k + 16 ≤ 208) (h₁ : Fits m (d.add (BitVec.ofNat 64 k)) 64)
     (h₂ : Fits m (d.add (BitVec.ofNat 64 (k + 8))) 64) : Fits m (d.add (BitVec.ofNat 64 k)) 128 :=
   Fits.append (off := 8#64) (obj_noOverflow hdo k 8 (by omega)) rfl rfl h₁
     (by rwa [Pointer.add_add, ← BitVec.ofNat_add])
@@ -324,9 +241,9 @@ theorem tail_eq (d out : Pointer) (S : GlobalState) (E : ⟪Γ⟫) (hwf : S.WF)
     pair_eq _ _ (obj_noOverflow hdo 144 8 (by decide)),
     pair_eq _ _ (obj_noOverflow hdo 160 8 (by decide)),
     pair_eq _ _ (obj_noOverflow hdo 176 8 (by decide)),
-    storeAt_storeAt_concat (hov 16 (by decide)) rfl,
-    storeAt_storeAt_concat (hov 32 (by decide)) rfl,
-    storeAt_storeAt_concat (hov 48 (by decide)) rfl]
+    MemoryState.storeAt_storeAt_concat (hov 16 (by decide)) rfl,
+    MemoryState.storeAt_storeAt_concat (hov 32 (by decide)) rfl,
+    MemoryState.storeAt_storeAt_concat (hov 48 (by decide)) rfl]
   simp only [MemoryState.readSha512, outBits, Pointer.add_add, BitVec.reduceAdd]
   rfl
 
@@ -344,7 +261,7 @@ theorem compress_one (st blk : Pointer) (s : GlobalState) (hwf : s.WF)
     hH, hBr']
 
 /-- The state words at `d + 128` as eight reads. -/
-theorem sha_words {m : MemoryState} {d : Pointer} {H : Vector (BitVec 64) 8}
+public theorem sha_words {m : MemoryState} {d : Pointer} {H : Vector (BitVec 64) 8}
     (h : m.readSha512 (d.add 128#64) = H) :
     m.readAt (d.add 128#64) 64 = H[0] ∧
       m.readAt (d.add 136#64) 64 = H[1] ∧
@@ -357,7 +274,7 @@ theorem sha_words {m : MemoryState} {d : Pointer} {H : Vector (BitVec 64) 8}
   simp [MemoryState.readSha512]
 
 /-- The state words at `d + 128` from eight reads. -/
-theorem sha_of_words {m : MemoryState} {d : Pointer} {H : Vector (BitVec 64) 8}
+public theorem sha_of_words {m : MemoryState} {d : Pointer} {H : Vector (BitVec 64) 8}
     (h0 : m.readAt (d.add 128#64) 64 = H[0]) (h1 : m.readAt (d.add 136#64) 64 = H[1])
     (h2 : m.readAt (d.add 144#64) 64 = H[2]) (h3 : m.readAt (d.add 152#64) 64 = H[3])
     (h4 : m.readAt (d.add 160#64) 64 = H[4]) (h5 : m.readAt (d.add 168#64) 64 = H[5])
@@ -372,7 +289,7 @@ theorem sha_of_words {m : MemoryState} {d : Pointer} {H : Vector (BitVec 64) 8}
     | omega
 
 /-- The state words at `d + 128` stored, read back. -/
-theorem words_after {S : GlobalState} {a : AllocState} {m : MemoryState} {d : Pointer}
+public theorem words_after {S : GlobalState} {a : AllocState} {m : MemoryState} {d : Pointer}
     {v : Vector (BitVec 64) 8} (hS : S = ⟨a, m.storeSha512 (d.add 128#64) v⟩)
     (h : Room S.mem d 1664) (hdo : d.offset.toNat + 208 < 2 ^ 64) :
     S.mem.readSha512 (d.add 128#64) = v := by
@@ -388,10 +305,11 @@ theorem words_after {S : GlobalState} {a : AllocState} {m : MemoryState} {d : Po
   exact this
 
 /-- The state words at `d + 128` fit, from their eight words'. -/
-theorem sha_fit {m : MemoryState} {d : Pointer} (hso : (d.add 128#64).offset.toNat + 56 < 2 ^ 64)
-    (h0 : Fits m (d.add 128#64) 64) (h1 : Fits m (d.add 136#64) 64) (h2 : Fits m (d.add 144#64) 64)
-    (h3 : Fits m (d.add 152#64) 64) (h4 : Fits m (d.add 160#64) 64) (h5 : Fits m (d.add 168#64) 64)
-    (h6 : Fits m (d.add 176#64) 64) (h7 : Fits m (d.add 184#64) 64) : m.Sha512Fit (d.add 128#64) :=
+public theorem sha_fit {m : MemoryState} {d : Pointer}
+    (hso : (d.add 128#64).offset.toNat + 56 < 2 ^ 64) (h0 : Fits m (d.add 128#64) 64)
+    (h1 : Fits m (d.add 136#64) 64) (h2 : Fits m (d.add 144#64) 64) (h3 : Fits m (d.add 152#64) 64)
+    (h4 : Fits m (d.add 160#64) 64) (h5 : Fits m (d.add 168#64) 64) (h6 : Fits m (d.add 176#64) 64)
+    (h7 : Fits m (d.add 184#64) 64) : m.Sha512Fit (d.add 128#64) :=
   ⟨hso, h0, by simpa using h1, by simpa using h2, by simpa using h3, by simpa using h4, by
     simpa using h5, by simpa using h6, by simpa using h7⟩
 
@@ -464,8 +382,8 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF)
   step_pure
   have hP64 : (P.setWidth 64).toNat = P.toNat := by
     simp; omega
-  rw [storeAt_storeAt_low (by omega) D,
-    storeAt_storeAt_add
+  rw [MemoryState.storeAt_storeAt_low (by omega) D,
+    MemoryState.storeAt_storeAt_add
       (by
         simp [BitVec.uaddOverflow, hblock_off]; omega)
       (by omega) 128#8,
@@ -478,7 +396,7 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF)
     block_init
     step_pure
     step_store
-    rw [storeAt_storeAt_add (off := 112#64) (by simp [BitVec.uaddOverflow, hblock_off])
+    rw [MemoryState.storeAt_storeAt_add (off := 112#64) (by simp [BitVec.uaddOverflow, hblock_off])
         (by decide)] at hS
     step_pure
     step_memcpy
@@ -514,10 +432,10 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF)
     step_pure
     replace hS := restore hS hfits_block hread_blk
     step_memset
-    rw [storeAt_storeAt_low (by decide) 0#896] at hS
+    rw [MemoryState.storeAt_storeAt_low (by decide) 0#896] at hS
     step_pure
     step_store
-    rw [storeAt_storeAt_add (off := 112#64) (by simp [BitVec.uaddOverflow, hblock_off])
+    rw [MemoryState.storeAt_storeAt_add (off := 112#64) (by simp [BitVec.uaddOverflow, hblock_off])
         (by decide)] at hS
     step_pure
     step_memcpy
@@ -634,7 +552,7 @@ theorem bitLen_eq {q : Nat} {P : BitVec 8} (h : P.toNat < 128) :
   omega
 
 /-- `twoBlocks`: the position is at least `112`. -/
-theorem twoBlocks_iff {P : BitVec 8} (h : P.toNat < 128) :
+public theorem twoBlocks_iff {P : BitVec 8} (h : P.toNat < 128) :
     twoBlocks P = decide (112 ≤ P.toNat) := by
   have : P < 128#8 := by
     simp [BitVec.lt_def]; omega

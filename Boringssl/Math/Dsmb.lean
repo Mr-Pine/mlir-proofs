@@ -14,8 +14,8 @@ multiple, and the ladder doubles between digits. -/
 namespace MLIR.Boringssl
 
 open _root_.Ed25519 Agave
-open Firedancer.Ref (Limbs.Loose Limbs.Tight Limbs.Under2p dN x2N y2N addOk dblOk curveOk natCast_eq
-  natCast_ne dN_eq add_of_ok dbl_of_ok onCurve_of_ok)
+open Firedancer.Ref (Limbs.Loose Limbs.Tight Limbs.Under2p dN x2N y2N addOk dblOk curveOk dN_eq
+  add_of_ok dbl_of_ok onCurve_of_ok bounded limbs_of_bounded)
 
 namespace ge_double_scalarmult_vartime
 
@@ -42,11 +42,11 @@ theorem fe_limb (a : ⟦tFe⟧ᵣ) (i : Fin 5) :
     simp [Ty.stride, Ty.width, Ty.padding, Ty.align]
 
 /-- Three 320-bit fields, packed as a struct: `a` lowest. -/
-abbrev pack3 (a b c : BitVec 320) : BitVec 960 :=
+public abbrev pack3 (a b c : BitVec 320) : BitVec 960 :=
   ((0#0 ++ c) ++ (0#0 ++ b)) ++ (0#0 ++ a)
 
 /-- Limb `i` of each field. -/
-theorem pack3_extract (a b c : BitVec 320) {i : Nat} (hi : i < 5) :
+public theorem pack3_extract (a b c : BitVec 320) {i : Nat} (hi : i < 5) :
     (pack3 a b c).extractLsb' (64 * i) 64 = a.extractLsb' (64 * i) 64 ∧
       (pack3 a b c).extractLsb' (320 + 64 * i) 64 = b.extractLsb' (64 * i) 64 ∧
       (pack3 a b c).extractLsb' (640 + 64 * i) 64 = c.extractLsb' (64 * i) 64 := by
@@ -98,13 +98,10 @@ Natural number checks, mod `p`, that the kernel decides. -/
 
 /-- The affine point a precomputed entry stores, `((y + x) - (y - x), (y + x) + (y - x)) / 2`: the
 witness the checks test. -/
-def affine (P : GePrecomp) : ℕ × ℕ :=
+@[expose]
+public def affine (P : GePrecomp) : ℕ × ℕ :=
   ((Limbs.nat P.yplusx + p - Limbs.nat P.yminusx % p) * ((p + 1) / 2) % p,
     (Limbs.nat P.yplusx + Limbs.nat P.yminusx) * ((p + 1) / 2) % p)
-
-/-- Every limb at most `c`. -/
-def bounded (c : ℕ) (l : Fin 5 → BitVec 64) : Bool :=
-  (l 0).toNat ≤ c && (l 1).toNat ≤ c && (l 2).toNat ≤ c && (l 3).toNat ≤ c && (l 4).toNat ≤ c
 
 /-- `P` is the curve point `(x, y)` as `(y + x, y - x, 2d x y)`, loose. -/
 def entryOk (P : GePrecomp) (x y : ℕ) : Bool :=
@@ -137,14 +134,6 @@ theorem adds_ok :
   decide +kernel
 
 /-! ### Soundness -/
-
-/-- `bounded c` bounds every limb by `c`. -/
-theorem limbs_of_bounded {c : ℕ} {l : Fin 5 → BitVec 64} (h : bounded c l = true) :
-    ∀ i, (l i).toNat ≤ c := by
-  simp only [bounded, Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩ := h
-  intro i
-  fin_cases i <;> assumption
 
 /-- `entryOk` gives the `ge_precomp` of `(x, y)` with loose limbs, the point on the curve. -/
 theorem entry_of_ok {P : GePrecomp} {x y : ℕ} (h : entryOk P x y = true) :
@@ -186,11 +175,12 @@ public theorem biTbl_niels {j : ℕ} (hj : j < 8) :
 /-! ## Digits -/
 
 /-- A slide digit: `0`, or odd in `[-15, 15]`. -/
-def DigitOk (d : BitVec 8) : Prop :=
+@[expose]
+public def DigitOk (d : BitVec 8) : Prop :=
   d = 0#8 ∨ (Odd d.toInt ∧ -15 ≤ d.toInt ∧ d.toInt ≤ 15)
 
 /-- A positive odd digit halves to the index of its multiple. -/
-theorem idx_val_pos {d : BitVec 8} (hpos : (0#8).slt d = true) (ho : Odd d.toInt) :
+public theorem idx_val_pos {d : BitVec 8} (hpos : (0#8).slt d = true) (ho : Odd d.toInt) :
     ((2 * (d >>> 1).toNat + 1 : ℕ) : ℤ) = d.toInt := by
   have h1 : 0 < d.toInt := by
     simp only [BitVec.slt, decide_eq_true_eq, BitVec.toInt_zero] at hpos
@@ -205,7 +195,7 @@ theorem idx_val_pos {d : BitVec 8} (hpos : (0#8).slt d = true) (ho : Odd d.toInt
   omega
 
 /-- A negative odd digit at least `-15`, negated, halves to the index of its multiple. -/
-theorem idx_val_neg {d : BitVec 8} (hneg : d.slt 0#8 = true) (ho : Odd d.toInt)
+public theorem idx_val_neg {d : BitVec 8} (hneg : d.slt 0#8 = true) (ho : Odd d.toInt)
     (h15 : -15 ≤ d.toInt) : ((2 * ((-d) >>> 1).toNat + 1 : ℕ) : ℤ) = -d.toInt := by
   have h1 : d.toInt < 0 := by
     simp only [BitVec.slt, decide_eq_true_eq, BitVec.toInt_zero] at hneg
@@ -233,7 +223,7 @@ theorem eq_zero_of_not' {d : BitVec 8} (hp : ¬(0#8).slt d = true) (hn : ¬d.slt
   exact BitVec.eq_of_toInt_eq (by simpa using this)
 
 /-- A table of `P`'s odd multiples looked up at a digit `d ≠ 0`: `d P`, by sign. -/
-theorem addDigit {β : Type} {Niels : β → Point → Prop} {tbl : ℕ → β} {P : Point}
+public theorem addDigit {β : Type} {Niels : β → Point → Prop} {tbl : ℕ → β} {P : Point}
     (htbl : ∀ k < 8, Niels (tbl k) ((2 * k + 1) • P)) {d : BitVec 8}
     (hd : Odd d.toInt ∧ -15 ≤ d.toInt ∧ d.toInt ≤ 15) :
     ((0#8).slt d = true → Niels (tbl (d >>> 1).toNat) (d.toInt • P)) ∧
@@ -299,24 +289,25 @@ theorem step_proj {AI : ℕ → GeCached} {BI : ℕ → GePrecomp} {PA PB R : Po
 /-! ## The ladder -/
 
 /-- The value of `w`'s low `i` digits, `Σ_{k < i} w[k] 2^k`, signed. -/
-def low (w : Vector (BitVec 8) 256) (i : ℕ) : ℤ :=
+@[expose]
+public def low (w : Vector (BitVec 8) 256) (i : ℕ) : ℤ :=
   ∑ k ∈ Finset.range i, if h : k < 256 then w[k].toInt * 2 ^ k else 0
 
 /-- One more digit. -/
-theorem low_succ (w : Vector (BitVec 8) 256) {i : ℕ} (h : i < 256) :
+public theorem low_succ (w : Vector (BitVec 8) 256) {i : ℕ} (h : i < 256) :
     low w (i + 1) = low w i + w[i].toInt * 2 ^ i := by
   rw [low, Finset.sum_range_succ, dite_eq_left_of_eq_true (eq_true h)]
   rfl
 
 /-- All digits: `w`'s value. -/
-theorem low_256 (w : Vector (BitVec 8) 256) :
+public theorem low_256 (w : Vector (BitVec 8) 256) :
     low w 256 = ∑ i : Fin 256, w[i].toInt * 2 ^ (i : ℕ) := by
   rw [low, ← Fin.sum_univ_eq_sum_range]
   simp
 
 /-- Zero digits from `j` on add nothing. -/
-theorem low_add {w : Vector (BitVec 8) 256} {j : ℕ} (hz : ∀ k (hk : k < 256), j ≤ k → w[k] = 0#8) :
-    ∀ m, j + m ≤ 256 → low w (j + m) = low w j
+public theorem low_add {w : Vector (BitVec 8) 256} {j : ℕ}
+    (hz : ∀ k (hk : k < 256), j ≤ k → w[k] = 0#8) : ∀ m, j + m ≤ 256 → low w (j + m) = low w j
   | 0, _ => rfl
   | m + 1, h => by
     rw [← Nat.add_assoc, low_succ w (by omega), hz _ _ (by omega), BitVec.toInt_zero, zero_mul,
@@ -372,7 +363,7 @@ theorem aiTbl_niels {P : GeP3} {PA : Point} (hP : P.Ext PA) :
 /-! ## The first non-zero digit -/
 
 /-- `start` stops at `j`: the digits above it, up to `i`, are zero. -/
-theorem start_some {as bs : Vector (BitVec 8) 256} :
+public theorem start_some {as bs : Vector (BitVec 8) 256} :
     ∀ i (h : i < 256) {j : Fin 256},
       start as bs i h = some j → ∀ k (hk : k < 256), j.val < k → k ≤ i → as[k] = 0#8 ∧ bs[k] = 0#8
   | 0, _, _, _, _, _, hjk, hki => absurd hjk (by omega)
@@ -388,7 +379,7 @@ theorem start_some {as bs : Vector (BitVec 8) 256} :
       omega
 
 /-- `start` finds nothing: the digits up to `i` are zero. -/
-theorem start_none {as bs : Vector (BitVec 8) 256} :
+public theorem start_none {as bs : Vector (BitVec 8) 256} :
     ∀ i (h : i < 256),
       start as bs i h = none → ∀ k (hk : k < 256), k ≤ i → as[k] = 0#8 ∧ bs[k] = 0#8
   | 0, _, hs, k, hk, hki => by

@@ -5,6 +5,7 @@ public import Firedancer.Ref.fd_sha512_init
 public import Firedancer.Ref.fd_curve25519_scalar_reduce
 public import Firedancer.R52x5.Mlir.fd_sha512_init
 import Std.Tactic.BVDecide
+import Firedancer.Common.LimbBits
 
 namespace MLIR.Firedancer.R52x5
 
@@ -13,18 +14,6 @@ open Ref (sha512IV)
 /-! ## Proof -/
 
 section Proof
-
-/-- Four lanes packed: lane `0` lowest. -/
-theorem packLanes_four (v : Vector (BitVec 64) 4) :
-    BitVec.packLanes v = v[3] ++ (v[2] ++ (v[1] ++ v[0])) := by
-  have h (x : BitVec 256) :
-    x =
-      x.extractLsb' (3 * 64) 64 ++
-        (x.extractLsb' (2 * 64) 64 ++
-          (x.extractLsb' (1 * 64) 64 ++ x.extractLsb' (0 * 64) 64)) := by
-    bv_decide
-  rw [h (BitVec.packLanes v), BitVec.extractLsb'_packLanes, BitVec.extractLsb'_packLanes,
-    BitVec.extractLsb'_packLanes, BitVec.extractLsb'_packLanes]
 
 /-- `fd_sha512_init` stores `sha512IV` at `state` (byte `128`) and zeroes `buf_used`, `bit_cnt_lo`
 and `bit_cnt_hi` (bytes `200 … 223`), and returns `sha`. -/
@@ -69,19 +58,19 @@ public theorem fd_sha512_init.call_eq (sha : Pointer) (s : GlobalState) (hwf : s
     show sha.add 168#64 = (sha.add 160#64).add (BitVec.ofNat 64 8) by simp,
     show sha.add 176#64 = (sha.add 160#64).add (BitVec.ofNat 64 16) by simp,
     show sha.add 184#64 = (sha.add 160#64).add (BitVec.ofNat 64 24) by simp,
-    Ref.MemoryState.storeAt_storeAt_add (a := 64) (hov 128 8 (by decide) (by decide)) rfl
+    MemoryState.storeAt_storeAt_append (a := 64) (hov 128 8 (by decide) (by decide)) rfl
       (by decide),
-    Ref.MemoryState.storeAt_storeAt_add (a := 128) (hov 128 16 (by decide) (by decide)) rfl
+    MemoryState.storeAt_storeAt_append (a := 128) (hov 128 16 (by decide) (by decide)) rfl
       (by decide),
-    Ref.MemoryState.storeAt_storeAt_add (a := 192) (hov 128 24 (by decide) (by decide)) rfl
+    MemoryState.storeAt_storeAt_append (a := 192) (hov 128 24 (by decide) (by decide)) rfl
       (by decide),
-    Ref.MemoryState.storeAt_storeAt_add (a := 64) (hov 160 8 (by decide) (by decide)) rfl
+    MemoryState.storeAt_storeAt_append (a := 64) (hov 160 8 (by decide) (by decide)) rfl
       (by decide),
-    Ref.MemoryState.storeAt_storeAt_add (a := 128) (hov 160 16 (by decide) (by decide)) rfl
+    MemoryState.storeAt_storeAt_append (a := 128) (hov 160 16 (by decide) (by decide)) rfl
       (by decide),
-    Ref.MemoryState.storeAt_storeAt_add (a := 192) (hov 160 24 (by decide) (by decide)) rfl
+    MemoryState.storeAt_storeAt_append (a := 192) (hov 160 24 (by decide) (by decide)) rfl
       (by decide),
-    packLanes_four, packLanes_four, show BitVec.replicate 24 0#8 = 0#192 by decide]
+    BitVec.packLanes_quad, BitVec.packLanes_quad, show BitVec.replicate 24 0#8 = 0#192 by decide]
   rfl
 
 end Proof

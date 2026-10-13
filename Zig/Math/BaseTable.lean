@@ -29,9 +29,6 @@ def projEq (A B : E) : Bool :=
   mulN B.X A.Z == mulN A.X B.Z && mulN B.Y A.Z == mulN A.Y B.Z && mulN B.T A.Z == mulN A.T B.Z &&
     B.Z % p != 0
 
-theorem natCast_eq {a b : ℕ} (h : a % p = b % p) : (a : ZMod p) = b :=
-  (ZMod.natCast_eq_natCast_iff' a b p).2 h
-
 theorem rep_of_projEq {P : Point} {A B : E} (hA : Rep P A) (h : projEq A B = true) : Rep P B := by
   unfold projEq at h
   unfold Rep IsExt at hA ⊢

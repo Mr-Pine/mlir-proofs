@@ -2,7 +2,7 @@
 """Generate Boringssl/Tests/<fn>.lean for the point functions."""
 import os
 
-OUT = "/home/david.intern/mlir-proofs/Boringssl/Tests"
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "Boringssl", "Tests")
 FIELDS = {
     "P2": ["X", "Y", "Z"],
     "P3": ["X", "Y", "Z", "T"],

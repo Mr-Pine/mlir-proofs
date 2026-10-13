@@ -91,7 +91,7 @@ local macro "store_byte" : tactic =>
       step_pure
       step_store
       clear_reads
-      rw [storeAt_storeAt_add (BitVec.not_uaddOverflow_of_le hout_off (by decide))
+      rw [MemoryState.storeAt_storeAt_concat (BitVec.not_uaddOverflow_of_le hout_off (by decide))
           (by decide)] at hS))
 
 /-- `s[k] = (limbs[i] >> j) as u8`. -/

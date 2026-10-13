@@ -3,6 +3,7 @@ module
 public import Ed25519.Field
 public import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.LinearCombination
+import Mathlib.Tactic.FinCases
 
 /-! Field elements as five 64-bit limbs of radix `2^51`: their value in `ZMod p`, their number in
 `ℕ`, and the carry and bound arithmetic shared by the limb implementations. -/
@@ -22,11 +23,38 @@ def Limbs.nat (l : Fin 5 → BitVec 64) : ℕ :=
   (l 0).toNat + (l 1).toNat * 2 ^ 51 + (l 2).toNat * 2 ^ 102 + (l 3).toNat * 2 ^ 153 +
     (l 4).toNat * 2 ^ 204
 
+/-- Every limb below `c`. -/
+abbrev Limbs.Lt (l : Fin 5 → BitVec 64) (c : ℕ) : Prop :=
+  ∀ i, (l i).toNat < c
+
 /-- `x` holds `n`, at most `M`. -/
 def ValLe (x : BitVec w) (n M : ℕ) : Prop :=
   x.toNat = n ∧ n ≤ M
 
 end
+
+/-! ## Bounds -/
+
+public theorem Limbs.Lt.mono {l : Fin 5 → BitVec 64} {c d : ℕ} (h : Limbs.Lt l c) (hcd : c ≤ d) :
+    Limbs.Lt l d := fun i => (h i).trans_le hcd
+
+public theorem Limbs.lt_iff (l : Fin 5 → BitVec 64) (c : ℕ) :
+    Limbs.Lt l c ↔
+      (l 0).toNat < c ∧ (l 1).toNat < c ∧ (l 2).toNat < c ∧ (l 3).toNat < c ∧ (l 4).toNat < c := by
+  refine ⟨fun h => ⟨h 0, h 1, h 2, h 3, h 4⟩, fun h i => ?_⟩
+  fin_cases i <;> simp [h]
+
+/-! ## Carries -/
+
+/-- `x`'s low 51 bits and its carry, in `ZMod p`. -/
+public theorem mod_add_div51 (x : ℕ) :
+    ((x % 2 ^ 51 : ℕ) : ZMod p) + 2 ^ 51 * (x / 2 ^ 51 : ℕ) = x := by
+  exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (Nat.mod_add_div x (2 ^ 51))
+
+/-- A 128-bit column's carry out of bit 51, truncated to a limb. -/
+public theorem toNat_shift_setWidth (x : BitVec 128) :
+    ((x >>> 51).setWidth 64).toNat = x.toNat / 2 ^ 51 % 2 ^ 64 := by
+  rw [BitVec.toNat_setWidth, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 /-! ## Values -/
 

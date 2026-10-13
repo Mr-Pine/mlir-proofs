@@ -72,7 +72,7 @@ local macro "naf_iter " ho:term:max hf:ident hr:ident c:ident x:ident n:ident : 
       have hv456_point := MemoryState.PointRoom.of_room hroom_v456 hv456_off
       have hv457_point := MemoryState.PointRoom.of_room hroom_v457 hv457_off
       have hv458_point := MemoryState.PointRoom.of_room hroom_v458 hv458_off
-      have he := pointFit_of_fits $hf $ho
+      have he := MemoryState.PointFit.of_fits' $hf $ho
       have hne := readNiels_of_readAt $hf $ho $hr
       step_call using EdwardsPoint_Add_ProjectiveNielsPoint_add.call_eq consuming he hne
       name_point $c
@@ -83,66 +83,11 @@ local macro "naf_iter " ho:term:max hf:ident hr:ident c:ident x:ident n:ident : 
         hread_v457_readLimbs hread_v457_40 hread_v457_80 hread_v457_120
       name_point $n
       have hb := (readAt_nielsBits hv458_point).trans (congrArg nielsBits hread_v458)
-      have hf458 := fits_of_pointFit hv458_point
+      have hf458 := MemoryState.PointFit.fits hv458_point
       step_memcpy consuming hb hf458 hread_v458 hread_v458_readLimbs hread_v458_40 hread_v458_80
         hread_v458_120
       clear hv456_point hv457_point hv458_point hroom_v456 hroom_v457 hroom_v458
       iterate 3 step_pure))
-
-/-- Room for limbs from room for their 320 bits. -/
-theorem limbsRoom_of_room {m : MemoryState} {p : Pointer} (h : Room m p 320)
-    (ho : p.offset.toNat + 32 < 2 ^ 64) : m.LimbsRoom p := by
-  have hov (off : BitVec 64) (hoff : off.toNat ≤ 32) : ¬p.offset.uaddOverflow off := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-  refine ⟨ho, h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-    exact Room.add_of_le (hov _ (by decide)) (by decide) h
-
-/-- Limbs that fit from their 320 bits that fit. -/
-theorem limbsFit_of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 320)
-    (ho : p.offset.toNat + 32 < 2 ^ 64) : m.LimbsFit p := by
-  have hov (off : BitVec 64) (hoff : off.toNat ≤ 32) : ¬p.offset.uaddOverflow off := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-  refine ⟨ho, h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-    exact Fits.add_of_le (hov _ (by decide)) (by decide) h
-
-/-- No wrap at a coordinate's offset. -/
-theorem coord_noOverflow {p : Pointer} (ho : p.offset.toNat + 160 ≤ 2 ^ 64) {k : BitVec 64}
-    (hk : k.toNat < 160) : ¬p.offset.uaddOverflow k := by
-  simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-
-/-- Room for a point from room for its 1280 bits. -/
-theorem pointRoom_of_room {m : MemoryState} {p : Pointer} (h : Room m p 1280)
-    (ho : p.offset.toNat + 160 ≤ 2 ^ 64) : m.PointRoom p :=
-  ⟨ho, limbsRoom_of_room (h.mono (by decide)) (by omega),
-    limbsRoom_of_room (Room.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 40) (by omega)),
-    limbsRoom_of_room (Room.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 80) (by omega)),
-    limbsRoom_of_room (Room.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 120) (by omega))⟩
-
-/-- A point that fits from its 1280 bits that fit. -/
-theorem pointFit_of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 1280)
-    (ho : p.offset.toNat + 160 ≤ 2 ^ 64) : m.PointFit p :=
-  ⟨ho, limbsFit_of_fits (h.mono (by decide)) (by omega),
-    limbsFit_of_fits (Fits.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 40) (by omega)),
-    limbsFit_of_fits (Fits.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 80) (by omega)),
-    limbsFit_of_fits (Fits.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 120) (by omega))⟩
-
-/-- A point's 1280 bits fit where its coordinates do. -/
-theorem fits_of_pointFit {m : MemoryState} {p : Pointer} (h : m.PointFit p) : Fits m p 1280 := by
-  have a1 :=
-    Fits.append (coord_noOverflow h.1 (by decide)) (by decide) rfl (fits_of_limbsFit h.limbsFit_X)
-      (fits_of_limbsFit h.limbsFit_Y)
-  have a2 :=
-    Fits.append (coord_noOverflow h.1 (by decide)) (by decide) rfl a1
-      (fits_of_limbsFit h.limbsFit_T)
-  exact
-    Fits.append (coord_noOverflow h.1 (by decide)) (by decide) rfl a2
-      (fits_of_limbsFit h.limbsFit_Z)
 
 /-- The 1280 bits of a `ProjectiveNielsPoint` that fits. -/
 theorem readAt_nielsBits {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
@@ -150,9 +95,9 @@ theorem readAt_nielsBits {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
   readAt_edwardsBits (P :=
     ⟨m.readLimbs p, m.readLimbs (p.add 40#64), m.readLimbs (p.add 80#64),
       m.readLimbs (p.add 120#64)⟩)
-    (fits_of_pointFit h).inBounds h.1 (readAt_eq_limbsBits h.limbsFit_X)
-    (readAt_eq_limbsBits h.limbsFit_Y) (readAt_eq_limbsBits h.limbsFit_T)
-    (readAt_eq_limbsBits h.limbsFit_Z)
+    (MemoryState.PointFit.fits h).inBounds h.1 (MemoryState.readAt_eq_limbsBits h.limbsFit_X)
+    (MemoryState.readAt_eq_limbsBits h.limbsFit_Y) (MemoryState.readAt_eq_limbsBits h.limbsFit_T)
+    (MemoryState.readAt_eq_limbsBits h.limbsFit_Z)
 
 /-- Storing a `ProjectiveNielsPoint`'s bits is storing the point. -/
 theorem storeAt_nielsBits {m : MemoryState} {p : Pointer} {P : ProjectiveNielsPoint}
@@ -169,22 +114,23 @@ theorem readLimbs_of_readAt {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVe
   have hl : (m.makeWritable p.id).readLimbs p = m.readLimbs p := by
     funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
   have hfw : Fits (m.makeWritable p.id) p 320 := hf.makeWritable
-  rw [← hl, ← MemoryState.storeAt_readAt_self hfw, hr, h, ← storeLimbs_eq_storeAt ho]
+  rw [← hl, ← MemoryState.storeAt_readAt_self hfw, hr, h, ← MemoryState.storeLimbs_eq_storeAt ho]
   exact
-    MemoryState.readLimbs_storeLimbs_self (limbsRoom_of_room (Room.makeWritable_self hf.live) ho)
+    MemoryState.readLimbs_storeLimbs_self
+      (MemoryState.LimbsRoom.of_room' (Room.makeWritable_self hf.live) ho)
 
 /-- A table entry's offsets do not wrap. -/
-theorem entry_off {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toNat ≤ 1120) :
+public theorem entry_off {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toNat ≤ 1120) :
     (t.add k).offset.toNat + 160 ≤ 2 ^ 64 := by
   simp [Pointer.add, ho]; omega
 
 /-- No wrap at a table entry's offset. -/
-theorem entry_noOverflow {t : Pointer} (ho : t.offset = 0) {k : BitVec 64} (hk : k.toNat ≤ 1120) :
-    ¬t.offset.uaddOverflow k := by
+public theorem entry_noOverflow {t : Pointer} (ho : t.offset = 0) {k : BitVec 64}
+    (hk : k.toNat ≤ 1120) : ¬t.offset.uaddOverflow k := by
   simp [BitVec.uaddOverflow, ho]; omega
 
 /-- A table's 10240 bits fit where its eight entries' do. -/
-theorem fits_table {m : MemoryState} {t : Pointer} (ho : t.offset = 0) (h0 : Fits m t 1280)
+public theorem fits_table {m : MemoryState} {t : Pointer} (ho : t.offset = 0) (h0 : Fits m t 1280)
     (h1 : Fits m (t.add 160#64) 1280) (h2 : Fits m (t.add 320#64) 1280)
     (h3 : Fits m (t.add 480#64) 1280) (h4 : Fits m (t.add 640#64) 1280)
     (h5 : Fits m (t.add 800#64) 1280) (h6 : Fits m (t.add 960#64) 1280)
@@ -241,7 +187,8 @@ theorem readNiels_of_readAt {m : MemoryState} {p : Pointer} {P : ProjectiveNiels
   have hfw : Fits (m.makeWritable p.id) p 1280 := hf.makeWritable
   rw [← hn, ← MemoryState.storeAt_readAt_self hfw, hr, h, storeAt_nielsBits ho]
   exact
-    MemoryState.readNiels_storeNiels_self (pointRoom_of_room (Room.makeWritable_self hf.live) ho)
+    MemoryState.readNiels_storeNiels_self
+      (MemoryState.PointRoom.of_room' (Room.makeWritable_self hf.live) ho)
 
 -- about 130 steps over a frame of 8 slots and 22 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
@@ -274,7 +221,7 @@ public theorem call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   name_point n0
   have hb_n0 : S.mem.readAt v460 1280 = nielsBits n0 := by
     rw [readAt_nielsBits hv460_point, hread_v460]
-  have hfits_v460 := fits_of_pointFit hv460_point
+  have hfits_v460 := MemoryState.PointFit.fits hv460_point
   step_memcpy
   -- let mut Ai = [A.as_projective_niels(); 8];
   iterate 7
@@ -289,25 +236,27 @@ public theorem call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   have hv459_point := MemoryState.PointRoom.of_room hroom_v459 hv459_off
   step_pure
   step_pure
-  have h1 := room_of_limbsRoom hv454_proj.limbsRoom_Y
-  have h2 := fits_of_limbsFit ha.limbsFit_Y
-  have hY := readAt_eq_limbsBits ha.limbsFit_Y
+  have h1 := MemoryState.LimbsRoom.room320 hv454_proj.limbsRoom_Y
+  have h2 := MemoryState.LimbsFit.fits ha.limbsFit_Y
+  have hY := MemoryState.readAt_eq_limbsBits ha.limbsFit_Y
   step_memcpy consuming h1 h2 hY
   step_pure
   step_pure
-  have h1 := room_of_limbsRoom hv454_proj.limbsRoom_Z
-  have h2 := fits_of_limbsFit ha.limbsFit_T
-  have hZ := readAt_eq_limbsBits ha.limbsFit_T
+  have h1 := MemoryState.LimbsRoom.room320 hv454_proj.limbsRoom_Z
+  have h2 := MemoryState.LimbsFit.fits ha.limbsFit_T
+  have hZ := MemoryState.readAt_eq_limbsBits ha.limbsFit_T
   step_memcpy consuming h1 h2 hZ
-  have h1 := room_of_limbsRoom hv454_proj.limbsRoom_X
-  have h2 := fits_of_limbsFit ha.limbsFit_X
-  have hX := readAt_eq_limbsBits ha.limbsFit_X
+  have h1 := MemoryState.LimbsRoom.room320 hv454_proj.limbsRoom_X
+  have h2 := MemoryState.LimbsFit.fits ha.limbsFit_X
+  have hX := MemoryState.readAt_eq_limbsBits ha.limbsFit_X
   step_memcpy consuming h1 h2 hX
   have ho454 : v454.offset.toNat + 120 ≤ 2 ^ 64 := by simp [hv454_off]
   have hv454_fit : S.mem.ProjectiveFit v454 :=
-    ⟨ho454, limbsFit_of_fits hfits_v454 (by omega),
-      limbsFit_of_fits hfits_v454_40 (Pointer.coord_offset_le (a := 40) ho454 (by omega)),
-      limbsFit_of_fits hfits_v454_80 (Pointer.coord_offset_le (a := 80) ho454 (by omega))⟩
+    ⟨ho454, MemoryState.LimbsFit.of_fits' hfits_v454 (by omega),
+      MemoryState.LimbsFit.of_fits' hfits_v454_40
+        (Pointer.coord_offset_le (a := 40) ho454 (by omega)),
+      MemoryState.LimbsFit.of_fits' hfits_v454_80
+        (Pointer.coord_offset_le (a := 80) ho454 (by omega))⟩
   have hread_v454_proj :
     S.mem.readProjective v454 =
       ⟨S₀.mem.readLimbs a, S₀.mem.readLimbs (a.add 40#64), S₀.mem.readLimbs (a.add 80#64)⟩ := by

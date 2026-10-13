@@ -3,6 +3,7 @@ module
 public import Ed25519.Sha512
 public import Firedancer.Ref.fd_ed25519_verify
 import Std.Tactic.BVDecide
+import Firedancer.Common.Counter
 
 /-! `fd_ed25519_verify.hash` computes SHA-512: its digest's bytes are SHA-512 of
 `r ‖ publicKey ‖ msg`, whatever `buf0` holds. -/
@@ -80,9 +81,7 @@ private theorem word_ref (block : BitVec 1024) (h : t < 16) :
     show 8 * (8 * t + 4) = 64 * t + 32 by omega, show 8 * (8 * t + 5) = 64 * t + 40 by omega,
     show 8 * (8 * t + 6) = 64 * t + 48 by omega, show 8 * (8 * t + 7) = 64 * t + 56 by omega]
 
-private theorem K_ref (h : i < 80) : K[i] = Sha512.K[i]! := by
-  rw [getElem!_pos Sha512.K i h]
-  rfl
+private theorem K_ref (h : i < 80) : K[i] = Sha512.K[i]! := by rw [getElem!_pos Sha512.K i h]
 
 private theorem loop1_ref (block : BitVec 1024) (i : Nat) (v : Vector (BitVec 64) 8)
     (hi : i ≤ 16) :
@@ -197,12 +196,6 @@ public theorem _root_.MLIR.ShaState.absorbed_init (buf0 : BitVec 1024) :
     exact BitVec.eq_of_toNat_eq (by simp)
 
 namespace fd_sha512_append
-
-private theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
-
-private theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
-  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 /-- `append`'s bit count: 128-bit addition of `8 sz`. -/
 private theorem bitCnt_add (hi lo sz : BitVec 64) :

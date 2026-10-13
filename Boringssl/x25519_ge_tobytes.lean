@@ -33,36 +33,6 @@ end
 
 section Proof
 
-/-- A splice into a splice that covers it: one splice of the inner value. -/
-private theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x : BitVec wx)
-    (y : BitVec wy) (h : k + wy ≤ wx) :
-    Memory.spliceBits (Memory.spliceBits b o x) (o + k) y =
-      Memory.spliceBits b o (Memory.spliceBits x k y) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits]
-  grind
-
-/-- A store inside a stored value: one store, the inner value spliced. -/
-private theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu}
-    {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu)
-    (y : BitVec wy) :
-    (m.storeAt p u).storeAt (p.add off) y =
-      m.storeAt p (Memory.spliceBits u (off.toNat * 8) y) := by
-  have hones :
-    Memory.spliceBits (BitVec.allOnes wu) (off.toNat * 8) (BitVec.allOnes wy) =
-      BitVec.allOnes wu := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
-    grind
-  simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
-    spliceBits_spliceBits_add _ _ _ _ _ hw, hones]
-
 /-- A sign is a bit: its `trunc nuw nsw` to a byte and `shl nuw` by 7 do not wrap. -/
 private theorem sgn_bits {v : BitVec 32} {a : Fin 5 → BitVec 64}
     (h : v = Firedancer.Ref.fd_f25519_sgn.spec a) :
@@ -122,7 +92,7 @@ public theorem x25519_ge_tobytes.call_eq (out h : Pointer) (s : GlobalState) (hw
   finish_block
   rw [hS]
   erase_frame
-  rw [storeAt_storeAt_add hov31 (by decide)]
+  rw [MemoryState.storeAt_storeAt_add hov31 (by decide)]
   subst hs31 hsgn_x
   rfl
 

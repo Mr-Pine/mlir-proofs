@@ -402,7 +402,7 @@ public theorem Fe_mul.call_eq (out a b : Pointer) (s : GlobalState) (hwf : s.WF)
     rw [hS]; exact MemoryState.WideFit.stores hrW₀ _ _ _ _ _
   clear hpre hcols
   step_call using Fe_carry128.call_eq consuming hpre'
-  have hout320 := hout.room
+  have hout320 := hout.room320
   have ht320 := ht_limbs.fits
   have htm := hS ▸ ht_limbs
   have htr := hS ▸ hread_t_readLimbs

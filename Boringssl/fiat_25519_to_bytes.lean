@@ -33,70 +33,11 @@ local macro "store_byte" : tactic =>
     ( step_pure
       step_store
       clear_reads
-      rw [MemoryState.storeAt_storeAt_add (BitVec.not_uaddOverflow_of_le hout1_off (by decide))
+      rw [MemoryState.storeAt_storeAt_concat (BitVec.not_uaddOverflow_of_le hout1_off (by decide))
           (by decide)] at hS))
 
 /-! ## Helpers -/
 
-/-- A store right after another: one store of both. -/
-private theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {off : BitVec 64}
-    {x : BitVec v} {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
-    (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
-    true_and, and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
-
-/-- The stored bytes, as the code computes them: `pack`'s. -/
-theorem fiat_25519_to_bytes.pack_eq {x12 x14 x16 x18 x20 x38 x51 x66 x79 : BitVec 64}
-    (hx38 : x38 = (x12 >>> 48 &&& 255#64) + x14 <<< 3)
-    (hx51 : x51 = (x38 >>> 48 &&& 255#64) + x16 <<< 6) (hx66 : x66 = x51 >>> 56 + x18 <<< 1)
-    (hx79 : x79 = (x66 >>> 48 &&& 255#64) + x20 <<< 4) :
-    (x79 >>> 48).setWidth 8 ++
-        ((x79 >>> 40).setWidth 8 ++
-          ((x79 >>> 32).setWidth 8 ++
-            ((x79 >>> 24).setWidth 8 ++
-              ((x79 >>> 16).setWidth 8 ++
-                ((x79 >>> 8).setWidth 8 ++
-                  (x79.setWidth 8 ++
-                    ((x66 >>> 40).setWidth 8 ++
-                      ((x66 >>> 32).setWidth 8 ++
-                        ((x66 >>> 24).setWidth 8 ++
-                          ((x66 >>> 16).setWidth 8 ++
-                            ((x66 >>> 8).setWidth 8 ++
-                              (x66.setWidth 8 ++
-                                ((x51 >>> 48).setWidth 8 ++
-                                  ((x51 >>> 40).setWidth 8 ++
-                                    ((x51 >>> 32).setWidth 8 ++
-                                      ((x51 >>> 24).setWidth 8 ++
-                                        ((x51 >>> 16).setWidth 8 ++
-                                          ((x51 >>> 8).setWidth 8 ++
-                                            (x51.setWidth 8 ++
-                                              ((x38 >>> 40).setWidth 8 ++
-                                                ((x38 >>> 32).setWidth 8 ++
-                                                  ((x38 >>> 24).setWidth 8 ++
-                                                    ((x38 >>> 16).setWidth 8 ++
-                                                      ((x38 >>> 8).setWidth 8 ++
-                                                        (x38.setWidth 8 ++
-                                                          ((x12 >>> 40).setWidth 8 ++
-                                                            ((x12 >>> 32).setWidth 8 ++
-                                                              ((x12 >>> 24).setWidth 8 ++
-                                                                ((x12 >>> 16).setWidth 8 ++
-                                                                  ((x12 >>> 8).setWidth 8 ++
-                                                                    x12.setWidth
-                                                                      8)))))))))))))))))))))))))))))) =
-      Firedancer.Ref.fiat_25519_to_bytes.pack x12 x14 x16 x18 x20 := by
-  subst hx38 hx51 hx66 hx79
-  simp only [Firedancer.Ref.fiat_25519_to_bytes.pack]
-  bv_decide
-
--- 154 steps late in a 260-instruction block: just under 200000 heartbeats
 set_option maxHeartbeats 400000 in
 /-- From `%1839` up to the lifetimes' ends: `x12 … x20`'s bytes, stored at `out1`, as
 `pack x12 x14 x16 x18 x20`. -/
@@ -159,7 +100,7 @@ theorem fiat_25519_to_bytes.store_bytes {E : ⟪fiat_25519_to_bytes.Γ⟫} {S : 
   step_store
   clear_reads
   iterate 31 store_byte
-  rw [hS, fiat_25519_to_bytes.pack_eq hx38 hx51 hx66 hx79]
+  rw [hS, Firedancer.Ref.fiat_25519_to_bytes.pack_eq hx38 hx51 hx66 hx79]
   exact hK E (by env_reads)
 
 -- 106 steps early in a 260-instruction block (each step rescans the rest of the block): just under

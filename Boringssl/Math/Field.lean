@@ -49,29 +49,6 @@ public theorem fe_sq2_tt.spec_val {f : Fin 5 → BitVec 64} (hf : Limbs.Loose f)
 
 /-! ## `fe_loose_invert` -/
 
-/-- `l` is loose with value `z ^ e`. -/
-def IsPow (l z : Fin 5 → BitVec 64) (e : ℕ) : Prop :=
-  Limbs.val l = Limbs.val z ^ e ∧ Limbs.Loose l
-
-theorem IsPow.self {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) : IsPow z z 1 :=
-  ⟨(pow_one _).symm, hz⟩
-
-theorem IsPow.sqr (h : IsPow l z e) : IsPow (fd_f25519_sqr.spec l) z (e * 2) := by
-  obtain ⟨hv, ht⟩ := fd_f25519_sqr.spec_val h.2
-  exact ⟨by rw [hv, h.1, pow_mul], ht.loose⟩
-
-theorem IsPow.mul (h : IsPow l z e) (h' : IsPow m z f) :
-    IsPow (fd_f25519_mul.spec l m) z (e + f) := by
-  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h.2 h'.2
-  exact ⟨by rw [hv, h.1, h'.1, pow_add], ht.loose⟩
-
-theorem IsPow.sqrN (h : IsPow l z e) : IsPow (fd_f25519_pow22523.sqrN n l) z (e * 2 ^ n) := by
-  induction n generalizing l e with
-  | zero => simpa [fd_f25519_pow22523.sqrN] using h
-  | succ n ih =>
-    rw [fd_f25519_pow22523.sqrN, pow_succ', ← mul_assoc]
-    exact ih h.sqr
-
 /-- `fe_loose_invert` raises a loose field element to `p - 2`, tight: its inverse, `0` at `0`. -/
 public theorem fe_loose_invert.spec_val {z : Fin 5 → BitVec 64} (hz : Limbs.Loose z) :
     Limbs.val (fe_loose_invert.spec z) = Limbs.val z ^ (p - 2) ∧
@@ -104,11 +81,11 @@ public theorem fe_loose_invert.spec_val {z : Fin 5 → BitVec 64} (hz : Limbs.Lo
   have h25 := h24.sqrN (n := 50)
   have h26 := h25.mul h18
   have h27 := h26.sqrN (n := 5)
-  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h27.2 h5.2
+  obtain ⟨hv, ht⟩ := fd_f25519_mul.spec_val h27.1.2 h5.1.2
   exact
     ⟨hv.trans
         (by
-          rw [h27.1, h5.1, ← pow_add]; norm_num [p]),
+          rw [h27.1.1, h5.1.1, ← pow_add]; norm_num [p]),
       ht⟩
 
 /-! ## `fe_isnonzero` -/

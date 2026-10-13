@@ -4,6 +4,8 @@ public import Mathlib.Data.ZMod.Basic
 import Mathlib.NumberTheory.LucasPrimality
 import Mathlib.Tactic.NormNum.Prime
 import Mathlib.Tactic.ReduceModChar
+import Mathlib.Tactic.LinearCombination
+import Mathlib.Tactic.Ring
 
 /-! The field `ZMod p`, `p = 2^255 - 19`: `p` is prime, and `√-1`. -/
 
@@ -109,5 +111,25 @@ public instance fact_prime_p : Fact p.Prime :=
   ⟨prime_p⟩
 
 end Prime
+
+/-! ## Casts and squares -/
+
+/-- Naturals equal mod `p` are equal in `ZMod p`. -/
+public theorem natCast_eq {a b : ℕ} (h : a % p = b % p) : (a : ZMod p) = b :=
+  (ZMod.natCast_eq_natCast_iff' a b p).2 h
+
+/-- Naturals distinct mod `p` are distinct in `ZMod p`. -/
+public theorem natCast_ne {a b : ℕ} (h : a % p ≠ b % p) : (a : ZMod p) ≠ b := fun e =>
+  h ((ZMod.natCast_eq_natCast_iff' a b p).1 e)
+
+/-- `c² = 1` exactly at `±1`. -/
+public theorem sq_eq_one_iff' {c : ZMod p} : c ^ 2 = 1 ↔ c = 1 ∨ c = -1 := by
+  constructor
+  · intro h
+    have : (c - 1) * (c + 1) = 0 := by linear_combination h
+    rcases mul_eq_zero.1 this with h | h
+    · exact .inl (by linear_combination h)
+    · exact .inr (by linear_combination h)
+  · rintro (rfl | rfl) <;> ring
 
 end Ed25519

@@ -259,6 +259,38 @@ theorem MemoryState.PointRoom.limbsRoom_Z {m : MemoryState} (h : m.PointRoom p) 
     m.LimbsRoom (p.add 120#64) :=
   h.2.2.2.2
 
+/-! The same field elements by byte offset, for layouts that order them otherwise. -/
+
+theorem MemoryState.PointFit.limbsFit_0 {m : MemoryState} (h : m.PointFit p) : m.LimbsFit p :=
+  h.2.1
+
+theorem MemoryState.PointFit.limbsFit_40 {m : MemoryState} (h : m.PointFit p) :
+    m.LimbsFit (p.add 40#64) :=
+  h.2.2.1
+
+theorem MemoryState.PointFit.limbsFit_80 {m : MemoryState} (h : m.PointFit p) :
+    m.LimbsFit (p.add 80#64) :=
+  h.2.2.2.1
+
+theorem MemoryState.PointFit.limbsFit_120 {m : MemoryState} (h : m.PointFit p) :
+    m.LimbsFit (p.add 120#64) :=
+  h.2.2.2.2
+
+theorem MemoryState.PointRoom.limbsRoom_0 {m : MemoryState} (h : m.PointRoom p) : m.LimbsRoom p :=
+  h.2.1
+
+theorem MemoryState.PointRoom.limbsRoom_40 {m : MemoryState} (h : m.PointRoom p) :
+    m.LimbsRoom (p.add 40#64) :=
+  h.2.2.1
+
+theorem MemoryState.PointRoom.limbsRoom_80 {m : MemoryState} (h : m.PointRoom p) :
+    m.LimbsRoom (p.add 80#64) :=
+  h.2.2.2.1
+
+theorem MemoryState.PointRoom.limbsRoom_120 {m : MemoryState} (h : m.PointRoom p) :
+    m.LimbsRoom (p.add 120#64) :=
+  h.2.2.2.2
+
 @[mlir_read]
 theorem MemoryState.readLimbs_storePoint_of_id_ne {m : MemoryState} {p q : Pointer}
     (h : p.id ≠ q.id) : (m.storePoint p P).readLimbs q = m.readLimbs q := by

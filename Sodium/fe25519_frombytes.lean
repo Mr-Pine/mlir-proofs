@@ -42,7 +42,7 @@ public theorem fe25519_frombytes.call_eq (h s : Pointer) (st : GlobalState) (hwf
           { st with
             mem := st.mem.storeLimbs h (fe25519_frombytes.spec (st.mem.readAt s 256)) }) := by
   have hov (k : BitVec 64) (hk : k.toNat ≤ 32) : ¬s.offset.uaddOverflow k :=
-    Agave.not_uaddOverflow_limb hso hk
+    Pointer.not_uaddOverflow_of_limbs hso hk
   have hs0 : Fits st.mem s 64 := hs.mono (by decide)
   have hs6 : Fits st.mem (s.add 6#64) 64 := Fits.add_of_le (hov 6#64 (by decide)) (by decide) hs
   have hs12 : Fits st.mem (s.add 12#64) 64 := Fits.add_of_le (hov 12#64 (by decide)) (by decide) hs

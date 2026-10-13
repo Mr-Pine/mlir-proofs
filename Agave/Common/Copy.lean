@@ -25,12 +25,6 @@ public theorem readLimbs_global {m : MemoryState} {p : Pointer} {x : BitVec 320}
     (hx : (fun i : Fin 5 => x.extractLsb' (64 * i.val) 64) = l) : m.readLimbs p = l :=
   (MemoryState.readLimbs_of_readAt hf ho h).trans hx
 
-/-- 320 known bits hold limbs. -/
-public theorem limbsFit_of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 320)
-    (ho : p.offset.toNat + 32 < 2 ^ 64) : m.LimbsFit p := by
-  refine ⟨ho, h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-    exact Fits.add_of_le (not_uaddOverflow_limb ho (by decide)) (by decide) h
-
 /-- `limbsBits`' 64-bit pieces. -/
 public theorem extractLsb'_limbsBits (l : Fin 5 → BitVec 64) :
     (limbsBits l).extractLsb' 0 64 = l 0 ∧
@@ -38,11 +32,11 @@ public theorem extractLsb'_limbsBits (l : Fin 5 → BitVec 64) :
       (limbsBits l).extractLsb' 128 64 = l 2 ∧
       (limbsBits l).extractLsb' 192 64 = l 3 ∧ (limbsBits l).extractLsb' 256 64 = l 4 := by
   have h (a b c d e : BitVec 64) :
-    (e ++ (d ++ (c ++ (b ++ a)))).extractLsb' 0 64 = a ∧
-      (e ++ (d ++ (c ++ (b ++ a)))).extractLsb' 64 64 = b ∧
-      (e ++ (d ++ (c ++ (b ++ a)))).extractLsb' 128 64 = c ∧
-      (e ++ (d ++ (c ++ (b ++ a)))).extractLsb' 192 64 = d ∧
-      (e ++ (d ++ (c ++ (b ++ a)))).extractLsb' 256 64 = e := by
+    (e ++ d ++ c ++ b ++ a).extractLsb' 0 64 = a ∧
+      (e ++ d ++ c ++ b ++ a).extractLsb' 64 64 = b ∧
+      (e ++ d ++ c ++ b ++ a).extractLsb' 128 64 = c ∧
+      (e ++ d ++ c ++ b ++ a).extractLsb' 192 64 = d ∧
+      (e ++ d ++ c ++ b ++ a).extractLsb' 256 64 = e := by
     bv_decide
   exact h _ _ _ _ _
 
@@ -51,7 +45,8 @@ public theorem readLimbs_of_readAt_limbsBits {m : MemoryState} {p : Pointer} {l 
     (hb : InBounds m p 320) (ho : p.offset.toNat + 32 < 2 ^ 64) (h : m.readAt p 320 = limbsBits l) :
     m.readLimbs p = l := by
   have hr (k : BitVec 64) (hk : k.toNat ≤ 32) :=
-    MemoryState.readAt_add_of_readAt (w := 64) hb (not_uaddOverflow_limb ho hk) (by omega) h
+    MemoryState.readAt_add_of_readAt (w := 64) hb (Pointer.not_uaddOverflow_of_limbs ho hk)
+      (by omega) h
   obtain ⟨e0, e1, e2, e3, e4⟩ := extractLsb'_limbsBits l
   refine
     readLimbs_of_reads ?_

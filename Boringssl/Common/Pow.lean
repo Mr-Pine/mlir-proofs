@@ -3,6 +3,7 @@ module
 public import MLIR.Run.Tactic
 public import Firedancer.Ref.fd_f25519_pow22523
 public import Firedancer.Common.Writable
+public import Firedancer.Common.Counter
 public import Boringssl.fe_sq_tt
 
 namespace MLIR.Boringssl
@@ -21,19 +22,6 @@ def sqRun (t : Dst Γ .ptr) : Nat → List (Instr Γ)
     .call fe_sq_tt.call (.cons (.val t.i t.h) (.cons (.val t.i t.h) .nil)) .nil :: sqRun t n
 
 end
-
-/-- A loop counter's `+ 1` does not wrap. -/
-public theorem saddOverflow_ofNat_one {i : Nat} (h : i + 1 < 2 ^ 31) :
-    (BitVec.ofNat 32 i).saddOverflow 1#32 = false := by
-  have : (BitVec.ofNat 32 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, this]
-  omega
-
-/-- The unsigned `+ 1` does not wrap either. -/
-public theorem uaddOverflow_ofNat_one {i : Nat} (h : i + 1 < 2 ^ 31) :
-    (BitVec.ofNat 32 i).uaddOverflow 1#32 = false := by
-  simp [BitVec.uaddOverflow]
-  omega
 
 attribute [local mlir_state] MemoryState.readLimbs_storeLimbs_self MemoryState.LimbsFit.storeLimbs
 

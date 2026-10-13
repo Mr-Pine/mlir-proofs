@@ -1,5 +1,5 @@
-import re
-src=open('/home/david.intern/mlir-proofs/Boringssl/Mlir/slide.lean').read().split('\n')
+import os,re
+src=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','Boringssl','Mlir','slide.lean')).read().split('\n')
 blocks={}; order=[]; cur=None
 for l in src:
     m=re.match(r'\^bb(\d+)(\(([^)]*)\))?:',l.strip())

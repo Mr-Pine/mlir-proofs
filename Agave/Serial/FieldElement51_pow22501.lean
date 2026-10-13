@@ -72,7 +72,7 @@ public theorem FieldElement51_pow22501.call_eq (out z : Pointer) (s : GlobalStat
                 (out.add 40#64) (FieldElement51_pow22501.spec (s.mem.readLimbs z)).2 }) := by
   func_init
   have hz₀ : S₀.mem.LimbsFit z := hS ▸ hz
-  have hout'_room := room_of_limbsRoom hout'
+  have hout'_room := MemoryState.LimbsRoom.room320 hout'
   have hout40 : ¬out.offset.uaddOverflow 40#64 := by
     simp [BitVec.uaddOverflow]; omega
   block_init
@@ -202,7 +202,7 @@ public theorem FieldElement51_pow22501.call_eq (out z : Pointer) (s : GlobalStat
   drop p13
   -- (t19, t3)
   step_pure
-  have hp3_fits := fits_of_limbsFit hp3_limbs
+  have hp3_fits := MemoryState.LimbsFit.fits hp3_limbs
   have hdisj : (Range.of (out.add 40#64) 320).Disjoint (Range.of p3 320) :=
     Or.inl (by simpa [Range.of] using hout_ne_p3)
   have hoff' := hout'.1
@@ -214,7 +214,7 @@ public theorem FieldElement51_pow22501.call_eq (out z : Pointer) (s : GlobalStat
   clear_reads
   subst hS
   erase_frame
-  rw [← storeLimbs_eq_storeAt hoff']
+  rw [← MemoryState.storeLimbs_eq_storeAt hoff']
   subst_vars
   rfl
 

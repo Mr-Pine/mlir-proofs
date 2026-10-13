@@ -10,6 +10,7 @@ pairs from block `i₀`, the state words stored (`^bb17`), the buffers ended (`^
 namespace MLIR.Agave.Avx2.compress512
 
 open _root_.Ed25519 MLIR.Agave
+open MLIR.Agave.Serial.compress512 (compressBlocks_drop compressBlocks_drop_all)
 
 section Proof
 

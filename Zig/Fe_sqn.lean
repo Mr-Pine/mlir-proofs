@@ -158,7 +158,7 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
       block_init
       step_call using Fe_sq.call_eq consuming hb
       have hT320 := ht.fits
-      have hF320 := (hf.room hfw).room
+      have hF320 := (hf.room hfw).room320
       step_memcpy consuming hT320 hF320
       step_pure [counter_overflow (show i + 1 < 2 ^ 63 by omega)]
       finish_block
@@ -209,7 +209,7 @@ public theorem Fe_sqn.call_eq (out a : Pointer) (n : BitVec 64) (s : GlobalState
   limbs_room fe
   have hfeA := hS ▸ hfe_limbs
   have ha320 := ha.fits
-  have hfe320 := hfe_limbs.room
+  have hfe320 := hfe_limbs.room320
   step_memcpy consuming ha320 hfe320 ha'
   have hfeF := MemoryState.LimbsFit.of_fits' hfits_fe hfe_limbs.1
   finish_block
@@ -239,7 +239,7 @@ public theorem Fe_sqn.call_eq (out a : Pointer) (n : BitVec 64) (s : GlobalState
     rw [← h3] at hw' hf' hout'
     clear hwf hout ha htmp_limbs hfe_limbs hfeF hfits_fe
     block_init
-    have hout320 := hout'.room
+    have hout320 := hout'.room320
     have hf320 := hf'.fits
     step_memcpy consuming hout320 hf320
     finish_block

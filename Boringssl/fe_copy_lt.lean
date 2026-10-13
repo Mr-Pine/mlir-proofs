@@ -17,7 +17,7 @@ public theorem fe_copy_lt.call_eq (h f : Pointer) (s : GlobalState) (hwf : s.WF)
     fe_copy_lt.call (fe_copy_lt.args (.value h) (.value f)) s =
       .value (.nil, { s with mem := s.mem.storeLimbs h (s.mem.readLimbs f) }) := by
   have hh320 : Room s.mem h 320 := hh.room320
-  have hf320 : Fits s.mem f 320 := hf.fits320
+  have hf320 : Fits s.mem f 320 := hf.fits
   func_init
   have hf₀ : S₀.mem.LimbsFit f := hS ▸ hf
   block_init

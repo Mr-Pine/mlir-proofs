@@ -1,7 +1,9 @@
 module
 
-/-! Small loop counters as bit vectors, shared by `fd_curve25519_scalar_wnaf` and
-`fd_ed25519_double_scalar_mul_base`. -/
+import Std.Tactic.BVDecide
+meta import Std.Tactic.BVDecide.Reflect
+
+/-! Small loop counters as bit vectors. -/
 
 namespace MLIR.Firedancer
 
@@ -31,6 +33,67 @@ theorem uaddOverflow_one64 {i : Nat} (h : i + 1 < 2 ^ 64) :
     (BitVec.ofNat 64 i).uaddOverflow 1#64 = false := by
   simp [BitVec.uaddOverflow]
   omega
+
+
+/-- `i + 1` on a small `int` counter does not overflow, signed. -/
+theorem saddOverflow_one32 {i : Nat} (h : i + 1 < 2 ^ 31) :
+    (BitVec.ofNat 32 i).saddOverflow 1#32 = false := by
+  have : (BitVec.ofNat 32 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
+  simp [BitVec.saddOverflow, this]
+  omega
+
+/-- Nor unsigned. -/
+theorem uaddOverflow_one32 {i : Nat} (h : i + 1 < 2 ^ 31) :
+    (BitVec.ofNat 32 i).uaddOverflow 1#32 = false := by
+  simp [BitVec.uaddOverflow]
+  omega
+
+/-- `i + k` on a small `long` counter does not overflow, signed. -/
+theorem saddOverflow_ofNat64 {i k : Nat} (h : i + k < 2 ^ 63) :
+    (BitVec.ofNat 64 i).saddOverflow (BitVec.ofNat 64 k) = false := by
+  have hi : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
+  have hk : (BitVec.ofNat 64 k).toInt = k := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
+  simp [BitVec.saddOverflow, hi, hk]
+  omega
+
+/-- Nor unsigned. -/
+theorem uaddOverflow_ofNat64 {i k : Nat} (h : i + k < 2 ^ 64) :
+    (BitVec.ofNat 64 i).uaddOverflow (BitVec.ofNat 64 k) = false := by
+  simp [BitVec.uaddOverflow]
+  omega
+
+/-- `i + k` on a small `int` counter does not overflow, signed. -/
+theorem saddOverflow_ofNat32 {i k : Nat} (h : i + k < 2 ^ 31) :
+    (BitVec.ofNat 32 i).saddOverflow (BitVec.ofNat 32 k) = false := by
+  have hi : (BitVec.ofNat 32 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
+  have hk : (BitVec.ofNat 32 k).toInt = k := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
+  simp [BitVec.saddOverflow, hi, hk]
+  omega
+
+/-- Nor unsigned. -/
+theorem uaddOverflow_ofNat32 {i k : Nat} (h : i + k < 2 ^ 32) :
+    (BitVec.ofNat 32 i).uaddOverflow (BitVec.ofNat 32 k) = false := by
+  simp [BitVec.uaddOverflow]
+  omega
+
+/-- Distinct small counters differ as `long`s. -/
+theorem ofNat64_ne {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) (h : a ≠ b) :
+    BitVec.ofNat 64 a ≠ BitVec.ofNat 64 b := by
+  intro e
+  have := congrArg BitVec.toNat e
+  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at this
+  exact h this
+
+/-- A buffer offset's low seven bits: the offset mod `128`. -/
+theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
+  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+
+/-- A byte count shifted by 7: its 128-byte blocks. -/
+theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
+  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+
+/-- A byte shifted right by 7 has a clear sign bit. -/
+theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
 
 end
 

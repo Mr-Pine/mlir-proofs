@@ -11,6 +11,8 @@ meta import Std.Tactic.BVDecide.Reflect
 
 namespace MLIR.Agave.Avx2
 
+open Serial (storeFe4_of_XTYZ)
+
 /-! ## Proof -/
 
 section Proof
@@ -20,7 +22,8 @@ theorem readAt_quad0 {m : MemoryState} {p : Pointer} (h : m.LimbsFit p) :
     m.readAt p 256 =
       m.readAt (p.add 24#64) 64 ++
         (m.readAt (p.add 16#64) 64 ++ (m.readAt (p.add 8#64) 64 ++ m.readAt p 64)) := by
-  rw [MemoryState.readAt_of_readAt_le (w := 256) (v := 320) (by decide) (readAt_eq_limbsBits h)]
+  rw [MemoryState.readAt_of_readAt_le (w := 256) (v := 320) (by decide)
+      (MemoryState.readAt_eq_limbsBits h)]
   simp only [limbsBits, MemoryState.readLimbs]
   bv_decide
 
@@ -72,15 +75,6 @@ theorem square2_readLimbs {m : MemoryState} {p : Pointer} (a : Fin 5 → BitVec 
     congr 1
     exact (lanes_append _ _ _ _).2.2.2
   · exact h4
-
-/-- Field elements stored at bytes 0, 120, 40, 80: `storeFe4`'s. -/
-theorem storeFe4_of_XTYZ {m : MemoryState} {p : Pointer} (hp : p.offset.toNat + 160 ≤ 2 ^ 64) :
-    (((m.storeLimbs p a).storeLimbs (p.add 120#64) d).storeLimbs (p.add 40#64) b).storeLimbs
-        (p.add 80#64) c =
-      m.storeFe4 p a b c d := by
-  rw [MemoryState.storeLimbs_comm_coord (a := 120) (b := 40) hp (by omega) (by omega) (by omega),
-    MemoryState.storeLimbs_comm_coord (a := 120) (b := 80) hp (by omega) (by omega) (by omega)]
-  rfl
 
 /-- `P.double()` stores `Serial.ProjectivePoint_double.spec P` at `out`. Every read of `P` comes
 before the first store to `out`, so `out` may alias it. Its seven temporaries count seven blocks. -/
@@ -168,12 +162,12 @@ public theorem ProjectivePoint_double.call_eq (out p : Pointer) (s : GlobalState
   step_pure
   step_call using FieldElement51_Sub_sub.call_eq consuming hread_zz2_limbs hzz2_limbs
   step_pure
-  have hroom_Y := room_of_limbsRoom hout.limbsRoom_Y
-  have hfits_Y := fits_of_limbsFit hyy_plus_xx_limbs
+  have hroom_Y := MemoryState.LimbsRoom.room320 hout.limbsRoom_Y
+  have hfits_Y := MemoryState.LimbsFit.fits hyy_plus_xx_limbs
   step_memcpy
   step_pure
-  have hroom_Z := room_of_limbsRoom hout.limbsRoom_T
-  have hfits_Z := fits_of_limbsFit hyy_minus_xx_limbs
+  have hroom_Z := MemoryState.LimbsRoom.room320 hout.limbsRoom_T
+  have hfits_Z := MemoryState.LimbsFit.fits hyy_minus_xx_limbs
   step_memcpy
   iterate 7 step_pure
   finish_block
@@ -181,8 +175,9 @@ public theorem ProjectivePoint_double.call_eq (out p : Pointer) (s : GlobalState
   clear_reads
   subst hS
   erase_frame
-  rw [← storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 40) ho (by omega)), ←
-    storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 80) ho (by omega)), storeFe4_of_XTYZ ho]
+  rw [← MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 40) ho (by omega)), ←
+    MemoryState.storeLimbs_eq_storeAt (Pointer.coord_offset_le (a := 80) ho (by omega)),
+    storeFe4_of_XTYZ ho]
   subst_vars
   rfl
 

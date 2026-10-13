@@ -79,14 +79,9 @@ variable {Q : Point}
 /-- `k = 2d`, limbs below `2^52`. -/
 theorem k_val :
     Limbs.val Firedancer.Ref.fd_f25519_k.limbs = 2 * Ed25519.d ∧
-      Limbs.Lt Firedancer.Ref.fd_f25519_k.limbs (2 ^ 52) := by
-  refine
-    ⟨?_, by
-      rw [Limbs.lt_iff]; decide⟩
-  rw [Limbs.val_eq]
-  unfold Ed25519.d
-  simp [Firedancer.Ref.fd_f25519_k.limbs]
-  reduce_mod_char
+      Limbs.Lt Firedancer.Ref.fd_f25519_k.limbs (2 ^ 52) :=
+  ⟨Firedancer.Ref.fd_f25519_k.val.1, by
+    rw [Limbs.lt_iff]; decide⟩
 
 /-- `ge25519_p3_to_p2` keeps the point. -/
 public theorem ge25519_p3_to_p2.spec_projLt {P : GeP3} {b : ℕ} (h : P.ExtLt Q b) :
@@ -279,31 +274,6 @@ end Addition
 
 section Encode
 
-/-- `s[31] ^= b << 7` on bytes below `2²⁵⁵`: the bit `b` on top. -/
-theorem splice_sign {s : BitVec 256} (hs : s.toNat < 2 ^ 255) {c : ℕ} (hc : c < 2) :
-    Memory.spliceBits s 248 (((BitVec.ofNat 32 c).setWidth 8 <<< 7#8) ^^^ s.extractLsb' 248 8) =
-      BitVec.ofNat 256 (s.toNat + 2 ^ 255 * c) := by
-  have h255 : s.getLsbD 255 = false := by rw [← BitVec.testBit_toNat, Nat.testBit_lt_two_pow hs]
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  rw [Memory.getLsbD_spliceBits]
-  obtain rfl | rfl : c = 0 ∨ c = 1 := by omega
-  · simp only [Nat.mul_zero, Nat.add_zero, BitVec.ofNat_toNat, BitVec.setWidth_eq]
-    split
-    · have : i - 248 < 8 := by omega
-      simp [this, show 248 + (i - 248) = i by omega]
-    · rfl
-  · rw [BitVec.getLsbD_ofNat, Nat.mul_one, Nat.add_comm s.toNat]
-    by_cases h : i < 255
-    · rw [Nat.testBit_two_pow_add_gt h, BitVec.testBit_toNat]
-      split
-      · obtain ⟨hlo, -⟩ := ‹248 ≤ i ∧ i < 248 + 8 ∧ i < 256›
-        interval_cases i <;> simp
-      · simp [hi]
-    · obtain rfl : i = 255 := by omega
-      rw [Nat.testBit_two_pow_add_eq, BitVec.testBit_toNat, h255]
-      simpa using h255
-
 /-- `ge25519_tobytes` encodes the point. -/
 public theorem ge25519_tobytes.spec_eq {P : GeP2} {Q : Point} (h : P.ProjLt Q (2 ^ 54)) :
     ge25519_tobytes.spec P = encode Q := by
@@ -328,7 +298,7 @@ public theorem ge25519_tobytes.spec_eq {P : GeP2} {Q : Point} (h : P.ProjLt Q (2
   have hlt : Q.y.val < 2 ^ 255 := (ZMod.val_lt Q.y).trans (by decide)
   simp only [ge25519_tobytes.spec]
   rw [hsgn',
-    splice_sign
+    Boringssl.splice_sign
       (by
         rw [hs]; exact hlt)
       (Nat.mod_lt _ (by decide)),
@@ -359,8 +329,7 @@ theorem root_iff {u v x : ZMod p} (hv : v ≠ 0) (hx : x = u * v ^ 3 * (u * v ^ 
   have hc2 : c ^ 2 = (u * v ^ 7) ^ (p / 2) := by
     rw [hc, ← pow_mul]
     norm_num
-  rw [hcheck, Firedancer.Ref.isSquare_div_iff hv, ZMod.euler_criterion p hw, ← hc2,
-    Firedancer.Ref.sq_eq_one_iff']
+  rw [hcheck, Firedancer.Ref.isSquare_div_iff hv, ZMod.euler_criterion p hw, ← hc2, sq_eq_one_iff']
   constructor
   · rintro (h | h)
     · exact .inl (mul_left_cancel₀ hu (by rw [h, mul_one]))

@@ -1,6 +1,7 @@
 module
 
 public import Agave.Avx2.compress512.Loop2
+public import Agave.Serial.compress512
 
 /-! `compress512`'s two-block path: one iteration of the loop over block pairs `^bb9` (both
 blocks' loads, the loops, the sums `^bb14`, `^bb16`), and the loop. -/
@@ -8,6 +9,7 @@ blocks' loads, the loops, the sums `^bb14`, `^bb16`), and the loop. -/
 namespace MLIR.Agave.Avx2.compress512
 
 open _root_.Ed25519 MLIR.Agave
+open MLIR.Agave.Serial.compress512 (compressBlocks_drop compressBlocks_drop_all)
 
 @[expose] public section
 
@@ -131,26 +133,6 @@ public theorem KPairs.pairsLoop {m : MemoryState} {Kp : Pointer} (h : KPairs m K
   by
   rw [readAt_pairsLoop_of_id_ne (by simpa using h1) (by simpa using h2)]
   exact h k hk
-
-/-- The bytes from block `j` on: block `j`'s, then those from `j + 1`. -/
-public theorem compressBlocks_drop {N j : Nat} (D : BitVec (1024 * N)) (hj : j < N)
-    (H : Vector (BitVec 64) 8) :
-    Sha512.compressBlocks H ((bytesLE D).drop (128 * j)) =
-      Sha512.compressBlocks (Sha512.compress H (bytesLE (D.extractLsb' (1024 * j) 1024)))
-        ((bytesLE D).drop (128 * (j + 1))) := by
-  rw [Sha512.compressBlocks_of_le
-      (by
-        simp; omega),
-    List.drop_drop, bytesLE_extractLsb' D (by omega) (by decide) (by omega)]
-  simp only [show 1024 * j / 8 = 128 * j by omega, show 1024 / 8 = 128 by rfl,
-    show 128 * j + 128 = 128 * (j + 1) by omega]
-
-/-- No bytes after the last block. -/
-public theorem compressBlocks_drop_all {N : Nat} (D : BitVec (1024 * N))
-    (H : Vector (BitVec 64) 8) : Sha512.compressBlocks H ((bytesLE D).drop (128 * N)) = H :=
-  Sha512.compressBlocks_of_lt
-    (by
-      simp; omega)
 
 /-- The bytes from block `i` on: blocks `i`, `i + 1` compressed, then those from `i + 2`. -/
 public theorem compressBlocks_drop2 {N i : Nat} (D : BitVec (1024 * N)) (hi : i + 2 ≤ N)

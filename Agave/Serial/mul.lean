@@ -27,14 +27,6 @@ local macro "checkpoint " hck:ident : tactic => `(tactic| (have $hck:ident := hS
 
 namespace mul
 
-/-- Limbs that fit from their 320 bits that fit. -/
-theorem limbsFit_of_fits {m : MemoryState} {p : Pointer} (h : Fits m p 320)
-    (ho : p.offset.toNat + 32 < 2 ^ 64) : m.LimbsFit p := by
-  have hov (off : BitVec 64) (hoff : off.toNat ≤ 32) : ¬p.offset.uaddOverflow off := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-  refine ⟨ho, h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-    exact Fits.add_of_le (hov _ (by decide)) (by decide) h
-
 /-- Limbs at `p`, from the 320 bits there. -/
 theorem readLimbs_of_readAt {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVec 64}
     (hf : Fits m p 320) (ho : p.offset.toNat + 32 < 2 ^ 64) (h : m.readAt p 320 = limbsBits l) :
@@ -43,12 +35,6 @@ theorem readLimbs_of_readAt {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVe
 
 /-- `X`'s bits after the `memset`: `ZERO`'s limbs'. -/
 theorem zero_bits : (0#320 : BitVec 320) = limbsBits FieldElement51.ZERO := by decide +kernel
-
-/-- `ONE`'s global: `ONE`'s limbs' bits. -/
-theorem one_bits {hw : (Ty.array 40 (.bv 8)).width = 320} :
-    Ty.flatBits (t := .array 40 (.bv 8)) anon_042b818bc72209407b52bd0e4d6c8368_1.lit (hw := hw) =
-      limbsBits FieldElement51.ONE := by
-  decide +kernel +revert
 
 /-- The search's start index is at most where it starts. -/
 theorem start_le (an bn : BitVec (8 * 256)) : ∀ i, start an bn i ≤ i
@@ -197,9 +183,9 @@ public theorem mul.call_eq (out a A b : Pointer) (s : GlobalState) (hwf : s.WF)
   have hr_fit : S.mem.ProjectiveFit r := by
     have ho : r.offset.toNat + 120 ≤ 2 ^ 64 := by simp [hr_off]
     exact
-      ⟨ho, limbsFit_of_fits hfits_r (by omega),
-        limbsFit_of_fits hfits_r_40 (Pointer.coord_offset_le (a := 40) ho (by omega)),
-        limbsFit_of_fits hfits_r_80 (Pointer.coord_offset_le (a := 80) ho (by omega))⟩
+      ⟨ho, MemoryState.LimbsFit.of_fits' hfits_r (by omega),
+        MemoryState.LimbsFit.of_fits' hfits_r_40 (Pointer.coord_offset_le (a := 40) ho (by omega)),
+        MemoryState.LimbsFit.of_fits' hfits_r_80 (Pointer.coord_offset_le (a := 80) ho (by omega))⟩
   have hrv : S.mem.readProjective r = ProjectivePoint_identity.spec := by
     have ho : r.offset.toNat + 120 ≤ 2 ^ 64 := by simp [hr_off]
     simp only [MemoryState.readProjective, ProjectivePoint_identity.spec]

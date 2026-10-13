@@ -203,30 +203,6 @@ public theorem pointFit_at {m : MemoryState} {p : Pointer} {o : Nat} (h : Fits m
     · rw [add_ofNat_add]
       exact limbsFit_at h ho (by omega) (by omega)
 
-/-- Room for limbs from room for their 320 bits. -/
-theorem limbsRoom_of_room {m : MemoryState} {p : Pointer} (h : Room m p 320)
-    (ho : p.offset.toNat + 32 < 2 ^ 64) : m.LimbsRoom p := by
-  have hov (off : BitVec 64) (hoff : off.toNat ≤ 32) : ¬p.offset.uaddOverflow off := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-  refine ⟨ho, h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-    exact Room.add_of_le (hov _ (by decide)) (by decide) h
-
-/-- No wrap at a coordinate's offset. -/
-theorem coord_noOverflow {p : Pointer} (ho : p.offset.toNat + 160 ≤ 2 ^ 64) {k : BitVec 64}
-    (hk : k.toNat < 160) : ¬p.offset.uaddOverflow k := by
-  simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-
-/-- Room for a point from room for its 1280 bits. -/
-theorem pointRoom_of_room {m : MemoryState} {p : Pointer} (h : Room m p 1280)
-    (ho : p.offset.toNat + 160 ≤ 2 ^ 64) : m.PointRoom p :=
-  ⟨ho, limbsRoom_of_room (h.mono (by decide)) (by omega),
-    limbsRoom_of_room (Room.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 40) (by omega)),
-    limbsRoom_of_room (Room.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 80) (by omega)),
-    limbsRoom_of_room (Room.add_of_le (coord_noOverflow ho (by decide)) (by decide) h)
-      (Pointer.coord_offset_le ho (a := 120) (by omega))⟩
-
 /-- The `ProjectiveNielsPoint` at `p`, from the 1280 bits there. -/
 theorem readNiels_of_readAt {m : MemoryState} {p : Pointer} {P : ProjectiveNielsPoint}
     (hf : Fits m p 1280) (ho : p.offset.toNat + 160 ≤ 2 ^ 64) (h : m.readAt p 1280 = nielsBits P) :
@@ -244,7 +220,8 @@ theorem readNiels_of_readAt {m : MemoryState} {p : Pointer} {P : ProjectiveNiels
     storeAt_edwardsBits (P := ⟨P.Y_plus_X, P.Y_minus_X, P.Z, P.T2d⟩) ho
   rw [← hn, ← MemoryState.storeAt_readAt_self hfw, hr, h, hs]
   exact
-    MemoryState.readNiels_storeNiels_self (pointRoom_of_room (Room.makeWritable_self hf.live) ho)
+    MemoryState.readNiels_storeNiels_self
+      (MemoryState.PointRoom.of_room' (Room.makeWritable_self hf.live) ho)
 
 /-! ### `table_A` -/
 

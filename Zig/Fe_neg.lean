@@ -51,7 +51,7 @@ public theorem Fe_neg.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   step_alloca with t
   limbs_room t
   step_call using Fe_sub.call_eq
-  have hout320 := hout.room
+  have hout320 := hout.room320
   have ht320 := ht_limbs.fits
   have htm := hS ▸ ht_limbs
   have htr := hS ▸ hread_t_readLimbs

@@ -18,7 +18,7 @@ set_option hygiene false in
 local macro "merge" : tactic =>
   `(tactic|
     ( clear_reads
-      rw [Agave.storeAt_storeAt_concat (BitVec.not_uaddOverflow_of_le hout_off (by decide))
+      rw [MemoryState.storeAt_storeAt_concat (BitVec.not_uaddOverflow_of_le hout_off (by decide))
           (by decide)] at hS))
 
 /-- `s[k] = (self.0[i] >> j) as u8`: the shift, the address, the byte, its store. -/

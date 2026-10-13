@@ -1,6 +1,6 @@
 """The C of x25519_sc_reduce as a list of let-statements with linear forms."""
-import re
-SRC='/tmp/w1c/screduce.c'
+import re,os
+SRC=os.path.join(os.path.dirname(os.path.abspath(__file__)),'screduce.c')
 M21=2097151
 def lin_add(a,b,k=1):
     r=dict(a)

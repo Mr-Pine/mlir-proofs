@@ -65,8 +65,7 @@ section Proof
 open Serial (run_memcpy_read reduce_call_eq pow22501_call_eq pow2k_call_eq
   mul_call_eq to_bytes_call_eq is_negative_call_eq readAt_storeOptEdwards_of_id_ne
   readEdwards_storeOptEdwards_of_id_ne s_noOverflow readAt_s31 readAt_s_tail readAt_s0 scalar_copy
-  high_bit_eq lt_of_canonical spliceBits_248 bcmp_select fits_of_pointFit pointFit_of_fits
-  readEdwards_of_readAt)
+  high_bit_eq lt_of_canonical spliceBits_248 bcmp_select readEdwards_of_readAt)
 
 set_option hygiene false in
 /-- `memcpy_n n hsrc hx`: a `memcpy` of `n` bytes by `run_memcpy_read`, for a source `step_memcpy`
@@ -219,7 +218,7 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
       block_init
       step_pure
       step_pure
-      memcpy_n 160(fits_of_pointFit hpointFit_popt_8)hread_popt_8
+      memcpy_n 160(MemoryState.PointFit.fits hpointFit_popt_8)hread_popt_8
       step_pure
       step_pure
       step_memcpy
@@ -227,7 +226,7 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
       step_memcpy
       step_pure
       clear hread_pres2_6 hread_pres1_6 hread_popt hread_popt_8_readEdwards hread_popt_8
-      have hR_fit := pointFit_of_fits hfits_pR (by simp [hpR_off])
+      have hR_fit := MemoryState.PointFit.of_fits' hfits_pR (by simp [hpR_off])
       have hR_read := readEdwards_of_readAt hfits_pR (by simp [hpR_off]) hread_pR
       clear hread_pR
       -- if R.is_small_order() { return Err(Error::InvalidSignature); }
@@ -319,18 +318,19 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
           name_limbs t3
           name_limbs t19
           step_pure
-          have hppow_bits := (readAt_eq_limbsBits hppow_limbs).trans (congrArg limbsBits hread_ppow)
-          have hsrc := fits_of_limbsFit hppow_limbs
+          have hppow_bits :=
+            (MemoryState.readAt_eq_limbsBits hppow_limbs).trans (congrArg limbsBits hread_ppow)
+          have hsrc := MemoryState.LimbsFit.fits hppow_limbs
           step_memcpy consuming hsrc hppow_bits
           step_pure
           step_pure
-          memcpy_n 40(fits_of_limbsFit hppow_40)hread_ppow_40
+          memcpy_n 40(MemoryState.LimbsFit.fits hppow_40)hread_ppow_40
           step_pure
           clear hread_ppow hread_ppow_40_readLimbs hread_ppow_40
-          have hpt19_limbs := limbsFit_of_fits hfits_pt19 (by simp [hpt19_off])
+          have hpt19_limbs := MemoryState.LimbsFit.of_fits' hfits_pt19 (by simp [hpt19_off])
           have hpt19_read :=
             readLimbs_of_readAt_limbsBits hfits_pt19.inBounds (by simp [hpt19_off]) hread_pt19
-          have hpt3_limbs := limbsFit_of_fits hfits_pt3 (by simp [hpt3_off])
+          have hpt3_limbs := MemoryState.LimbsFit.of_fits' hfits_pt3 (by simp [hpt3_off])
           have hpt3_read :=
             readLimbs_of_readAt_limbsBits hfits_pt3.inBounds (by simp [hpt3_off]) hread_pt3
           clear hfits_pt19 hread_pt19 hroom_pt19 hfits_pt3 hread_pt3 hroom_pt3

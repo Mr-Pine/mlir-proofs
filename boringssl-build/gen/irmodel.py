@@ -1,8 +1,9 @@
-import sys
-sys.path.insert(0,'/tmp/w1c')
+import sys,os
+HERE=os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0,HERE)
 from ir import parse
 from cmodel import parse as cparse, lin_add, lin_scale
-LIFT='/home/david.intern/mlir-proofs/Boringssl/Mlir/x25519_sc_reduce.lean'
+LIFT=os.path.join(HERE,'..','..','Boringssl/Mlir/x25519_sc_reduce.lean')
 def key(f): return tuple(sorted((str(k),v) for k,v in f.items()))
 def model():
     c=cparse()

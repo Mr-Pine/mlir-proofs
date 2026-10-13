@@ -1,6 +1,7 @@
 module
 
-public import Firedancer.Common.Point
+public import Firedancer.Common.LimbBits
+public import Ed25519.Limbs
 public import Zig.Common.Memory
 import MLIR.Run.Tactic.Memory
 import Mathlib.Tactic.NormNum
@@ -17,9 +18,9 @@ open Memory
 
 @[expose] public section
 
-/-- Every limb below `c`. -/
+/-- Every limb below `c`: `Limbs.Lt`. -/
 abbrev Fe.Lt (l : Fin 5 → BitVec 64) (c : ℕ) : Prop :=
-  ∀ i, (l i).toNat < c
+  _root_.Ed25519.Limbs.Lt l c
 
 /-- Five limbs, lowest first. -/
 def Fe.mk5 (a0 a1 a2 a3 a4 : BitVec 64) : Fin 5 → BitVec 64
@@ -32,10 +33,6 @@ def Fe.mk5 (a0 a1 a2 a3 a4 : BitVec 64) : Fin 5 → BitVec 64
 /-- `MASK51`. -/
 abbrev Fe.mask : BitVec 64 :=
   0x7ffffffffffff#64
-
-/-- The limbs' bits, limb `0` lowest. -/
-def limbsBits (l : Fin 5 → BitVec 64) : BitVec 320 :=
-  l 4 ++ l 3 ++ l 2 ++ l 1 ++ l 0
 
 /-- The five 128-bit columns of a product, as `_carry128` reads them at `p`. -/
 def _root_.MLIR.MemoryState.readWide (m : MemoryState) (p : Pointer) : Fin 5 → BitVec 128
@@ -86,124 +83,6 @@ public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → B
   subst h0 h1 h2 h3 h4
   rfl
 
-/-! ### Limbs as one 320-bit value -/
-
-/-- Bit `j` of the limbs' bits: bit `j % 64` of limb `j / 64`. -/
-public theorem getLsbD_limbsBits (l : Fin 5 → BitVec 64) (j : Nat) :
-    (limbsBits l).getLsbD j =
-      if j < 64 then (l 0).getLsbD j
-      else
-        if j < 128 then (l 1).getLsbD (j - 64)
-        else
-          if j < 192 then (l 2).getLsbD (j - 128)
-          else if j < 256 then (l 3).getLsbD (j - 192) else (l 4).getLsbD (j - 256) := by
-  simp only [limbsBits, BitVec.getLsbD_append]
-  simp only [Nat.sub_sub, Nat.reduceAdd]
-  split_ifs <;>
-    first
-    | (exfalso; omega)
-    | rfl
-
-/-- Five limbs spliced in one after another: their bits spliced in at once. -/
-theorem splice5 {n : Nat} (b : BitVec n) (o : Nat) (l : Fin 5 → BitVec 64) :
-    spliceBits
-        (spliceBits (spliceBits (spliceBits (spliceBits b o (l 0)) (o + 64) (l 1)) (o + 128) (l 2))
-          (o + 192) (l 3))
-        (o + 256) (l 4) =
-      spliceBits b o (limbsBits l) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [getLsbD_spliceBits, getLsbD_limbsBits]
-  by_cases h0 : o ≤ i <;> by_cases h1 : i < o + 64 <;> by_cases h2 : i < o + 128 <;>
-    by_cases h3 : i < o + 192 <;>
-    by_cases h4 : i < o + 256 <;>
-    by_cases h5 : i < o + 320 <;>
-    simp (disch := omega) only [ite_eq_left, ite_eq_right, Nat.sub_sub] <;>
-    omega
-
-/-- All-ones limbs' bits are all ones. -/
-theorem limbsBits_allOnes : limbsBits (fun _ => BitVec.allOnes 64) = BitVec.allOnes 320 := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [getLsbD_limbsBits, BitVec.getLsbD_allOnes]
-  split_ifs <;> simp <;> omega
-
-/-- Storing limbs is storing their bits at once. -/
-public theorem _root_.MLIR.MemoryState.storeLimbs_eq_storeAt {m : MemoryState} {p : Pointer}
-    {l : Fin 5 → BitVec 64} (h : p.offset.toNat + 32 < 2 ^ 64) :
-    m.storeLimbs p l = m.storeAt p (limbsBits l) := by
-  have hp : p.offsetInBits = 8 * p.offset.toNat := rfl
-  have o (k : Nat) (hk : k ≤ 32) :
-    (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + 8 * k :=
-    hp ▸ Pointer.offsetInBits_add_limb h hk
-  simp only [MemoryState.storeLimbs, MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true, Function.comp_apply]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
-  rw [o 8 (by omega), o 16 (by omega), o 24 (by omega), o 32 (by omega)]
-  refine ⟨heq_of_eq (splice5 _ _ l), heq_of_eq ?_⟩
-  rw [← limbsBits_allOnes]
-  exact splice5 _ _ (fun _ => BitVec.allOnes 64)
-
-/-- Limbs whose 320 bits are known, offsets not wrapping, are limbs that fit. -/
-public theorem _root_.MLIR.MemoryState.LimbsFit.of_fits' {m : MemoryState} {p : Pointer}
-    (h : Fits m p 320) (ho : p.offset.toNat + 32 < 2 ^ 64) : m.LimbsFit p := by
-  have hov : ∀ off : BitVec 64, off.toNat ≤ 32 → ¬p.offset.uaddOverflow off := by
-    intro off hoff
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]
-    omega
-  refine ⟨ho, h.mono (by omega), ?_, ?_, ?_, ?_⟩ <;>
-    exact Fits.add_of_le (hov _ (by decide)) (by decide) h
-
-/-- Limbs that fit are 320 known bits. -/
-public theorem _root_.MLIR.MemoryState.LimbsFit.fits {m : MemoryState} {p : Pointer}
-    (h : m.LimbsFit p) : Fits m p 320 := by
-  have hov : ∀ off : BitVec 64, off.toNat ≤ 32 → ¬p.offset.uaddOverflow off := by
-    intro off hoff
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]
-    have := h.1
-    omega
-  obtain ⟨-, h0, h1, h2, h3, h4⟩ := h
-  have a1 := Fits.append (hov 8#64 (by decide)) (by decide) rfl h0 h1
-  have a2 := Fits.append (hov 16#64 (by decide)) (by decide) rfl a1 h2
-  have a3 := Fits.append (hov 24#64 (by decide)) (by decide) rfl a2 h3
-  exact Fits.append (hov 32#64 (by decide)) (by decide) rfl a3 h4
-
-/-- Room for limbs is room for their 320 bits. -/
-public theorem _root_.MLIR.MemoryState.LimbsRoom.room {m : MemoryState} {p : Pointer}
-    (h : m.LimbsRoom p) : Room m p 320 := by
-  obtain ⟨ho, ⟨⟨blk, hblk, hl, -⟩, hw⟩, -, -, -, ⟨⟨blk', hblk', -, hsz⟩, -⟩⟩ := h
-  have hb : blk' = blk := Option.some.inj (hblk'.symm.trans hblk)
-  subst hb
-  have o32 := Pointer.offsetInBits_add_limb (k := 32) ho (by omega)
-  have hp : p.offsetInBits = 8 * p.offset.toNat := rfl
-  refine ⟨⟨blk', hblk, hl, ?_⟩, hw⟩
-  rw [show (32#64 : BitVec 64) = BitVec.ofNat 64 32 from rfl, o32] at hsz
-  omega
-
-/-- The 320 bits at limbs that fit: the limbs' bits. -/
-public theorem _root_.MLIR.MemoryState.readAt_eq_limbsBits {m : MemoryState} {p : Pointer}
-    (h : m.LimbsFit p) : m.readAt p 320 = limbsBits (m.readLimbs p) := by
-  -- in a copy of `m` with `p`'s block writable, which reads the same
-  let m' := m.makeWritable p.id
-  have hr (q : Pointer) (w : Nat) : m'.readAt q w = m.readAt q w := MemoryState.readAt_makeWritable
-  have h' : m'.LimbsFit p :=
-    ⟨h.1, h.2.1.makeWritable, h.2.2.1.makeWritable, h.2.2.2.1.makeWritable,
-      h.2.2.2.2.1.makeWritable, h.2.2.2.2.2.makeWritable⟩
-  have hl : m'.readLimbs p = m.readLimbs p := by
-    funext i; fin_cases i <;> simp only [MemoryState.readLimbs, hr]
-  rw [← hr, ← hl]
-  conv_lhs => rw [← MemoryState.storeLimbs_readLimbs_self h']
-  rw [MemoryState.storeLimbs_eq_storeAt h.1,
-    MemoryState.readAt_storeAt_self (Room.makeWritable_self h.fits.live)]
-
-/-- A field element copied whole (a `memcpy` of 40 bytes): its limbs stored. -/
-public theorem _root_.MLIR.MemoryState.storeAt_readAt_eq_storeLimbs {m m' : MemoryState}
-    {p q : Pointer} (hq : m'.LimbsFit q) (hp : p.offset.toNat + 32 < 2 ^ 64) :
-    m.storeAt p (m'.readAt q 320) = m.storeLimbs p (m'.readLimbs q) := by
-  rw [MemoryState.readAt_eq_limbsBits hq, MemoryState.storeLimbs_eq_storeAt hp]
-
 /-- Five limb stores at `p`, read back. -/
 public theorem _root_.MLIR.MemoryState.readLimbs_stores {m : MemoryState} {p : Pointer}
     (h : m.LimbsRoom p) (x : Fin 5 → BitVec 64) :
@@ -217,12 +96,7 @@ public theorem _root_.MLIR.MemoryState.readLimbs_stores {m : MemoryState} {p : P
 
 /-! ### Limbs read past stores -/
 
-/-- Limbs in another block are unaffected by a store. -/
-@[mlir_read]
-public theorem _root_.MLIR.MemoryState.readLimbs_storeAt_of_id_ne {m : MemoryState} {p q : Pointer}
-    {x : BitVec w} (h : q.id ≠ p.id) : (m.storeAt q x).readLimbs p = m.readLimbs p := by
-  funext i
-  fin_cases i <;> simp only [MemoryState.readLimbs, Tactic.readThroughStore]
+attribute [mlir_read] MemoryState.readLimbs_storeAt_of_id_ne
 
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_0 {m : MemoryState} {p : Pointer}
@@ -253,9 +127,6 @@ public theorem _root_.MLIR.MemoryState.readAt_storeLimbs_4 {m : MemoryState} {p 
   congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 4
 
 /-! ### Limb bounds carried across steps -/
-
-public theorem Fe.Lt.mono {l : Fin 5 → BitVec 64} {a b : ℕ} (h : Fe.Lt l a) (hab : a ≤ b) :
-    Fe.Lt l b := fun i => Nat.lt_of_lt_of_le (h i) hab
 
 @[mlir_transport]
 public theorem Fe.Lt.alloca {s : GlobalState} {p : Pointer} {c : ℕ} (hne : p.id ≠ s.allocaPtr.id)

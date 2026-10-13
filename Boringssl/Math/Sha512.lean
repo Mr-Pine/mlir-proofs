@@ -6,6 +6,7 @@ public import Boringssl.SHA512_Init
 public import Boringssl.SHA512_Update
 public import Boringssl.SHA512_Final
 import Std.Tactic.BVDecide
+import Firedancer.Common.Counter
 
 /-! The SHA-512 that `SHA512_Init`, `SHA512_Update` and `SHA512_Final` compute: after an init
 and updates, the final digest's bytes are SHA-512 of the bytes appended. -/
@@ -46,12 +47,6 @@ public theorem _root_.MLIR.Sha512Ctx.absorbed_init (v : Sha512Ctx) :
     exact BitVec.eq_of_toNat_eq (by simp)
 
 namespace BCM_sha512_update
-
-private theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
-
-private theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
-  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 /-- The byte count: 96-bit addition of `len`. -/
 private theorem count_add (hi : BitVec 32) (lo len : BitVec 64) :
@@ -125,8 +120,8 @@ private theorem bulk_absorbed {v : Sha512Ctx} {m : List (BitVec 8)} (len : BitVe
     (hs : v.h = Sha512.compressBlocks Sha512.IV m) (hn : v.num = 0#16)
     (hc : v.hi ++ v.lo = BitVec.ofNat 96 (m.length + len.toNat)) (hmd : v.mdLen = 64#16) :
     (bulk v len data).Absorbed (m ++ bytesLE data) := by
-  have hb := toNat_ushiftRight_7 len
-  have ht := toNat_and_127 len
+  have hb := Firedancer.toNat_ushiftRight_7 len
+  have ht := Firedancer.toNat_and_127 len
   unfold bulk
   split
   · -- the whole blocks `B`, then the tail `T`

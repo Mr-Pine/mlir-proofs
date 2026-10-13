@@ -52,7 +52,7 @@ local macro "zero_bytes " a:num b:num : tactic => do
 /-! ### sha2's `Sha512` moved by `memcpy` -/
 
 /-- A block unchanged keeps its object's absorbed bytes. -/
-theorem absorbed_of_block {m m' : MemoryState} {d : Pointer} {M : List (BitVec 8)}
+public theorem absorbed_of_block {m m' : MemoryState} {d : Pointer} {M : List (BitVec 8)}
     (hb : m'[d.id]? = m[d.id]?) (h : m.Sha2Absorbed d M) : m'.Sha2Absorbed d M := by
   have hf {p : Pointer} {w : Nat} (h : Fits m p w) (hp : p.id = d.id) : Fits m' p w := by
     simpa only [Fits, hp, hb] using h
@@ -68,30 +68,31 @@ theorem absorbed_of_block {m m' : MemoryState} {d : Pointer} {M : List (BitVec 8
       by rwa [hs], hf hcf rfl, by rwa [hr (d.add 192#64) rfl]⟩
 
 @[local mlir_transport]
-theorem absorbed_alloca {s : GlobalState} {d : Pointer} {M : List (BitVec 8)}
+public theorem absorbed_alloca {s : GlobalState} {d : Pointer} {M : List (BitVec 8)}
     (hne : d.id ≠ s.allocaPtr.id) (h : s.mem.Sha2Absorbed d M) :
     (s.alloca n b).mem.Sha2Absorbed d M :=
   absorbed_of_block (GlobalState.getElem?_alloca hne) h
 
 @[local mlir_transport]
-theorem absorbed_lifetimeStart {m : MemoryState} {d q : Pointer} {M : List (BitVec 8)}
+public theorem absorbed_lifetimeStart {m : MemoryState} {d q : Pointer} {M : List (BitVec 8)}
     (hne : d.id ≠ q.id) (h : m.Sha2Absorbed d M) : (m.lifetimeStart q).Sha2Absorbed d M :=
   absorbed_of_block (MemoryState.getElem?_setLifetime_ne hne) h
 
 @[local mlir_transport]
-theorem absorbed_storeDef {m : MemoryState} {d q : Pointer} {M : List (BitVec 8)} {x y : BitVec w}
-    (hne : d.id ≠ q.id) (h : m.Sha2Absorbed d M) : (m.storeDef q x y).Sha2Absorbed d M :=
+public theorem absorbed_storeDef {m : MemoryState} {d q : Pointer} {M : List (BitVec 8)}
+    {x y : BitVec w} (hne : d.id ≠ q.id) (h : m.Sha2Absorbed d M) :
+    (m.storeDef q x y).Sha2Absorbed d M :=
   absorbed_of_block (MemoryState.getElem?_storeDef_ne hne) h
 
 /-- sha2's `Sha512` at `self` copied to `out`: its 208 bytes, defined where they were. -/
-abbrev copyObj (m : MemoryState) (out self : Pointer) : MemoryState :=
+public abbrev copyObj (m : MemoryState) (out self : Pointer) : MemoryState :=
   m.storeDef out (m.readAt self 1664) (m.definedAt self 1664)
 
 /-- A range of the object, known at `self`: known at `out` after the copy. -/
-theorem copy_fits {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout : Room m out 1664)
-    (hoo : out.offset.toNat + 208 < 2 ^ 64) (hso : self.offset.toNat + 208 < 2 ^ 64)
-    (hk : k.toNat * 8 + w ≤ 1664) (hs : Fits m (self.add k) w) :
-    Fits (copyObj m out self) (out.add k) w :=
+public theorem copy_fits {m : MemoryState} {out self : Pointer} {k : BitVec 64}
+    (hout : Room m out 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64)
+    (hso : self.offset.toNat + 208 < 2 ^ 64) (hk : k.toNat * 8 + w ≤ 1664)
+    (hs : Fits m (self.add k) w) : Fits (copyObj m out self) (out.add k) w :=
   Fits.storeDef_definedAt hout hs
     (by
       simp [BitVec.uaddOverflow]; omega)
@@ -100,8 +101,8 @@ theorem copy_fits {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout :
     hk
 
 /-- A range of the object, read at `out` after the copy: its bits at `self`. -/
-theorem copy_read {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout : Room m out 1664)
-    (hself : Room m self 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64)
+public theorem copy_read {m : MemoryState} {out self : Pointer} {k : BitVec 64}
+    (hout : Room m out 1664) (hself : Room m self 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64)
     (hso : self.offset.toNat + 208 < 2 ^ 64) (hk : k.toNat * 8 + w ≤ 1664) :
     (copyObj m out self).readAt (out.add k) w = m.readAt (self.add k) w :=
   MemoryState.readAt_storeDef_readAt_add hout hself.inBounds
@@ -112,11 +113,11 @@ theorem copy_read {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout :
     hk _
 
 /-- The state words' word pointers from the object's. -/
-theorem add_128 (p : Pointer) (k : BitVec 64) : (p.add 128#64).add k = p.add (128#64 + k) :=
+public theorem add_128 (p : Pointer) (k : BitVec 64) : (p.add 128#64).add k = p.add (128#64 + k) :=
   Pointer.add_add p _ _
 
 /-- The object copied to `out` has absorbed what it had. -/
-theorem absorbed_copy {m : MemoryState} {out self : Pointer} {M : List (BitVec 8)}
+public theorem absorbed_copy {m : MemoryState} {out self : Pointer} {M : List (BitVec 8)}
     (h : m.Sha2Absorbed self M) (hout : Room m out 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64) :
     (copyObj m out self).Sha2Absorbed out M := by
   obtain ⟨hso, hroom, hpf, hp, hbf, hb, ⟨_, h0, h1, h2, h3, h4, h5, h6, h7⟩, hst, hcf, hc⟩ := h
@@ -145,7 +146,7 @@ theorem absorbed_copy {m : MemoryState} {out self : Pointer} {M : List (BitVec 8
 
 /-- The `memcpy` of sha2's `Sha512` at `d` to `dst`, its bits read where its block is the same:
 the copy has absorbed what `d` has. -/
-theorem absorbed_after_copy {S : GlobalState} {a : AllocState} {m m₀ m₁ : MemoryState}
+public theorem absorbed_after_copy {S : GlobalState} {a : AllocState} {m m₀ m₁ : MemoryState}
     {d dst : Pointer} {M : List (BitVec 8)}
     (hS : S = ⟨a, m.storeDef dst (m₀.readAt d 1664) (m₁.definedAt d 1664)⟩)
     (hb₀ : m₀[d.id]? = m[d.id]?) (hb₁ : m₁[d.id]? = m[d.id]?) (hA : S.mem.Sha2Absorbed d M)
@@ -161,8 +162,9 @@ theorem absorbed_after_copy {S : GlobalState} {a : AllocState} {m m₀ m₁ : Me
 
 /-- State words stored into an erased block are dropped with it. -/
 @[local mlir_erase high]
-theorem eraseFrom_storeSha512_of_le {m : MemoryState} {p : Pointer} {v : Vector (BitVec 64) 8}
-    (h : n ≤ p.id.id) : (m.storeSha512 p v).eraseFrom n = m.eraseFrom n := by
+public theorem eraseFrom_storeSha512_of_le {m : MemoryState} {p : Pointer}
+    {v : Vector (BitVec 64) 8} (h : n ≤ p.id.id) :
+    (m.storeSha512 p v).eraseFrom n = m.eraseFrom n := by
   simp only [MemoryState.storeSha512, MemoryState.eraseFrom_storeAt_of_le (p := p.add _) h,
     MemoryState.eraseFrom_storeAt_of_le h]
 

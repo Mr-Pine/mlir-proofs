@@ -42,7 +42,7 @@ public theorem fe25519_tobytes.call_eq (s h : Pointer) (st : GlobalState) (hwf :
           { alloc := ⟨st.alloc.nextFreeBlock + 1⟩,
             mem := st.mem.storeAt s (fe25519_tobytes.spec (st.mem.readLimbs h)) }) := by
   have hov (k : BitVec 64) (hk : k.toNat ≤ 32) : ¬s.offset.uaddOverflow k :=
-    Agave.not_uaddOverflow_limb hso hk
+    Pointer.not_uaddOverflow_of_limbs hso hk
   have hs0 : Room st.mem s 64 := hs.mono (by decide)
   have hs8 : Room st.mem (s.add 8#64) 64 := Room.add_of_le (hov 8#64 (by decide)) (by decide) hs
   have hs16 : Room st.mem (s.add 16#64) 64 := Room.add_of_le (hov 16#64 (by decide)) (by decide) hs

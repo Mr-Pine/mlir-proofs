@@ -244,10 +244,6 @@ public theorem fe25519_sq2.spec_val {f : Fin 5 → BitVec 64} (hf : Limbs.Lt f (
 
 /-! ## Sums -/
 
-/-- `x`'s low 51 bits and its carry, in `ZMod p`. -/
-theorem mod_add_div51 (x : ℕ) : ((x % 2 ^ 51 : ℕ) : ZMod p) + 2 ^ 51 * (x / 2 ^ 51 : ℕ) = x := by
-  exact_mod_cast congrArg (Nat.cast (R := ZMod p)) (Nat.mod_add_div x (2 ^ 51))
-
 /-- `fe25519_add` (Firedancer's `fiat_25519_add.spec`) adds limbs below `A` and `B`,
 `A + B ≤ 2^64`, into limbs below `A + B`. -/
 public theorem fe25519_add.spec_val {f g : Fin 5 → BitVec 64} {A B : ℕ} (hf : Limbs.Lt f A)

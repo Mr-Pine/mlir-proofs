@@ -10,6 +10,10 @@ meta import Std.Tactic.BVDecide.Reflect
 
 namespace MLIR.Agave.Avx2
 
+open
+  Serial.BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (rem_toNat
+  sub_nuw sub_nsw rem_nuw rem_nsw pos_msb pos_msb' pos_slt trunc8_nuw trunc8_nsw pos_add_nuw mask_lt
+  and_mask_le noOverflow_of_le nb_toNat tail_toNat full_toNat wf_compressMem wf_tailMem rng_disj0)
 open _root_.Ed25519
 
 namespace BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0
@@ -19,136 +23,10 @@ open Serial.BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_updat
 
 section Proof
 
-/-- `128 - P`, the buffer's room. -/
-theorem rem_toNat {P : BitVec 8} (h : P.toNat < 128) :
-    (128#64 - P.setWidth 64).toNat = 128 - P.toNat := by
-  rw [BitVec.toNat_sub_of_le
-      (by
-        simp [BitVec.le_def]; omega)]
-  simp only [BitVec.toNat_setWidth, BitVec.toNat_ofNat]
-  omega
-
-/-- `x - y` does not wrap below `x`. -/
-theorem sub_nuw {x y : BitVec 64} (h : y.toNat ≤ x.toNat) : x.usubOverflow y = false := by
-  simp [BitVec.usubOverflow]; omega
-
-/-- `x - y` keeps its sign. -/
-theorem sub_nsw {x y : BitVec 64} (hx : x.toNat < 2 ^ 63) (hy : y.toNat ≤ 128) :
-    x.ssubOverflow y = false := by
-  have : x < 9223372036854775808#64 := by
-    simp [BitVec.lt_def]; omega
-  have : y ≤ 128#64 := by
-    simp [BitVec.le_def]; omega
-  bv_decide
-
-/-- `128 - P` does not wrap below `128`. -/
-theorem rem_nuw {pos : BitVec 8} (h : pos.toNat < 128) :
-    (128#64).usubOverflow (pos.setWidth 64) = false := by
-  have : pos < 128#8 := by
-    simp [BitVec.lt_def]; omega
-  bv_decide
-
-/-- `128 - P` keeps its sign. -/
-theorem rem_nsw (pos : BitVec 8) : (128#64).ssubOverflow (pos.setWidth 64) = false := by bv_decide
-
-/-- The buffer's length is non-negative. -/
-theorem pos_msb {pos : BitVec 8} (h : pos.toNat < 128) : pos.msb = false := by
-  have : pos < 128#8 := by
-    simp [BitVec.lt_def]; omega
-  bv_decide
-
-/-- A count of whole blocks is non-negative. -/
-theorem pos_msb' {x : BitVec 64} (h : x.toNat < 2 ^ 56) : x.msb = false := by
-  have : x < 72057594037927936#64 := by
-    simp [BitVec.lt_def]; omega
-  bv_decide
-
-/-- `assume(pos > -1)` holds. -/
-theorem pos_slt {pos : BitVec 8} (h : pos.toNat < 128) : (255#8).slt pos = true := by
-  have : pos < 128#8 := by
-    simp [BitVec.lt_def]; omega
-  bv_decide
-
-/-- `trunc` to `u8` drops no bits. -/
-theorem trunc8_nuw {x : BitVec 64} (h : x.toNat < 128) : (x.setWidth 8).setWidth 64 = x := by
-  have : x < 128#64 := by
-    simp [BitVec.lt_def]; omega
-  bv_decide
-
-/-- `trunc` to `u8` keeps the sign. -/
-theorem trunc8_nsw {x : BitVec 64} (h : x.toNat < 128) : (x.setWidth 8).signExtend 64 = x := by
-  have : x < 128#64 := by
-    simp [BitVec.lt_def]; omega
-  bv_decide
-
-/-- The new buffer length does not wrap. -/
-theorem pos_add_nuw {P : BitVec 8} {x : BitVec 64} (h : P.toNat + x.toNat < 128) :
-    P.uaddOverflow (x.setWidth 8) = false := by
-  simp only [BitVec.uaddOverflow, BitVec.toNat_setWidth, decide_eq_false_iff_not, Nat.not_le]
-  omega
-
-/-- The whole blocks' bytes fit. -/
-theorem mask_lt (n : BitVec 64) : n.toNat &&& 9223372036854775680 < 18446744073709551616 :=
-  Nat.lt_of_le_of_lt Nat.and_le_left n.isLt
-
-/-- The whole blocks' bytes, at most the input's. -/
-theorem and_mask_le (n : BitVec 64) : (n &&& 9223372036854775680#64).toNat ≤ n.toNat := by
-  simp only [BitVec.toNat_and]
-  exact Nat.and_le_left
-
-/-- An offset below a bound that does not wrap does not wrap. -/
-theorem noOverflow_of_le {p : Pointer} {x : BitVec 64} {k : Nat} (h : x.toNat ≤ k)
-    (hk : p.offset.toNat + k < 2 ^ 64) : ¬p.offset.uaddOverflow x := by
-  simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]
-  omega
-
-/-- `n >> 7`, the whole blocks. -/
-theorem nb_toNat (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
-  simp [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
-
-/-- `n & 127`, the rest. -/
-theorem tail_toNat (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  simp only [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 by rfl,
-    Nat.and_two_pow_sub_one_eq_mod]
-
-/-- `n & !127`, the whole blocks' bytes, for `n < 2 ^ 63`. -/
-theorem full_toNat {n : BitVec 64} (h : n.toNat < 2 ^ 63) :
-    (n &&& 9223372036854775680#64).toNat = n.toNat / 128 * 128 := by
-  have hb : n < 9223372036854775808#64 := by
-    simp [BitVec.lt_def]; omega
-  have e : n &&& 9223372036854775680#64 = n - (n &&& 127#64) := by bv_decide
-  rw [e,
-    BitVec.toNat_sub_of_le
-      (by
-        simp [BitVec.le_def]; exact Nat.and_le_left),
-    tail_toNat]
-  omega
-
-/-- `compressMem` keeps a state well-formed. -/
-theorem wf_compressMem {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    (⟨a, compressMem m self k b⟩ : GlobalState).WF :=
-  GlobalState.WF.storeSha512_mk (GlobalState.WF.storeAt_mk h)
-
-/-- `tailMem` keeps a state well-formed. -/
-theorem wf_tailMem {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
-    (⟨a, tailMem m self inp n⟩ : GlobalState).WF := by
-  unfold tailMem
-  split
-  · exact GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk h)
-  · exact GlobalState.WF.storeAt_mk (GlobalState.WF.storeAt_mk (wf_compressMem h))
-
 /-- Nothing at or above a well-formed state's counter. -/
-theorem eraseFrom_of_wf {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
+public theorem eraseFrom_of_wf {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
     m.eraseFrom a.nextFreeBlock = m :=
   h.eraseFrom
-
-/-- A range from an object's start and one apart from it. -/
-theorem rng_disj0 {p : Pointer} {b : BitVec 64} {v w : Nat} (hp : p.offset.toNat + 208 < 2 ^ 64)
-    (hb : b.toNat ≤ 208) (h : v ≤ b.toNat * 8 ∨ b.toNat * 8 + w ≤ 0) :
-    (Range.of p v).Disjoint (Range.of (p.add b) w) := by
-  simp only [Range.Disjoint, Range.of, Pointer.offsetInBits, Pointer.add, BitVec.toNat_add]
-  rw [Nat.mod_eq_of_lt (by omega)]
-  omega
 
 /-- `^bb3` on `n` bytes at `inp`, the buffer empty: `tailMem`. -/
 theorem tail_eq (self data inp : Pointer) (len n : BitVec 64) (S : GlobalState) (E : ⟪Γ⟫)

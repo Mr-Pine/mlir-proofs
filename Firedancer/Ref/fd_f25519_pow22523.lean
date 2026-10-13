@@ -6,6 +6,7 @@ public import Firedancer.Common.Tactics
 public import Firedancer.Ref.fd_f25519_sqr
 public import Firedancer.Ref.fd_f25519_mul
 public import Firedancer.Ref.Mlir.fd_f25519_pow22523
+import Firedancer.Common.Counter
 
 namespace MLIR.Firedancer.Ref
 
@@ -72,8 +73,7 @@ local macro "iter_proof" : tactic =>
       dsimp only [hdr2, hdr4, hdr6, hdr8, hdr10, hdr12, hdr14]
       block_init
       step_call using fd_f25519_sqr.call_eq
-      step_pure [saddOverflow_ofNat_one (i := i) (by omega),
-        uaddOverflow_ofNat_one (i := i) (by omega)]
+      step_pure [saddOverflow_one32 (i := i) (by omega), uaddOverflow_one32 (i := i) (by omega)]
       step_pure
       finish_block
       · step_loop using
@@ -131,19 +131,6 @@ attribute [local mlir_state] MemoryState.readLimbs_storeLimbs_self
   MemoryState.LimbsFit.storeLimbs
 
 namespace fd_f25519_pow22523
-
-/-- A loop counter's `+ 1` does not wrap. -/
-theorem saddOverflow_ofNat_one {i : Nat} (h : i + 1 < 2 ^ 31) :
-    (BitVec.ofNat 32 i).saddOverflow 1#32 = false := by
-  have : (BitVec.ofNat 32 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, this]
-  omega
-
-/-- The unsigned `+ 1` does not wrap either. -/
-theorem uaddOverflow_ofNat_one {i : Nat} (h : i + 1 < 2 ^ 31) :
-    (BitVec.ofNat 32 i).uaddOverflow 1#32 = false := by
-  simp [BitVec.uaddOverflow]
-  omega
 
 /-- `WF_storeLimbs` for a state written as a constructor, as after a loop. -/
 @[mlir_mem]

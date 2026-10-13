@@ -67,37 +67,8 @@ open slide MLIR.Firedancer
 
 /-! ### `r` in memory -/
 
-/-- A splice into a splice that covers it: one splice of the inner value. -/
-theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x : BitVec wx)
-    (y : BitVec wy) (h : k + wy ≤ wx) :
-    Memory.spliceBits (Memory.spliceBits b o x) (o + k) y =
-      Memory.spliceBits b o (Memory.spliceBits x k y) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits]
-  grind
-
-/-- A store inside a stored value: one store, the inner value spliced. -/
-theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off : BitVec 64}
-    (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
-    (m.storeAt p u).storeAt (p.add off) y =
-      m.storeAt p (Memory.spliceBits u (off.toNat * 8) y) := by
-  have hones :
-    Memory.spliceBits (BitVec.allOnes wu) (off.toNat * 8) (BitVec.allOnes wy) =
-      BitVec.allOnes wu := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
-    grind
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
-    spliceBits_spliceBits_add _ _ _ _ _ hw, hones]
-
 /-- Splicing byte `j` into 256 packed bytes sets it. -/
-theorem spliceBits_packLanes {u : Vector (BitVec 8) 256} (hj : j < 256) (y : BitVec 8) :
+public theorem spliceBits_packLanes {u : Vector (BitVec 8) 256} (hj : j < 256) (y : BitVec 8) :
     Memory.spliceBits (BitVec.packLanes u) (j * 8) y = BitVec.packLanes (u.setIfInBounds j y) := by
   apply BitVec.eq_of_getLsbD_eq
   intro m hm
@@ -118,7 +89,7 @@ theorem spliceBits_packLanes {u : Vector (BitVec 8) 256} (hj : j < 256) (y : Bit
     simp only [hc, ite_false, Ne.symm h]
 
 /-- `r[j]`'s offset `j`, which does not wrap. -/
-theorem byte_offset {r : Pointer} (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) :
+public theorem byte_offset {r : Pointer} (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) :
     (BitVec.ofNat 64 j).toNat = j ∧ ¬r.offset.uaddOverflow (BitVec.ofNat 64 j) := by
   have h : (BitVec.ofNat 64 j).toNat = j := by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   exact
@@ -128,25 +99,25 @@ theorem byte_offset {r : Pointer} (hov : ¬r.offset.uaddOverflow 256#64) (hj : j
           rw [h]; show j ≤ 256; omega)⟩
 
 /-- `r[j]`, read from the stored digits. -/
-theorem readAt_byte {m : MemoryState} {r : Pointer} {v : Vector (BitVec 8) 256}
+public theorem readAt_byte {m : MemoryState} {r : Pointer} {v : Vector (BitVec 8) 256}
     (hr : Room m r 2048) (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) :
     (m.storeAt r (BitVec.packLanes v)).readAt (r.add (BitVec.ofNat 64 j)) 8 = v[j] := by
   obtain ⟨h8, hov'⟩ := byte_offset hov hj
   rw [MemoryState.readAt_storeAt_add hr hov' (by omega), h8, BitVec.extractLsb'_packLanes v j hj]
 
 /-- A store of `r[j]` into the stored digits: `r[j]` set. -/
-theorem storeAt_byte {m : MemoryState} {r : Pointer} {v : Vector (BitVec 8) 256}
+public theorem storeAt_byte {m : MemoryState} {r : Pointer} {v : Vector (BitVec 8) 256}
     (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) (y : BitVec 8) :
     (m.storeAt r (BitVec.packLanes v)).storeAt (r.add (BitVec.ofNat 64 j)) y =
       m.storeAt r (BitVec.packLanes (v.setIfInBounds j y)) := by
   obtain ⟨h8, hov'⟩ := byte_offset hov hj
-  rw [storeAt_storeAt_add hov'
+  rw [MemoryState.storeAt_storeAt_add hov'
       (by
         rw [h8]; omega),
     h8, spliceBits_packLanes hj]
 
 /-- The digits `v` stored at `r` over `S`. -/
-abbrev st (S : GlobalState) (r : Pointer) (v : Vector (BitVec 8) 256) : GlobalState :=
+public abbrev st (S : GlobalState) (r : Pointer) (v : Vector (BitVec 8) 256) : GlobalState :=
   { S with mem := S.mem.storeAt r (BitVec.packLanes v) }
 
 /-- The constants the `i` loop reads. -/
@@ -167,47 +138,25 @@ abbrev hdrB (r : Pointer) (E : ⟪slide.Γ⟫) (i : Nat) : ⟪slide.Γ⟫ :=
   (hdrI E i)[%256 := .value (r.add (BitVec.ofNat 64 i)), %262 :=
     .value (BitVec.ofNat 32 (min (254 - i) 5 + 2))]
 
-/-- Distinct small counters differ as `long`s. -/
-theorem ofNat64_ne {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) (h : a ≠ b) :
-    BitVec.ofNat 64 a ≠ BitVec.ofNat 64 b := by
-  intro e
-  have := congrArg BitVec.toNat e
-  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at this
-  exact h this
-
 /-- The carry at a clear `r[k]`: set it. -/
-theorem carry_set {v : Vector (BitVec 8) 256} (hk : k < 256) (h : v[k] = 0#8) :
+public theorem carry_set {v : Vector (BitVec 8) 256} (hk : k < 256) (h : v[k] = 0#8) :
     carry v k = v.setIfInBounds k 1#8 := by
   rw [carry]
   simp [hk, h]
 
 /-- The carry at a set `r[k]`: clear it, carry on. -/
-theorem carry_clear {v : Vector (BitVec 8) 256} (hk : k < 256) (h : ¬v[k] = 0#8) :
+public theorem carry_clear {v : Vector (BitVec 8) 256} (hk : k < 256) (h : ¬v[k] = 0#8) :
     carry v k = carry (v.setIfInBounds k 0#8) (k + 1) := by
   rw [carry]
   simp [hk, h]
 
 /-- The carry past `r[255]`: nothing. -/
-theorem carry_done {v : Vector (BitVec 8) 256} (hk : 256 ≤ k) : carry v k = v := by
+public theorem carry_done {v : Vector (BitVec 8) 256} (hk : 256 ≤ k) : carry v k = v := by
   rw [carry]
   simp [show ¬k < 256 by omega]
 
-/-- `x + c` on a small `long` counter does not overflow, signed. -/
-theorem sadd64 {x c : Nat} (h : x + c < 2 ^ 63) :
-    (BitVec.ofNat 64 x).saddOverflow (BitVec.ofNat 64 c) = false := by
-  have h1 : (BitVec.ofNat 64 x).toInt = x := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  have h2 : (BitVec.ofNat 64 c).toInt = c := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, h1, h2]
-  omega
-
-/-- Nor unsigned. -/
-theorem uadd64 {x c : Nat} (h : x + c < 2 ^ 64) :
-    (BitVec.ofNat 64 x).uaddOverflow (BitVec.ofNat 64 c) = false := by
-  simp [BitVec.uaddOverflow]
-  omega
-
 /-- `%262 = min(254 - i, 5) + 2` is `b`, for `3 ≤ b ≤ 6`: `256 ≤ i + b`. -/
-theorem guard_eq (hb : 3 ≤ b ∧ b ≤ 6)
+public theorem guard_eq (hb : 3 ≤ b ∧ b ≤ 6)
     (h : BitVec.ofNat 32 (min (254 - i) 5 + 2) = BitVec.ofNat 32 b) : 256 ≤ i + b := by
   have := congrArg BitVec.toNat h
   simp only [BitVec.toNat_ofNat] at this
@@ -215,20 +164,20 @@ theorem guard_eq (hb : 3 ≤ b ∧ b ≤ 6)
   omega
 
 /-- It is not: `i + b < 256`. -/
-theorem guard_ne (hb : 3 ≤ b ∧ b ≤ 6) (hi : i + (b - 1) < 256)
+public theorem guard_ne (hb : 3 ≤ b ∧ b ≤ 6) (hi : i + (b - 1) < 256)
     (h : ¬BitVec.ofNat 32 (min (254 - i) 5 + 2) = BitVec.ofNat 32 b) : i + b < 256 := by
   apply Classical.byContradiction
   intro hc
   exact h (congrArg (BitVec.ofNat 32) (by omega))
 
 /-- The countdown `254 - i` for `i < 255`. -/
-theorem toNat_cnt (hi : i < 255) : (254#32 - BitVec.ofNat 32 i).toNat = 254 - i := by
+public theorem toNat_cnt (hi : i < 255) : (254#32 - BitVec.ofNat 32 i).toNat = 254 - i := by
   rw [BitVec.toNat_sub, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (a := i) (by omega)]
   simp
   omega
 
 /-- The countdown is not yet `0`: `i < 254`. -/
-theorem cnt_ne (hi : i < 255) (h : ¬254#32 - BitVec.ofNat 32 i = 0#32) : i < 254 := by
+public theorem cnt_ne (hi : i < 255) (h : ¬254#32 - BitVec.ofNat 32 i = 0#32) : i < 254 := by
   have := toNat_cnt hi
   have h2 : (254#32 - BitVec.ofNat 32 i).toNat ≠ 0 := fun e =>
     h
@@ -238,24 +187,24 @@ theorem cnt_ne (hi : i < 255) (h : ¬254#32 - BitVec.ofNat 32 i = 0#32) : i < 25
   omega
 
 /-- The countdown is `0`: `i = 254`. -/
-theorem cnt_eq (hi : i < 255) (h : 254#32 - BitVec.ofNat 32 i = 0#32) : i = 254 := by
+public theorem cnt_eq (hi : i < 255) (h : 254#32 - BitVec.ofNat 32 i = 0#32) : i = 254 := by
   have := toNat_cnt hi
   rw [h] at this
   simp at this
   omega
 
 /-- `r[i + b] << b` for `b ≤ 6` keeps its sign: the `shl nsw` holds. -/
-theorem sext_shl (x : BitVec 8) (hb : b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6) :
+public theorem sext_shl (x : BitVec 8) (hb : b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6) :
     (x.signExtend 32 <<< b).sshiftRight b = x.signExtend 32 := by
   rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> bv_decide
 
 /-- `(r[i + b] << b) + r[i]` does not overflow. -/
-theorem sext_add (x y : BitVec 8) (hb : b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6) :
+public theorem sext_add (x y : BitVec 8) (hb : b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6) :
     (x.signExtend 32 <<< b).saddOverflow (y.signExtend 32) = false := by
   rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> bv_decide
 
 /-- `r[i] - (r[i + b] << b)` does not overflow. -/
-theorem sext_sub (x y : BitVec 8) (hb : b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6) :
+public theorem sext_sub (x y : BitVec 8) (hb : b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6) :
     (y.signExtend 32).ssubOverflow (x.signExtend 32 <<< b) = false := by
   rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> bv_decide
 
@@ -270,7 +219,7 @@ public theorem window_skip {v : Vector (BitVec 8) 256} (hb : b ≤ 6) (hib : i +
   simp only [h0, ↓reduceIte]
 
 /-- `r[i] + (r[i + b] << b) <= 15`, as the code tests it: `r[i]` takes in `r[i + b]`, cleared. -/
-theorem window_add {v : Vector (BitVec 8) 256} (hb : b ≤ 6) (hib : i + b < 256)
+public theorem window_add {v : Vector (BitVec 8) 256} (hb : b ≤ 6) (hib : i + b < 256)
     (h0 : ¬v[i + b] = 0#8)
     (h : (v[i + b].signExtend 32 <<< b + (v[i]'(by omega)).signExtend 32).slt 16#32 = true) :
     window v i b =
@@ -320,22 +269,8 @@ theorem window_break {v : Vector (BitVec 8) 256} (hb : b ≤ 6) (hib : i + b < 2
   rw [window, dite_eq_left ⟨hb, hib⟩]
   simp only [h0, ↓reduceIte, e, e', h, h', Bool.false_eq_true]
 
-/-- `x + c` on a small `int` counter does not overflow, signed. -/
-theorem sadd32 {x c : Nat} (h : x + c < 2 ^ 31) :
-    (BitVec.ofNat 32 x).saddOverflow (BitVec.ofNat 32 c) = false := by
-  have h1 : (BitVec.ofNat 32 x).toInt = x := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  have h2 : (BitVec.ofNat 32 c).toInt = c := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, h1, h2]
-  omega
-
-/-- Nor unsigned. -/
-theorem uadd32 {x c : Nat} (h : x + c < 2 ^ 32) :
-    (BitVec.ofNat 32 x).uaddOverflow (BitVec.ofNat 32 c) = false := by
-  simp [BitVec.uaddOverflow]
-  omega
-
 /-- `umin(254 - i, 5)` for `i < 255`. -/
-theorem umin_cnt (hi : i < 255) :
+public theorem umin_cnt (hi : i < 255) :
     (if (254#32 - BitVec.ofNat 32 i).ult 5#32 = true then 254#32 - BitVec.ofNat 32 i else 5#32) =
       BitVec.ofNat 32 (min (254 - i) 5) := by
   have h := toNat_cnt hi
@@ -430,8 +365,9 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   have hi0 : i < 256 := by omega
   block_init
   -- i + b, i + b < 256
-  step_pure [sadd64 (x := i + 1) (c := 5) (by omega), uadd64 (x := i + 1) (c := 5) (by omega),
-    ← BitVec.ofNat_add, show i + 1 + 5 = i + 6 from rfl]
+  step_pure [saddOverflow_ofNat64 (i := i + 1) (k := 5) (by omega),
+    uaddOverflow_ofNat64 (i := i + 1) (k := 5) (by omega), ← BitVec.ofNat_add,
+    show i + 1 + 5 = i + 6 from rfl]
   step_pure
   finish_block
   · rw [window_stop
@@ -568,8 +504,9 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   have hi0 : i < 256 := by omega
   block_init
   -- i + b, i + b < 256
-  step_pure [sadd64 (x := i + 1) (c := 4) (by omega), uadd64 (x := i + 1) (c := 4) (by omega),
-    ← BitVec.ofNat_add, show i + 1 + 4 = i + 5 from rfl]
+  step_pure [saddOverflow_ofNat64 (i := i + 1) (k := 4) (by omega),
+    uaddOverflow_ofNat64 (i := i + 1) (k := 4) (by omega), ← BitVec.ofNat_add,
+    show i + 1 + 4 = i + 5 from rfl]
   step_pure
   finish_block
   · rw [window_stop
@@ -707,8 +644,9 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   have hi0 : i < 256 := by omega
   block_init
   -- i + b, i + b < 256
-  step_pure [sadd64 (x := i + 1) (c := 3) (by omega), uadd64 (x := i + 1) (c := 3) (by omega),
-    ← BitVec.ofNat_add, show i + 1 + 3 = i + 4 from rfl]
+  step_pure [saddOverflow_ofNat64 (i := i + 1) (k := 3) (by omega),
+    uaddOverflow_ofNat64 (i := i + 1) (k := 3) (by omega), ← BitVec.ofNat_add,
+    show i + 1 + 3 = i + 4 from rfl]
   step_pure
   finish_block
   · rw [window_stop
@@ -846,8 +784,9 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   have hi0 : i < 256 := by omega
   block_init
   -- i + b, i + b < 256
-  step_pure [sadd64 (x := i + 1) (c := 2) (by omega), uadd64 (x := i + 1) (c := 2) (by omega),
-    ← BitVec.ofNat_add, show i + 1 + 2 = i + 3 from rfl]
+  step_pure [saddOverflow_ofNat64 (i := i + 1) (k := 2) (by omega),
+    uaddOverflow_ofNat64 (i := i + 1) (k := 2) (by omega), ← BitVec.ofNat_add,
+    show i + 1 + 2 = i + 3 from rfl]
   step_pure
   finish_block
   · rw [window_stop
@@ -985,8 +924,9 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   have hi0 : i < 256 := by omega
   block_init
   -- i + b, i + b < 256
-  step_pure [sadd64 (x := i + 1) (c := 1) (by omega), uadd64 (x := i + 1) (c := 1) (by omega),
-    ← BitVec.ofNat_add, show i + 1 + 1 = i + 2 from rfl]
+  step_pure [saddOverflow_ofNat64 (i := i + 1) (k := 1) (by omega),
+    uaddOverflow_ofNat64 (i := i + 1) (k := 1) (by omega), ← BitVec.ofNat_add,
+    show i + 1 + 1 = i + 2 from rfl]
   step_pure
   finish_block
   · rw [window_stop
@@ -1126,8 +1066,8 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   block_init
   -- min(254 - i, 5) + 2
   step_pure [umin_cnt hi]
-  step_pure [sadd32 (x := min (254 - i) 5) (c := 2) (by omega),
-    uadd32 (x := min (254 - i) 5) (c := 2) (by omega), ← BitVec.ofNat_add]
+  step_pure [saddOverflow_ofNat32 (i := min (254 - i) 5) (k := 2) (by omega),
+    uaddOverflow_ofNat32 (i := min (254 - i) 5) (k := 2) (by omega), ← BitVec.ofNat_add]
   have hib : i + 1 < 256 := by omega
   have W := window2 r a Sb hr hr_off i hi K
   have C := carry1_loop r a Sb hr hr_off i K (255 - (i + 1)) (i + 1)
@@ -1183,23 +1123,23 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
 /-! ### The `i` loop -/
 
 /-- The loop at `i < 256`: `r[i]`'s window if set, then `i + 1`. -/
-theorem loop_step {v : Vector (BitVec 8) 256} (hi : i < 256) :
+public theorem loop_step {v : Vector (BitVec 8) 256} (hi : i < 256) :
     loop v i = loop (if v[i] ≠ 0#8 then window v i 1 else v) (i + 1) := by
   rw [loop, dite_eq_left hi]
 
 /-- The loop past `255`: done. -/
-theorem loop_done {v : Vector (BitVec 8) 256} (hi : 256 ≤ i) : loop v i = v := by
+public theorem loop_done {v : Vector (BitVec 8) 256} (hi : 256 ≤ i) : loop v i = v := by
   rw [loop, dite_eq_right (by omega)]
 
 /-- `254 - i - 1`. -/
-theorem cnt_succ (i : Nat) :
+public theorem cnt_succ (i : Nat) :
     254#32 - BitVec.ofNat 32 i + 4294967295#32 = 254#32 - BitVec.ofNat 32 (i + 1) := by
   rw [BitVec.ofNat_add]
   generalize BitVec.ofNat 32 i = y
   bv_decide
 
 /-- `254 - i - 1` does not overflow, for `i ≤ 255`. -/
-theorem cnt_sadd (hi : i < 256) :
+public theorem cnt_sadd (hi : i < 256) :
     (254#32 - BitVec.ofNat 32 i).saddOverflow 4294967295#32 = false := by
   have hy : BitVec.ofNat 32 i ≤ 255#32 := by
     rw [BitVec.le_def, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
@@ -1245,14 +1185,14 @@ theorem latch_next (r a : Pointer) (Sb : GlobalState) (i : Nat) (hi : i < 255)
   · step_loop using hK
 
 /-- The `i` loop's test, as the code selects it. -/
-theorem sel_iff {c : Prop} [Decidable c] (hi : i < 256) :
+public theorem sel_iff {c : Prop} [Decidable c] (hi : i < 256) :
     (if c then BitVec.ofBool ((BitVec.ofNat 64 i).ult 255#64) else 0#1) = 1#1 ↔ c ∧ i < 255 := by
   have : (BitVec.ofNat 64 i).ult 255#64 = decide (i < 255) := by
     simp [BitVec.ult, Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega)]
   by_cases hc : c <;> by_cases hl : i < 255 <;> simp [hc, this, hl]
 
 /-- No window at `i`: on to `i + 1`. -/
-theorem loop_skip {v : Vector (BitVec 8) 256} (hi : i < 256) (h : ¬(v[i] ≠ 0#8 ∧ i < 255)) :
+public theorem loop_skip {v : Vector (BitVec 8) 256} (hi : i < 256) (h : ¬(v[i] ≠ 0#8 ∧ i < 255)) :
     loop v i = loop v (i + 1) := by
   rw [loop_step hi]
   by_cases h0 : v[i] ≠ 0#8
@@ -1261,7 +1201,7 @@ theorem loop_skip {v : Vector (BitVec 8) 256} (hi : i < 256) (h : ¬(v[i] ≠ 0#
   · rw [ite_eq_right h0]
 
 /-- The window at `i`: on to `i + 1`. -/
-theorem loop_window {v : Vector (BitVec 8) 256} (hi : i < 256) (h : v[i] ≠ 0#8 ∧ i < 255) :
+public theorem loop_window {v : Vector (BitVec 8) 256} (hi : i < 256) (h : v[i] ≠ 0#8 ∧ i < 255) :
     loop v i = loop (window v i 1) (i + 1) := by rw [loop_step hi, ite_eq_left h.1]
 
 /-- `^bb2`, the `i` loop from `i`: on to `^bb57` with `loop v i`. -/
@@ -1314,31 +1254,18 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
 /-! ### The bit loop -/
 
 /-- The low `8 j` bits of the 256 bytes. -/
-abbrev lowMask (j : Nat) : BitVec 2048 :=
+public abbrev lowMask (j : Nat) : BitVec 2048 :=
   BitVec.allOnes 2048 >>> (2048 - 8 * j)
 
 /-- `r` after the bit loop's first `j` stores over `Sb`: the bytes of `B` below `j`, `Sb`'s above,
 defined as stored. -/
-abbrev fill (Sb : GlobalState) (r : Pointer) (B : BitVec 2048) (j : Nat) : MemoryState :=
+public abbrev fill (Sb : GlobalState) (r : Pointer) (B : BitVec 2048) (j : Nat) : MemoryState :=
   Sb.mem.overlay r (B &&& lowMask j ||| Sb.mem.readAt r 2048 &&& ~~~lowMask j)
     (lowMask j ||| Sb.mem.definedAt r 2048 &&& ~~~lowMask j)
 
-/-- A store inside a range stored with definedness: one such store, both spliced. -/
-theorem overlay_storeAt_add {m : MemoryState} {p : Pointer} {u d : BitVec wu} {off : BitVec 64}
-    (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
-    (m.overlay p u d).storeAt (p.add off) y =
-      m.overlay p (Memory.spliceBits u (off.toNat * 8) y)
-        (Memory.spliceBits d (off.toNat * 8) (BitVec.allOnes wy)) := by
-  simp only [MemoryState.storeAt, MemoryState.overlay, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
-    spliceBits_spliceBits_add _ _ _ _ _ hw]
-
 /-- Before the loop: `Sb`'s memory. -/
-theorem fill_zero {Sb : GlobalState} {r : Pointer} (hr : InBounds Sb.mem r 2048) (B : BitVec 2048) :
-    fill Sb r B 0 = Sb.mem := by
+public theorem fill_zero {Sb : GlobalState} {r : Pointer} (hr : InBounds Sb.mem r 2048)
+    (B : BitVec 2048) : fill Sb r B 0 = Sb.mem := by
   have h0 : lowMask 0 = 0#2048 := by
     apply BitVec.eq_of_getLsbD_eq
     intro k hk
@@ -1347,19 +1274,19 @@ theorem fill_zero {Sb : GlobalState} {r : Pointer} (hr : InBounds Sb.mem r 2048)
   exact MemoryState.overlay_readAt_definedAt hr
 
 /-- After it: `B` stored. -/
-theorem fill_full {Sb : GlobalState} {r : Pointer} (B : BitVec 2048) :
+public theorem fill_full {Sb : GlobalState} {r : Pointer} (B : BitVec 2048) :
     fill Sb r B 256 = Sb.mem.storeAt r B := by
   have h1 : lowMask 256 = BitVec.allOnes 2048 := by simp [lowMask]
   simp only [fill, h1, BitVec.and_allOnes, BitVec.not_allOnes, BitVec.and_zero, BitVec.or_zero]
   rfl
 
 /-- The store of byte `j` of `B`: one byte more. -/
-theorem fill_step {Sb : GlobalState} {r : Pointer} {B : BitVec 2048}
+public theorem fill_step {Sb : GlobalState} {r : Pointer} {B : BitVec 2048}
     (hov : ¬r.offset.uaddOverflow 256#64) (hj : j < 256) :
     (fill Sb r B j).storeAt (r.add (BitVec.ofNat 64 j)) (B.extractLsb' (j * 8) 8) =
       fill Sb r B (j + 1) := by
   obtain ⟨h8, hov'⟩ := byte_offset hov hj
-  rw [overlay_storeAt_add hov'
+  rw [MemoryState.overlay_storeAt_add hov'
       (by
         rw [h8]; omega),
     h8]
@@ -1387,14 +1314,14 @@ theorem fill_step {Sb : GlobalState} {r : Pointer} {B : BitVec 2048}
       grind
 
 /-- `a[i >> 3]`'s index. -/
-theorem idx_eq (hj : j < 256) :
+public theorem idx_eq (hj : j < 256) :
     BitVec.ofNat 64 j >>> 3 &&& 536870911#64 = BitVec.ofNat 64 (j / 8) := by
   have : ∀ j < 256, BitVec.ofNat 64 j >>> 3 &&& 536870911#64 = BitVec.ofNat 64 (j / 8) := by
     decide +kernel
   exact this j hj
 
 /-- `a[k]`, read from the 32 bytes at `a`. -/
-theorem readAt_a {m : MemoryState} {a : Pointer} (ha : InBounds m a 256)
+public theorem readAt_a {m : MemoryState} {a : Pointer} (ha : InBounds m a 256)
     (hov : ¬a.offset.uaddOverflow 32#64) (hk : k < 32) :
     m.readAt (a.add (BitVec.ofNat 64 k)) 8 = (m.readAt a 256).extractLsb' (k * 8) 8 := by
   have h8 : (BitVec.ofNat 64 k).toNat = k := by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
@@ -1408,7 +1335,7 @@ theorem readAt_a {m : MemoryState} {a : Pointer} (ha : InBounds m a 256)
     h8]
 
 /-- `i & 6` and `(i | 1) & 7` on an even `i`: `i % 8` and `(i + 1) % 8`. -/
-theorem sh_eq :
+public theorem sh_eq :
     ∀ j < 256,
       j % 2 = 0 →
         BitVec.ofNat 8 j &&& 6#8 = BitVec.ofNat 8 (j % 8) ∧
@@ -1416,7 +1343,7 @@ theorem sh_eq :
   decide +kernel
 
 /-- `i | 1` on an even `i`: `i + 1`. -/
-theorem or_one (hj : j < 256) (he : j % 2 = 0) :
+public theorem or_one (hj : j < 256) (he : j % 2 = 0) :
     BitVec.ofNat 64 j &&& 1#64 = 0#64 ∧ BitVec.ofNat 64 j ||| 1#64 = BitVec.ofNat 64 (j + 1) := by
   have :
     ∀ j < 256,
@@ -1427,14 +1354,14 @@ theorem or_one (hj : j < 256) (he : j % 2 = 0) :
   exact this j hj he
 
 /-- `(a[i >> 3] >> (i & 7)) & 1` as the code computes it: byte `i` of the bits. -/
-theorem bit_byte (A : BitVec 256) (hj : j < 256) (k : Nat) (hk : k = j / 8) :
+public theorem bit_byte (A : BitVec 256) (hj : j < 256) (k : Nat) (hk : k = j / 8) :
     A.extractLsb' (k * 8) 8 >>> (j % 8) &&& 1#8 =
       (BitVec.packLanes (bits A)).extractLsb' (j * 8) 8 := by
   rw [BitVec.extractLsb'_packLanes (bits A) j hj]
   simp only [bits, Vector.getElem_ofFn, hk, Nat.mul_comm (j / 8), BitVec.and_comm]
 
 /-- The shift amount `i % 8 < 8`. -/
-theorem toNat_mod8 : (BitVec.ofNat 8 (j % 8)).toNat = j % 8 := by
+public theorem toNat_mod8 : (BitVec.ofNat 8 (j % 8)).toNat = j % 8 := by
   simp only [BitVec.toNat_ofNat]
   omega
 
@@ -1497,8 +1424,8 @@ theorem bits_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [bit_byte _ (show j + 1 < 256 by omega) (j / 8) (by omega),
       fill_step hr_off (show j + 1 < 256 by omega)] at hS
-    step_pure [sadd64 (x := j) (c := 2) (by omega), uadd64 (x := j) (c := 2) (by omega),
-      ← BitVec.ofNat_add]
+    step_pure [saddOverflow_ofNat64 (i := j) (k := 2) (by omega),
+      uaddOverflow_ofNat64 (i := j) (k := 2) (by omega), ← BitVec.ofNat_add]
     step_pure
     finish_block
     · rw [show j + 1 + 1 = 256 by omega, fill_full] at hS
@@ -1537,8 +1464,8 @@ theorem bits_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [bit_byte _ (show j + 1 < 256 by omega) (j / 8) (by omega),
       fill_step hr_off (show j + 1 < 256 by omega)] at hS
-    step_pure [sadd64 (x := j) (c := 2) (by omega), uadd64 (x := j) (c := 2) (by omega),
-      ← BitVec.ofNat_add]
+    step_pure [saddOverflow_ofNat64 (i := j) (k := 2) (by omega),
+      uaddOverflow_ofNat64 (i := j) (k := 2) (by omega), ← BitVec.ofNat_add]
     step_pure
     finish_block
     · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))

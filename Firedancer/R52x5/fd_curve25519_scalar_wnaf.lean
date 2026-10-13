@@ -7,6 +7,7 @@ public import Firedancer.R52x5.fd_int_min
 public import Firedancer.R52x5.Mlir.fd_curve25519_scalar_wnaf
 public import Firedancer.Ref.fd_curve25519_scalar_wnaf
 import Std.Data.ExtHashMap.Lemmas
+import Firedancer.Common.LimbBits
 
 namespace MLIR.Firedancer.R52x5
 
@@ -136,25 +137,6 @@ local macro "next_bit " k:num : tactic =>
 
 section BitVecFacts
 
-/-- Bit `m` of packed lanes: bit `m % we` of lane `m / we`. -/
-theorem getLsbD_packLanes {we n : Nat} (v : Vector (BitVec we) n) {m : Nat} (hm : m < we * n) :
-    (BitVec.packLanes v).getLsbD m = (v[m / we]'(Nat.div_lt_of_lt_mul hm)).getLsbD (m % we) := by
-  have hwe : 0 < we := Nat.pos_of_ne_zero fun h => by simp [h] at hm
-  have h :=
-    BitVec.extractLsb'_packLanes_of_lt v (s := m) (w := 1) (Nat.div_lt_of_lt_mul hm)
-      (Nat.mod_lt _ hwe)
-  simpa [BitVec.getLsbD_extractLsb'] using congrArg (·.getLsbD 0) h
-
-/-- A splice into a splice that covers it: one splice of the inner value. -/
-theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x : BitVec wx)
-    (y : BitVec wy) (h : k + wy ≤ wx) :
-    Memory.spliceBits (Memory.spliceBits b o x) (o + k) y =
-      Memory.spliceBits b o (Memory.spliceBits x k y) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits]
-  grind
-
 /-- Two small counters are equal as 64-bit values exactly when they are. -/
 theorem eq_of_ofNat64_eq {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
     (h : BitVec.ofNat 64 a = BitVec.ofNat 64 b) : a = b := by
@@ -235,7 +217,8 @@ theorem spliceBits_packLanes {u : Vector (BitVec 16) 256} (hj : j < 256) (y : Bi
     Memory.spliceBits (BitVec.packLanes u) (16 * j) y = BitVec.packLanes (u.set j y) := by
   apply BitVec.eq_of_getLsbD_eq
   intro m hm
-  rw [Memory.getLsbD_spliceBits, getLsbD_packLanes _ hm, getLsbD_packLanes _ hm, Vector.getElem_set]
+  rw [Memory.getLsbD_spliceBits, BitVec.getLsbD_packLanes _ hm, BitVec.getLsbD_packLanes _ hm,
+    Vector.getElem_set]
   by_cases h : m / 16 = j
   · subst h
     have hc : 16 * (m / 16) ≤ m ∧ m < 16 * (m / 16) + 16 ∧ m < 16 * 256 := by omega
@@ -344,7 +327,7 @@ theorem overlay_storeAt_lane {m : MemoryState} {p : Pointer} {u d : BitVec (16 *
   congr 1
   funext blk
   simp only [Function.comp_apply, ho,
-    spliceBits_spliceBits_add _ _ _ _ _ (show 16 * j + 16 ≤ 16 * 256 by omega)]
+    Memory.spliceBits_spliceBits_add _ _ _ _ _ (show 16 * j + 16 ≤ 16 * 256 by omega)]
 
 /-- A store into `_t[j]` of a stored `_t`: the whole `_t`, `_t[j]` set. -/
 theorem storeAt_storeAt_lane {m : MemoryState} {p : Pointer} {u : BitVec (16 * 256)}
@@ -399,20 +382,6 @@ theorem lt_of_ofNat64_ne {a b : Nat} (hab : a ≤ b) (h : ¬BitVec.ofNat 64 a = 
   rcases Nat.lt_or_ge a b with hlt | hge
   · exact hlt
   · exact absurd (by rw [show a = b by omega]) h
-
-/-- `i + k` on a small `long` counter does not overflow, signed. -/
-theorem saddOverflow_ofNat64 {i k : Nat} (h : i + k < 2 ^ 63) :
-    (BitVec.ofNat 64 i).saddOverflow (BitVec.ofNat 64 k) = false := by
-  have hi : (BitVec.ofNat 64 i).toInt = i := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  have hk : (BitVec.ofNat 64 k).toInt = k := by rw [BitVec.toInt_eq_toNat_of_lt] <;> simp <;> omega
-  simp [BitVec.saddOverflow, hi, hk]
-  omega
-
-/-- Nor unsigned. -/
-theorem uaddOverflow_ofNat64 {i k : Nat} (h : i + k < 2 ^ 64) :
-    (BitVec.ofNat 64 i).uaddOverflow (BitVec.ofNat 64 k) = false := by
-  simp [BitVec.uaddOverflow]
-  omega
 
 /-- `i | k` for `i` a multiple of `8` and `k < 8`: the bits are disjoint. -/
 theorem and_ofNat64 {i k : Nat} (hi : i % 8 = 0) (hk : k < 8) :
@@ -1541,7 +1510,7 @@ def tOf (m : MemoryState) (p : Pointer) : Vector Int 256 :=
 theorem shorts_tOf {m : MemoryState} {p : Pointer} : shorts (tOf m p) = m.readAt p (16 * 256) := by
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
-  rw [getLsbD_packLanes _ hi]
+  rw [BitVec.getLsbD_packLanes _ hi]
   simp only [tOf, Vector.getElem_map, Vector.getElem_ofFn, BitVec.ofInt_toInt,
     BitVec.getLsbD_extractLsb']
   simp only [show i % 16 < 16 by omega, decide_true, Bool.true_and]

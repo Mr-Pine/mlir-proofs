@@ -6,6 +6,7 @@ public import Boringssl.OPENSSL_memcpy
 public import Boringssl.sha512_block_data_order
 public import Boringssl.Mlir.BCM_sha512_update
 import Std.Tactic.BVDecide
+import Firedancer.Common.Counter
 
 namespace MLIR.Boringssl
 
@@ -187,12 +188,6 @@ theorem gep_zero {f : GepFlags} (p : Pointer) :
     Operation.gep f (.value 0#64) (.value p) = .value p := by
   rw [gep_value (by simp [BitVec.uaddOverflow, p.offset.isLt]) (.inr (by decide)), Pointer.add_zero]
 
-theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
-  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
-
-theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
-
 theorem ssubOverflow_and_127 (n : BitVec 64) : (0#64).ssubOverflow (n &&& 127#64) = false := by
   bv_decide
 
@@ -200,7 +195,7 @@ theorem ssubOverflow_and_127 (n : BitVec 64) : (0#64).ssubOverflow (n &&& 127#64
 theorem gep_tail {d : Pointer} {n : BitVec 64} (hdo : ¬d.offset.uaddOverflow n) :
     Operation.gepDyn { nusw := true } 0 1 (.value (d.add n)) (.value (-(n &&& 127#64))) =
       .value (d.add (n - (n &&& 127#64))) := by
-  have ht := toNat_and_127 n
+  have ht := Firedancer.toNat_and_127 n
   have hoff : (d.add n).offset.toNat = d.offset.toNat + n.toNat := by
     simp only [Pointer.add]
     exact BitVec.toNat_add_of_not_uaddOverflow hdo
@@ -261,13 +256,13 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
     have hblk : Fits S₁.mem d (1024 * (n >>> 7).toNat) :=
       hd.mono
         (by
-          rw [toNat_ushiftRight_7]; omega)
+          rw [Firedancer.toNat_ushiftRight_7]; omega)
     have hblko : d.offset.toNat + 128 * (n >>> 7).toNat < 2 ^ 64 := by
-      rw [toNat_ushiftRight_7]
+      rw [Firedancer.toNat_ushiftRight_7]
       simp [BitVec.uaddOverflow] at hdo
       omega
     -- the tail: `len % 128` bytes at `data + (len - len % 128)`
-    have ht := toNat_and_127 n
+    have ht := Firedancer.toNat_and_127 n
     have hq : (n - (n &&& 127#64)).toNat = n.toNat - n.toNat % 128 := by
       rw [BitVec.toNat_sub_of_le
           (by
@@ -301,7 +296,7 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
       exact
         MemoryState.readAt_of_readAt_le
           (by
-            rw [toNat_ushiftRight_7]; omega)
+            rw [Firedancer.toNat_ushiftRight_7]; omega)
           hD
     rw [hstate, hblock, hM, MemoryState.storeShaCtx_storeWords8 hco] at hS
     have hM' := congrArg GlobalState.mem hS
@@ -577,7 +572,7 @@ theorem bulk_valid {v : Sha512Ctx} (hv : v.Valid) (len : BitVec 64)
   split
   · apply leftover_valid
     · exact hv
-    · rw [toNat_and_127]
+    · rw [Firedancer.toNat_and_127]
       omega
   · rename_i h
     exact

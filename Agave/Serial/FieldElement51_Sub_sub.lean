@@ -36,14 +36,14 @@ public theorem FieldElement51_Sub_sub.call_eq (out a b : Pointer) (s : GlobalSta
   func_init
   have ha₀ : S₀.mem.LimbsFit a := hS ▸ ha
   have hb₀ : S₀.mem.LimbsFit b := hS ▸ hb
-  have ha_0 := fits_pair0 ha
-  have ha_8 := fits_pair ha (k := 8#64) (by decide)
-  have ha_24 := fits_pair ha (k := 24#64) (by decide)
-  have hb_0 := fits_pair0 hb
-  have hb_8 := fits_pair hb (k := 8#64) (by decide)
-  have hb_24 := fits_pair hb (k := 24#64) (by decide)
-  have hout_8 := room_pair hout (k := 8#64) (by decide)
-  have hout_24 := room_pair hout (k := 24#64) (by decide)
+  have ha_0 := MemoryState.LimbsFit.fits_lo ha
+  have ha_8 := MemoryState.LimbsFit.fits_pair ha (k := 8#64) (by decide)
+  have ha_24 := MemoryState.LimbsFit.fits_pair ha (k := 24#64) (by decide)
+  have hb_0 := MemoryState.LimbsFit.fits_lo hb
+  have hb_8 := MemoryState.LimbsFit.fits_pair hb (k := 8#64) (by decide)
+  have hb_24 := MemoryState.LimbsFit.fits_pair hb (k := 24#64) (by decide)
+  have hout_8 := MemoryState.LimbsRoom.room_pair hout (k := 8#64) (by decide)
+  have hout_24 := MemoryState.LimbsRoom.room_pair hout (k := 24#64) (by decide)
   have hoff := hout.1
   block_init
   iterate 14 step_pure
@@ -64,10 +64,12 @@ public theorem FieldElement51_Sub_sub.call_eq (out a b : Pointer) (s : GlobalSta
   step_store
   finish_block
   rw [hS, storeAt_pairs_eq_storeLimbs' hoff]
-  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, lane0_readAt, lane1_readAt0 ha₀,
-    lane1_readAt0 hb₀, lane1_readAt ha₀ (k := 8#64) (by decide),
-    lane1_readAt hb₀ (k := 8#64) (by decide), lane1_readAt ha₀ (k := 24#64) (by decide),
-    lane1_readAt hb₀ (k := 24#64) (by decide)]
+  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, MemoryState.extractVecElem_zero_readAt,
+    MemoryState.LimbsFit.extractVecElem_one_lo ha₀, MemoryState.LimbsFit.extractVecElem_one_lo hb₀,
+    MemoryState.LimbsFit.extractVecElem_one ha₀ (k := 8#64) (by decide),
+    MemoryState.LimbsFit.extractVecElem_one hb₀ (k := 8#64) (by decide),
+    MemoryState.LimbsFit.extractVecElem_one ha₀ (k := 24#64) (by decide),
+    MemoryState.LimbsFit.extractVecElem_one hb₀ (k := 24#64) (by decide)]
   congr
 
 end Proof

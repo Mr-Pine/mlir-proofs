@@ -32,45 +32,6 @@ namespace Scalar_non_adjacent_form
 
 /-! ## Memory -/
 
-/-- A splice into a splice that covers it: one splice of the inner value. -/
-theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x : BitVec wx)
-    (y : BitVec wy) (h : k + wy ≤ wx) :
-    Memory.spliceBits (Memory.spliceBits b o x) (o + k) y =
-      Memory.spliceBits b o (Memory.spliceBits x k y) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits]
-  grind
-
-/-- A store inside a stored value: one store, the inner value spliced. -/
-public theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off : BitVec 64}
-    (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
-    (m.storeAt p u).storeAt (p.add off) y =
-      m.storeAt p (Memory.spliceBits u (off.toNat * 8) y) := by
-  have hones :
-    Memory.spliceBits (BitVec.allOnes wu) (off.toNat * 8) (BitVec.allOnes wy) =
-      BitVec.allOnes wu := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
-    grind
-  simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
-    spliceBits_spliceBits_add _ _ _ _ _ hw, hones]
-
-/-- A store at a stored value's start: one store, the inner value spliced. -/
-public theorem storeAt_storeAt_low {m : MemoryState} {p : Pointer} {u : BitVec wu} (hw : wy ≤ wu)
-    (y : BitVec wy) : (m.storeAt p u).storeAt p y = m.storeAt p (Memory.spliceBits u 0 y) := by
-  have h :=
-    storeAt_storeAt_add (m := m) (p := p) (u := u) (off := 0#64)
-      (by
-        simp [BitVec.uaddOverflow]; exact p.offset.isLt)
-      (by simpa using hw) y
-  rwa [Pointer.add_zero] at h
-
 /-- `x_u64[k]`'s byte offset `8 k`, which does not wrap. -/
 theorem word_offset {v : Pointer} (hv : v.offset = 0) (hk : k < 5) :
     (BitVec.ofNat 64 (8 * k)).toNat = 8 * k ∧ ¬v.offset.uaddOverflow (BitVec.ofNat 64 (8 * k)) := by
@@ -148,7 +109,7 @@ public theorem storeAt_digit {m : MemoryState} {naf v : Pointer} {t : Vector ℤ
     simp
     omega
   rw [MemoryState.storeAt_comm (.inl (by simpa [Range.of] using Ne.symm hne)),
-    storeAt_storeAt_add hov (by omega), hj8, show j * 8 = 8 * j by omega, hy,
+    MemoryState.storeAt_storeAt_add hov (by omega), hj8, show j * 8 = 8 * j by omega, hy,
     spliceBits_packLanes hj]
   simp only [bytes, Vector.map_set]
 

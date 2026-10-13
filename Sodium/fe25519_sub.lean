@@ -60,8 +60,8 @@ theorem storeAt_limb0_pairs {m : MemoryState} {p : Pointer} (h : p.offset.toNat 
         | 2 => v12[1]
         | 3 => v34[0]
         | 4 => v34[1] := by
-  rw [storeAt_packLanes_limb h (k := 8#64) (by decide),
-    storeAt_packLanes_limb h (k := 24#64) (by decide)]
+  rw [MemoryState.storeAt_packLanes_limb h (k := 8#64) (by decide),
+    MemoryState.storeAt_packLanes_limb h (k := 24#64) (by decide)]
   rfl
 
 /-- `spec` as the code computes it: `f - h + c` per limb (`c` the offset, `2^52 - 38` and
@@ -96,10 +96,10 @@ public theorem fe25519_sub.call_eq (h f g : Pointer) (s : GlobalState) (hwf : s.
               s.mem.storeLimbs h (fe25519_sub.spec (s.mem.readLimbs f) (s.mem.readLimbs g)) }) := by
   func_init
   have hf₀ : S₀.mem.LimbsFit f := hS ▸ hf
-  have hf_8 := fits_pair hf (k := 8#64) (by decide)
-  have hf_24 := fits_pair hf (k := 24#64) (by decide)
-  have hh_8 := room_pair hh (k := 8#64) (by decide)
-  have hh_24 := room_pair hh (k := 24#64) (by decide)
+  have hf_8 := MemoryState.LimbsFit.fits_pair hf (k := 8#64) (by decide)
+  have hf_24 := MemoryState.LimbsFit.fits_pair hf (k := 24#64) (by decide)
+  have hh_8 := MemoryState.LimbsRoom.room_pair hh (k := 8#64) (by decide)
+  have hh_24 := MemoryState.LimbsRoom.room_pair hh (k := 24#64) (by decide)
   have hoff := hh.1
   block_init
   iterate 11 step_pure
@@ -124,8 +124,9 @@ public theorem fe25519_sub.call_eq (h f g : Pointer) (s : GlobalState) (hwf : s.
   step_store
   finish_block
   rw [hS, storeAt_limb0_pairs hoff]
-  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, lane0_readAt,
-    lane1_readAt hf₀ (k := 8#64) (by decide), lane1_readAt hf₀ (k := 24#64) (by decide)]
+  simp only [Vector.getElem_ofFn, Fin.zero_eta, Fin.mk_one, MemoryState.extractVecElem_zero_readAt,
+    MemoryState.LimbsFit.extractVecElem_one hf₀ (k := 8#64) (by decide),
+    MemoryState.LimbsFit.extractVecElem_one hf₀ (k := 24#64) (by decide)]
   rw [fe25519_sub.spec_eq]
   simp only [MemoryState.readLimbs, BitVec.reduceAdd, List.getElem_cons_zero,
     List.getElem_cons_succ]

@@ -88,7 +88,7 @@ theorem compress_eq (H : Vector (BitVec 64) 8) (B : List (BitVec 8)) :
   simp only [rounds, Sha512.compress]
 
 /-- A byte array's literal whose byte `i` is that of `N`: `N`'s bits. -/
-theorem flatBits_ofFn_bytes {n N w : Nat} {hw : (Ty.array n (.bv 8)).width = w} :
+public theorem flatBits_ofFn_bytes {n N w : Nat} {hw : (Ty.array n (.bv 8)).width = w} :
     Ty.flatBits (t := .array n (.bv 8))
         (Vector.ofFn fun i : Fin n => BitVec.ofNat 8 (N >>> (8 * i.val))) (hw := hw) =
       BitVec.ofNat w N := by
@@ -187,7 +187,7 @@ theorem block_ne {data : Pointer} {N j : Nat} (hdo : data.offset.toNat + 128 * N
   omega
 
 /-- The bytes from block `j` on: block `j`'s, then those from `j + 1`. -/
-theorem compressBlocks_drop {N j : Nat} (D : BitVec (1024 * N)) (hj : j < N)
+public theorem compressBlocks_drop {N j : Nat} (D : BitVec (1024 * N)) (hj : j < N)
     (H : Vector (BitVec 64) 8) :
     Sha512.compressBlocks H ((bytesLE D).drop (128 * j)) =
       Sha512.compressBlocks (Sha512.compress H (bytesLE (D.extractLsb' (1024 * j) 1024)))
@@ -200,8 +200,8 @@ theorem compressBlocks_drop {N j : Nat} (D : BitVec (1024 * N)) (hj : j < N)
     show 128 * j + 128 = 128 * (j + 1) by omega]
 
 /-- No bytes after the last block. -/
-theorem compressBlocks_drop_all {N : Nat} (D : BitVec (1024 * N)) (H : Vector (BitVec 64) 8) :
-    Sha512.compressBlocks H ((bytesLE D).drop (128 * N)) = H :=
+public theorem compressBlocks_drop_all {N : Nat} (D : BitVec (1024 * N))
+    (H : Vector (BitVec 64) 8) : Sha512.compressBlocks H ((bytesLE D).drop (128 * N)) = H :=
   Sha512.compressBlocks_of_lt
     (by
       simp; omega)

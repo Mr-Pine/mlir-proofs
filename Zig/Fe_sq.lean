@@ -248,7 +248,7 @@ public theorem Fe_sq.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   have htm := hS ▸ ht_limbs
   have htr := hS ▸ hread_t_readLimbs
   step_pure
-  have hout320 := hout.room
+  have hout320 := hout.room320
   have ht320 := ht_limbs.fits
   step_memcpy consuming hout320 ht320
   finish_block

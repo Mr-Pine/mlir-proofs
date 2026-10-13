@@ -301,26 +301,8 @@ public theorem spliceBits_spliceBits_append {n a b : Nat} (bytes : BitVec n) (of
   simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append]
   grind
 
-/-- Two adjacent stores are one store of both values, the later one above. -/
-public theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {x : BitVec a}
-    {y : BitVec b} (hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k)) (ha : a = 8 * k)
-    (hk : k < 2 ^ 64) :
-    (m.storeAt p x).storeAt (p.add (BitVec.ofNat 64 k)) y = m.storeAt p (y ++ x) := by
-  have hoff : (p.add (BitVec.ofNat 64 k)).offsetInBits = p.offsetInBits + a := by
-    rw [Pointer.offsetInBits_add hov, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hk]
-    omega
-  have hones : BitVec.allOnes b ++ BitVec.allOnes a = BitVec.allOnes (b + a) := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-    split <;> simp <;> omega
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, hoff, spliceBits_spliceBits_append, hones]
-
 /-- `x`, as a signed integer, lies in `[lo, hi]`. -/
+@[expose]
 public def Bnd (x : BitVec 64) (lo hi : Int) : Prop :=
   lo ≤ x.toInt ∧ x.toInt ≤ hi
 
@@ -3149,9 +3131,9 @@ public theorem fd_curve25519_scalar_reduce.call_eq (out inp : Pointer) (s : Glob
     BitVec.not_uaddOverflow_of_le hout_off
       (by
         simp; omega)
-  rw [hS, MemoryState.storeAt_storeAt_add (hov 8 (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (hov 16 (by decide)) rfl (by decide),
-    MemoryState.storeAt_storeAt_add (hov 24 (by decide)) rfl (by decide)]
+  rw [hS, MemoryState.storeAt_storeAt_append (hov 8 (by decide)) rfl (by decide),
+    MemoryState.storeAt_storeAt_append (hov 16 (by decide)) rfl (by decide),
+    MemoryState.storeAt_storeAt_append (hov 24 (by decide)) rfl (by decide)]
   -- the named values' C forms, substituted, are the spec's lets
   keep_eqs
   subst_vars

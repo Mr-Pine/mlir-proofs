@@ -59,12 +59,13 @@ section Proof
 open Serial.BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0
   (globals_updateMem writable_updateMem)
 
-open Serial.Signature_verify_verbose (storeAt_storeAt_below readBack fitsBack optEdwardsRoom_of
-  readAt_storeOptEdwards_of_id_ne point_of_decomp decomp_some_eq edwards_of_bits limbsRoom_at
-  key_store edwardsBits_Y edwardsBits_Z lifetimeEnd_storeAt_comm sig_reads iv_words absorbed_init
-  fits_updateMem inBounds_updateMem readAt_updateMem_of_id_ne fits_copyObj inBounds_copyObj
-  room_copyObj wf_copyObj_mk readAt_copyObj_of_id_ne absorbed_chain updateCalls_eq
-  eraseFrom_updateMem_of_le scalar_lt absorbed_lifetimeEnd)
+open Serial.Sha512VarCore_VariableOutputCore_finalize_variable_core (readBack)
+open Serial.Signature_verify_verbose (fitsBack optEdwardsRoom_of readAt_storeOptEdwards_of_id_ne
+  point_of_decomp decomp_some_eq edwards_of_bits limbsRoom_at key_store edwardsBits_Y edwardsBits_Z
+  lifetimeEnd_storeAt_comm sig_reads iv_words absorbed_init fits_updateMem inBounds_updateMem
+  readAt_updateMem_of_id_ne fits_copyObj inBounds_copyObj room_copyObj wf_copyObj_mk
+  readAt_copyObj_of_id_ne absorbed_chain updateCalls_eq eraseFrom_updateMem_of_le scalar_lt
+  absorbed_lifetimeEnd)
 
 attribute [local mlir_read] readAt_storeOptEdwards_of_id_ne readAt_updateMem_of_id_ne
   readAt_copyObj_of_id_ne
@@ -216,7 +217,8 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
   step_pure
   step_memcpy
   step_store
-  rw [storeAt_storeAt_below (off := 1#64) (by simp [BitVec.uaddOverflow, hA_bytes_off]) rfl] at hS
+  rw [MemoryState.storeAt_storeAt_below (off := 1#64) (by simp [BitVec.uaddOverflow, hA_bytes_off])
+      rfl] at hS
   have hread_pkb : S.mem.readAt A_bytes 256 = pk1 ++ pk0 := readBack hS hroom_A_bytes
   clear hread_A_bytes hread_A_bytes_1 hfits_A_bytes hfits_A_bytes_1
   have hfits_pkb : Fits S.mem A_bytes 256 := fitsBack hS hroom_A_bytes
@@ -308,7 +310,8 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
     step_pure
     step_memcpy
     rw [hS_bytes₀,
-      storeAt_storeAt_add (off := 31#64) (by simp [BitVec.uaddOverflow, hsig_tail_off]) rfl] at hS
+      MemoryState.storeAt_storeAt_concat (off := 31#64)
+        (by simp [BitVec.uaddOverflow, hsig_tail_off]) rfl] at hS
     clear hread_sig_tail hread_sig_tail_31 hfits_sig_tail hfits_sig_tail_31 hvk_read
     have hst_read : S.mem.readAt sig_tail 504 = _ := readBack hS hroom_sig_tail
     have hst_fits : Fits S.mem sig_tail (8 * (63#64).toNat) := fitsBack hS hroom_sig_tail

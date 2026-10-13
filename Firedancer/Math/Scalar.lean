@@ -13,6 +13,7 @@ open _root_.Ed25519
 /-! ## Signed bounds -/
 
 /-- `x` is the integer `z`, and `lo ≤ z ≤ hi`. -/
+@[expose]
 public def BE (x : BitVec 64) (z lo hi : Int) : Prop :=
   x.toInt = z ∧ lo ≤ z ∧ z ≤ hi
 

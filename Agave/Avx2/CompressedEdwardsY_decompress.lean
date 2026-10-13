@@ -14,17 +14,14 @@ import all MLIR.Ty
 
 namespace MLIR.Agave.Avx2
 
+open Serial (readAt_storeLimbs_add8 readAt_flag sign_trunc_zext sign_trunc_sext sign_eq fits_point
+  readAt_point_stores)
 open Serial (anon_042b818bc72209407b52bd0e4d6c8368_1 anon_042b818bc72209407b52bd0e4d6c8368_26
   FieldElement51_square FieldElement51_Mul_mul black_box_u8)
 
 /-! ## Proof -/
 
 section Proof
-
-theorem one_bits {hw : (Ty.array 40 (.bv 8)).width = 320} :
-    Ty.flatBits (t := .array 40 (.bv 8)) anon_042b818bc72209407b52bd0e4d6c8368_1.lit (hw := hw) =
-      limbsBits Serial.FieldElement51.ONE := by
-  decide +kernel +revert
 
 theorem one_limbs {hw : (Ty.array 40 (.bv 8)).width = 320} :
     (fun i : Fin 5 =>
@@ -44,90 +41,6 @@ theorem d_limbs {hw : (Ty.array 40 (.bv 8)).width = 320} :
   funext i
   fin_cases i <;> decide +kernel +revert
 
-/-- The byte at a slot's start, past limbs stored 8 bytes into it. -/
-theorem readAt_storeLimbs_add8 {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVec 64}
-    (ho : p.offset = 0) : (m.storeLimbs (p.add 8#64) l).readAt p 8 = m.readAt p 8 := by
-  rw [storeLimbs_eq_storeAt (by simp [Pointer.add, ho])]
-  apply MemoryState.readAt_storeAt_disjoint
-  simp [Range.Disjoint, Range.of, Pointer.add, Pointer.offsetInBits, ho]
-
-/-- `sqrt_ratio_i`'s `Choice` read back from below its `r`. -/
-theorem readAt_flag {m : MemoryState} {p : Pointer} {x : BitVec 8} {l : Fin 5 → BitVec 64}
-    (ho : p.offset = 0) (hb : Room ((m.storeAt p x).storeLimbs (p.add 8#64) l) p 8) :
-    ((m.storeAt p x).storeLimbs (p.add 8#64) l).readAt p 8 = x := by
-  have hl : (p.add 8#64).offset.toNat + 32 < 2 ^ 64 := by simp [Pointer.add, ho]
-  rw [readAt_storeLimbs_add8 ho]
-  rw [storeLimbs_eq_storeAt hl, Room.storeAt_iff] at hb
-  exact MemoryState.readAt_storeAt_self (Room.storeAt_iff.mp hb) x
-
-/-- `(repr[31] >> 7) as u8` from the word at byte 24: its sign bit, truncated without loss. -/
-theorem sign_trunc_zext (x : BitVec 64) : ((x >>> 63).setWidth 8).setWidth 64 = x >>> 63 := by
-  bv_decide
-
-theorem sign_trunc_sext (x : BitVec 64) : ((x >>> 63).setWidth 8).signExtend 64 = x >>> 63 := by
-  bv_decide
-
-/-- The sign bit from the word at byte 24 is byte 31's top bit. -/
-theorem sign_eq (buf : BitVec 256) :
-    (buf.extractLsb' 192 64 >>> 63).setWidth 8 = buf.extractLsb' 248 8 >>> 7 := by bv_decide
-
-/-- A 160-byte slot's four field elements known: its 1280 bits. -/
-theorem fits_point {m : MemoryState} {p : Pointer} (ho : p.offset = 0) (h0 : Fits m p 320)
-    (h1 : Fits m (p.add 40#64) 320) (h2 : Fits m (p.add 80#64) 320)
-    (h3 : Fits m (p.add 120#64) 320) : Fits m p 1280 := by
-  have hov (k : BitVec 64) (hk : k.toNat ≤ 120) : ¬p.offset.uaddOverflow k := by
-    simp [ho, BitVec.uaddOverflow]
-    omega
-  have a1 := Fits.append (hov 40#64 (by decide)) (by decide) rfl h0 h1
-  have a2 := Fits.append (hov 80#64 (by decide)) (by decide) rfl a1 h2
-  exact Fits.append (hov 120#64 (by decide)) (by decide) rfl a2 h3
-
-/-- The point `decompress` builds at `p`: `X`, `T = X Y`, `Y`, then `Z` stored, read whole. -/
-theorem readAt_point_stores {m : MemoryState} {p : Pointer} {X Y Z T : Fin 5 → BitVec 64}
-    {z : BitVec 320}
-    (hb :
-      Room
-        ((((m.storeAt p (limbsBits X)).storeLimbs (p.add 120#64) T).storeAt (p.add 40#64)
-              (limbsBits Y)).storeAt
-          (p.add 80#64) z)
-        p 1280)
-    (ho : p.offset = 0) (hz : z = limbsBits Z) :
-    ((((m.storeAt p (limbsBits X)).storeLimbs (p.add 120#64) T).storeAt (p.add 40#64)
-                (limbsBits Y)).storeAt
-            (p.add 80#64) z).readAt
-        p 1280 =
-      edwardsBits ⟨X, Y, Z, T⟩ := by
-  subst hz
-  have hp : p.offset.toNat + 160 ≤ 2 ^ 64 := by simp [ho]
-  have hl : (p.add 120#64).offset.toNat + 32 < 2 ^ 64 := by simp [Pointer.add, ho]
-  rw [storeLimbs_eq_storeAt hl] at hb ⊢
-  simp only [Room.storeAt_iff] at hb
-  have d (a b : Nat) (ha : a ≤ 120) (hb : b ≤ 120) (hab : a + 40 ≤ b ∨ b + 40 ≤ a) :=
-    Range.disjoint_coords hp ha hb hab
-  have d0 (b : Nat) (hb : b ≤ 120) (hab : 40 ≤ b) := by
-    simpa only [Pointer.add_zero'] using d 0 b (by omega) hb (by omega)
-  have d0' (a : Nat) (ha : a ≤ 120) (hab : 40 ≤ a) := by
-    simpa only [Pointer.add_zero'] using d a 0 ha (by omega) (by omega)
-  have i (k : BitVec 64) (hk : k.toNat ≤ 120) : Room m (p.add k) 320 :=
-    Room.add_of_le
-      (by
-        simp [ho, BitVec.uaddOverflow]; omega)
-      (by omega) hb
-  apply readAt_edwardsBits (by simpa only [InBounds.storeAt_iff] using hb.inBounds) hp
-  · rw [MemoryState.readAt_storeAt_disjoint (d0' 80 (by omega) (by omega)),
-      MemoryState.readAt_storeAt_disjoint (d0' 40 (by omega) (by omega)),
-      MemoryState.readAt_storeAt_disjoint (d0' 120 (by omega) (by omega)),
-      MemoryState.readAt_storeAt_self (hb.mono (by decide))]
-  · rw [MemoryState.readAt_storeAt_disjoint (d 80 40 (by omega) (by omega) (by omega)),
-      MemoryState.readAt_storeAt_self
-        (by simpa only [Room.storeAt_iff] using i 40#64 (by decide))]
-  · rw [MemoryState.readAt_storeAt_self
-        (by simpa only [Room.storeAt_iff] using i 80#64 (by decide))]
-  · rw [MemoryState.readAt_storeAt_disjoint (d 80 120 (by omega) (by omega) (by omega)),
-      MemoryState.readAt_storeAt_disjoint (d 40 120 (by omega) (by omega) (by omega)),
-      MemoryState.readAt_storeAt_self
-        (by simpa only [Room.storeAt_iff] using i 120#64 (by decide))]
-
 /-- `start p`: the slot `p`'s lifetime starts, with room for its limbs. -/
 local macro "start " p:ident : tactic => `(tactic| (step_pure; limbs_room $p))
 
@@ -144,7 +57,7 @@ local macro "copied " p:ident : tactic => do
   let room := Lean.mkIdent (.mkSimple s!"hroom_{n}")
   let bounds := Lean.mkIdent (.mkSimple s!"h{n}_bounds")
   `(tactic|
-      ( have $limbs:ident := limbsFit_of_fits $fits (by simp [$off:ident])
+      ( have $limbs:ident := MemoryState.LimbsFit.of_fits' $fits (by simp [$off:ident])
         have $readL:ident :=
           readLimbs_of_readAt_limbsBits (Fits.inBounds $fits) (by simp [$off:ident]) $read
         clear $fits $room $bounds $read))
@@ -156,8 +69,8 @@ local macro "copy " p:ident readL:ident : tactic => do
   let n := p.getId.toString
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
   `(tactic|
-      ( have hsrc_fits := fits_of_limbsFit $limbs
-        have hsrc_bits := (readAt_eq_limbsBits $limbs).trans (congrArg limbsBits $readL)
+      ( have hsrc_fits := MemoryState.LimbsFit.fits $limbs
+        have hsrc_bits := (MemoryState.readAt_eq_limbsBits $limbs).trans (congrArg limbsBits $readL)
         step_memcpy consuming hsrc_fits hsrc_bits))
 
 set_option hygiene false in
@@ -306,14 +219,14 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
   step_load with is_valid_y_coord consuming hflag
   -- step_1's `(X, Y)` at `ret`
   step_pure
-  have hsrc := Agave.fits_of_limbsFit hst1_8
+  have hsrc := MemoryState.LimbsFit.fits hst1_8
   step_memcpy consuming hsrc
   clear_facts st1
   clear hread_st1_8 hread_st1_8_readLimbs
   step_pure
   step_pure
-  have hY_bits := (readAt_eq_limbsBits hY_fit).trans (congrArg limbsBits hY_read)
-  have hsrc := fits_of_limbsFit hY_fit
+  have hY_bits := (MemoryState.readAt_eq_limbsBits hY_fit).trans (congrArg limbsBits hY_read)
+  have hsrc := MemoryState.LimbsFit.fits hY_fit
   step_memcpy consuming hsrc hY_bits
   clear hY_read hY_fit
   drop pv
@@ -374,8 +287,9 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
     have hpt_bits : S.mem.readAt pt 1280 = edwardsBits ⟨X, Y, Serial.FieldElement51.ONE, T⟩ := by
       have hb := hroom_pt
       rw [hS] at hb ⊢
-      exact readAt_point_stores hb hpt_off one_bits
-    have hpt_fits := fits_point hpt_off hfits_pt hfits_pt_40 hfits_pt_80 (fits_of_limbsFit hpt120)
+      exact readAt_point_stores hb hpt_off Serial.one_bits
+    have hpt_fits :=
+      fits_point hpt_off hfits_pt hfits_pt_40 hfits_pt_80 (MemoryState.LimbsFit.fits hpt120)
     step_memcpy
     clear hpt_bits hpt_fits
     step_pure

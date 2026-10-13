@@ -1,7 +1,8 @@
-import sys
-sys.path.insert(0,'/tmp/w1c')
+import sys,os
+HERE=os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0,HERE)
 from ir import parse
-ins=parse('/home/david.intern/mlir-proofs/Boringssl/Mlir/x25519_sc_reduce.lean')
+ins=parse(os.path.join(HERE,'..','..','Boringssl/Mlir/x25519_sc_reduce.lean'))
 LO,HI=-2**63,2**63-1
 const={}; iv={}; defs={}
 def fl(a,b): return a//b

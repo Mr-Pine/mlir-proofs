@@ -5,6 +5,7 @@ public import Firedancer.Ref.fd_sha512_append
 public import Firedancer.R52x5.fd_memcpy
 public import Firedancer.R52x5.Mlir.fd_sha512_append
 import Std.Tactic.BVDecide
+import Firedancer.Common.Counter
 
 namespace MLIR.Firedancer.R52x5
 
@@ -18,12 +19,6 @@ section Proof
 namespace fd_sha512_append
 
 /-! ### Sizes -/
-
-theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
-
-theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
-  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 theorem toNat_and_neg128 (n : BitVec 64) :
     (n &&& 18446744073709551488#64).toNat = n.toNat / 128 * 128 := by

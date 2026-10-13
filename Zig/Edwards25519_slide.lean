@@ -6,6 +6,7 @@ public import Firedancer.Common.Memory
 public import Zig.Common.Memory
 public import Zig.Common.PointCopy
 import Std.Tactic.BVDecide
+import Firedancer.Common.LimbBits
 public import Zig.Mlir.Edwards25519_slide
 
 namespace MLIR.Zig
@@ -39,15 +40,6 @@ end
 section Proof
 
 /-! ### The digits in memory -/
-
-/-- Bit `m` of packed lanes: bit `m % we` of lane `m / we`. -/
-theorem getLsbD_packLanes {we n : Nat} (v : Vector (BitVec we) n) {m : Nat} (hm : m < we * n) :
-    (BitVec.packLanes v).getLsbD m = (v[m / we]'(Nat.div_lt_of_lt_mul hm)).getLsbD (m % we) := by
-  have hwe : 0 < we := Nat.pos_of_ne_zero fun h => by simp [h] at hm
-  have h :=
-    BitVec.extractLsb'_packLanes_of_lt v (s := m) (w := 1) (Nat.div_lt_of_lt_mul hm)
-      (Nat.mod_lt _ hwe)
-  simpa [BitVec.getLsbD_extractLsb'] using congrArg (·.getLsbD 0) h
 
 /-- The digits `v` stored at `e` over `S`. -/
 abbrev withE (e : Pointer) (v : Vector (BitVec 8) 64) (S : GlobalState) : GlobalState :=
@@ -102,7 +94,8 @@ theorem spliceBits_packLanes {u : Vector (BitVec 8) 64} (hj : j < 64) (y : BitVe
     Memory.spliceBits (BitVec.packLanes u) (j * 8) y = BitVec.packLanes (u.set j y) := by
   apply BitVec.eq_of_getLsbD_eq
   intro m hm
-  rw [Memory.getLsbD_spliceBits, getLsbD_packLanes _ hm, getLsbD_packLanes _ hm, Vector.getElem_set]
+  rw [Memory.getLsbD_spliceBits, BitVec.getLsbD_packLanes _ hm, BitVec.getLsbD_packLanes _ hm,
+    Vector.getElem_set]
   by_cases h : m / 8 = j
   · subst h
     have hc : m / 8 * 8 ≤ m ∧ m < m / 8 * 8 + 8 ∧ m < 8 * 64 := by omega
@@ -181,7 +174,7 @@ theorem storeAt_lane {m : MemoryState} {p : Pointer} {v : Vector (BitVec 8) 64} 
 theorem packLanes_zero : BitVec.packLanes (Vector.replicate 64 (0#8)) = 0#512 := by
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
-  rw [getLsbD_packLanes _ hi]
+  rw [BitVec.getLsbD_packLanes _ hi]
   simp
 
 /-- A fresh slot `e`: no digits, none defined. -/

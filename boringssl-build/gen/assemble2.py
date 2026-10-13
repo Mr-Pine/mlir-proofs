@@ -12,9 +12,10 @@ theorem x25519_sc_reduce.nomask3_3 (y : BitVec 24) :
     if os.environ.get('NOIR'): return s
     s+="\n".join(lem)+"\n"+out_eq_text()+"\n"+t
     return s
-sys.path.insert(0,'/tmp/w1c')
+HERE=os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0,HERE)
 from gen2 import *
-parts='/tmp/w1c/parts/'
+parts=os.path.join(HERE,'parts','')
 splits=eval(sys.argv[1])
 nruns=int(sys.argv[2]) if len(sys.argv)>2 else len(splits)-1
 inline_last=os.environ.get('INLINE_LAST')=='1'
@@ -52,4 +53,4 @@ public theorem x25519_sc_reduce.call_eq (p : Pointer) (s : GlobalState) (hwf : s
 s=(open(parts+'head.lean').read()+open(parts+'spec.lean').read()+open(parts+'bnd_reduce.lean').read()
    +open(parts+'loads.lean').read()
    +open(parts+'fdeq.lean').read()+spec_eq_text()+"\n"+out_def()+"\n"+compiled_part()+"\n/-! ## Proof -/\n\nsection Proof\n\nopen x25519_sc_reduce Bounds\n\n"+consts_abbrev()+"\n"+"\n\n".join(runs)+"\n"+thm+main+"\n"+tail+"\n\nend Proof\n\nend MLIR.Boringssl\n")
-open('/home/david.intern/mlir-proofs/Boringssl/x25519_sc_reduce.lean','w').write(s)
+open(os.path.join(HERE,'..','..','Boringssl/x25519_sc_reduce.lean'),'w').write(s)

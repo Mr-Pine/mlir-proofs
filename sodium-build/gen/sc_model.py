@@ -2,21 +2,21 @@
 
 The C (from ~/src/libsodium) is rewritten into BoringSSL's spelling and parsed by
 boringssl-build/gen/cmodel.py, so its lets are those of `Boringssl.x25519_sc_reduce.spec`."""
-import os, re, sys
+import os, re, sys, tempfile
 HOME = os.path.expanduser('~')
-sys.path.insert(0, f'{HOME}/mlir-proofs/boringssl-build/gen')
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+sys.path.insert(0, os.path.join(ROOT, 'boringssl-build/gen'))
 import cmodel
 from cmodel import lin_add, lin_scale
 from ir import parse as irparse
 
-LIFT = f'{HOME}/mlir-proofs/Sodium/Mlir/sc25519_reduce.lean'
+LIFT = os.path.join(ROOT, 'Sodium/Mlir/sc25519_reduce.lean')
 CSRC = f'{HOME}/src/libsodium/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c'
-CNORM = '/tmp/w2gen/screduce.c'
 M21, M43, M63, NEG21 = 2097151, 8796090925056, 9223372036852678656, -2097152
 
 
 def normalize_c():
-    """libsodium's `sc25519_reduce` in BoringSSL's spelling."""
+    """libsodium's `sc25519_reduce` in BoringSSL's spelling, written to a temp file; returns its path."""
     src = open(CSRC).read()
     body = src[src.index('sc25519_reduce(unsigned char s[64])'):]
     body = body[:body.index('\n}\n') + 3]
@@ -29,8 +29,10 @@ def normalize_c():
         if l.startswith('sc25519_reduce') or l == '{':
             continue
         out.append(l)
-    os.makedirs(os.path.dirname(CNORM), exist_ok=True)
-    open(CNORM, 'w').write('\n'.join(out) + '\n')
+    fd, path = tempfile.mkstemp(prefix='sc25519_reduce-', suffix='.c')
+    with os.fdopen(fd, 'w') as f:
+        f.write('\n'.join(out) + '\n')
+    return path
 
 
 def key(f):
@@ -43,9 +45,11 @@ def lit(v):
 
 
 def model():
-    normalize_c()
-    cmodel.SRC = CNORM
-    c = cmodel.parse()
+    cmodel.SRC = normalize_c()
+    try:
+        c = cmodel.parse()
+    finally:
+        os.remove(cmodel.SRC)
     ins = [d for d in irparse(LIFT) if d['op'] != 'func']
     arg = next(a for d in ins for a in d['args'] if a.startswith('%arg'))
     const, ptr, form, kind, info, rawload = {}, {}, {}, {}, {}, {}

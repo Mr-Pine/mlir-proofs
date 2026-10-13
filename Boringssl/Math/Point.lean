@@ -2,7 +2,7 @@ module
 
 public import Agave.Math.Point
 public import Boringssl.Math.Field
-public import Boringssl.Math.Encode
+public import Ed25519.Encode
 public import Firedancer.Math.Curve
 public import Boringssl.ge_p3_to_p2
 public import Boringssl.x25519_ge_p1p1_to_p2
@@ -69,17 +69,6 @@ section Conversions
 
 variable {Q : Point}
 
-/-- `k = 2d`, tight. -/
-private theorem k_val :
-    Limbs.val fd_f25519_k.limbs = 2 * Ed25519.d ∧ Limbs.Tight fd_f25519_k.limbs := by
-  refine
-    ⟨?_, by
-      rw [Limbs.tight_iff]; decide⟩
-  rw [Limbs.val_eq]
-  unfold Ed25519.d
-  simp [fd_f25519_k.limbs]
-  reduce_mod_char
-
 /-- `ge_p3_to_p2` keeps the point. -/
 public theorem ge_p3_to_p2.spec_proj {P : GeP3} (h : P.Ext Q) : (ge_p3_to_p2.spec P).Proj Q :=
   ⟨IsExt.isProj h.1, h.2.1, h.2.2.1, h.2.2.2.1⟩
@@ -115,7 +104,7 @@ public theorem x25519_ge_p3_to_cached.spec_niels {P : GeP3} (h : P.Ext Q) :
   obtain ⟨he, tX, tY, tZ, tT⟩ := h
   obtain ⟨vp, bp⟩ := fiat_25519_add.spec_val tY tX
   obtain ⟨vm, bm⟩ := fiat_25519_sub.spec_val tY tX.under2p
-  obtain ⟨vk, tk⟩ := k_val
+  obtain ⟨vk, tk⟩ := fd_f25519_k.val
   obtain ⟨vt, tt⟩ := fiat_25519_carry_mul.spec_val tT.loose tk.loose
   refine ⟨?_, bp, bm, tZ.loose, tt.loose⟩
   simp only [x25519_ge_p3_to_cached.spec]
@@ -270,7 +259,7 @@ end Addition
 section Encode
 
 /-- `s[31] ^= b << 7` on bytes below `2²⁵⁵`: the bit `b` on top. -/
-theorem splice_sign {s : BitVec 256} (hs : s.toNat < 2 ^ 255) {c : ℕ} (hc : c < 2) :
+public theorem splice_sign {s : BitVec 256} (hs : s.toNat < 2 ^ 255) {c : ℕ} (hc : c < 2) :
     Memory.spliceBits s 248 (((BitVec.ofNat 32 c).setWidth 8 <<< 7#8) ^^^ s.extractLsb' 248 8) =
       BitVec.ofNat 256 (s.toNat + 2 ^ 255 * c) := by
   have h255 : s.getLsbD 255 = false := by rw [← BitVec.testBit_toNat, Nat.testBit_lt_two_pow hs]

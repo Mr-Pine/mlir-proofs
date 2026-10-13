@@ -370,7 +370,7 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hoy_limbs
   have htr := hS ▸ hread_oy_readLimbs
-  have f1 := hout.limbsRoom_y.room
+  have f1 := hout.limbsRoom_y.room320
   have f2 := hoy_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 40) (by omega)),
@@ -383,7 +383,7 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hoz_limbs
   have htr := hS ▸ hread_oz_readLimbs
-  have f1 := hout.limbsRoom_z.room
+  have f1 := hout.limbsRoom_z.room320
   have f2 := hoz_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 80) (by omega)),
@@ -396,7 +396,7 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hot_limbs
   have htr := hS ▸ hread_ot_readLimbs
-  have f1 := hout.limbsRoom_t.room
+  have f1 := hout.limbsRoom_t.room320
   have f2 := hot_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 120) (by omega)),

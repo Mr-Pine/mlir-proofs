@@ -23,81 +23,16 @@ local macro "byte_shl " x:ident : tactic =>
       step_pure
       step_pure [byte_shiftLeft_ushiftRight, byte_shiftLeft_sshiftRight] with $x:ident))
 
-/-! ### Helpers -/
-
-/-- A byte shifted left by at most `55` bits shifts back. -/
-theorem byte_shiftLeft_ushiftRight (b : BitVec 8) (h : s ≤ 55) :
-    (b.setWidth 64 <<< s) >>> s = b.setWidth 64 := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [BitVec.getLsbD_ushiftRight, BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth]
-  by_cases hi8 : i < 8
-  · simp
-    omega
-  · simp [BitVec.getLsbD_of_ge b i (by omega)]
-
-/-- A byte shifted left by at most `55` bits stays nonnegative, so it shifts back signed too. -/
-theorem byte_shiftLeft_sshiftRight (b : BitVec 8) (h : s ≤ 55) :
-    (b.setWidth 64 <<< s).sshiftRight s = b.setWidth 64 := by
-  rw [BitVec.sshiftRight_eq_of_msb_false, byte_shiftLeft_ushiftRight b h]
-  simp only [BitVec.msb_eq_getLsbD_last, BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth]
-  simp [BitVec.getLsbD_of_ge b (63 - s) (by omega)]
-
-/-- A read at the start of a known read: its low bits. -/
-theorem MemoryState.readAt_of_readAt_low {m : MemoryState} {p : Pointer} {x : BitVec v}
-    (hfits : Fits m p v) (hw : w ≤ v) (h : m.readAt p v = x) :
-    m.readAt p w = x.extractLsb' 0 w := by
-  have :=
-    MemoryState.readAt_add_of_readAt (off := 0#64) hfits.inBounds
-      (by
-        simp [BitVec.uaddOverflow]; omega)
-      (by simpa using hw) h
-  simpa [Pointer.add] using this
+open Firedancer.Ref (byte_shiftLeft_ushiftRight byte_shiftLeft_sshiftRight
+  MemoryState.readAt_of_readAt_low)
+open Firedancer.Ref.fiat_25519_from_bytes (x39_eq x47_eq x13to19 x7to12 x55_no_overflow x55_eq
+  x63_no_overflow x63_eq mask_eq byteAt x39_disjoint x47_disjoint x55_disjoint x63_disjoint)
 
 /-! ### The limbs -/
 
 /-- With bit 255 clear, byte 31 is its low seven bits. -/
 theorem fiat_25519_from_bytes.x1_mask {x : BitVec 256} (h : x.msb = false) :
     (x.extractLsb' 248 8).setWidth 64 = (x.extractLsb' 248 8).setWidth 64 &&& 127#64 := by bv_decide
-
-/-- Limb 0 as the code builds it: bits `0 … 50`. -/
-theorem fiat_25519_from_bytes.x39_eq (x : BitVec 256) :
-    (BitVec.setWidth 64 (x.extractLsb' 40 8) <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32) |||
-        BitVec.setWidth 64 (x.extractLsb' 32 8) <<< 32 |||
-        BitVec.setWidth 64 (x.extractLsb' 48 8) <<< 48 &&& 1970324836974592#64) =
-      (x.extractLsb' 0 51).setWidth 64 := by
-  bv_decide
-
-/-- Limb 1 as the code builds it: bits `51 … 101`. -/
-theorem fiat_25519_from_bytes.x47_eq (x : BitVec 256) :
-    (BitVec.setWidth 64 (x.extractLsb' 88 8) <<< 37 |||
-        BitVec.setWidth 64 (x.extractLsb' 96 8) <<< 45 &&& 2216615441596416#64 |||
-        BitVec.setWidth 64 (x.extractLsb' 80 8) <<< 29 |||
-        BitVec.setWidth 64 (x.extractLsb' 72 8) <<< 21 |||
-        BitVec.setWidth 64 (x.extractLsb' 64 8) <<< 13 |||
-        BitVec.setWidth 64 (x.extractLsb' 56 8) <<< 5 |||
-        BitVec.setWidth 64 (x.extractLsb' 48 8) >>> 3) =
-      (x.extractLsb' 51 51).setWidth 64 := by
-  bv_decide
-
-/-- `x13 … x19` as the code ors them. -/
-abbrev fiat_25519_from_bytes.x13to19 (x : BitVec 256) : BitVec 64 :=
-  BitVec.setWidth 64 (x.extractLsb' 144 8) <<< 42 |||
-    BitVec.setWidth 64 (x.extractLsb' 152 8) <<< 50 |||
-    BitVec.setWidth 64 (x.extractLsb' 136 8) <<< 34 |||
-    BitVec.setWidth 64 (x.extractLsb' 128 8) <<< 26 |||
-    BitVec.setWidth 64 (x.extractLsb' 120 8) <<< 18 |||
-    BitVec.setWidth 64 (x.extractLsb' 112 8) <<< 10 |||
-    BitVec.setWidth 64 (x.extractLsb' 104 8) <<< 2
-
-/-- `x7 … x12` as the code ors them. -/
-abbrev fiat_25519_from_bytes.x7to12 (x : BitVec 256) : BitVec 64 :=
-  BitVec.setWidth 64 (x.extractLsb' 192 8) <<< 39 |||
-    BitVec.setWidth 64 (x.extractLsb' 200 8) <<< 47 |||
-    BitVec.setWidth 64 (x.extractLsb' 184 8) <<< 31 |||
-    BitVec.setWidth 64 (x.extractLsb' 176 8) <<< 23 |||
-    BitVec.setWidth 64 (x.extractLsb' 168 8) <<< 15 |||
-    BitVec.setWidth 64 (x.extractLsb' 160 8) <<< 7
 
 /-- `x1 … x6` as the code ors them. -/
 abbrev fiat_25519_from_bytes.x1to6 (x : BitVec 256) : BitVec 64 :=
@@ -108,28 +43,6 @@ abbrev fiat_25519_from_bytes.x1to6 (x : BitVec 256) : BitVec 64 :=
     BitVec.setWidth 64 (x.extractLsb' 216 8) <<< 12 |||
     BitVec.setWidth 64 (x.extractLsb' 208 8) <<< 4
 
-/-- `x55`'s `add nsw nuw` holds: `x13 … x19` stay below `2^58`. -/
-theorem fiat_25519_from_bytes.x55_no_overflow (x : BitVec 256) :
-    ¬(x13to19 x).saddOverflow (BitVec.setWidth 64 (x.extractLsb' 96 8) >>> 6) ∧
-      ¬(x13to19 x).uaddOverflow (BitVec.setWidth 64 (x.extractLsb' 96 8) >>> 6) := by
-  bv_decide
-
-/-- Byte 12's top bits plus `x13 … x19`: bits `102 … 159`. -/
-theorem fiat_25519_from_bytes.x55_eq (x : BitVec 256) :
-    x13to19 x + BitVec.setWidth 64 (x.extractLsb' 96 8) >>> 6 =
-      (x.extractLsb' 102 58).setWidth 64 := by
-  bv_decide
-
-/-- `x63`'s `add nsw nuw` holds: `x7 … x12` stay below `2^55`. -/
-theorem fiat_25519_from_bytes.x63_no_overflow (x : BitVec 256) (y : BitVec 64) :
-    ¬(x7to12 x).saddOverflow (y >>> 51) ∧ ¬(x7to12 x).uaddOverflow (y >>> 51) := by bv_decide
-
-/-- Limb 2's carry plus `x7 … x12`: bits `153 … 207`. -/
-theorem fiat_25519_from_bytes.x63_eq {x : BitVec 256} (h : y = (x.extractLsb' 102 58).setWidth 64) :
-    x7to12 x + y >>> 51 = (x.extractLsb' 153 55).setWidth 64 := by
-  subst h
-  bv_decide
-
 /-- `x71`'s `add nsw nuw` holds: `x1 … x6` stay below `2^51`. -/
 theorem fiat_25519_from_bytes.x71_no_overflow (x : BitVec 256) (y : BitVec 64) :
     ¬(x1to6 x).saddOverflow (y >>> 51) ∧ ¬(x1to6 x).uaddOverflow (y >>> 51) := by bv_decide
@@ -138,104 +51,6 @@ theorem fiat_25519_from_bytes.x71_no_overflow (x : BitVec 256) (y : BitVec 64) :
 theorem fiat_25519_from_bytes.x71_eq {x : BitVec 256} (h : y = (x.extractLsb' 153 55).setWidth 64) :
     x1to6 x + y >>> 51 = (x.extractLsb' 204 51).setWidth 64 := by
   subst h
-  bv_decide
-
-/-- A carried limb masked: its low `51` bits. -/
-theorem fiat_25519_from_bytes.mask_eq {x : BitVec 256} (h : y = (x.extractLsb' k n).setWidth 64)
-    (hn : 51 ≤ n := by decide) : y &&& 2251799813685247#64 = (x.extractLsb' k 51).setWidth 64 := by
-  subst h
-  rw [show 2251799813685247#64 = (BitVec.allOnes 51).setWidth 64 by decide]
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [BitVec.getLsbD_and, BitVec.getLsbD_setWidth, BitVec.getLsbD_extractLsb',
-    BitVec.getLsbD_allOnes]
-  by_cases h51 : i < 51
-  · simp [h51, hi, Nat.lt_of_lt_of_le h51 hn]
-  · simp [h51]
-
-/-- Bits `i … i + 7` of `x`, widened. -/
-abbrev fiat_25519_from_bytes.byteAt (x : BitVec 256) (i : Nat) : BitVec 64 :=
-  (x.extractLsb' i 8).setWidth 64
-
-/-- `x39`'s `or disjoint`s hold: `arg1[0 … 3]`, `x27`, `x28` and `x26`'s low bits do not overlap. -/
-theorem fiat_25519_from_bytes.x39_disjoint (x : BitVec 256) :
-    byteAt x 40 <<< 40 &&& BitVec.setWidth 64 (x.extractLsb' 0 32) = 0#64 ∧
-      (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32)) &&& byteAt x 32 <<< 32 =
-        0#64 ∧
-      (byteAt x 40 <<< 40 ||| BitVec.setWidth 64 (x.extractLsb' 0 32) ||| byteAt x 32 <<< 32) &&&
-          (byteAt x 48 <<< 48 &&& 1970324836974592#64) =
-        0#64 := by
-  bv_decide
-
-/-- `x47`'s `or disjoint`s hold: `x40`, `x21 … x25` and `x20`'s low bits do not overlap. -/
-theorem fiat_25519_from_bytes.x47_disjoint (x : BitVec 256) :
-    byteAt x 88 <<< 37 &&& (byteAt x 96 <<< 45 &&& 2216615441596416#64) = 0#64 ∧
-      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64)) &&& byteAt x 80 <<< 29 =
-        0#64 ∧
-      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-            byteAt x 80 <<< 29) &&&
-          byteAt x 72 <<< 21 =
-        0#64 ∧
-      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-            byteAt x 80 <<< 29 |||
-            byteAt x 72 <<< 21) &&&
-          byteAt x 64 <<< 13 =
-        0#64 ∧
-      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-            byteAt x 80 <<< 29 |||
-            byteAt x 72 <<< 21 |||
-            byteAt x 64 <<< 13) &&&
-          byteAt x 56 <<< 5 =
-        0#64 ∧
-      (byteAt x 88 <<< 37 ||| (byteAt x 96 <<< 45 &&& 2216615441596416#64) |||
-            byteAt x 80 <<< 29 |||
-            byteAt x 72 <<< 21 |||
-            byteAt x 64 <<< 13 |||
-            byteAt x 56 <<< 5) &&&
-          byteAt x 48 >>> 3 =
-        0#64 := by
-  bv_decide
-
-/-- `x13 | … | x19`'s `or disjoint`s hold. -/
-theorem fiat_25519_from_bytes.x55_disjoint (x : BitVec 256) :
-    byteAt x 144 <<< 42 &&& byteAt x 152 <<< 50 = 0#64 ∧
-      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50) &&& byteAt x 136 <<< 34 = 0#64 ∧
-      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34) &&&
-          byteAt x 128 <<< 26 =
-        0#64 ∧
-      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
-            byteAt x 128 <<< 26) &&&
-          byteAt x 120 <<< 18 =
-        0#64 ∧
-      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
-            byteAt x 128 <<< 26 |||
-            byteAt x 120 <<< 18) &&&
-          byteAt x 112 <<< 10 =
-        0#64 ∧
-      (byteAt x 144 <<< 42 ||| byteAt x 152 <<< 50 ||| byteAt x 136 <<< 34 |||
-            byteAt x 128 <<< 26 |||
-            byteAt x 120 <<< 18 |||
-            byteAt x 112 <<< 10) &&&
-          byteAt x 104 <<< 2 =
-        0#64 := by
-  bv_decide
-
-/-- `x7 | … | x12`'s `or disjoint`s hold. -/
-theorem fiat_25519_from_bytes.x63_disjoint (x : BitVec 256) :
-    byteAt x 192 <<< 39 &&& byteAt x 200 <<< 47 = 0#64 ∧
-      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47) &&& byteAt x 184 <<< 31 = 0#64 ∧
-      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31) &&&
-          byteAt x 176 <<< 23 =
-        0#64 ∧
-      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31 |||
-            byteAt x 176 <<< 23) &&&
-          byteAt x 168 <<< 15 =
-        0#64 ∧
-      (byteAt x 192 <<< 39 ||| byteAt x 200 <<< 47 ||| byteAt x 184 <<< 31 |||
-            byteAt x 176 <<< 23 |||
-            byteAt x 168 <<< 15) &&&
-          byteAt x 160 <<< 7 =
-        0#64 := by
   bv_decide
 
 /-- `x1 | … | x6`'s `or disjoint`s hold. -/

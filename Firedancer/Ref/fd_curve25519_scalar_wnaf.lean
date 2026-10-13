@@ -77,35 +77,6 @@ open fd_curve25519_scalar_wnaf
 
 /-! ### `n` and `_t` in memory -/
 
-/-- A splice into a splice that covers it: one splice of the inner value. -/
-theorem spliceBits_spliceBits_add {n wx wy : Nat} (b : BitVec n) (o k : Nat) (x : BitVec wx)
-    (y : BitVec wy) (h : k + wy ≤ wx) :
-    Memory.spliceBits (Memory.spliceBits b o x) (o + k) y =
-      Memory.spliceBits b o (Memory.spliceBits x k y) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits]
-  grind
-
-/-- A store inside a stored value: one store, the inner value spliced. -/
-theorem storeAt_storeAt_add {m : MemoryState} {p : Pointer} {u : BitVec wu} {off : BitVec 64}
-    (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + wy ≤ wu) (y : BitVec wy) :
-    (m.storeAt p u).storeAt (p.add off) y =
-      m.storeAt p (Memory.spliceBits u (off.toNat * 8) y) := by
-  have hones :
-    Memory.spliceBits (BitVec.allOnes wu) (off.toNat * 8) (BitVec.allOnes wy) =
-      BitVec.allOnes wu := by
-    apply BitVec.eq_of_getLsbD_eq
-    intro i hi
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_allOnes]
-    grind
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov,
-    spliceBits_spliceBits_add _ _ _ _ _ hw, hones]
-
 /-- `n[w]`'s byte offset `8 * w`, which does not wrap. -/
 theorem limb_offset {v : Pointer} (hv : v.offset = 0) (hw : w < 5) :
     (BitVec.ofNat 64 (8 * w)).toNat = 8 * w ∧ ¬v.offset.uaddOverflow (BitVec.ofNat 64 (8 * w)) := by
@@ -130,7 +101,7 @@ theorem storeAt_limb {m : MemoryState} {v : Pointer} {n : BitVec 320} (hv : v.of
     (m.storeAt v n).storeAt (v.add (BitVec.ofNat 64 (8 * w))) y =
       m.storeAt v (Memory.spliceBits n (64 * w) y) := by
   obtain ⟨h8, hov⟩ := limb_offset hv hw
-  rw [storeAt_storeAt_add hov (by omega), h8, show 8 * w * 8 = 64 * w by omega]
+  rw [MemoryState.storeAt_storeAt_add hov (by omega), h8, show 8 * w * 8 = 64 * w by omega]
 
 /-- Splicing lane `j` into 256 packed `short`s sets it. -/
 theorem spliceBits_packLanes {u : Vector (BitVec 16) 256} (hj : j < 256) (y : BitVec 16) :
@@ -167,7 +138,7 @@ theorem storeAt_shorts {m : MemoryState} {slides v : Pointer} {t : Vector Int 25
     show 2 * j ≤ 512
     omega
   rw [MemoryState.storeAt_comm (.inl (by simpa [Range.of] using Ne.symm hne)),
-    storeAt_storeAt_add hov (by omega), h2j, show 2 * j * 8 = 16 * j by omega, hy,
+    MemoryState.storeAt_storeAt_add hov (by omega), h2j, show 2 * j * 8 = 16 * j by omega, hy,
     spliceBits_packLanes hj]
   simp only [shorts, Vector.map_set]
 

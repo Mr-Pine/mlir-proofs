@@ -34,7 +34,7 @@ local macro "copied " p:ident : tactic => do
   let room := Lean.mkIdent (.mkSimple s!"hroom_{n}")
   let bounds := Lean.mkIdent (.mkSimple s!"h{n}_bounds")
   `(tactic|
-      ( have $limbs:ident := Agave.limbsFit_of_fits $fits (by simp [$off:ident])
+      ( have $limbs:ident := MemoryState.LimbsFit.of_fits' $fits (by simp [$off:ident])
         have $readL:ident :=
           Agave.readLimbs_of_readAt_limbsBits (Fits.inBounds $fits) (by simp [$off:ident]) $read
         clear $fits $room $bounds $read))
@@ -46,8 +46,8 @@ local macro "copy " p:ident readL:ident : tactic => do
   let n := p.getId.toString
   let limbs := Lean.mkIdent (.mkSimple s!"h{n}_limbs")
   `(tactic|
-      ( have hsrc_fits := Agave.fits_of_limbsFit $limbs
-        have hsrc_bits := (Agave.readAt_eq_limbsBits $limbs).trans (congrArg Agave.limbsBits $readL)
+      ( have hsrc_fits := MemoryState.LimbsFit.fits $limbs
+        have hsrc_bits := (MemoryState.readAt_eq_limbsBits $limbs).trans (congrArg limbsBits $readL)
         step_memcpy consuming hsrc_fits hsrc_bits))
 
 set_option hygiene false in
@@ -225,7 +225,7 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   -- (was_nonzero_square, r) at `out`
   step_store
   step_pure
-  have hdst := Agave.room_of_limbsRoom hout8
+  have hdst := MemoryState.LimbsRoom.room320 hout8
   copy pr hread_pr_readLimbs
   clear hdst
   iterate 4 step_pure
@@ -243,7 +243,7 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   subst_vars
   erase_frame
   simp only [GlobalState.alloca_alloc, Nat.add_assoc, Nat.reduceAdd,
-    Agave.storeLimbs_eq_storeAt hoff8]
+    MemoryState.storeLimbs_eq_storeAt hoff8]
 
 end Proof
 

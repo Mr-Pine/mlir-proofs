@@ -7,6 +7,7 @@ public import Firedancer.Ref.fd_sha512_core_ref
 public import Firedancer.Ref.Mlir.fd_sha512_append
 import Std.Data.ExtHashMap.Lemmas
 import Std.Tactic.BVDecide
+import Firedancer.Common.Counter
 
 namespace MLIR
 
@@ -15,24 +16,6 @@ open Memory
 /-! ## Staged for Common -/
 
 @[expose] public section
-
-/-- A store inside a stored range: one store of the bits with the new ones spliced in. -/
-theorem MemoryState.storeAt_storeAt_add {m : MemoryState} {p : Pointer} {x : BitVec v}
-    {y : BitVec w} {off : BitVec 64} (hov : ¬p.offset.uaddOverflow off)
-    (hw : off.toNat * 8 + w ≤ v) :
-    (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (spliceBits x (off.toNat * 8) y) := by
-  have ho : (p.add off).offset.toNat = p.offset.toNat + off.toNat := by
-    simp only [Pointer.add, BitVec.toNat_add_of_not_uaddOverflow hov]
-  simp only [MemoryState.storeAt, Pointer.add_id, MemoryState.modifyBlock_modifyBlock_self,
-    implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits, ho, MemoryBlock.mk.injEq, true_and,
-    and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [getLsbD_spliceBits, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try simp only [decide_eq_decide]) <;> omega
 
 /-- `storeAt` past `storeWords8` to a disjoint range. -/
 theorem MemoryState.storeWords8_storeAt_comm {m : MemoryState} {p q : Pointer} {x : BitVec w}
@@ -513,12 +496,6 @@ section Proof
 namespace fd_sha512_append
 
 /-! ### Sizes -/
-
-theorem toNat_and_127 (n : BitVec 64) : (n &&& 127#64).toNat = n.toNat % 128 := by
-  rw [BitVec.toNat_and, show (127#64).toNat = 2 ^ 7 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
-
-theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 := by
-  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
 theorem toNat_and_neg128 (n : BitVec 64) :
     (n &&& 18446744073709551488#64).toNat = n.toNat / 128 * 128 := by

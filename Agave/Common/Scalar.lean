@@ -209,21 +209,6 @@ public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → B
   subst h0 h1 h2 h3 h4
   rfl
 
-/-- A store right after another: one store of both. -/
-public theorem storeAt_storeAt_concat {m : MemoryState} {p : Pointer} {off : BitVec 64}
-    {x : BitVec v} {y : BitVec w} (hov : ¬p.offset.uaddOverflow off) (hoff : off.toNat * 8 = v) :
-    (m.storeAt p x).storeAt (p.add off) y = m.storeAt p (y ++ x) := by
-  simp only [MemoryState.storeAt, Pointer.add_id,
-    MemoryState.modifyBlock_modifyBlock_self, implies_true]
-  congr 1
-  funext blk
-  simp only [Function.comp_apply, Pointer.offsetInBits_add hov, hoff, MemoryBlock.mk.injEq,
-    true_and, and_true]
-  refine ⟨heq_of_eq ?_, heq_of_eq ?_⟩ <;> apply BitVec.eq_of_getLsbD_eq <;> intro i hi <;>
-    simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append, BitVec.getLsbD_allOnes]
-  · grind
-  · split <;> split <;> (try split) <;> (try simp only [decide_eq_decide]) <;> omega
-
 /-! ## Meaning -/
 
 namespace Scalar52

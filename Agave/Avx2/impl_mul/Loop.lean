@@ -887,10 +887,10 @@ theorem stores_eq {m : MemoryState} {p : Pointer} (ho : p.offset.toNat + 160 ≤
     rw [Nat.mod_eq_of_lt (by omega)]
     simp
     omega
-  rw [storeAt_packLanes (p := p) (by simpa using hov 0#64 (by decide)),
-    storeAt_packLanes (p := p.add 32#64) (hov 32#64 (by decide)),
-    storeAt_packLanes (p := p.add 72#64) (hov 72#64 (by decide)),
-    storeAt_packLanes (p := p.add 112#64) (hov 112#64 (by decide))]
+  rw [MemoryState.storeAt_packLanes (p := p) (by simpa using hov 0#64 (by decide)),
+    MemoryState.storeAt_packLanes (p := p.add 32#64) (hov 32#64 (by decide)),
+    MemoryState.storeAt_packLanes (p := p.add 72#64) (hov 72#64 (by decide)),
+    MemoryState.storeAt_packLanes (p := p.add 112#64) (hov 112#64 (by decide))]
   simp only [MemoryState.storeEdwards, MemoryState.storeFe4, MemoryState.storeLimbs,
     Pointer.add_add, BitVec.reduceAdd]
   rfl

@@ -44,12 +44,6 @@ theorem MemoryState.storeWords_succ {m : MemoryState} :
       (m.storeWords p f n).storeAt (p.add (BitVec.ofNat 64 (8 * n))) (f n) :=
   rfl
 
-/-- A store of a cast is the store. -/
-theorem MemoryState.storeAt_cast {m : MemoryState} {x : BitVec v} (h : v = w) :
-    m.storeAt p (x.cast h) = m.storeAt p x := by
-  subst h
-  rfl
-
 /-- The words as one store. -/
 theorem MemoryState.storeWords_eq_storeAt {m : MemoryState} (hp : p.offset.toNat + 8 * n < 2 ^ 64) :
     m.storeWords p f n = m.storeAt p (wordsLE f n) := by

@@ -75,8 +75,8 @@ theorem loop (t0 t1 t2 : Pointer) (g : Vals [] × GlobalState → PoisonOr β) (
     intro i S E hwf ht htw hi hK
     block_init
     step_call using fe_sq_tt.call_eq
-    step_pure [saddOverflow_ofNat_one (i := i) (by omega),
-      uaddOverflow_ofNat_one (i := i) (by omega)]
+    step_pure [Firedancer.saddOverflow_one32 (i := i) (by omega),
+      Firedancer.uaddOverflow_one32 (i := i) (by omega)]
     step_pure
     finish_block
     · step_loop using hK
@@ -86,8 +86,8 @@ theorem loop (t0 t1 t2 : Pointer) (g : Vals [] × GlobalState → PoisonOr β) (
     intro i S E hwf ht htw hi hK
     block_init
     step_call using fe_sq_tt.call_eq
-    step_pure [saddOverflow_ofNat_one (i := i) (by omega),
-      uaddOverflow_ofNat_one (i := i) (by omega)]
+    step_pure [Firedancer.saddOverflow_one32 (i := i) (by omega),
+      Firedancer.uaddOverflow_one32 (i := i) (by omega)]
     step_pure
     finish_block
     · simp [BitVec.toNat_eq] at hbr

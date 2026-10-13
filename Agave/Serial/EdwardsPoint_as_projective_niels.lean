@@ -65,7 +65,7 @@ public theorem EdwardsPoint_as_projective_niels.call_eq (out p : Pointer) (s : G
   have hX : S.mem.readLimbs p = S₀.mem.readLimbs p := by rw [hS]
   have hY : S.mem.readLimbs (p.add 40#64) = S₀.mem.readLimbs (p.add 40#64) := by rw [hS]
   have hZ : S.mem.readAt (p.add 80#64) 320 = limbsBits (S₀.mem.readLimbs (p.add 80#64)) := by
-    rw [hS]; exact readAt_eq_limbsBits (hS ▸ hp).limbsFit_T
+    rw [hS]; exact MemoryState.readAt_eq_limbsBits (hS ▸ hp).limbsFit_T
   have hT : S.mem.readLimbs (p.add 120#64) = S₀.mem.readLimbs (p.add 120#64) := by rw [hS]
   step_pure
   step_addressof anon_042b818bc72209407b52bd0e4d6c8368_50.value_eq with d2
@@ -82,8 +82,8 @@ public theorem EdwardsPoint_as_projective_niels.call_eq (out p : Pointer) (s : G
   -- Z: self.Z
   step_pure
   step_pure
-  have hroom_Z := room_of_limbsRoom hout.limbsRoom_T
-  have hfits_Z := fits_of_limbsFit hp.limbsFit_T
+  have hroom_Z := MemoryState.LimbsRoom.room320 hout.limbsRoom_T
+  have hfits_Z := MemoryState.LimbsFit.fits hp.limbsFit_T
   step_memcpy
   -- T2d: &self.T * &constants::EDWARDS_D2
   step_pure
@@ -92,7 +92,7 @@ public theorem EdwardsPoint_as_projective_niels.call_eq (out p : Pointer) (s : G
   finish_block
   have hoZ := hout.limbsRoom_T.1
   subst hS
-  rw [← storeLimbs_eq_storeAt hoZ]
+  rw [← MemoryState.storeLimbs_eq_storeAt hoZ]
   rfl
 
 end Proof
