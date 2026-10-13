@@ -11,6 +11,8 @@ public import Agave.Math.Compress
 public import Agave.Math.CurveModels
 public import Agave.Math.Decompress
 public import Agave.Math.FieldElement2625x4
+public import Agave.Math.ExtendedPoint
+public import Agave.Math.CachedTable
 public import Agave.Math.FieldElement51
 public import Agave.Math.Ladder
 public import Agave.Math.NafLookupTable5
