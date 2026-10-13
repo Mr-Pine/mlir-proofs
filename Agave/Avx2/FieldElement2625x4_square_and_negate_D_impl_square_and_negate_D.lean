@@ -103,8 +103,8 @@ set_option maxHeartbeats 4000000 in
 /-- `x.square_and_negate_D()` stores `spec x` at `out`. The loads all come before the stores, so
 `out` may alias `x`; the `nuw`/`nsw` flags never fire. -/
 public theorem FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.call_eq
-    (out x : Pointer) (s : GlobalState) (hwf : s.WF) (hout : s.mem.Fe4Room out)
-    (hx : s.mem.Fe4Fit x) :
+    (out x : Pointer) (s : GlobalState) (hwf : s.WF) (hout : s.mem.Fe4xRoom out)
+    (hx : s.mem.Fe4xFit x) :
     FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.call
         (FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.args (.value out)
           (.value x))
@@ -113,9 +113,9 @@ public theorem FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.c
         (.nil,
           { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem :=
-              s.mem.storeFe4 out
+              s.mem.storeFe4x out
                 (FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.spec
-                  (s.mem.readFe4 x)) }) := by
+                  (s.mem.readFe4x x)) }) := by
   func_init
   obtain ⟨hoff, ho0, ho1, ho2, ho3, ho4⟩ := hout
   obtain ⟨hxoff, hxf0, hxf1, hxf2, hxf3, hxf4⟩ := hx
@@ -307,11 +307,11 @@ public theorem FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.c
     MemoryState.readAt_alloca_of_fits hwf₀ hx₀_2.inBounds,
     MemoryState.readAt_alloca_of_fits hwf₀ hx₀_3.inBounds,
     MemoryState.readAt_alloca_of_fits hwf₀ hx₀_4.inBounds] at ha1 ha2 ha3 ha4
-  change a0 = S₀.mem.readFe4 x 0 at ha0
-  change a1 = S₀.mem.readFe4 x 1 at ha1
-  change a2 = S₀.mem.readFe4 x 2 at ha2
-  change a3 = S₀.mem.readFe4 x 3 at ha3
-  change a4 = S₀.mem.readFe4 x 4 at ha4
+  change a0 = S₀.mem.readFe4x x 0 at ha0
+  change a1 = S₀.mem.readFe4x x 1 at ha1
+  change a2 = S₀.mem.readFe4x x 2 at ha2
+  change a3 = S₀.mem.readFe4x x 3 at ha3
+  change a4 = S₀.mem.readFe4x x 4 at ha4
   change x0 = unpackLo a0 at hx0
   change x1 = unpackHi a0 at hx1
   change x2 = unpackLo a1 at hx2

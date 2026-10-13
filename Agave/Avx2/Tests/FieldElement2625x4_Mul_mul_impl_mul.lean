@@ -42,8 +42,8 @@ private def agrees (s : GlobalState) : Bool :=
       (FieldElement2625x4_Mul_mul_impl_mul.args (.value out) (.value x) (.value y)) s with
   | .value (some .nil, s') =>
     (List.finRange 5).all fun k =>
-      s'.mem.readFe4 out k ==
-        FieldElement2625x4_Mul_mul_impl_mul.spec (s.mem.readFe4 x) (s.mem.readFe4 y) k
+      s'.mem.readFe4x out k ==
+        FieldElement2625x4_Mul_mul_impl_mul.spec (s.mem.readFe4x x) (s.mem.readFe4x y) k
   | _ => false
 
 #guard agrees (state ones ones)

@@ -24,7 +24,7 @@ def MemoryState.readU32x8 (m : MemoryState) (p : Pointer) : Vector (BitVec 32) 8
   Vector.ofFn fun i => Ty.extractVecElem 8 32 i (m.readAt p 256)
 
 /-- The five registers at `p`. -/
-def MemoryState.readFe4 (m : MemoryState) (p : Pointer) : Fe2625x4
+def MemoryState.readFe4x (m : MemoryState) (p : Pointer) : Fe2625x4
   | 0 => m.readU32x8 p
   | 1 => m.readU32x8 (p.add 32#64)
   | 2 => m.readU32x8 (p.add 64#64)
@@ -32,21 +32,21 @@ def MemoryState.readFe4 (m : MemoryState) (p : Pointer) : Fe2625x4
   | 4 => m.readU32x8 (p.add 128#64)
 
 /-- Store five registers at `p`, lowest first, as the lifted code does. -/
-def MemoryState.storeFe4 (m : MemoryState) (p : Pointer) (v : Fe2625x4) : MemoryState :=
+def MemoryState.storeFe4x (m : MemoryState) (p : Pointer) (v : Fe2625x4) : MemoryState :=
   ((((m.storeAt p (BitVec.packLanes (v 0))).storeAt (p.add 32#64) (BitVec.packLanes (v 1))).storeAt
             (p.add 64#64) (BitVec.packLanes (v 2))).storeAt
         (p.add 96#64) (BitVec.packLanes (v 3))).storeAt
     (p.add 128#64) (BitVec.packLanes (v 4))
 
 /-- Each register at `p` fits, and the register offsets do not wrap. -/
-abbrev MemoryState.Fe4Fit (m : MemoryState) (p : Pointer) : Prop :=
+abbrev MemoryState.Fe4xFit (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 128 < 2 ^ 64 ∧
     Fits m p 256 ∧
     Fits m (p.add 32#64) 256 ∧
     Fits m (p.add 64#64) 256 ∧ Fits m (p.add 96#64) 256 ∧ Fits m (p.add 128#64) 256
 
 /-- Room for the five registers at `p` (an output), and the register offsets do not wrap. -/
-abbrev MemoryState.Fe4Room (m : MemoryState) (p : Pointer) : Prop :=
+abbrev MemoryState.Fe4xRoom (m : MemoryState) (p : Pointer) : Prop :=
   p.offset.toNat + 128 < 2 ^ 64 ∧
     Room m p 256 ∧
     Room m (p.add 32#64) 256 ∧
@@ -108,7 +108,7 @@ def unpackLo2 (v : Vector (BitVec 32) 8) : Vector (BitVec 64) 4 :=
 def unpackHi2 (v : Vector (BitVec 32) 8) : Vector (BitVec 64) 4 :=
   #v[0#32 ++ v[2] <<< 1, 0#32 ++ v[3] <<< 1, 0#32 ++ v[6] <<< 1, 0#32 ++ v[7] <<< 1]
 
-attribute [mlir_mem] MemoryState.Fe4Fit MemoryState.Fe4Room MemoryState.Z10Fit
+attribute [mlir_mem] MemoryState.Fe4xFit MemoryState.Fe4xRoom MemoryState.Z10Fit
 
 /-- Ten stores, lowest first, as `storeZ10` of their values. -/
 theorem MemoryState.storeZ10_eq {m : MemoryState} {z : Pointer}
@@ -127,23 +127,23 @@ theorem MemoryState.storeZ10_eq {m : MemoryState} {z : Pointer}
 
 /-! ### Through stores -/
 
-/-- `storeFe4` keeps the set of blocks, so `WF` does not depend on it. -/
+/-- `storeFe4x` keeps the set of blocks, so `WF` does not depend on it. -/
 @[simp, mlir_mem]
-theorem GlobalState.WF_storeFe4 {s : GlobalState} :
-    ({ s with mem := m.storeFe4 p v } : GlobalState).WF ↔
+theorem GlobalState.WF_storeFe4x {s : GlobalState} :
+    ({ s with mem := m.storeFe4x p v } : GlobalState).WF ↔
       ({ s with mem := m } : GlobalState).WF := by
-  simp [MemoryState.storeFe4]
+  simp [MemoryState.storeFe4x]
 
 @[mlir_transport]
-theorem GlobalState.WF.storeFe4 {s : GlobalState} (h : s.WF) :
-    ({ s with mem := s.mem.storeFe4 p v } : GlobalState).WF :=
-  GlobalState.WF_storeFe4.mpr h
+theorem GlobalState.WF.storeFe4x {s : GlobalState} (h : s.WF) :
+    ({ s with mem := s.mem.storeFe4x p v } : GlobalState).WF :=
+  GlobalState.WF_storeFe4x.mpr h
 
-/-- `WF.storeFe4` for a state written as a constructor, which unifies first-order. -/
+/-- `WF.storeFe4x` for a state written as a constructor, which unifies first-order. -/
 @[mlir_transport]
-theorem GlobalState.WF.storeFe4_mk {a : AllocState} {m : MemoryState}
-    (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.storeFe4 p v⟩ : GlobalState).WF :=
-  GlobalState.WF.storeFe4 (s := ⟨a, m⟩) h
+theorem GlobalState.WF.storeFe4x_mk {a : AllocState} {m : MemoryState}
+    (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, m.storeFe4x p v⟩ : GlobalState).WF :=
+  GlobalState.WF.storeFe4x (s := ⟨a, m⟩) h
 
 /-- `storeZ10` keeps the set of blocks, so `WF` does not depend on it. -/
 @[simp, mlir_mem]
@@ -152,22 +152,23 @@ theorem GlobalState.WF_storeZ10 {s : GlobalState} :
       ({ s with mem := m } : GlobalState).WF := by
   simp [MemoryState.storeZ10]
 
-/-- `storeFe4` keeps every block, its length and lifetime. -/
+/-- `storeFe4x` keeps every block, its length and lifetime. -/
 @[simp, mlir_state]
-theorem Room.storeFe4_iff {m : MemoryState} : Room (m.storeFe4 q v) p w ↔ Room m p w := by
-  simp [MemoryState.storeFe4]
+theorem Room.storeFe4x_iff {m : MemoryState} : Room (m.storeFe4x q v) p w ↔ Room m p w := by
+  simp [MemoryState.storeFe4x]
 
 @[mlir_transport]
-theorem Room.storeFe4 {m : MemoryState} (h : Room m p w) : Room (m.storeFe4 q v) p w :=
-  Room.storeFe4_iff.mpr h
+theorem Room.storeFe4x {m : MemoryState} (h : Room m p w) : Room (m.storeFe4x q v) p w :=
+  Room.storeFe4x_iff.mpr h
 
-/-- `storeFe4` keeps known bits known. -/
+/-- `storeFe4x` keeps known bits known. -/
 @[mlir_transport]
-theorem Fits.storeFe4 {m : MemoryState} (h : Fits m p w) : Fits (m.storeFe4 q v) p w :=
+theorem Fits.storeFe4x {m : MemoryState} (h : Fits m p w) : Fits (m.storeFe4x q v) p w :=
   h.storeAt.storeAt.storeAt.storeAt.storeAt
 
 @[mlir_transport]
-theorem InBounds.storeFe4 {m : MemoryState} (h : InBounds m p w) : InBounds (m.storeFe4 q v) p w :=
+theorem InBounds.storeFe4x {m : MemoryState} (h : InBounds m p w) :
+    InBounds (m.storeFe4x q v) p w :=
   h.storeAt.storeAt.storeAt.storeAt.storeAt
 
 /-- Lanes stored and read back. -/
@@ -179,21 +180,21 @@ theorem MemoryState.readU32x8_packLanes {m : MemoryState}
 
 /-- Registers stored where there is room read back. -/
 @[mlir_read]
-theorem MemoryState.readFe4_storeFe4_self {m : MemoryState} (h : m.Fe4Room p) :
-    (m.storeFe4 p v).readFe4 p = v := by
+theorem MemoryState.readFe4x_storeFe4x_self {m : MemoryState} (h : m.Fe4xRoom p) :
+    (m.storeFe4x p v).readFe4x p = v := by
   obtain ⟨ho, h0, h1, h2, h3, h4⟩ := h
   funext i
   fin_cases i <;> refine MemoryState.readU32x8_packLanes ?_ <;>
-    simp only [MemoryState.storeFe4, Tactic.readThroughStore] <;>
+    simp only [MemoryState.storeFe4x, Tactic.readThroughStore] <;>
     rfl
 
-/-- Registers in another block are unaffected by `storeFe4`. -/
+/-- Registers in another block are unaffected by `storeFe4x`. -/
 @[mlir_read]
-theorem MemoryState.readFe4_storeFe4_of_id_ne {m : MemoryState} (h : q.id ≠ p.id) :
-    (m.storeFe4 q v).readFe4 p = m.readFe4 p := by
+theorem MemoryState.readFe4x_storeFe4x_of_id_ne {m : MemoryState} (h : q.id ≠ p.id) :
+    (m.storeFe4x q v).readFe4x p = m.readFe4x p := by
   funext i
   fin_cases i <;>
-    simp only [MemoryState.readFe4, MemoryState.readU32x8, MemoryState.storeFe4,
+    simp only [MemoryState.readFe4x, MemoryState.readU32x8, MemoryState.storeFe4x,
       Tactic.readThroughStore]
 
 /-- `u64x4`s stored where there is room read back. -/
@@ -227,21 +228,21 @@ theorem MemoryState.readZ10_storeZ10_self {m : MemoryState} (ho : z.offset.toNat
 
 /-- Erasing a frame commutes with storing registers. -/
 @[mlir_frame, mlir_erase]
-theorem MemoryState.eraseFrom_storeFe4 {m : MemoryState} :
-    (m.storeFe4 p v).eraseFrom n = (m.eraseFrom n).storeFe4 p v := by
-  simp [MemoryState.storeFe4, MemoryState.eraseFrom_storeAt]
+theorem MemoryState.eraseFrom_storeFe4x {m : MemoryState} :
+    (m.storeFe4x p v).eraseFrom n = (m.eraseFrom n).storeFe4x p v := by
+  simp [MemoryState.storeFe4x, MemoryState.eraseFrom_storeAt]
 
 /-- Storing registers into an erased block does nothing. -/
 @[mlir_frame, mlir_erase]
-theorem MemoryState.storeFe4_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id.id) :
-    (m.eraseFrom n).storeFe4 p v = m.eraseFrom n := by
-  simp [MemoryState.storeFe4, MemoryState.storeAt_eraseFrom_of_le, Pointer.add, h]
+theorem MemoryState.storeFe4x_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.eraseFrom n).storeFe4x p v = m.eraseFrom n := by
+  simp [MemoryState.storeFe4x, MemoryState.storeAt_eraseFrom_of_le, Pointer.add, h]
 
 /-- Registers stored into the frame, dropped before the erase moves past them. -/
 @[mlir_erase high]
-theorem MemoryState.eraseFrom_storeFe4_of_le {m : MemoryState} (h : n ≤ p.id.id) :
-    (m.storeFe4 p v).eraseFrom n = m.eraseFrom n := by
-  rw [eraseFrom_storeFe4, storeFe4_eraseFrom_of_le h]
+theorem MemoryState.eraseFrom_storeFe4x_of_le {m : MemoryState} (h : n ≤ p.id.id) :
+    (m.storeFe4x p v).eraseFrom n = m.eraseFrom n := by
+  rw [eraseFrom_storeFe4x, storeFe4x_eraseFrom_of_le h]
 
 /-- Erasing a frame commutes with storing `u64x4`s. -/
 @[mlir_frame, mlir_erase]
@@ -264,12 +265,12 @@ theorem MemoryState.eraseFrom_storeZ10_of_le {m : MemoryState} (h : n ≤ p.id.i
 
 /-- Reading registers elsewhere is unaffected by `alloca`. -/
 @[mlir_frame, mlir_read]
-theorem MemoryState.readFe4_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
-    (s.alloca n d).mem.readFe4 p = s.mem.readFe4 p := by
+theorem MemoryState.readFe4x_alloca {s : GlobalState} (hne : p.id ≠ s.allocaPtr.id) :
+    (s.alloca n d).mem.readFe4x p = s.mem.readFe4x p := by
   have hne' (k : BitVec 64) : (p.add k).id ≠ s.allocaPtr.id := by simpa [Pointer.add_id] using hne
   funext i
   fin_cases i <;>
-    simp only [MemoryState.readFe4, MemoryState.readU32x8, MemoryState.readAt,
+    simp only [MemoryState.readFe4x, MemoryState.readU32x8, MemoryState.readAt,
       GlobalState.getElem?_alloca hne, GlobalState.getElem?_alloca (hne' _)]
 
 end

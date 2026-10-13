@@ -160,14 +160,14 @@ set_option maxHeartbeats 1000000 in
 /-- `FieldElement2625x4::reduce64(z)` stores `spec` of the ten `u64x4`s at `z` at `out`. The loads
 all come before the stores, so `out` may alias `z`; the `nuw`/`nsw` flags never fire. -/
 public theorem FieldElement2625x4_reduce64_impl_reduce64.call_eq (out z : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : s.mem.Fe4Room out) (hz : s.mem.Z10Fit z) :
+    (hwf : s.WF) (hout : s.mem.Fe4xRoom out) (hz : s.mem.Z10Fit z) :
     FieldElement2625x4_reduce64_impl_reduce64.call
         (FieldElement2625x4_reduce64_impl_reduce64.args (.value out) (.value z)) s =
       .value
         (.nil,
           { s with
             mem :=
-              s.mem.storeFe4 out
+              s.mem.storeFe4x out
                 (FieldElement2625x4_reduce64_impl_reduce64.spec (s.mem.readZ10 z)) }) := by
   func_init
   obtain ⟨hoff, ho0, ho1, ho2, ho3, ho4⟩ := hout

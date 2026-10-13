@@ -10,9 +10,9 @@ import Mathlib.Tactic.Ring
 
 /-! The AVX2 `FieldElement2625x4` arithmetic in `ZMod p`, element by element (`Fe2625x4.val`):
 `reduce64` keeps the value of its ten `u64x4` limbs (below `2^64 - 2^40`) and leaves limbs below
-`2^26` and `2^25 + 2^19`; `mul` multiplies limbs below `2^(26 + b)` (even) and `2^(25 + b)`
-(odd), `b = 2` on the left and `1` on the right; `square_and_negate_D` squares (negating `D`) for
-`b = 1`. -/
+`2^26` and `2^25 + 2^19`; `mul` multiplies limbs below `5 · 2^26` (even) and `5 · 2^25 + 2^21`
+(odd) on the left, `3 · 2^26` and `3 · 2^25 + 2^21` on the right; `square_and_negate_D` squares
+(negating `D`) limbs below `2^27 + 2^13` and `2^26 + 2^20`. -/
 
 namespace MLIR.Agave
 
@@ -266,8 +266,9 @@ public theorem FieldElement2625x4_reduce64_impl_reduce64.spec_lane
   exacts [⟨b0, b0'⟩, ⟨b1, b1'⟩, ⟨b2, b2'⟩, ⟨b3, b3'⟩, ⟨b4, b4'⟩]
 
 /-- `spec_lane` over limbs known through `ValLe`. -/
-theorem FieldElement2625x4_reduce64_impl_reduce64.spec_valLe {z : Fin 10 → Vector (BitVec 64) 4}
-    {e : Fin 4} {v : ZMod p} {n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 M0 M1 M2 M3 M4 M5 M6 M7 M8 M9 : ℕ}
+public theorem FieldElement2625x4_reduce64_impl_reduce64.spec_valLe
+    {z : Fin 10 → Vector (BitVec 64) 4} {e : Fin 4} {v : ZMod p}
+    {n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 M0 M1 M2 M3 M4 M5 M6 M7 M8 M9 : ℕ}
     (h0 : ValLe (z 0)[(e : ℕ)] n0 M0) (h1 : ValLe (z 1)[(e : ℕ)] n1 M1)
     (h2 : ValLe (z 2)[(e : ℕ)] n2 M2) (h3 : ValLe (z 3)[(e : ℕ)] n3 M3)
     (h4 : ValLe (z 4)[(e : ℕ)] n4 M4) (h5 : ValLe (z 5)[(e : ℕ)] n5 M5)
@@ -306,8 +307,9 @@ theorem FieldElement2625x4_reduce64_impl_reduce64.spec_valLe {z : Fin 10 → Vec
   rw [hv', h0.1, h1.1, h2.1, h3.1, h4.1, h5.1, h6.1, h7.1, h8.1, h9.1, hv]
 
 /-- `spec_lane` over limbs bounded by `M_k` and of value `v_k` in `ZMod p`. -/
-theorem FieldElement2625x4_reduce64_impl_reduce64.spec_valZ {z : Fin 10 → Vector (BitVec 64) 4}
-    {e : Fin 4} {v v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 : ZMod p} {M0 M1 M2 M3 M4 M5 M6 M7 M8 M9 : ℕ}
+public theorem FieldElement2625x4_reduce64_impl_reduce64.spec_valZ
+    {z : Fin 10 → Vector (BitVec 64) 4} {e : Fin 4} {v v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 : ZMod p}
+    {M0 M1 M2 M3 M4 M5 M6 M7 M8 M9 : ℕ}
     (h0 : (z 0)[(e : ℕ)].toNat ≤ M0 ∧ ((z 0)[(e : ℕ)].toNat : ZMod p) = v0)
     (h1 : (z 1)[(e : ℕ)].toNat ≤ M1 ∧ ((z 1)[(e : ℕ)].toNat : ZMod p) = v1)
     (h2 : (z 2)[(e : ℕ)].toNat ≤ M2 ∧ ((z 2)[(e : ℕ)].toNat : ZMod p) = v2)
@@ -420,10 +422,11 @@ theorem ValLe.toZ {x : BitVec 64} (hx : ValLe x n M) : x.toNat ≤ M ∧ (x.toNa
 -- the lane rules unify by heads, without unfolding a bound into its bits
 attribute [local irreducible] ValLe evenLane oddLane zx zx2
 
-/-- `&x * &y` multiplies each element: `x`'s limbs below `2^28` (even) and `2^27` (odd), `y`'s
-below `2^27` and `2^26`, into limbs below `2^26` and `2^25 + 2^19`. -/
+/-- `&x * &y` multiplies each element: `x`'s limbs below `5 · 2^26` (even) and `5 · 2^25 + 2^21`
+(odd), `y`'s below `3 · 2^26` and `3 · 2^25 + 2^21`, into limbs below `2^26` and `2^25 + 2^19`. -/
 public theorem FieldElement2625x4_Mul_mul_impl_mul.spec_val {x y : Fe2625x4}
-    (hx : Bounded x (2 ^ 28) (2 ^ 27)) (hy : Bounded y (2 ^ 27) (2 ^ 26)) :
+    (hx : Bounded x (5 * 2 ^ 26) (5 * 2 ^ 25 + 2 ^ 21))
+    (hy : Bounded y (3 * 2 ^ 26) (3 * 2 ^ 25 + 2 ^ 21)) :
     (∀ e, val (FieldElement2625x4_Mul_mul_impl_mul.spec x y) e = val x e * val y e) ∧
       Bounded (FieldElement2625x4_Mul_mul_impl_mul.spec x y) (2 ^ 26) (2 ^ 25 + 2 ^ 19) := by
   have key (e : Fin 4) :
@@ -431,24 +434,25 @@ public theorem FieldElement2625x4_Mul_mul_impl_mul.spec_val {x y : Fe2625x4}
       ∀ i,
         (FieldElement2625x4_Mul_mul_impl_mul.spec x y i)[evenLane e].toNat < 2 ^ 26 ∧
           (FieldElement2625x4_Mul_mul_impl_mul.spec x y i)[oddLane e].toNat < 2 ^ 25 + 2 ^ 19 := by
-    have hX i : ValLe (zx (x i) (evenLane e)) (x i)[evenLane e].toNat (2 ^ 28 - 1) :=
+    have hX i : ValLe (zx (x i) (evenLane e)) (x i)[evenLane e].toNat (5 * 2 ^ 26 - 1) :=
       ValLe.zx
         (by
           have := (hx i e).1; omega)
-    have hX' i : ValLe (zx (x i) (oddLane e)) (x i)[oddLane e].toNat (2 ^ 27 - 1) :=
+    have hX' i : ValLe (zx (x i) (oddLane e)) (x i)[oddLane e].toNat (5 * 2 ^ 25 + 2 ^ 21 - 1) :=
       ValLe.zx
         (by
           have := (hx i e).2; omega)
-    have hX2 i : ValLe (zx2 (x i) (oddLane e)) ((x i)[oddLane e].toNat * 2) ((2 ^ 27 - 1) * 2) :=
+    have hX2 i :
+      ValLe (zx2 (x i) (oddLane e)) ((x i)[oddLane e].toNat * 2) ((5 * 2 ^ 25 + 2 ^ 21 - 1) * 2) :=
       ValLe.zx2
         (by
           have := (hx i e).2; omega)
         (by decide)
-    have hY i : ValLe (zx (y i) (evenLane e)) (y i)[evenLane e].toNat (2 ^ 27 - 1) :=
+    have hY i : ValLe (zx (y i) (evenLane e)) (y i)[evenLane e].toNat (3 * 2 ^ 26 - 1) :=
       ValLe.zx
         (by
           have := (hy i e).1; omega)
-    have hY' i : ValLe (zx (y i) (oddLane e)) (y i)[oddLane e].toNat (2 ^ 26 - 1) :=
+    have hY' i : ValLe (zx (y i) (oddLane e)) (y i)[oddLane e].toNat (3 * 2 ^ 25 + 2 ^ 21 - 1) :=
       ValLe.zx
         (by
           have := (hy i e).2; omega)
@@ -561,10 +565,10 @@ theorem p37_val :
   rw [← h]
   norm_num [p]
 
-/-- `x.square_and_negate_D()` squares each element and negates `D`: limbs below `2^27` (even) and
-`2^26` (odd) in, limbs below `2^26` and `2^25 + 2^19` out. -/
+/-- `x.square_and_negate_D()` squares each element and negates `D`: limbs below `2^27 + 2^13`
+(even) and `2^26 + 2^20` (odd) in, limbs below `2^26` and `2^25 + 2^19` out. -/
 public theorem FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.spec_val
-    {x : Fe2625x4} (hx : Bounded x (2 ^ 27) (2 ^ 26)) :
+    {x : Fe2625x4} (hx : Bounded x (2 ^ 27 + 2 ^ 13) (2 ^ 26 + 2 ^ 20)) :
     (∀ e,
         val (FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.spec x) e =
           if e = 3 then -val x e ^ 2 else val x e ^ 2) ∧
@@ -580,20 +584,22 @@ public theorem FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.s
           (FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.spec x
                   i)[oddLane e].toNat <
             2 ^ 25 + 2 ^ 19 := by
-    have hX i : ValLe (zx (x i) (evenLane e)) (x i)[evenLane e].toNat (2 ^ 27 - 1) :=
+    have hX i : ValLe (zx (x i) (evenLane e)) (x i)[evenLane e].toNat (2 ^ 27 + 2 ^ 13 - 1) :=
       ValLe.zx
         (by
           have := (hx i e).1; omega)
-    have hX' i : ValLe (zx (x i) (oddLane e)) (x i)[oddLane e].toNat (2 ^ 26 - 1) :=
+    have hX' i : ValLe (zx (x i) (oddLane e)) (x i)[oddLane e].toNat (2 ^ 26 + 2 ^ 20 - 1) :=
       ValLe.zx
         (by
           have := (hx i e).2; omega)
-    have hX2 i : ValLe (zx2 (x i) (evenLane e)) ((x i)[evenLane e].toNat * 2) ((2 ^ 27 - 1) * 2) :=
+    have hX2 i :
+      ValLe (zx2 (x i) (evenLane e)) ((x i)[evenLane e].toNat * 2) ((2 ^ 27 + 2 ^ 13 - 1) * 2) :=
       ValLe.zx2
         (by
           have := (hx i e).1; omega)
         (by decide)
-    have hX2' i : ValLe (zx2 (x i) (oddLane e)) ((x i)[oddLane e].toNat * 2) ((2 ^ 26 - 1) * 2) :=
+    have hX2' i :
+      ValLe (zx2 (x i) (oddLane e)) ((x i)[oddLane e].toNat * 2) ((2 ^ 26 + 2 ^ 20 - 1) * 2) :=
       ValLe.zx2
         (by
           have := (hx i e).2; omega)

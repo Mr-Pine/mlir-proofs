@@ -107,16 +107,16 @@ set_option maxHeartbeats 4000000 in
 /-- `&x * &y` stores `spec x y` at `out`. The loads all come before the stores, so `out` may alias
 `x` or `y`; the `nuw`/`nsw` flags never fire. -/
 public theorem FieldElement2625x4_Mul_mul_impl_mul.call_eq (out x y : Pointer) (s : GlobalState)
-    (hwf : s.WF) (hout : s.mem.Fe4Room out) (hx : s.mem.Fe4Fit x) (hy : s.mem.Fe4Fit y) :
+    (hwf : s.WF) (hout : s.mem.Fe4xRoom out) (hx : s.mem.Fe4xFit x) (hy : s.mem.Fe4xFit y) :
     FieldElement2625x4_Mul_mul_impl_mul.call
         (FieldElement2625x4_Mul_mul_impl_mul.args (.value out) (.value x) (.value y)) s =
       .value
         (.nil,
           { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem :=
-              s.mem.storeFe4 out
-                (FieldElement2625x4_Mul_mul_impl_mul.spec (s.mem.readFe4 x)
-                  (s.mem.readFe4 y)) }) := by
+              s.mem.storeFe4x out
+                (FieldElement2625x4_Mul_mul_impl_mul.spec (s.mem.readFe4x x)
+                  (s.mem.readFe4x y)) }) := by
   func_init
   obtain ⟨hoff, ho0, ho1, ho2, ho3, ho4⟩ := hout
   obtain ⟨hxoff, hxf0, hxf1, hxf2, hxf3, hxf4⟩ := hx
@@ -358,16 +358,16 @@ public theorem FieldElement2625x4_Mul_mul_impl_mul.call_eq (out x y : Pointer) (
     MemoryState.readAt_alloca_of_fits hwf₀ hy₀_2.inBounds,
     MemoryState.readAt_alloca_of_fits hwf₀ hy₀_3.inBounds,
     MemoryState.readAt_alloca_of_fits hwf₀ hy₀_4.inBounds] at ha1 ha2 ha3 ha4 hb1 hb2 hb3 hb4
-  change a0 = S₀.mem.readFe4 x 0 at ha0
-  change a1 = S₀.mem.readFe4 x 1 at ha1
-  change a2 = S₀.mem.readFe4 x 2 at ha2
-  change a3 = S₀.mem.readFe4 x 3 at ha3
-  change a4 = S₀.mem.readFe4 x 4 at ha4
-  change b0 = S₀.mem.readFe4 y 0 at hb0
-  change b1 = S₀.mem.readFe4 y 1 at hb1
-  change b2 = S₀.mem.readFe4 y 2 at hb2
-  change b3 = S₀.mem.readFe4 y 3 at hb3
-  change b4 = S₀.mem.readFe4 y 4 at hb4
+  change a0 = S₀.mem.readFe4x x 0 at ha0
+  change a1 = S₀.mem.readFe4x x 1 at ha1
+  change a2 = S₀.mem.readFe4x x 2 at ha2
+  change a3 = S₀.mem.readFe4x x 3 at ha3
+  change a4 = S₀.mem.readFe4x x 4 at ha4
+  change b0 = S₀.mem.readFe4x y 0 at hb0
+  change b1 = S₀.mem.readFe4x y 1 at hb1
+  change b2 = S₀.mem.readFe4x y 2 at hb2
+  change b3 = S₀.mem.readFe4x y 3 at hb3
+  change b4 = S₀.mem.readFe4x y 4 at hb4
   change x0 = unpackLo a0 at hx0
   change x1 = unpackHi a0 at hx1
   change x2 = unpackLo a1 at hx2
