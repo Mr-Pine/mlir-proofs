@@ -51,11 +51,6 @@ local macro "copy " p:ident readL:ident : tactic => do
         step_memcpy consuming hsrc_fits hsrc_bits))
 
 set_option hygiene false in
-/-- `rebase`: the current state becomes the base of later states (`hS` reversed), so their terms
-and the steps' proofs stay small. -/
-local macro "rebase" : tactic => `(tactic| replace hS := hS.symm)
-
-set_option hygiene false in
 /-- `fe_call thm x p`: a call storing limbs at `p`, named `x`; their 320-bit read-back dropped. -/
 local macro "fe_call " thm:ident x:ident p:ident : tactic => do
   let n := p.getId.toString
@@ -78,6 +73,8 @@ theorem sqrt_m1_limbs {hw : (Ty.array 40 (.bv 8)).width = 320} :
   funext i
   fin_cases i <;> decide +kernel +revert
 
+-- a long chain of calls: the state cut from the entry state every so often (`rir.stateDepth`)
+set_option rir.stateDepth 64 in
 -- about 120 steps over a frame of 19 blocks and 27 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
 /-- `FieldElement::sqrt_ratio_i(u, v)` stores `Serial.FieldElement51_sqrt_ratio_i.spec u v`'s
@@ -144,7 +141,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   fe_call FieldElement51_square.call_eq v3_sq pv3_sq
   fe_call FieldElement51_Mul_mul.call_eq v7 pv7
   drop pv3_sq
-  rebase
   step_pure
   -- let mut r = &(u * &v3) * &(u * &v7).pow_p58();
   start puv3
@@ -152,7 +148,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   start pt21
   start puv7
   fe_call FieldElement51_Mul_mul.call_eq uv7 puv7
-  rebase
   step_pure
   have hppw_limbs := MemoryState.LimbsRoom.of_room (hroom_ppw.mono (by decide)) hppw_off
   have hppw_limbs' := Agave.limbsRoom_add (k := 40#64) hroom_ppw hppw_off (by decide) (by decide)
@@ -168,7 +163,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   copied pt19
   clear hread_ppw
   clear_facts ppw
-  rebase
   step_pure
   -- let t20 = t19.pow2k(2);
   start pt20
@@ -182,7 +176,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   drop puv7
   drop pt21
   drop puv3
-  rebase
   iterate 3 step_pure
   -- let check = v * &r.square();
   start pcheck
@@ -190,7 +183,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   fe_call FieldElement51_square.call_eq r_sq pr_sq
   fe_call FieldElement51_Mul_mul.call_eq check pcheck
   drop pr_sq
-  rebase
   step_pure
   -- let correct_sign_sqrt = check.ct_eq(u);
   step_call using FieldElement51_ConstantTimeEq_ct_eq.call_eq with correct_sign_sqrt
@@ -199,7 +191,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   fe_call FieldElement51_Neg_neg.call_eq neg_u pneg_u
   step_call using FieldElement51_ConstantTimeEq_ct_eq.call_eq with flipped_sign_sqrt
   drop pneg_u
-  rebase
   step_pure
   -- let flipped_sign_sqrt_i = check.ct_eq(&(&(-u) * i));
   start pneg_u_i
@@ -210,7 +201,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   step_call using FieldElement51_ConstantTimeEq_ct_eq.call_eq with flipped_sign_sqrt_i
   drop pneg_u_i
   drop pcheck
-  rebase
   iterate 2 step_pure
   -- let r_prime = &constants::SQRT_M1 * &r;
   start pr_prime
@@ -221,14 +211,12 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   step_pure
   step_call using black_box_u8.call_eq
   fe_call FieldElement51_ConditionallySelectable_conditional_assign.call_eq r1 pr
-  rebase
   -- let r_is_negative = r.is_negative(); r.conditional_negate(r_is_negative);
   step_call using FieldElement51_is_negative.call_eq with r_is_negative
   start pr_neg
   fe_call FieldElement51_Neg_neg.call_eq r_neg pr_neg
   fe_call FieldElement51_ConditionallySelectable_conditional_assign.call_eq r2 pr
   drop pr_neg
-  rebase
   step_pure
   -- let was_nonzero_square = correct_sign_sqrt | flipped_sign_sqrt;
   step_pure
@@ -242,10 +230,6 @@ public theorem FieldElement51_sqrt_ratio_i.call_eq (out u v : Pointer) (s : Glob
   iterate 4 step_pure
   finish_block
   subst hneg_u
-  -- the calls' results over the named values
-  simp only [← hr_sq, ← hcheck] at hcorrect_sign_sqrt hflipped_sign_sqrt hflipped_sign_sqrt_i
-  simp only [← hneg_u2, ← hneg_u_i] at hflipped_sign_sqrt_i
-  simp only [← hr0, ← hr_prime, ← hr1] at hr_is_negative
   have hspec : Serial.FieldElement51_sqrt_ratio_i.spec U V = (was_nonzero_square, r2) := by
     simp only [Serial.FieldElement51_sqrt_ratio_i.spec, Serial.FieldElement51_pow_p58.spec]
     simp only [← hv_sq, ← hv3, ← hv3_sq, ← hv7, ← huv3, ← huv7, ← ht19, ← ht20, ← ht21, ← hr0,

@@ -173,10 +173,6 @@ public theorem fd_f25519_sqrt_ratio.call_eq (r u v : Pointer) (s : GlobalState) 
   step_call using fd_f25519_eq.call_eq with flipped_sign_sqrt_i consuming hread_u_neg_sqrtm1
   clear_facts u_neg_sqrtm1 check
   clear hread_check
-  -- the returned values unfold the limbs' names: fold them back
-  rw [← hlcheck0, ← hlcheck1] at hcorrect_sign_sqrt
-  rw [← hlcheck0, ← hlcheck1, ← hlu_neg] at hflipped_sign_sqrt
-  rw [← hlcheck0, ← hlcheck1, ← hlu_neg, ← hlu_neg_sqrtm1] at hflipped_sign_sqrt_i
   -- fd_f25519_mul( r_prime, r, fd_f25519_sqrtm1 );
   step_pure
   limbs_room r_prime

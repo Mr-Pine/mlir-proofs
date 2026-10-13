@@ -143,7 +143,7 @@ theorem bb1_run (E : ⟪Γ⟫) (S : GlobalState)
   have hnz := fd_r43x6_is_nonzero.call_eq
   block_init
   step_pure with transparent sum
-  step_call using hnz with transparent nz
+  step_call using hnz with transparent nz hnz_eq
   step_pure with transparent both
   step_pure with transparent isZero
   finish_block

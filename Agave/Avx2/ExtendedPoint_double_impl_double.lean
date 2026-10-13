@@ -197,10 +197,6 @@ public theorem ExtendedPoint_double_impl_double.call_eq (out x : Pointer) (s : G
         rw [hv55_off]; decide, hfits_v55, hfits_v55_32, hfits_v55_64, hfits_v55_96, hfits_v55_128⟩))
   iterate 2 step_pure
   finish_block
-  simp only [MemoryState.readAt_alloca_alloca hwf₀ hx₀_1.inBounds,
-    MemoryState.readAt_alloca_alloca hwf₀ hx₀_2.inBounds,
-    MemoryState.readAt_alloca_alloca hwf₀ hx₀_3.inBounds,
-    MemoryState.readAt_alloca_alloca hwf₀ hx₀_4.inBounds] at ha1 ha2 ha3 ha4
   change a0 = S₀.mem.readFe4x x 0 at ha0
   change a1 = S₀.mem.readFe4x x 1 at ha1
   change a2 = S₀.mem.readFe4x x 2 at ha2
@@ -211,7 +207,6 @@ public theorem ExtendedPoint_double_impl_double.call_eq (out x : Pointer) (s : G
   change t2 = abReg a2 at ht2
   change t3 = abReg a3 at ht3
   change t4 = abReg a4 at ht4
-  rw [← hsq] at hb0 hb1 hb2 hb3 hb4
   change c0 = cacaReg b0 134217690 67108862 at hc0
   change c1 = cacaReg b1 134217726 67108862 at hc1
   change c2 = cacaReg b2 134217726 67108862 at hc2

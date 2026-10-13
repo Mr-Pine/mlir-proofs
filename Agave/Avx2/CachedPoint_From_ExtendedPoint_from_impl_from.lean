@@ -225,10 +225,6 @@ public theorem CachedPoint_From_ExtendedPoint_from_impl_from.call_eq (out x : Po
     step_store
   finish_block
   rw [MemoryState.storeFe4x_eq] at hS
-  simp only [MemoryState.readAt_alloca_alloca hwf₀ hx₀_1.inBounds,
-    MemoryState.readAt_alloca_alloca hwf₀ hx₀_2.inBounds,
-    MemoryState.readAt_alloca_alloca hwf₀ hx₀_3.inBounds,
-    MemoryState.readAt_alloca_alloca hwf₀ hx₀_4.inBounds] at ha1 ha2 ha3 ha4
   change a0 = S₀.mem.readFe4x x 0 at ha0
   change a1 = S₀.mem.readFe4x x 1 at ha1
   change a2 = S₀.mem.readFe4x x 2 at ha2
@@ -249,7 +245,6 @@ public theorem CachedPoint_From_ExtendedPoint_from_impl_from.call_eq (out x : Po
   change b7 = unpackHi x3 at hb7
   change b8 = unpackLo x4 at hb8
   change b9 = unpackHi x4 at hb9
-  rw [← hy] at hy0 hy1 hy2 hy3 hy4
   change n0 = subLanes p16Lo y0 at hn0
   change n1 = subLanes p16Hi y1 at hn1
   change n2 = subLanes p16Hi y2 at hn2

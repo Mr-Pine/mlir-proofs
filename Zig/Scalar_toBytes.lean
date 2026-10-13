@@ -52,56 +52,48 @@ public theorem Scalar_toBytes.call_eq (out l : Pointer) (s : GlobalState) (hwf :
   step_pure
   finish_block
   block_init
-  step_pure [(by decide : (0#64).smulOverflow 7#64 = false),
-    (by decide : (0#64).umulOverflow 7#64 = false)]
+  step_pure
   iterate 2 step_pure
   step_load with v0 hv0
   step_store
-  step_pure [(by decide : (0#64).saddOverflow 1#64 = false),
-    (by decide : (0#64).uaddOverflow 1#64 = false)]
+  step_pure
   finish_block
   block_init
   step_pure
   finish_block
   block_init
-  step_pure [(by decide : (1#64).smulOverflow 7#64 = false),
-    (by decide : (1#64).umulOverflow 7#64 = false)]
+  step_pure
   iterate 2 step_pure
   step_load with v1 hv1
   step_store
-  step_pure [(by decide : (1#64).saddOverflow 1#64 = false),
-    (by decide : (1#64).uaddOverflow 1#64 = false)]
+  step_pure
   finish_block
   block_init
   step_pure
   finish_block
   block_init
-  step_pure [(by decide : (2#64).smulOverflow 7#64 = false),
-    (by decide : (2#64).umulOverflow 7#64 = false)]
+  step_pure
   iterate 2 step_pure
   step_load with v2 hv2
   step_store
-  step_pure [(by decide : (2#64).saddOverflow 1#64 = false),
-    (by decide : (2#64).uaddOverflow 1#64 = false)]
+  step_pure
   finish_block
   block_init
   step_pure
   finish_block
   block_init
-  step_pure [(by decide : (3#64).smulOverflow 7#64 = false),
-    (by decide : (3#64).umulOverflow 7#64 = false)]
+  step_pure
   iterate 2 step_pure
   step_load with v3 hv3
   step_store
-  step_pure [(by decide : (3#64).saddOverflow 1#64 = false),
-    (by decide : (3#64).uaddOverflow 1#64 = false)]
+  step_pure
   finish_block
   block_init
   step_pure
   finish_block
   block_init
   iterate 2 step_pure
-  step_load [MemoryState.readAt_alloca_of_fits hwf₀ hl₀_4.inBounds] with v4 hv4
+  step_load with v4 hv4
   have h4 : v4 < 4294967296#64 := by
     rw [hv4, BitVec.lt_def]; exact hl4'
   have h4' : v4.ult 4294967296#64 = true := by simpa [BitVec.ult, BitVec.lt_def] using h4

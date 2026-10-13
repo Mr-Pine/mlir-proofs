@@ -982,7 +982,7 @@ theorem runBodyFrom_packLimbRun (k : Nat) {blk : BasicBlock Γ tRets bp} {E : �
   convert hK _ _ _ _ _ _ _ _ _ _ using 6
   ext i hi
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
-  all_goals simp [Ty.wrap_vec, wl]
+  all_goals simp [wl]
 
 /-- `packLimbRun` for `Q0 = wl( _x[0], _y[0], _z[0], _t[0] )`: no `getelementptr`s. -/
 def packLimbRun0 (tx ty tz tt : Reg Γ .ptr) (n1 n2 n3 : Reg Γ (.bv 64)) (vx : Dst Γ Ty4x64)
@@ -1034,7 +1034,7 @@ theorem runBodyFrom_packLimbRun0 {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
   convert hK _ _ _ _ _ _ using 6
   ext i hi
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
-  all_goals simp [Ty.wrap_vec, wl]
+  all_goals simp [wl]
 
 /-! ### `FD_R52X5_QUAD_PERMUTE` -/
 

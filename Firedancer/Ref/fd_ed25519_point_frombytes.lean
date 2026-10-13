@@ -115,8 +115,6 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
   step_call using fd_f25519_sqrt_ratio.call_eq with was_square consuming hread_u hread_v hu_limbs
     hv_limbs
   name_limbs lx0
-  -- the returned value unfolds the limbs' names: fold them back
-  rw [← hlu0, ← hlv0, ← hlu1, ← hlv1] at hwas_square
   step_pure
   finish_block
   case isTrue =>
@@ -139,7 +137,6 @@ public theorem fd_ed25519_point_frombytes.call_eq (r buf : Pointer) (s : GlobalS
     block_init
     step_pure with expected_x_sign
     step_call using fd_f25519_sgn.call_eq with sgn_x
-    rw [← hlu1, ← hlv1, ← hlx0] at hsgn_x
     -- `zext nneg expected_x_sign` needs its sign bit clear
     have hmsb : expected_x_sign.msb = false := hexpected_x_sign ▸ lshr_seven_msb buf31
     step_pure [hmsb]

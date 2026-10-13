@@ -739,7 +739,7 @@ public meta section
 
 open Lean Elab Tactic Meta in
 /-- `name_fe4 x`: the registers the latest `storeFe4x` of the current state writes become `x`, with
-`hx : x = …`, in the state and the facts. -/
+`hx : x = …`, in the state and the facts; `hx` stays folded, as a `with x`'s. -/
 elab "name_fe4 " x:ident : tactic =>
   withMainContext do
     let (g, goal) ← Tactic.getGoalType
@@ -775,7 +775,8 @@ elab "name_fe4 " x:ident : tactic =>
                 return if ((← instantiateMVars d.type).find? (· == v)).isSome then hs.push d.fvarId
                   else hs
           Tactic.generalizeOpaque g (hyps := hyps) v x.getId
-              #[⟨x.getId.appendBefore "h", (mkEq · v), ← mkEqRefl v⟩]
+              #[⟨x.getId.appendBefore "h", fun y => return Tactic.tagNamed (← mkEq y v),
+                  ← mkEqRefl v⟩]
     replaceMainGoal [g]
 
 end

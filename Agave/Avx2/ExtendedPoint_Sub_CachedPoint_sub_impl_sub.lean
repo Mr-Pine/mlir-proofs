@@ -93,10 +93,6 @@ public theorem ExtendedPoint_Sub_CachedPoint_sub_impl_sub.call_eq (out p q : Poi
         rw [hv30_off]; decide, hfits_v30, hfits_v30_32, hfits_v30_64, hfits_v30_96, hfits_v30_128⟩))
   step_pure
   finish_block
-  simp only [MemoryState.readAt_alloca_of_fits hwf₀ hq₀_1.inBounds,
-    MemoryState.readAt_alloca_of_fits hwf₀ hq₀_2.inBounds,
-    MemoryState.readAt_alloca_of_fits hwf₀ hq₀_3.inBounds,
-    MemoryState.readAt_alloca_of_fits hwf₀ hq₀_4.inBounds] at hb1 hb2 hb3 hb4
   change b0 = S₀.mem.readFe4x q 0 at hb0
   change b1 = S₀.mem.readFe4x q 1 at hb1
   change b2 = S₀.mem.readFe4x q 2 at hb2

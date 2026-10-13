@@ -72,7 +72,7 @@ macro "limbs_room " x:ident : tactic => do
 open Lean Elab Tactic Meta in
 /-- `name_limbs x`: the limbs the latest `storeLimbs` of the current state writes become `x`, with
 `hx : x = …`, in the state and the facts, so later states and reads mention `x` instead of the whole
-computation. -/
+computation; `hx` stays folded, as a `with x`'s. -/
 elab "name_limbs " x:ident : tactic =>
   withMainContext do
     let (g, goal) ← Tactic.getGoalType
@@ -111,7 +111,8 @@ elab "name_limbs " x:ident : tactic =>
                 return if ((← instantiateMVars d.type).find? (· == v)).isSome then hs.push d.fvarId
                   else hs
           Tactic.generalizeOpaque g (hyps := hyps) v x.getId
-              #[⟨x.getId.appendBefore "h", (mkEq · v), ← mkEqRefl v⟩]
+              #[⟨x.getId.appendBefore "h", fun y => return Tactic.tagNamed (← mkEq y v),
+                  ← mkEqRefl v⟩]
     replaceMainGoal [g]
 
 end

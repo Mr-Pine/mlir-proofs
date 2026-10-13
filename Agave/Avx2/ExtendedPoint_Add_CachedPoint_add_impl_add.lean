@@ -153,7 +153,6 @@ public theorem ExtendedPoint_Add_CachedPoint_add_impl_add.call_eq (out p q : Poi
   change x2 = dsReg a2 134217726 67108862 at hx2
   change x3 = dsReg a3 134217726 67108862 at hx3
   change x4 = dsReg a4 134217726 67108862 at hx4
-  rw [← hw] at hc0 hc1 hc2 hc3 hc4
   change e0 = permute (dsAbdcReg c0 134217690 67108862) Shuffle.ADDA at he0
   change e1 = permute (dsAbdcReg c1 134217726 67108862) Shuffle.ADDA at he1
   change e2 = permute (dsAbdcReg c2 134217726 67108862) Shuffle.ADDA at he2

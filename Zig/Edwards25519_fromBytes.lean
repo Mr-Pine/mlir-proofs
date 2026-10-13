@@ -505,8 +505,8 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   have htm := hS ▸ hu_limbs
   have htr := hS ▸ hread_u_readLimbs
   have hdR := hS ▸ hu0_limbs
-  have f1 : Room S.mem u0 (8 * (40#64 : BitVec 64).toNat) := hu0_limbs.fits.room
-  have f2 : Fits S.mem u (8 * (40#64 : BitVec 64).toNat) := hu_limbs.fits
+  have f1 := hu0_limbs.fits.room
+  have f2 := hu_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm hdR.1, htr] at hS
   have hru0 : S.mem.readLimbs u0 = U := by
@@ -693,8 +693,8 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     have htr : S₉.mem.readLimbs x = X1 := by
       have h := hread_x_readLimbs; rw [hS] at h; simpa [MemoryState.readLimbs_lifetimeStart] using h
     have hdR := hS ▸ hr_limbs
-    have f1 : Room S.mem r (8 * (40#64 : BitVec 64).toNat) := hr_limbs.room
-    have f2 : Fits S.mem x (8 * (40#64 : BitVec 64).toNat) := hx_limbs.fits
+    have f1 := hr_limbs.room
+    have f2 := hx_limbs.fits
     step_memcpy consuming f1 f2
     rw [MemoryState.storeAt_readAt_eq_storeLimbs htm hdR.1, htr] at hS
     have hrr : S.mem.readLimbs r = X1 := by
@@ -739,27 +739,20 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     step_call using Fe_mul.call_eq_of consuming h1 h2 hp120
     name_limbs T
     stash hT
-    have hp0 := limbsRoom_of_block 0 hpt_room hpt_off (by decide) (by decide)
-    have hp40 := limbsRoom_of_block 40 hpt_room hpt_off (by decide) (by decide)
-    have hp80 := limbsRoom_of_block 80 hpt_room hpt_off (by decide) (by decide)
-    simp only [Pointer.add_zero'] at hp0
     have hxb : S.mem.readAt x 320 = limbsBits XF := by
       rw [MemoryState.readAt_eq_limbsBits hx_limbs, hread_x_readLimbs]
-    have f1 : Room S.mem pt (8 * (40#64 : BitVec 64).toNat) := hp0.room
-    have f2 : Fits S.mem x (8 * (40#64 : BitVec 64).toNat) := hx_limbs.fits
-    step_memcpy consuming f1 f2 hxb
+    have f2 := hx_limbs.fits
+    step_memcpy consuming f2 hxb
     step_pure
     have hyb : S.mem.readAt y 320 = limbsBits Y := by
       rw [MemoryState.readAt_eq_limbsBits hy_limbs, hry]
-    have f1 : Room S.mem (pt.add 40#64) (8 * (40#64 : BitVec 64).toNat) := hp40.room
-    have f2 : Fits S.mem y (8 * (40#64 : BitVec 64).toNat) := hy_limbs.fits
-    step_memcpy consuming f1 f2 hyb
+    have f2 := hy_limbs.fits
+    step_memcpy consuming f2 hyb
     step_pure
     have hob : S.mem.readAt gone 320 = limbsBits ONE := by
       rw [MemoryState.readAt_eq_limbsBits hgone_limbs, hro]
-    have f1 : Room S.mem (pt.add 80#64) (8 * (40#64 : BitVec 64).toNat) := hp80.room
-    have f2 : Fits S.mem gone (8 * (40#64 : BitVec 64).toNat) := hgone_limbs.fits
-    step_memcpy consuming f1 f2 hob
+    have f2 := hgone_limbs.fits
+    step_memcpy consuming f2 hob
     have hptv :
       S.mem.readAt pt 1280 = limbsBits T ++ limbsBits ONE ++ limbsBits Y ++ limbsBits XF := by
       have h := hpt_room
@@ -784,7 +777,6 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
           simp [BitVec.uaddOverflow]; omega)
         (by decide) hout
     step_store consuming f1
-    have f1 : Room S.mem out (8 * (160#64 : BitVec 64).toNat) := hout.mono (by decide)
     have hov (k : BitVec 64) (hk : k.toNat ≤ 160) : ¬pt.offset.uaddOverflow k := by
       simp only [BitVec.uaddOverflow, hpt_off, decide_eq_true_eq, Nat.not_le]; simp; omega
     have a0 : Fits S.mem pt 320 := by mem_fact
@@ -796,10 +788,10 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
       Fits.append (hov 40#64 (by decide)) (by decide) (by decide) a0 a1
     have a02 : Fits S.mem pt 960 :=
       Fits.append (hov 80#64 (by decide)) (by decide) (by decide) a01 a2
-    have f2 : Fits S.mem pt (8 * (160#64 : BitVec 64).toNat) :=
+    have f2 : Fits S.mem pt 1280 :=
       Fits.append (hov 120#64 (by decide)) (by decide) (by decide) a02 a3
     clear hov a0 a1 a2 a3 a01 a02
-    step_memcpy consuming f1 f2 hptv hfits_out_168 hbuf
+    step_memcpy consuming f2 hptv hfits_out_168 hbuf
     step_pure
     step_impure [hfd] => exact run_loadDef (by mem_fact)
     have f1 : Room S.mem (out.add 160#64) 8 ∧ True :=

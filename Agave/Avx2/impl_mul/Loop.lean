@@ -828,14 +828,6 @@ theorem split_add_ok (y z : BitVec 32) :
       (y.setWidth 64 <<< 26).uaddOverflow (z.setWidth 64) = false := by
   constructor <;> bv_decide
 
-/-- An `insertelement` of a value into a vector of values: the vector of values. -/
-theorem set_wrap {l w : Nat} (xs : Vector (BitVec w) l) (i : Nat) (x : BitVec w) (h : i < l) :
-    (Ty.wrap (t := .vec l w) xs).set i (.value x) h = Ty.wrap (t := .vec l w) (xs.set i x h) := by
-  simp only [Ty.wrap]
-  ext j hj
-  simp only [Vector.getElem_set, Vector.getElem_map]
-  split <;> rfl
-
 /-- A pair's lanes. -/
 theorem ofFn_two {α : Type} (f : Fin 2 → α) : Vector.ofFn f = #v[f 0, f 1] := by
   ext i hi
@@ -843,7 +835,7 @@ theorem ofFn_two {α : Type} (f : Fin 2 → α) : Vector.ofFn f = #v[f 0, f 1] :
   | 0, _ => rfl
   | 1, _ => rfl
 
-attribute [local simp] shl26_ok split_add_ok set_wrap ofFn_two
+attribute [local simp] shl26_ok split_add_ok ofFn_two
 
 /-- `Q.into()`'s stores, the pairs `(X₀, X₁)`, `(X₄, Y₀)`, `(Y₄, Z₀)`, `(Z₄, T₀)` as vectors: the
 point's. -/

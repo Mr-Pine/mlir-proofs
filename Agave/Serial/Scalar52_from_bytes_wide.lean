@@ -74,11 +74,6 @@ local macro "ld " k:num w:num : tactic =>
 local macro "byte " k:num : tactic => `(tactic| (wstep; ld $k 8; wstep; wstep; wstep))
 
 set_option hygiene false in
-/-- `rebase`: the current state becomes the base of later states (`hS` reversed), so their terms
-and the steps' proofs stay small. -/
-local macro "rebase" : tactic => `(tactic| replace hS := hS.symm)
-
-set_option hygiene false in
 /-- `copied p`: the limbs a copy stored at `p` (`hfits_p`, `hread_p`) as `hp_limbs` and
 `hread_p_readLimbs`. -/
 local macro "copied " p:ident : tactic => do
@@ -94,6 +89,8 @@ local macro "copied " p:ident : tactic => do
           Agave.readLimbs_of_readAt_limbsBits (Fits.inBounds $fits) (by simp [$off:ident]) $read
         clear $fits $read))
 
+-- a long chain of calls: the state cut from the entry state every so often (`rir.stateDepth`)
+set_option rir.stateDepth 64 in
 -- about 330 steps in one block: past the default heartbeats
 set_option maxHeartbeats 1000000 in
 /-- `Scalar52::from_bytes_wide(bytes)` for the 64 bytes at `bytes` stores `spec` at `out`: `lo` and
@@ -276,7 +273,6 @@ public theorem Scalar52_from_bytes_wide.call_eq (out bytes : Pointer) (s : Globa
     hread_hi_24 hread_hi_32 hread_w0 hread_w1 hread_w2 hread_w3 hread_w4 hread_w5 hread_w6 hread_w7
   clear hfits_lo hfits_lo_8 hfits_lo_16 hfits_lo_24 hfits_lo_32 hfits_hi hfits_hi_8 hfits_hi_16
     hfits_hi_24 hfits_hi_32
-  rebase
   -- `lo = Scalar52::montgomery_mul(&lo, &constants::R);`
   step_pure
   limbs_room lo_t

@@ -64,9 +64,6 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   limbs_room t4
   limbs_room t5
   have ht6P := MemoryState.PtRoom.of_room ht6_room ht6_off
-  have hpA : (((S₀.alloca 40).alloca 40).alloca 168).mem.PtLimbsFit p := hS ▸ hp
-  have hR : (((S₀.alloca 40).alloca 40).alloca 168).mem.readPt p = S₀.mem.readPt p := by
-    simp (disch := mem_fact) only [MemoryState.readPt_alloca]
   -- the copy's `t`, read later
   step_memcpy
   have hT : S.mem.readLimbs (t6.add 120#64) = S₀.mem.readLimbs (p.add 120#64) := by
@@ -75,28 +72,22 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_neg.call_eq
   have htm := hS ▸ ht5_limbs
   have htr := hS ▸ hread_t5_readLimbs
-  have f1 := hout.limbsRoom_x.room
   have f2 := ht5_limbs.fits
-  step_memcpy consuming f1 f2 hread_t5_readLimbs hread_t5 hread_t5_8 hread_t5_16 hread_t5_24
+  step_memcpy consuming f2 hread_t5_readLimbs hread_t5 hread_t5_8 hread_t5_16 hread_t5_24
     hread_t5_32 hfits_out
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (by omega), htr] at hS
   clear htm htr
   iterate 2 step_pure
-  -- the width as `step_memcpy` states it
   have f1 := hout.limbsRoom_y.room
-  have f2 : Fits S.mem (p.add 40#64) (8 * (40#64 : BitVec 64).toNat) := hp.limbsFit_y.fits
-  have f3 : (Range.of (out.add 40#64) 320).Disjoint (Range.of (p.add 40#64) 320) :=
-    Range.disjoint_of_id_ne (by simpa [Pointer.add_id] using hsep)
-  step_memcpy consuming f1 f2 f3 hfits_out_40
-  rw [MemoryState.storeAt_readAt_eq_storeLimbs hpA.limbsFit_y
+  have f2 := hp.limbsFit_y.fits
+  step_memcpy consuming f1 f2 hfits_out_40
+  rw [MemoryState.storeAt_readAt_eq_storeLimbs hpL₀.limbsFit_y
       (Pointer.field_offset ho (a := 40) (by omega))] at hS
   iterate 2 step_pure
   have f1 := hout.limbsRoom_z.room
-  have f2 : Fits S.mem (p.add 80#64) (8 * (40#64 : BitVec 64).toNat) := hp.limbsFit_z.fits
-  have f3 : (Range.of (out.add 80#64) 320).Disjoint (Range.of (p.add 80#64) 320) :=
-    Range.disjoint_of_id_ne (by simpa [Pointer.add_id] using hsep)
-  step_memcpy consuming f1 f2 f3 hfits_out_80
-  rw [MemoryState.storeAt_readAt_eq_storeLimbs hpA.limbsFit_z
+  have f2 := hp.limbsFit_z.fits
+  step_memcpy consuming f1 f2 hfits_out_80
+  rw [MemoryState.storeAt_readAt_eq_storeLimbs hpL₀.limbsFit_z
       (Pointer.field_offset ho (a := 80) (by omega))] at hS
   iterate 2 step_pure
   step_call using fe_neg_call_eq_of consuming hT ht₀
@@ -115,10 +106,6 @@ public theorem Edwards25519_neg.call_eq (out p : Pointer) (s : GlobalState) (hwf
   finish_block
   rw [hS]
   erase_frame
-  have hy := congrArg ZPt.y hR
-  have hz := congrArg ZPt.z hR
-  simp only [MemoryState.readPt] at hy hz
-  rw [hy, hz]
   rfl
 
 /-- `call_eq` on the point `Q` read at `p`. -/

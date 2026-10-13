@@ -704,9 +704,6 @@ theorem loop3 (d V : Pointer) (Hf vf : Nat → BitVec 64) (R : PoisonOr (Vals []
 
 /-! ## `^bb5`: the 80 rounds -/
 
-/-- `^bb5` ends at position `2110`; `decide` would walk the instructions. -/
-theorem bb5_done : 2110 ≥ Sha512_round.bb5.body.length := by decide +kernel
-
 -- one block of 2110 instructions: about 120 steps (~0.15 s each), 76 rounds by the pattern
 -- (~1 s each) and the stores take about 1.5M heartbeats
 set_option maxHeartbeats 2000000 in
@@ -799,14 +796,8 @@ theorem block5 (d V W : Pointer) (Wf : Nat → BitVec 64) (a b c dd e f g h : Bi
   iterate 7
     step_pure
     step_store
-  rw [BasicBlock.runBodyFrom_done bb5_done]
-  simp only [EffectM.pure_eq, PoisonOr.value_bind, reduceBlockExit, Exit.run]
-  dsimp only [Jump.run, Fin.isValue, Regs.read_nil, EffectM.pure_eq, PoisonOr.value_bind,
-    Regs.read_cons, reduceWriteManyDsts, Env.writeMany_nil, Env.writeMany_cons]
-  rw [Func.continue_next]
+  finish_block
   rw [hv] at hK
-  have hA : E₀.args = (Sha512_round.args (.value d) (.value bp)).get := by
-    rw [hE] at hArgs; simpa only [Env.write_args] using hArgs
   step_loop using hK
 
 /-! ## The spec's words -/

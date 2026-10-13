@@ -183,16 +183,16 @@ public theorem Fe_sq.call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   step_load with a0
   step_pure
   step_pure
-  step_load [readAt_alloca₂ hwf₀ ha₀_1.inBounds] with a1
+  step_load with a1
   step_pure
   step_pure
-  step_load [readAt_alloca₂ hwf₀ ha₀_2.inBounds] with a2
+  step_load with a2
   step_pure
   step_pure
-  step_load [readAt_alloca₂ hwf₀ ha₀_3.inBounds] with a3
+  step_load with a3
   step_pure
   step_pure
-  step_load [readAt_alloca₂ hwf₀ ha₀_4.inBounds] with a4
+  step_load with a4
   step_pure
   have hA : Fe.Lt (Fe.mk5 a0 a1 a2 a3 a4) (2 ^ 54) := by
     intro i

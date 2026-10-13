@@ -1462,35 +1462,25 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
     hbp_fits_1008 hbp_fits_1176 hbp_fits_1344 hbp_fits_1512 hbp_fits_1680 hbp_fits_1848
     hbp_fits_2016 hbp_fits_2184 hbp_fits_2352 hbp_fits_2520
   step_pure
-  have hbp_ne : bp.id ≠ S.allocaPtr.id := by
-    rw [hbp, hS]; slot_ne
   step_addressof Edwards25519_mulDoubleBasePublic_weak.value_eq with wk
-  have hwk_room : Room S.mem wk 1408 := by
-    rw [hwk]; exact hroom
-  have hwb : S.mem.readAt wk 1408 = Edwards25519_mulDoubleBasePublic_weak.bits := by
-    rw [hwk]; exact hread.trans (by decide +kernel)
+  have hwb : S.mem.readAt wk 1408 = Edwards25519_mulDoubleBasePublic_weak.bits :=
+    hread_wk.trans (by decide +kernel)
   have hwd : S.mem.definedAt wk 1408 = weakDef := by
     rw [hS, hwk]
     exact
       (MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega)) _ _).trans
         (by decide +kernel)
-  clear hread hroom hfits
+  clear hread_wk
   step_pure
-  have hbp_ne : bp.id ≠ S.allocaPtr.id := by
-    rw [hbp, hS]; slot_ne
-  have hwk_ne : wk.id ≠ S.allocaPtr.id := by
-    rw [hwk, hS]; slot_ne
   step_addressof Edwards25519_identityElement.value_eq with idp
-  have hidp_room : Room S.mem idp 1344 := by
-    rw [hidp]; exact hroom
-  have hidb : S.mem.readAt idp 1344 = Edwards25519.identityBits := by
-    rw [hidp]; exact hread.trans (by decide +kernel)
+  have hidb : S.mem.readAt idp 1344 = Edwards25519.identityBits :=
+    hread_idp.trans (by decide +kernel)
   have hidd : S.mem.definedAt idp 1344 = Edwards25519.identityDef := by
     rw [hS, hidp]
     exact
       (MemoryState.definedAt_storeDef_self (InBounds.allocaPtr (by omega)) _ _).trans
         (by decide +kernel)
-  clear hread hroom hfits
+  clear hread_idp
   checkpoint hck0
   rename' S => S₁
   iterate 5 step_pure

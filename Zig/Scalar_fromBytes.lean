@@ -53,56 +53,48 @@ public theorem Scalar_fromBytes.call_eq (out p : Pointer) (s : GlobalState) (hwf
   finish_block
   block_init
   step_pure
-  step_pure [(by decide : (0#64).smulOverflow 7#64 = false),
-    (by decide : (0#64).umulOverflow 7#64 = false)]
+  step_pure
   step_pure
   step_load with ld0 hld0
   step_pure with m0 hm0
   step_store
-  step_pure [(by decide : (0#64).saddOverflow 1#64 = false),
-    (by decide : (0#64).uaddOverflow 1#64 = false)]
-  finish_block
-  block_init
   step_pure
   finish_block
   block_init
   step_pure
-  step_pure [(by decide : (1#64).smulOverflow 7#64 = false),
-    (by decide : (1#64).umulOverflow 7#64 = false)]
+  finish_block
+  block_init
+  step_pure
+  step_pure
   step_pure
   step_load with ld1 hld1
   step_pure with m1 hm1
   step_store
-  step_pure [(by decide : (1#64).saddOverflow 1#64 = false),
-    (by decide : (1#64).uaddOverflow 1#64 = false)]
-  finish_block
-  block_init
   step_pure
   finish_block
   block_init
   step_pure
-  step_pure [(by decide : (2#64).smulOverflow 7#64 = false),
-    (by decide : (2#64).umulOverflow 7#64 = false)]
+  finish_block
+  block_init
+  step_pure
+  step_pure
   step_pure
   step_load with ld2 hld2
   step_pure with m2 hm2
   step_store
-  step_pure [(by decide : (2#64).saddOverflow 1#64 = false),
-    (by decide : (2#64).uaddOverflow 1#64 = false)]
-  finish_block
-  block_init
   step_pure
   finish_block
   block_init
   step_pure
-  step_pure [(by decide : (3#64).smulOverflow 7#64 = false),
-    (by decide : (3#64).umulOverflow 7#64 = false)]
+  finish_block
+  block_init
+  step_pure
+  step_pure
   step_pure
   step_load with ld3 hld3
   step_pure with m3 hm3
   step_store
-  step_pure [(by decide : (3#64).saddOverflow 1#64 = false),
-    (by decide : (3#64).uaddOverflow 1#64 = false)]
+  step_pure
   finish_block
   block_init
   step_pure

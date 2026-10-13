@@ -783,8 +783,7 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
               (by simp) hv_zb hv_zd
           clear hv_zb hv_zd
           checkpoint hck7
-          have hsrc : Fits S.mem (sig.add 32#64) (8 * (32#64).toNat) := hsig32
-          step_memcpy consuming hsrc
+          step_memcpy
           obtain ⟨hv_zb, hv_zd⟩ := hV _ (congrArg GlobalState.mem hS)
           have hvr : Room S.mem v 4736 ∧ True := ⟨hv_room, trivial⟩
           clear hV

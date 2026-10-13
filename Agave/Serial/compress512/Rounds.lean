@@ -540,11 +540,8 @@ public theorem rounds60 (st Kp En P : Pointer) (A : Vals compress512.Γ.args)
   · env_reads
   · env_reads
 
-/-- `^bb1`'s instructions all run by position `2969`; `decide` would walk the list. -/
-theorem bb1_done : 2969 ≥ compress512.bb1.body.length := by decide +kernel
-
 /-- `^bb1`'s exit, on the next block's pointer: to `^bb2` with the new state words `N` at the end
-`En`, else back to `^bb1` on them. Stepped by hand: `finish_block` unfolds the body's length. -/
+`En`, else back to `^bb1` on them. -/
 public theorem exit_eq (En P : Pointer) (N : Vector (BitVec 64) 8) (E : ⟪Γ⟫) (S : GlobalState)
     (g : Vals [] × GlobalState → PoisonOr β) (K : PoisonOr β)
     (hR :
@@ -568,22 +565,11 @@ public theorem exit_eq (En P : Pointer) (N : Vector (BitVec 64) 8) (E : ⟪Γ⟫
           K)
     (h1 : P.add 128#64 ≠ En → (compress512.runFrom (hdr (P.add 128#64) N E) 1 S >>= g) = K) :
     BODY E 2969 S g = K := by
-  obtain ⟨h1565, h0, h1', h2', h3, h4, h5, h6, h7, hc⟩ := hR
-  rw [BasicBlock.runBodyFrom_done bb1_done]
-  simp only [EffectM.pure_eq, PoisonOr.value_bind, reduceBlockExit, Exit.run]
-  rw [hc]
-  simp only [beq_iff_eq, ofBool_eq_one_iff, EffectM.pure_eq, PoisonOr.value_bind]
-  by_cases hb : P.add 128#64 = En
-  · rw [ite_eq_left hb]
-    dsimp only [Jump.run, Fin.isValue, Regs.read_nil, EffectM.pure_eq, PoisonOr.value_bind,
-      Regs.read_cons, reduceWriteManyDsts, Env.writeMany_nil, Env.writeMany_cons]
-    rw [Func.continue_next, h0, h1', h2', h3, h4, h5, h6, h7]
-    exact h2 hb
-  · rw [ite_eq_right hb]
-    dsimp only [Jump.run, Fin.isValue, Regs.read_nil, EffectM.pure_eq, PoisonOr.value_bind,
-      Regs.read_cons, reduceWriteManyDsts, Env.writeMany_nil, Env.writeMany_cons]
-    rw [Func.continue_next, h0, h1', h2', h3, h4, h5, h6, h7, h1565]
-    exact h1 hb
+  finish_block
+  · subst hE
+    exact h2 hbr
+  · subst hE
+    exact h1 hbr
 
 end Proof
 

@@ -71,24 +71,6 @@ theorem sign_trunc_sext (x : BitVec 64) : ((x >>> 63).setWidth 8).signExtend 64 
 theorem sign_eq (buf : BitVec 256) :
     (buf.extractLsb' 192 64 >>> 63).setWidth 8 = buf.extractLsb' 248 8 >>> 7 := by bv_decide
 
-/-- Ranges in two slots of a state are disjoint. -/
-theorem slots_disjoint {S : GlobalState} {p q : Pointer} {i j : Nat} (hp : p = S.slot i)
-    (hq : q = S.slot j) (hij : i ≠ j) (a b : BitVec 64) :
-    (Range.of (p.add a) 320).Disjoint (Range.of (q.add b) 320) :=
-  Or.inl
-    (by
-      simp only [Range.of, Pointer.add_id, hp, hq]; exact GlobalState.slot_id_ne hij)
-
-/-- Room for 320 bits 40 bytes into an 80-byte slot. -/
-theorem room_add40 {m : MemoryState} {p : Pointer} (h : Room m p 640) (ho : p.offset = 0) :
-    Room m (p.add 40#64) 320 :=
-  Room.add_of_le (by simp [ho, BitVec.uaddOverflow]) (by decide) h
-
-/-- Room for 320 bits 80 bytes into a 160-byte slot. -/
-theorem room_add80 {m : MemoryState} {p : Pointer} (h : Room m p 1280) (ho : p.offset = 0) :
-    Room m (p.add 80#64) 320 :=
-  Room.add_of_le (by simp [ho, BitVec.uaddOverflow]) (by decide) h
-
 /-- A 160-byte slot's four field elements known: its 1280 bits. -/
 theorem fits_point {m : MemoryState} {p : Pointer} (ho : p.offset = 0) (h0 : Fits m p 320)
     (h1 : Fits m (p.add 40#64) 320) (h2 : Fits m (p.add 80#64) 320)
@@ -179,16 +161,6 @@ local macro "copy " p:ident readL:ident : tactic => do
         step_memcpy consuming hsrc_fits hsrc_bits))
 
 set_option hygiene false in
-/-- `rebase`: the current state becomes the base of later states (`hS` reversed), so their terms
-and the steps' proofs stay small. -/
-local macro "rebase" : tactic => `(tactic| replace hS := hS.symm)
-
-/-- `memcpy_n n hd hdst hsrc`: a `memcpy` of `n` bytes by `run_memcpy` with its facts given
-(`step_memcpy`'s searches fall back to `simp_all` on a destination `p.add k`). -/
-local macro "memcpy_n " n:num hd:term:max hdst:term:max hsrc:term:max : tactic =>
-  `(tactic| step_impure => (expect_values; exact run_memcpy (n := $n) rfl $hd $hdst $hsrc))
-
-set_option hygiene false in
 /-- `fe_call thm x p`: a call storing limbs at `p`, named `x`; their 320-bit read-back dropped. -/
 local macro "fe_call " thm:ident x:ident p:ident : tactic => do
   let n := p.getId.toString
@@ -202,6 +174,8 @@ local macro "drop " p:ident : tactic => do
   let readL := Lean.mkIdent (.mkSimple s!"hread_{n}_readLimbs")
   `(tactic| (clear $readL; clear_facts $p))
 
+-- a long chain of calls: the state cut from the entry state every so often (`rir.stateDepth`)
+set_option rir.stateDepth 64 in
 -- about 150 steps over a frame of 13 blocks and 13 calls: past the default heartbeats
 set_option maxHeartbeats 1000000 in
 /-- `repr.decompress()` for the 32 bytes at `repr`: stores the point of
@@ -319,7 +293,6 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
   fe_call FieldElement51_Add_add.call_eq v pv
   drop pYYd
   step_pure
-  rebase
   -- let (is_valid_y_coord, X) = FieldElement::sqrt_ratio_i(&u, &v);
   step_pure
   have hst1_8 := Agave.limbsRoom_add (k := 8#64) hroom_st1 hst1_off (by decide) (by decide)
@@ -338,32 +311,19 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
   clear hread_st1_8 hread_st1_8_readLimbs
   step_pure
   step_pure
-  have hdisj := by
-    simpa only [Pointer.add_zero'] using
-      slots_disjoint (p := ret) (q := pY) hret hpY (by decide) 40#64 0#64
-  have hdst := room_add40 hroom_ret hret_off
-  have hsrc := fits_of_limbsFit hY_fit
   have hY_bits := (readAt_eq_limbsBits hY_fit).trans (congrArg limbsBits hY_read)
-  memcpy_n 40hdisj hdst hsrc
-  clear hY_read hY_fit hY_bits hdisj hdst hsrc
+  have hsrc := fits_of_limbsFit hY_fit
+  step_memcpy consuming hsrc hY_bits
+  clear hY_read hY_fit
   drop pv
   drop pu
   iterate 4 step_pure
-  rebase
   -- let X, Y
   step_pure
-  have hdisj := by
-    simpa only [Pointer.add_zero'] using
-      slots_disjoint (p := pX) (q := ret) hpX hret (by decide) 0#64 0#64
-  memcpy_n 40hdisj hroom_pX hfits_ret
-  clear hdisj
+  step_memcpy
   copied pX
   step_pure
-  have hdisj := by
-    simpa only [Pointer.add_zero'] using
-      slots_disjoint (p := pY') (q := ret) hpY' hret (by decide) 0#64 40#64
-  memcpy_n 40hdisj hroom_pY' hfits_ret_40
-  clear hdisj
+  step_memcpy
   copied pY'
   clear_facts ret
   clear hread_ret hread_ret_40
@@ -376,7 +336,7 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
     iterate 2 step_pure
     finish_block
     have hnone : Serial.CompressedEdwardsY_decompress.spec buf = none := by
-      simp only [his_valid_y_coord, hYYd, hYY, ← hY] at hbr
+      simp only [his_valid_y_coord, hu, hv, hYYd, hYY, ← hY] at hbr
       exact ite_eq_left (c := (Serial.CompressedEdwardsY_decompress.step_1 buf).1 = 0) hbr
     rw [hnone]
     clear_reads
@@ -396,12 +356,7 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
     drop pX_neg
     step_pure
     -- EdwardsPoint { X, Y, Z, T: &X * &Y } at `pt`, copied to `out + 8`
-    have hdisj := by
-      simpa only [Pointer.add_zero'] using
-        slots_disjoint (p := pt) (q := pX) hpt hpX (by decide) 0#64 0#64
-    have hX_bits := (readAt_eq_limbsBits hpX_limbs).trans (congrArg limbsBits hread_pX_readLimbs)
-    memcpy_n 40hdisj(hroom_pt.mono (by decide))(fits_of_limbsFit hpX_limbs)
-    clear hdisj hX_bits
+    copy pX hread_pX_readLimbs
     step_pure
     have hpt120 := MemoryState.LimbsRoom.of_room_add (k := 120#64) hroom_pt hpt_off (by decide)
     step_call using FieldElement51_Mul_mul.call_eq
@@ -409,30 +364,19 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
     clear_facts pX
     clear hread_pX_readLimbs
     step_pure
-    have hdisj := by
-      simpa only [Pointer.add_zero'] using
-        slots_disjoint (p := pt) (q := pY') hpt hpY' (by decide) 40#64 0#64
-    have hY_bits := (readAt_eq_limbsBits hpY'_limbs).trans (congrArg limbsBits hread_pY'_readLimbs)
-    memcpy_n 40hdisj(room_add40 (hroom_pt.mono (by decide)) hpt_off)(fits_of_limbsFit hpY'_limbs)
-    clear hdisj hY_bits
+    copy pY' hread_pY'_readLimbs
     clear_facts pY'
     clear hread_pY'_readLimbs
     step_pure
-    have hdisj := by
-      simpa only [Pointer.add_zero'] using
-        slots_disjoint (p := pt) (q := one) hpt hone (by decide) 80#64 0#64
-    memcpy_n 40hdisj(room_add80 hroom_pt hpt_off)hone_fits
-    clear hdisj
+    step_memcpy
     step_pure
     have hpt_bits : S.mem.readAt pt 1280 = edwardsBits ⟨X, Y, Serial.FieldElement51.ONE, T⟩ := by
       have hb := hroom_pt.inBounds
       rw [hS] at hb ⊢
       exact readAt_point_stores hb hpt_off one_bits
     have hpt_fits := fits_point hpt_off hfits_pt hfits_pt_40 hfits_pt_80 (fits_of_limbsFit hpt120)
-    have hdisj : (Range.of (out.add 8#64) 1280).Disjoint (Range.of pt 1280) :=
-      Or.inl (by simpa only [Range.of, Pointer.add_id] using hout_ne_pt)
-    memcpy_n 160hdisj hout_pt hpt_fits
-    clear hdisj hpt_bits hpt_fits
+    step_memcpy
+    clear hpt_bits hpt_fits
     step_pure
     finish_block
     block_init
@@ -443,7 +387,7 @@ public theorem CompressedEdwardsY_decompress.call_eq (out repr : Pointer) (s : G
     have hsome :
       Serial.CompressedEdwardsY_decompress.spec buf =
         some ⟨X, Y, Serial.FieldElement51.ONE, T⟩ := by
-      simp only [his_valid_y_coord, hYYd, hYY, ← hY] at hbr
+      simp only [his_valid_y_coord, hu, hv, hYYd, hYY, ← hY] at hbr
       have hb : ¬(Serial.CompressedEdwardsY_decompress.step_1 buf).1 = 0 := hbr
       unfold Serial.CompressedEdwardsY_decompress.spec
       simp only [hb, ↓reduceIte, Option.some.injEq]

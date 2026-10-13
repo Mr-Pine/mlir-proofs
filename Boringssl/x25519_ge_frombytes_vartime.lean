@@ -182,7 +182,6 @@ public theorem x25519_ge_frombytes_vartime.call_eq (h buf : Pointer) (s : Global
   name_limbs lcheck
   -- if (fe_isnonzero(&check)) {
   step_call using fe_isnonzero_fe_loose.call_eq with check1 consuming hread_check
-  rw [← hlvxx, ← hlu, ← hlcheck] at hcheck1
   step_pure
   finish_block
   all_goals
@@ -195,7 +194,6 @@ public theorem x25519_ge_frombytes_vartime.call_eq (h buf : Pointer) (s : Global
     step_call using fe_add.call_eq consuming hread_vxx hvxx_limbs hread_u hu_limbs
     name_limbs lcheck2
     step_call using fe_isnonzero_fe_loose.call_eq with check2 consuming hread_check hcheck_limbs
-    rw [← hlvxx, ← hlu, ← hlcheck2] at hcheck2
     step_pure
     finish_block
     all_goals

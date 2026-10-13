@@ -136,6 +136,7 @@ public theorem ProjectivePoint_double.call_eq (out p : Pointer) (s : GlobalState
   step_load
   step_pure
   step_store
+  rw [hZZ] at hread_zz2 hread_zz2_32
   have hread_zz2_limbs := square2_readLimbs _ hzz2_limbs hread_zz2 hread_zz2_32
   clear hread_zz2 hread_zz2_32 hzz2_q
   -- let X_plus_Y = &self.X + &self.Y;

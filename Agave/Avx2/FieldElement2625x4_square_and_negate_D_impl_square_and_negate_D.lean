@@ -303,10 +303,6 @@ public theorem FieldElement2625x4_square_and_negate_D_impl_square_and_negate_D.c
   step_pure
   finish_block
   -- the loads as the entry state's registers, the limbs as the spec names them
-  simp only [MemoryState.readAt_alloca_of_fits hwf₀ hx₀_1.inBounds,
-    MemoryState.readAt_alloca_of_fits hwf₀ hx₀_2.inBounds,
-    MemoryState.readAt_alloca_of_fits hwf₀ hx₀_3.inBounds,
-    MemoryState.readAt_alloca_of_fits hwf₀ hx₀_4.inBounds] at ha1 ha2 ha3 ha4
   change a0 = S₀.mem.readFe4x x 0 at ha0
   change a1 = S₀.mem.readFe4x x 1 at ha1
   change a2 = S₀.mem.readFe4x x 2 at ha2

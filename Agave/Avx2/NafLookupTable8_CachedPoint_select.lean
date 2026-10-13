@@ -26,18 +26,8 @@ public theorem NafLookupTable8_CachedPoint_select.call_eq (out : Pointer) (x : B
   block_init
   iterate 3 step_pure
   step_addressof anon_e79fcfe266c5706188f989b4d452749f_38 with loc
-  have hloc_ne : loc.id ≠ S.allocaPtr.id := by
-    rw [hloc, hS]
-    simp only [GlobalState.allocaPtr, GlobalState.alloca, GlobalState.slot, ne_eq, BlockId.mk.injEq]
-    omega
   step_addressof BASEPOINT_ODD_LOOKUP_TABLE.value_eq with tb
-  have htb_fits : Fits S.mem tb 81920 := by
-    rw [htb]; exact hfits
-  have hread_tb : S.mem.readAt tb 81920 = BASEPOINT_ODD_LOOKUP_TABLE.bits := by
-    rw [htb]; exact hread
-  have hout_tb : out.id ≠ tb.id := by
-    rw [htb]; exact hout_ne
-  clear hfits hread hroom hout_ne hloc_ne
+  replace hread_tb : S.mem.readAt tb 81920 = BASEPOINT_ODD_LOOKUP_TABLE.bits := hread_tb
   -- self.0[x / 2]
   iterate 3 step_pure
   finish_block

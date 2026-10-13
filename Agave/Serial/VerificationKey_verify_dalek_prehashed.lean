@@ -86,9 +86,12 @@ end
 section Proof
 
 set_option hygiene false in
-/-- `memcpy_n n hd hdst hsrc hx`: a `memcpy` of `n` bytes by `run_memcpy_read`, its facts given. -/
-local macro "memcpy_n " n:num hd:term:max hdst:term:max hsrc:term:max hx:term:max : tactic =>
-  `(tactic| step_impure => (expect_values; exact run_memcpy_read (n := $n) rfl $hd $hdst $hsrc $hx))
+/-- `memcpy_n n hsrc hx`: a `memcpy` of `n` bytes by `run_memcpy_read`, for a source `step_memcpy`
+cannot read (an object store's); its facts given, the others by `mem_fact`. -/
+local macro "memcpy_n " n:num hsrc:term:max hx:term:max : tactic =>
+  `(tactic|
+      step_impure =>
+        (expect_values; exact run_memcpy_read (n := $n) rfl (by mem_fact) (by mem_fact) $hsrc $hx))
 
 /-- `memcpy` of `n` known bytes read as `x`: a store of `x`. -/
 theorem run_memcpy_read {dst src : Pointer} {len : BitVec w} {n : Nat} {x : BitVec (8 * n)}
@@ -98,19 +101,6 @@ theorem run_memcpy_read {dst src : Pointer} {len : BitVec w} {n : Nat} {x : BitV
     (Operation.memcpy (.value dst) (.value src) (.value len)) env s =
       .value (env, { s with mem := s.mem.storeAt dst x }) := by
   rw [run_memcpy hn hd hfd hfs, hx]
-
-/-- Ranges in two slots of a state are disjoint. -/
-theorem slots_disjoint {S : GlobalState} {p q : Pointer} {i j : Nat} (hp : p = S.slot i)
-    (hq : q = S.slot j) (hij : i ≠ j) (a b : BitVec 64) (v w : Nat) :
-    (Range.of (p.add a) v).Disjoint (Range.of (q.add b) w) :=
-  Range.disjoint_of_id_ne (by simpa only [Pointer.add_id, hp, hq] using GlobalState.slot_id_ne hij)
-
-/-- Room `k` bytes into a slot. -/
-theorem room_add {m : MemoryState} {p : Pointer} {n w : Nat} {k : BitVec 64} (h : Room m p n)
-    (ho : p.offset = 0) (hk : k.toNat * 8 + w ≤ n) : Room m (p.add k) w :=
-  have hov : ¬p.offset.uaddOverflow k := by
-    simp [ho, BitVec.uaddOverflow]; omega
-  Room.add_of_le hov hk h
 
 /-- `reduce` on bytes that reduce to `x`. -/
 theorem reduce_call_eq {out self : Pointer} {s : GlobalState} {x : BitVec 256} (hwf : s.WF)
@@ -418,20 +408,12 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
       block_init
       step_pure
       step_pure
-      memcpy_n
-        160(slots_disjoint hpres1 hpopt (by decide) 6#64 8#64 _
-          _)(room_add hroom_pres1 hpres1_off
-          (by decide))(fits_of_pointFit hpointFit_popt_8)hread_popt_8
+      memcpy_n 160(fits_of_pointFit hpointFit_popt_8)hread_popt_8
       step_pure
       step_pure
-      memcpy_n
-        160(slots_disjoint hpres2 hpres1 (by decide) 6#64 6#64 _
-          _)(room_add hroom_pres2 hpres2_off (by decide))hfits_pres1_6 hread_pres1_6
+      step_memcpy
       step_pure
-      memcpy_n
-        160(by
-          simpa only [Pointer.add_zero'] using
-            slots_disjoint hpR hpres2 (by decide) 0#64 6#64 _ _)hroom_pR hfits_pres2_6 hread_pres2_6
+      step_memcpy
       step_pure
       clear hread_pres2_6 hread_pres1_6 hread_popt hread_popt_8_readEdwards hread_popt_8
       have hR_fit := pointFit_of_fits hfits_pR (by simp [hpR_off])
@@ -502,14 +484,8 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
           step_load [hs0]
           clear hs0
           step_pure
-          memcpy_n
-            31(Range.disjoint_of_id_ne
-              (by
-                simpa only [Pointer.add_id] using
-                  hsig_ne_ps.symm))(room_add hroom_ps hps_off
-              (by
-                decide))(Fits.add_of_le (BitVec.not_uaddOverflow_of_le hsig_off (by decide))
-              (by decide) hsig)(readAt_s_tail (by mem_fact) hs_off hsc)
+          step_memcpy
+          rw [readAt_s_tail (by mem_fact) hs_off hsc₀] at hread_ps_1
           step_store
           obtain ⟨hps_fit, hps_read⟩ := scalar_copy hps_off hfits_ps hfits_ps_1 hread_ps hread_ps_1
           clear hfits_ps hfits_ps_1 hread_ps hread_ps_1
@@ -531,19 +507,12 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
           name_limbs t3
           name_limbs t19
           step_pure
-          memcpy_n
-            40(by
-              simpa only [Pointer.add_zero'] using
-                slots_disjoint hpt19 hppow (by decide) 0#64 0#64 _
-                  _)hroom_pt19(fits_of_limbsFit
-              hppow_limbs)((readAt_eq_limbsBits hppow_limbs).trans (congrArg limbsBits hread_ppow))
+          have hppow_bits := (readAt_eq_limbsBits hppow_limbs).trans (congrArg limbsBits hread_ppow)
+          have hsrc := fits_of_limbsFit hppow_limbs
+          step_memcpy consuming hsrc hppow_bits
           step_pure
           step_pure
-          memcpy_n
-            40(by
-              simpa only [Pointer.add_zero'] using
-                slots_disjoint hpt3 hppow (by decide) 0#64 40#64 _
-                  _)hroom_pt3(fits_of_limbsFit hppow_40)hread_ppow_40
+          memcpy_n 40(fits_of_limbsFit hppow_40)hread_ppow_40
           step_pure
           clear hread_ppow hread_ppow_40_readLimbs hread_ppow_40
           have hpt19_limbs := limbsFit_of_fits hfits_pt19 (by simp [hpt19_off])
@@ -603,7 +572,7 @@ public theorem VerificationKey_verify_dalek_prehashed.call_eq (self sig h : Poin
           rw [← hres, ← hblk]
           simp only [spec, blocks, hnA, hnR, hbr, hdec, ↓reduceIte, Option.isSome_some,
             GlobalState.alloca_alloc, Nat.add_assoc, Nat.reduceAdd, EdwardsPoint_compress.spec,
-            FieldElement51_invert.spec, hx_is_negative, ht20, ht19, ht3, hP]
+            FieldElement51_invert.spec, hx_is_negative, hx, hy, hrecip, ht20, ht19, ht3, hP]
           simp only [← Nat.add_assoc, Nat.reduceAdd]
           rfl
 

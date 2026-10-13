@@ -155,7 +155,6 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   have hread_qt : S.mem.readLimbs (q.add 120#64) = Q.t := by
     rw [← hQd]; rfl
   clear hQd
-  checkpoint hck2
   -- a = (p.y - p.x) * (q.y - q.x)
   step_pure
   have h1 := hpy.mono (show 2 ^ 53 ≤ 2 ^ 63 by decide)
@@ -212,7 +211,6 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   replace hC := hC.symm
   drop tt
   clear_facts g
-  checkpoint hck3
   -- d = p.z * q.z
   step_pure
   step_pure
@@ -252,8 +250,7 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   have hread_d2 : S.mem.readLimbs d = fun i => D i <<< 1 :=
     MemoryState.readLimbs_of_reads hread_d hread_d_8 hread_d_16 hread_d_24 hread_d_32
   have hd_limbs : S.mem.LimbsFit d := ⟨hdo, r0, r8, r16, r24, r32⟩
-  clear hread_d hread_d_8 hread_d_16 hread_d_24 hread_d_32 r0 r8 r16 r24 r32 hdo hfits_d_8
-    hfits_d_16 hfits_d_24 hfits_d_32
+  clear hread_d hread_d_8 hread_d_16 hread_d_24 hread_d_32 r0 r8 r16 r24 r32 hdo
   have hDD : Fe.Lt (fun i => D i <<< 1) (2 ^ 53) := fun i => by
     show (D i <<< 1).toNat < _
     rw [shl1_toNat (Nat.lt_trans (hDl i) (by decide))]; have := hDl i; omega
@@ -265,7 +262,6 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   have h2 := hAl.mono (show 2 ^ 52 ≤ 2 ^ 63 by decide)
   limbs_room x
   step_call using Fe_sub.call_eq_of consuming h1 h2
-  checkpoint hck5
   -- y = b + a, inline
   have hyo (i : Fin 5) : (A i).uaddOverflow (B i) = false :=
     uaddOverflow_eq_false
@@ -312,7 +308,6 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   have hy_limbs : S.mem.LimbsFit y := ⟨hyo, hfits_y, hfits_y_8, hfits_y_16, hfits_y_24, hfits_y_32⟩
   clear hread_y hread_y_8 hread_y_16 hread_y_24 hread_y_32 hfits_y hfits_y_8 hfits_y_16 hfits_y_24
     hfits_y_32 hyo
-  checkpoint hck6
   -- z = 2d + c, inline
   have hzo (i : Fin 5) : (C i).uaddOverflow (D i <<< 1) = false :=
     uaddOverflow_eq_false
@@ -351,7 +346,6 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   have hz_limbs : S.mem.LimbsFit z := ⟨hzo', hfits_z, hfits_z_8, hfits_z_16, hfits_z_24, hfits_z_32⟩
   clear hread_z hread_z_8 hread_z_16 hread_z_24 hread_z_32 hfits_z hfits_z_8 hfits_z_16 hfits_z_24
     hfits_z_32 hzo'
-  checkpoint hck7
   -- t = 2d - c
   have h1 := hDD.mono (show 2 ^ 53 ≤ 2 ^ 63 by decide)
   have h2 := hCl.mono (show 2 ^ 52 ≤ 2 ^ 63 by decide)
@@ -370,9 +364,8 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hox_limbs
   have htr := hS ▸ hread_ox_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_x.room
-  have f2 : Fits S.mem ox (8 * (40#64 : BitVec 64).toNat) := hox_limbs.fits
-  step_memcpy consuming f1 f2
+  have f2 := hox_limbs.fits
+  step_memcpy consuming f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (by omega), htr] at hS
   clear htm htr
   step_pure
@@ -382,8 +375,8 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hoy_limbs
   have htr := hS ▸ hread_oy_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_y.room
-  have f2 : Fits S.mem oy (8 * (40#64 : BitVec 64).toNat) := hoy_limbs.fits
+  have f1 := hout.limbsRoom_y.room
+  have f2 := hoy_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 40) (by omega)),
     htr] at hS
@@ -395,8 +388,8 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hoz_limbs
   have htr := hS ▸ hread_oz_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_z.room
-  have f2 : Fits S.mem oz (8 * (40#64 : BitVec 64).toNat) := hoz_limbs.fits
+  have f1 := hout.limbsRoom_z.room
+  have f2 := hoz_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 80) (by omega)),
     htr] at hS
@@ -408,8 +401,8 @@ public theorem Edwards25519_add.call_eq (out p q : Pointer) (s : GlobalState) (h
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hot_limbs
   have htr := hS ▸ hread_ot_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_t.room
-  have f2 : Fits S.mem ot (8 * (40#64 : BitVec 64).toNat) := hot_limbs.fits
+  have f1 := hout.limbsRoom_t.room
+  have f2 := hot_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 120) (by omega)),
     htr] at hS

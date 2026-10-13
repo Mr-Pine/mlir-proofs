@@ -162,8 +162,8 @@ public theorem crypto_verify_n.call_eq (x_ y_ : Pointer) (s : GlobalState) (hwf 
   step_alloca with v2
   step_alloca with z
   step_alloca with m
-  step_alloca with x
-  step_alloca with y
+  step_alloca with x hx_slot
+  step_alloca with y hy_slot
   iterate 5 step_pure
   step_store
   step_pure

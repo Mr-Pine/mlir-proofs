@@ -6561,8 +6561,7 @@ public theorem sc25519_reduce.call_eq (p : Pointer) (s : GlobalState) (hwf : s.W
   step_pattern using sc25519_reduce.run425
   clear hwf hp
   step_pattern using sc25519_reduce.run464
-  rw [BasicBlock.runBodyFrom_done (block := sc25519_reduce.entry) (pos := 567) (by decide +kernel)]
-  simp only [EffectM.pure_eq, PoisonOr.value_bind, reduceBlockExit, reduceFuncContinue, Exit.run]
+  finish_block
   rw [hS]
   subst hres
   rw [← sc25519_reduce.ir_eq_spec]

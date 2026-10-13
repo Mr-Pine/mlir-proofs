@@ -59,8 +59,7 @@ local macro "round " t:num sw:term:max a:ident e:ident ld:ident lh:ident : tacti
       obtain ⟨hfk, hkt⟩ :=
         readK (t := 16 * j + $t) (hw := hw) (congrArg GlobalState.mem hS) hKf hKo hKr ho hSpo htK
           hSK (by omega) (by omega)
-      step_pattern using (runBodyFrom_roundRun (sw := $sw) (16 * j) $t)
-      rename' A' => $a, E' => $e
+      step_pattern using runBodyFrom_roundRun (sw := $sw) (16 * j) $t:num with $a:ident $e:ident
       replace hv := rounds_step (n := 16 * j + $t) hv _hr
       rw [$ld:ident hSp56, $lh:ident hSp56] at hS
       clear _hr hfw hfk hkt))

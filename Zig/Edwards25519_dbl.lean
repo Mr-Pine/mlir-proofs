@@ -275,7 +275,6 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   have hread_pcy : S.mem.readLimbs (pc.add 40#64) = P.y := by
     rw [← hread_pc_readPt]; rfl
   clear hPd hread_pc_readPt
-  checkpoint hck2
   -- t0 = (x + y)²
   step_pure
   have h1 := hX.mono (show 2 ^ 53 ≤ 2 ^ 63 by decide)
@@ -296,7 +295,6 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_sq.call_eq_of consuming h1 hread_pcy
   drop xy
   drop p
-  checkpoint hck3
   -- y = z + x, inline
   have hX2 := Fe.sq.spec_lt P.x
   have hY2 := Fe.sq.spec_lt P.y
@@ -349,7 +347,6 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   clear hread_y hread_y_8 hread_y_16 hread_y_24 hread_y_32 hfits_y hfits_y_8 hfits_y_16 hfits_y_24
     hfits_y_32 hyo'
   have hYv := Fe.add.spec_lt hY2 hX2 (by decide)
-  checkpoint hck4
   -- z = z - x; x = t0 - y
   have h1 := hY2.mono (show 2 ^ 52 ≤ 2 ^ 63 by decide)
   have h2 := hX2.mono (show 2 ^ 52 ≤ 2 ^ 63 by decide)
@@ -360,8 +357,6 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_sub.call_eq_of consuming h1 h2 hread_t0_readLimbs
   drop z
   drop t0
-  clear hread_pc
-  checkpoint hck5
   -- 2 z², its columns inline
   have hov := Fe.sq2.noOverflow (hZ.mono (show 2 ^ 53 ≤ 2 ^ 54 by decide))
   have hz0 : S.mem.readAt (pc.add 80#64) 64 = P.z 0 := congrFun hread_pcz 0
@@ -451,7 +446,6 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   limbs_room w
   step_call using Fe_carry128.call_eq_of consuming hR hpre hrF
   step_pure
-  checkpoint hck6
   -- t = 2 z² - z
   have hW := Fe.carry128.spec_lt fun i => Fe.sq.cols P.z i <<< 1
   have hZZ := Fe.sub.spec_lt (b := Fe.sq.spec P.x) hY2 (by decide)
@@ -471,9 +465,8 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hox_limbs
   have htr := hS ▸ hread_ox_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_x.room
-  have f2 : Fits S.mem ox (8 * (40#64 : BitVec 64).toNat) := hox_limbs.fits
-  step_memcpy consuming f1 f2
+  have f2 := hox_limbs.fits
+  step_memcpy consuming f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (by omega), htr] at hS
   clear htm htr
   drop ox
@@ -484,8 +477,8 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hoy_limbs
   have htr := hS ▸ hread_oy_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_y.room
-  have f2 : Fits S.mem oy (8 * (40#64 : BitVec 64).toNat) := hoy_limbs.fits
+  have f1 := hout.limbsRoom_y.room
+  have f2 := hoy_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 40) (by omega)),
     htr] at hS
@@ -498,8 +491,8 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hoz_limbs
   have htr := hS ▸ hread_oz_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_z.room
-  have f2 : Fits S.mem oz (8 * (40#64 : BitVec 64).toNat) := hoz_limbs.fits
+  have f1 := hout.limbsRoom_z.room
+  have f2 := hoz_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 80) (by omega)),
     htr] at hS
@@ -512,8 +505,8 @@ public theorem Edwards25519_dbl.call_eq (out p : Pointer) (s : GlobalState) (hwf
   step_call using Fe_mul.call_eq_of consuming h1 h2
   have htm := hS ▸ hot_limbs
   have htr := hS ▸ hread_ot_readLimbs
-  have f1 : Room S.mem _ (8 * (40#64 : BitVec 64).toNat) := hout.limbsRoom_t.room
-  have f2 : Fits S.mem ot (8 * (40#64 : BitVec 64).toNat) := hot_limbs.fits
+  have f1 := hout.limbsRoom_t.room
+  have f2 := hot_limbs.fits
   step_memcpy consuming f1 f2
   rw [MemoryState.storeAt_readAt_eq_storeLimbs htm (Pointer.field_offset ho (a := 120) (by omega)),
     htr] at hS

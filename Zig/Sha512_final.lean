@@ -377,7 +377,7 @@ theorem bb2_run (d out : Pointer) (A : AllocState) (M : MemoryState) (E : ⟪Γ�
   have hdo80 : (d.add 80#64).offset.toNat + 128 < 2 ^ 64 := by
     simp [Pointer.add, BitVec.toNat_add]; omega
   have hdo' : d.offset.toNat + 80 < 2 ^ 64 := by omega
-  have hmz : Room M (d.add 80#64) (8 * (128#64).toNat) :=
+  have hmz : Room M (d.add 80#64) 1024 :=
     Room.add_of_le
       (by
         simp [BitVec.uaddOverflow]; omega)

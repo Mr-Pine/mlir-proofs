@@ -237,26 +237,6 @@ theorem readLimbs_add {m : MemoryState} {p : Pointer} (k : Nat) :
   funext i
   fin_cases i <;> simp [MemoryState.readLimbs, Pointer.add_add, BitVec.ofNat_add]
 
-/-- A read below six `alloca`s. -/
-theorem readAt_alloca6 {s : GlobalState} (hwf : s.WF) (h : InBounds s.mem q w) :
-    ((((((s.alloca n₁ d₁).alloca n₂ d₂).alloca n₃ d₃).alloca n₄ d₄).alloca n₅ d₅).alloca n₆
-            d₆).mem.readAt
-        q w =
-      s.mem.readAt q w := by
-  have w1 := hwf.alloca (n := n₁) (d := d₁)
-  have w2 := w1.alloca (n := n₂) (d := d₂)
-  have w3 := w2.alloca (n := n₃) (d := d₃)
-  have w4 := w3.alloca (n := n₄) (d := d₄)
-  have w5 := w4.alloca (n := n₅) (d := d₅)
-  have i1 := h.alloca (n := n₁) (d := d₁) hwf
-  have i2 := i1.alloca (n := n₂) (d := d₂) w1
-  have i3 := i2.alloca (n := n₃) (d := d₃) w2
-  have i4 := i3.alloca (n := n₄) (d := d₄) w3
-  have i5 := i4.alloca (n := n₅) (d := d₅) w4
-  rw [MemoryState.readAt_alloca_of_fits w5 i5, MemoryState.readAt_alloca_of_fits w4 i4,
-    MemoryState.readAt_alloca_of_fits w3 i3, MemoryState.readAt_alloca_of_fits w2 i2,
-    MemoryState.readAt_alloca_of_fits w1 i1, MemoryState.readAt_alloca_of_fits hwf h]
-
 /-- A field element's limbs at byte 0 of a point, as the code loads them. -/
 theorem readLimbs_zero {m : MemoryState} {p : Pointer} :
     m.readLimbs p =
@@ -518,17 +498,6 @@ public theorem call_eq (out a : Pointer) (s : GlobalState) (hwf : s.WF)
   step_memcpy consuming hread_tbl hfits_tbl
   step_pure
   finish_block
-  simp only [readAt_alloca6 hwf₀ hf40₀.inBounds, readAt_alloca6 hwf₀ hf80₀.inBounds,
-    readAt_alloca6 hwf₀ hf120₀.inBounds, readAt_alloca6 hwf₀ hf8₀.inBounds,
-    readAt_alloca6 hwf₀ hf48₀.inBounds, readAt_alloca6 hwf₀ hf88₀.inBounds,
-    readAt_alloca6 hwf₀ hf128₀.inBounds, readAt_alloca6 hwf₀ hf16₀.inBounds,
-    readAt_alloca6 hwf₀ hf56₀.inBounds] at hy0 hz0 ht0 hx1 hy1 hz1 ht1 hx2 hy2
-  simp only [readAt_alloca6 hwf₀ hf96₀.inBounds, readAt_alloca6 hwf₀ hf136₀.inBounds,
-    readAt_alloca6 hwf₀ hf24₀.inBounds, readAt_alloca6 hwf₀ hf64₀.inBounds,
-    readAt_alloca6 hwf₀ hf104₀.inBounds, readAt_alloca6 hwf₀ hf144₀.inBounds,
-    readAt_alloca6 hwf₀ hf32₀.inBounds, readAt_alloca6 hwf₀ hf72₀.inBounds,
-    readAt_alloca6 hwf₀ hf112₀.inBounds,
-    readAt_alloca6 hwf₀ hf152₀.inBounds] at hz2 ht2 hx3 hy3 hz3 ht3 hx4 hy4 hz4 ht4
   subst hS
   erase_frame
   rw [MemoryState.storeNaf5, readEdwards_eq, spec_eq,

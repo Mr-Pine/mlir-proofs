@@ -434,7 +434,7 @@ theorem head_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 : Vector Int 2
   step_call using fd_ed25519_partial_dbl.call_eq
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
     show i * 2 = 2 * i by omega]
-  step_load with transparent d consuming hf1 hl1
+  step_load with transparent d hd_eq consuming hf1 hl1
   step_pure
   finish_block
   case
@@ -530,7 +530,7 @@ theorem digit2_block (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w2 : Vector Int
   block_init
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show 2 * i < 2 ^ 64 by omega,
     show i * 2 = 2 * i by omega]
-  step_load with transparent d consuming hf2 hl2
+  step_load with transparent d hd_eq consuming hf2 hl2
   step_pure
   finish_block
   case

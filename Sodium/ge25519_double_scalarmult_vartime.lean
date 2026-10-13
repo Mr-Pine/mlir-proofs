@@ -514,7 +514,7 @@ theorem headA_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
   block_init
   step_call using ge25519_p2_dbl.call_eq
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show i < 2 ^ 64 by omega]
-  step_load with transparent d consuming hf hdv
+  step_load with transparent d hd_eq consuming hf hdv
   step_pure
   finish_block
   case isTrue =>
@@ -619,7 +619,7 @@ theorem headB_block (r a A b aslide bslide ai bi t u a2 : Pointer) (as bs : Vect
   clear ht
   block_init
   step_pure [Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), show i < 2 ^ 64 by omega]
-  step_load with transparent d consuming hf hdv
+  step_load with transparent d hd_eq consuming hf hdv
   step_pure
   finish_block
   case isTrue =>
