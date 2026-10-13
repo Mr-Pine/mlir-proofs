@@ -11,4 +11,5 @@ public import Ed25519.BasePoint
 public import Ed25519.Decode
 public import Ed25519.Order
 public import Ed25519.Verify
+public import Ed25519.Encode
 public import Ed25519.Firedancer
