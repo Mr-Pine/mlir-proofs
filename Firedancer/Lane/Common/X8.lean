@@ -24,6 +24,23 @@ structure Consts where
   y1 : Fe
   tbl : Nat → BitVec 64
 
+/-- The canonical encodings of `d`, `√-1`, `2d`, and the order-8 `y`s `y8`, `-y8`. -/
+abbrev dBytes : BitVec 256 :=
+  37095705934669439343138083508754565189542113879843219016388785533085940283555#256
+abbrev sqrtm1Bytes : BitVec 256 :=
+  19681161376707505956807079304988542015446066515923890162744021073123829784752#256
+abbrev k2dBytes : BitVec 256 :=
+  16295367250680780974490674513165176452449235426866156013048779062215315747161#256
+abbrev y8Bytes : BitVec 256 :=
+  2707385501144840649318225287225658788936804267575313519463743609750303402022#256
+abbrev ny8Bytes : BitVec 256 :=
+  55188659117513257062467267217118295137698188065244968500265048394206261417927#256
+
+/-- `verify_x8`'s constants, broadcast from their encodings, with the fixed-base table `tbl`. -/
+def laneConsts (tbl : Nat → BitVec 64) : Consts :=
+  ⟨bcastBytes dBytes, bcastBytes sqrtm1Bytes, bcastBytes k2dBytes, bcastBytes y8Bytes,
+    bcastBytes ny8Bytes, tbl⟩
+
 /-- `FD_ED25519_SUCCESS`, `_ERR_SIG`, `_ERR_PUBKEY`, `_ERR_MSG`. -/
 abbrev errSig : BitVec 32 := -1#32
 abbrev errPubkey : BitVec 32 := -2#32
