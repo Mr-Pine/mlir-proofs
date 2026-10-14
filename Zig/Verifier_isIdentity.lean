@@ -59,7 +59,7 @@ public theorem Verifier_isIdentity.call_eq (p : Pointer) (s : GlobalState) (hwf 
       simp (disch := mem_fact) only [MemoryState.readLimbs_alloca]
     have hZd : S.mem.readLimbs (p.add 80#64) = S₀.mem.readLimbs (p.add 80#64) := by
       rw [hS]
-      simp (disch := mem_fact) only [MemoryState.readLimbs_storeDef_of_id_ne,
+      simp (disch := mem_fact) only [MemoryState.readLimbs_storeCopy_of_id_ne,
         MemoryState.readLimbs_alloca]
     have hz₀ : Fe.Lt (S₀.mem.readLimbs (p.add 80#64)) (2 ^ 63) := hZd ▸ hz
     clear hbits hcA hpA hz hy hx

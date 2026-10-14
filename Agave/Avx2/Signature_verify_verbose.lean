@@ -355,7 +355,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [hS']
       first
       | exact hg.mono globals_updateMem fun _ h => h
-      | exact Writable.storeDef (writable_updateMem (by mem_fact))
+      | exact Writable.storeCopy (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs1 :=
@@ -386,7 +386,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [hS']
       first
       | exact hg.mono globals_updateMem fun _ h => h
-      | exact Writable.storeDef (writable_updateMem (by mem_fact))
+      | exact Writable.storeCopy (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs2 :=
@@ -408,7 +408,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [hS']
       first
       | exact hg.mono globals_updateMem fun _ h => h
-      | exact Writable.storeDef (writable_updateMem (by mem_fact))
+      | exact Writable.storeCopy (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs3 := absorbed_chain hS hA' hroom' hhasher3_off hF' hmo hlen (by mem_fact)

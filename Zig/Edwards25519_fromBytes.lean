@@ -383,6 +383,8 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     hread_ginv.trans (by decide +kernel)
   have hginv_d : S.mem.definedAt ginv 1408 = Edwards25519.fromBytes.invalidDef :=
     hdefined_ginv.trans (by decide +kernel)
+  -- no pointer in the global: its copy is a masked store
+  have hginv_p : PtrFree S.mem ginv 1408 := PtrFree.of_global hwf hglobal_ginv rfl rfl
   clear hread_ginv hdefined_ginv
   checkpoint hck0
   rename' S => S₁
@@ -414,6 +416,8 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   step_alloca with flag
   have hflag0 : S.mem.definedAt flag 8 = 0 := by
     rw [hS, hflag]; exact MemoryState.definedAt_alloca_allocaPtr
+  have hflagp : PtrFree S.mem flag 8 := by
+    rw [hS, hflag]; exact PtrFree.allocaPtr
   step_alloca with nx
   step_alloca with xs
   step_alloca with pv
@@ -644,7 +648,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
   finish_block
   case isFalse =>
     block_init
-    step_memcpy consuming hout hbuf hB
+    step_memcpy consuming hout hbuf hB hginv_p
     finish_block
     block_init
     finish_block
@@ -661,6 +665,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     rw [hsp]
     rfl
   case isTrue =>
+    clear hginv_p
     -- x.cMov(x √-1, 1 - has_m_root)
     block_init
     limbs_room xs
@@ -789,7 +794,7 @@ public theorem Edwards25519_fromBytes.call_eq (out buf : Pointer) (s : GlobalSta
     clear hov a0 a1 a2 a3 a01 a02
     step_memcpy consuming f2 hptv hfits_out_168 hbuf
     step_pure
-    step_impure [hfd] => exact run_loadDef (by mem_fact)
+    step_impure [hfd] consuming hflagp => exact run_loadDef_of_ptrFree (by mem_fact) hflagp
     have f1 : Room S.mem (out.add 160#64) 8 ∧ True :=
       ⟨Room.add_of_le
           (by

@@ -15,12 +15,13 @@ private def it : Pointer :=
 private def buf (k : Nat) : Pointer :=
   ⟨⟨2⟩, BitVec.ofNat 64 k⟩
 
-/-- `it` holding the iterator over bytes `k … 3` of `buf`, its pointers stored. -/
+/-- `it` holding the iterator over bytes `k … 3` of `buf`, its pointers stored (their bits their
+addresses, every block at `0`). -/
 private def s0 (k : Nat) : GlobalState :=
   ⟨⟨3⟩,
     ⟨Std.ExtHashMap.ofList
         [(⟨1⟩,
-            ⟨16, 0, 0, true, fun o =>
+            ⟨16, BitVec.ofNat 128 (k + 4 * 2 ^ 64), 0, true, fun o =>
               if o = 0 then some (buf k) else if o = 64 then some (buf 4) else none, true⟩),
           (⟨2⟩, .ofBytes 4 0xdeadbeef)]⟩⟩
 

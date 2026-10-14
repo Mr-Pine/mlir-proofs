@@ -14,10 +14,11 @@ import Mathlib.Tactic.Rename
 namespace MLIR.Agave.Avx2
 
 open Serial.scalar_from_sha512 (absorbed_of_block absorbed_alloca absorbed_lifetimeStart
-  absorbed_storeDef copyObj copy_fits copy_read add_128 absorbed_copy absorbed_after_copy
-  eraseFrom_storeSha512_of_le)
+  absorbed_storeDef absorbed_storeCopy copyObj copy_fits copy_read add_128 absorbed_copy
+  absorbed_after_copy eraseFrom_storeSha512_of_le)
 
 attribute [local mlir_transport] absorbed_alloca absorbed_lifetimeStart absorbed_storeDef
+  absorbed_storeCopy
 
 attribute [local mlir_erase high] eraseFrom_storeSha512_of_le
 
@@ -84,7 +85,7 @@ public theorem call_eq (out hash : Pointer) (M : List (BitVec 8)) (s : GlobalSta
           MemoryState.getElem?_setLifetime_ne hhash_ne_output,
           MemoryState.getElem?_setLifetime_ne hhash_ne_digest,
           MemoryState.getElem?_setLifetime_ne hhash_ne_hasher, GlobalState.getElem?_alloca])
-      rfl hA hroom_hasher (by simp [hhasher_off]) hhash_ne_hasher.symm
+      rfl rfl hA hroom_hasher (by simp [hhasher_off]) hhash_ne_hasher.symm
   step_pure
   step_call using
     (Sha512VarCore_VariableOutputCore_finalize_variable_core.call_eq_absorbed (hA := hA')) consuming

@@ -365,31 +365,31 @@ open Sha512_Update_chain_slice_u8 in
 @[local mlir_transport]
 theorem fits_copyObj {m : MemoryState} {out self p : Pointer} (h : Fits m p w)
     (hne : p.id ≠ out.id) : Fits (copyObj m out self) p w := by
-  simpa only [copyObj, Fits, MemoryState.getElem?_storeDef_ne hne] using h
+  simpa only [copyObj, Fits, MemoryState.getElem?_storeCopy_ne hne] using h
 
 open Sha512_Update_chain_slice_u8 in
 @[local mlir_transport]
 theorem inBounds_copyObj {m : MemoryState} {out self p : Pointer} (h : InBounds m p w) :
     InBounds (copyObj m out self) p w :=
-  InBounds.storeDef h
+  InBounds.storeCopy h
 
 open Sha512_Update_chain_slice_u8 in
 @[local mlir_transport]
 theorem room_copyObj {m : MemoryState} {out self p : Pointer} (h : Room m p w) :
     Room (copyObj m out self) p w :=
-  Room.storeDef h
+  Room.storeCopy h
 
 open Sha512_Update_chain_slice_u8 in
 @[local mlir_transport]
 theorem wf_copyObj_mk {a : AllocState} {m : MemoryState} {out self : Pointer}
     (h : (⟨a, m⟩ : GlobalState).WF) : (⟨a, copyObj m out self⟩ : GlobalState).WF :=
-  GlobalState.WF.storeDef_mk h
+  GlobalState.WF.storeCopy_mk h
 
 open Sha512_Update_chain_slice_u8 in
 @[local mlir_read]
 public theorem readAt_copyObj_of_id_ne {m : MemoryState} {out self q : Pointer}
     (hne : q.id ≠ out.id) : (copyObj m out self).readAt q w = m.readAt q w := by
-  simp only [copyObj, MemoryState.readAt, MemoryState.getElem?_storeDef_ne hne]
+  simp only [copyObj, MemoryState.readAt, MemoryState.getElem?_storeCopy_ne hne]
 
 open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0
     Sha512_Update_chain_slice_u8 in
@@ -740,7 +740,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [hS']
       first
       | exact hg.mono globals_updateMem fun _ h => h
-      | exact Writable.storeDef (writable_updateMem (by mem_fact))
+      | exact Writable.storeCopy (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs1 :=
@@ -771,7 +771,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [hS']
       first
       | exact hg.mono globals_updateMem fun _ h => h
-      | exact Writable.storeDef (writable_updateMem (by mem_fact))
+      | exact Writable.storeCopy (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs2 :=
@@ -793,7 +793,7 @@ public theorem call_eq (sig pk msg : Pointer) (len : BitVec 64) (s : GlobalState
       rw [hS']
       first
       | exact hg.mono globals_updateMem fun _ h => h
-      | exact Writable.storeDef (writable_updateMem (by mem_fact))
+      | exact Writable.storeCopy (writable_updateMem (by mem_fact))
     dsimp only at hm₁
     rw [hm₁] at hS
     have hAbs3 := absorbed_chain hS hA' hroom' hhasher3_off hF' hmo hlen (by mem_fact)

@@ -1345,7 +1345,7 @@ theorem weak_block (out s1 p2 s2 wk : Pointer) (g : Vals [] × GlobalState → P
     (hArgs : Args E out s1 p2 s2) (hR : E ⊨ [%3486 := wk, %3487 := 176#64]) (hwf : S.WF)
     (hFo : Room S.mem out 1408) (hFw : Live S.mem wk 1408) (hne : out.id ≠ wk.id)
     (hwb : S.mem.readAt wk 1408 = Edwards25519_mulDoubleBasePublic_weak.bits)
-    (hwd : S.mem.definedAt wk 1408 = weakDef)
+    (hwd : S.mem.definedAt wk 1408 = weakDef) (hwp : PtrFree S.mem wk 1408)
     (hK :
       ∀ (E' : ⟪Edwards25519_mulDoubleBasePublic.Γ⟫) (S' : GlobalState),
         S' = ⟨S.alloc, S.mem.storeDef out Edwards25519_mulDoubleBasePublic_weak.bits weakDef⟩ →
@@ -1354,7 +1354,7 @@ theorem weak_block (out s1 p2 s2 wk : Pointer) (g : Vals [] × GlobalState → P
   have hd : (Range.of out 1408).Disjoint (Range.of wk 1408) := .inl hne
   unfold Args at hArgs
   block_init
-  step_memcpy consuming hwb hwd
+  step_memcpy consuming hwb hwd hwp
   finish_block
   exact hK E S hS
 
@@ -1610,9 +1610,17 @@ public theorem Edwards25519_mulDoubleBasePublic.call_eq (out s1 p2 s2 : Pointer)
           by omega]
     case isFalse =>
       simp only [hbr, ↓reduceIte] at hRes hk
+      -- the global's table entry, the same in every memory: no pointer in it
+      have hgw : S.mem.globals "Edwards25519.mulDoubleBasePublic.weak" =
+          some (wk.id, Edwards25519_mulDoubleBasePublic_weak.image) := by
+        have e : S.mem.globals = S₁.mem.globals :=
+          calc S.mem.globals = (S.mem.eraseFrom S₀.alloc.nextFreeBlock).globals := rfl
+            _ = S₀.mem.globals := by rw [hEr]
+            _ = S₁.mem.globals := by rw [← hck0]
+        rw [e]; exact hglobal_wk
       refine
         weak_block out s1 p2 s2 wk _ _ S E hArgs (by env_reads) hwf hout hwk_live hout_ne_wk hwb hwd
-          fun E' S' hS' => ?_
+          (PtrFree.of_global hwf hgw rfl rfl) fun E' S' hS' => ?_
       block_init
       finish_block
       rw [hS', ← hRes, ← hk]

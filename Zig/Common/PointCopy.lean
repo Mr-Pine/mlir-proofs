@@ -66,18 +66,19 @@ public theorem _root_.MLIR.MemoryState.PtFit.ptLimbsFit {m : MemoryState} {p : P
 /-- A copy of a point whose field elements are known has them known. -/
 @[mlir_fresh, mlir_mem]
 public theorem _root_.MLIR.MemoryState.PtLimbsFit.copy {m : MemoryState} {p q : Pointer}
+    {P : Nat → Option Pointer}
     (hp : m.PtRoom p) (hq : m.PtLimbsFit q) :
-    (m.storeDef p (m.readAt q 1344) (m.definedAt q 1344)).PtLimbsFit p := by
+    (m.storeCopy p (m.readAt q 1344) (m.definedAt q 1344) P).PtLimbsFit p := by
   have hl (k : BitVec 64) (hk : k.toNat ≤ 120) (hf : m.LimbsFit (q.add k)) :
-    (m.storeDef p (m.readAt q 1344) (m.definedAt q 1344)).LimbsFit (p.add k) :=
+    (m.storeCopy p (m.readAt q 1344) (m.definedAt q 1344) P).LimbsFit (p.add k) :=
     .of_fits'
-      (Fits.storeDef_definedAt hp.2 hf.fits (p.not_uaddOverflow_of_pt hp.1 (by omega))
+      (Fits.storeCopy_definedAt hp.2 hf.fits (p.not_uaddOverflow_of_pt hp.1 (by omega))
         (q.not_uaddOverflow_of_pt hq.1 (by omega)) (by omega))
       (by
         simp only [Pointer.add, BitVec.toNat_add]; have := hp.1; omega)
   exact
-    ⟨hp.1, hp.2.1.storeDef,
-      .of_fits' (Fits.storeDef_definedAt_self hp.2 hq.2.2.1.fits (by omega))
+    ⟨hp.1, hp.2.1.storeCopy,
+      .of_fits' (Fits.storeCopy_definedAt_self hp.2 hq.2.2.1.fits (by omega))
         (by
           have := hp.1; omega),
       hl _ (by decide) hq.2.2.2.1, hl _ (by decide) hq.2.2.2.2.1, hl _ (by decide) hq.2.2.2.2.2⟩
@@ -85,18 +86,20 @@ public theorem _root_.MLIR.MemoryState.PtLimbsFit.copy {m : MemoryState} {p q : 
 /-! ### Copies whose source bits the steps read below a frame -/
 
 /-- A coordinate of a copy of the bits `x` read at `q`: `q`'s. -/
-public theorem _root_.MLIR.MemoryState.readLimbs_copy_of {m : MemoryState} {p q : Pointer} {a : Nat}
+public theorem _root_.MLIR.MemoryState.readLimbs_copy_of {m : MemoryState} {p q : Pointer}
+    {P : Nat → Option Pointer} {a : Nat}
     {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtLive q) (ha : a ≤ 120) (hx : m.readAt q 1344 = x)
     (d : BitVec 1344) :
-    (m.storeDef p x d).readLimbs (p.add (BitVec.ofNat 64 a)) =
+    (m.storeCopy p x d P).readLimbs (p.add (BitVec.ofNat 64 a)) =
       m.readLimbs (q.add (BitVec.ofNat 64 a)) := by
   subst hx
   exact MemoryState.readLimbs_copy hp hq ha d
 
 /-- A copy of the bits `x` read at `q`: `q`'s point. -/
 public theorem _root_.MLIR.MemoryState.readPt_copy_of {m : MemoryState} {p q : Pointer}
+    {P : Nat → Option Pointer}
     {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtLive q) (hx : m.readAt q 1344 = x)
-    (d : BitVec 1344) : (m.storeDef p x d).readPt p = m.readPt q := by
+    (d : BitVec 1344) : (m.storeCopy p x d P).readPt p = m.readPt q := by
   subst hx
   exact MemoryState.readPt_copy hp hq d
 
@@ -131,6 +134,7 @@ public theorem _root_.MLIR.MemoryState.definedAt_addBlock {s : GlobalState} {x :
     (by simpa [GlobalState.allocaPtr] using GlobalState.ne_allocaPtr_of_inBounds hwf h)
 
 attribute [mlir_read] MemoryState.definedAt_storeDef_disjoint
+  MemoryState.definedAt_storeCopy_disjoint
 
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.definedAt_storeAt_disjoint {v w : Nat} {m : MemoryState}
@@ -150,6 +154,18 @@ theorem getElem?_storePt_ne {m : MemoryState} {p q : Pointer} (h : q.id ≠ p.id
   have h' (k : BitVec 64) : q.id ≠ p.id → (q.add k).id ≠ p.id := by simp [Pointer.add_id]
   simp only [MemoryState.storePt, MemoryState.getElem?_storeAt_ne (Ne.symm (h' _ h)),
     getElem?_storeLimbs_ne (h' _ h), getElem?_storeLimbs_ne h]
+
+/-- Limbs stored in another block keep `PtrFree`. -/
+@[mlir_transport]
+public theorem _root_.MLIR.PtrFree.storeLimbs_of_id_ne {m : MemoryState} {p q : Pointer}
+    (h : q.id ≠ p.id) (hf : PtrFree m p w) : PtrFree (m.storeLimbs q l) p w :=
+  hf.of_getElem?_eq (getElem?_storeLimbs_ne h) rfl
+
+/-- A point stored in another block keeps `PtrFree`. -/
+@[mlir_transport]
+public theorem _root_.MLIR.PtrFree.storePt_of_id_ne {m : MemoryState} {p q : Pointer}
+    (h : q.id ≠ p.id) (hf : PtrFree m p w) : PtrFree (m.storePt q Q c) p w :=
+  hf.of_getElem?_eq (getElem?_storePt_ne h) rfl
 
 /-- Definedness alike in blocks held alike. -/
 public theorem definedAt_congr {m m' : MemoryState} {p : Pointer} (h : m'[p.id]? = m[p.id]?) :
@@ -346,6 +362,33 @@ public theorem ZPt.overDef_low (d : BitVec 1344) :
     (ZPt.overDef d).extractLsb' 0 1281 = BitVec.allOnes 1281 :=
   splice5_def d
 
+/-- Bits defined as a stored point's carry no pointer: every 64-bit window of them has a defined
+bit. -/
+@[mlir_no_ptrs]
+public theorem _root_.MLIR.MemoryState.ptrsIn_of_overDef {m : MemoryState} {q : Pointer}
+    {d : BitVec 1344} (hd : m.definedAt q 1344 = ZPt.overDef d) :
+    m.ptrsIn q 1344 = fun _ => none := by
+  refine MemoryState.ptrsIn_eq_none fun o ho h0 => ?_
+  have hl := congrArg (·.getLsbD o) (ZPt.overDef_low d)
+  have hb := congrArg (·.getLsbD 0) h0
+  simp only [BitVec.getLsbD_extractLsb', BitVec.getLsbD_allOnes, show o < 1281 by omega,
+    decide_true, Bool.true_and, Nat.zero_add] at hl
+  simp only [hd, BitVec.getLsbD_extractLsb', Nat.add_zero, BitVec.getLsbD_zero,
+    show 0 < 64 by decide, decide_true, Bool.true_and] at hb
+  simp [hl] at hb
+
+/-- `ptrsIn_of_overDef` at a fresh slot's stored point. -/
+@[mlir_no_ptrs]
+public theorem _root_.MLIR.MemoryState.ptrsIn_of_rawDef {m : MemoryState} {q : Pointer}
+    (hd : m.definedAt q 1344 = ZPt.rawDef) : m.ptrsIn q 1344 = fun _ => none :=
+  MemoryState.ptrsIn_of_overDef hd
+
+/-- A stored point carries no pointer. -/
+@[mlir_read]
+public theorem _root_.MLIR.MemoryState.ptrsIn_storePt_self {m : MemoryState} {p : Pointer}
+    (h : m.PtRoom p) : (m.storePt p P b).ptrsIn p 1344 = fun _ => none :=
+  MemoryState.ptrsIn_of_overDef (MemoryState.definedAt_storePt_self h)
+
 /-- A point copied out of a fresh slot reads back. -/
 @[mlir_read]
 public theorem _root_.MLIR.MemoryState.readPt_storePtCopy_self {m : MemoryState} {p : Pointer}
@@ -530,6 +573,12 @@ public theorem _root_.MLIR.MemoryState.PadClear.storeDef {m : MemoryState} {t q 
   PadClear.congr (MemoryState.getElem?_storeDef_ne hne.symm) hc
 
 @[mlir_transport]
+public theorem _root_.MLIR.MemoryState.PadClear.storeCopy {m : MemoryState} {t q : Pointer}
+    {x d : BitVec w} {P : Nat → Option Pointer} (hne : q.id ≠ t.id) (hc : m.PadClear t) :
+    (m.storeCopy q x d P).PadClear t :=
+  PadClear.congr (MemoryState.getElem?_storeCopy_ne hne.symm) hc
+
+@[mlir_transport]
 public theorem _root_.MLIR.MemoryState.PadClear.storeAt {m : MemoryState} {t q : Pointer}
     {x : BitVec w} (hne : q.id ≠ t.id) (hc : m.PadClear t) : (m.storeAt q x).PadClear t :=
   PadClear.congr (MemoryState.getElem?_storeAt_ne hne.symm) hc
@@ -584,6 +633,14 @@ public theorem _root_.MLIR.MemoryState.PtLimbsFit.storeDef_of_id_ne {m : MemoryS
     (m.storeDef q x d).PtLimbsFit p :=
   ⟨h.1, h.2.1.storeDef, h.2.2.1.storeDef_of_id_ne hne, h.2.2.2.1.storeDef_of_id_ne hne,
     h.2.2.2.2.1.storeDef_of_id_ne hne, h.2.2.2.2.2.storeDef_of_id_ne hne⟩
+
+@[mlir_mem, mlir_transport]
+public theorem _root_.MLIR.MemoryState.PtLimbsFit.storeCopy_of_id_ne {m : MemoryState}
+    {p q : Pointer} {x d : BitVec w} {P : Nat → Option Pointer} (hne : q.id ≠ p.id)
+    (h : m.PtLimbsFit p) :
+    (m.storeCopy q x d P).PtLimbsFit p :=
+  ⟨h.1, h.2.1.storeCopy, h.2.2.1.storeCopy_of_id_ne hne, h.2.2.2.1.storeCopy_of_id_ne hne,
+    h.2.2.2.2.1.storeCopy_of_id_ne hne, h.2.2.2.2.2.storeCopy_of_id_ne hne⟩
 
 @[mlir_mem, mlir_transport]
 public theorem _root_.MLIR.MemoryState.PtLimbsFit.alloca {s : GlobalState} {p : Pointer}

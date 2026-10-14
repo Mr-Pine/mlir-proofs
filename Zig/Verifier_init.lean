@@ -32,11 +32,15 @@ set_option hygiene false in
 about `v` dropped but its room. -/
 local macro "v_post" : tactic =>
   `(tactic|
-    ( obtain ⟨hv_zb, hv_zd⟩ := hV _ _ _ (congrArg GlobalState.mem hS)
-      have hvr : Room S.mem v 4736 ∧ True := ⟨hv_room, trivial⟩
+    ( have hSc := hS
+      try rw [← MemoryState.storeCopy_none] at hSc
+      obtain ⟨hv_zb, hv_zd⟩ := hV _ _ _ _ (congrArg GlobalState.mem hSc)
+      clear hSc
+      have hvr : Room S.mem v 4736 ∧ PtrFree S.mem v 4736 := ⟨hv_room, hv_p⟩
       clear hV
       clear_facts v
       have hv_room := hvr.1
+      have hv_p := hvr.2
       clear hvr))
 
 namespace MLIR.Zig
@@ -406,26 +410,28 @@ theorem upd2_def : upd32Def hash1Def 32#8 = hashDefs := by
   rw [upd32Def, spliceBits_eq, spliceBits_eq, spliceBits_eq]
   decide +kernel
 
-/-- A masked store at a block's start, over its bits and definedness: spliced in. -/
+/-- A copy's write at a block's start, over its bits and definedness: spliced in. -/
 theorem splice_def0 {m m' : MemoryState} {p : Pointer} {X D : BitVec V} {x d : BitVec w}
-    (hm : m' = m.storeDef p x d) (hi : Room m p V) (hw : w ≤ V) (hX : m.readAt p V = X)
-    (hD : m.definedAt p V = D) :
+    {P : Nat → Option Pointer} (hm : m' = m.storeCopy p x d P) (hi : Room m p V) (hw : w ≤ V)
+    (hX : m.readAt p V = X) (hD : m.definedAt p V = D) :
     m'.readAt p V = spliceBits X 0 x ∧ m'.definedAt p V = spliceBits D 0 d := by
   subst hm hX hD
+  rw [MemoryState.sameBits_storeCopy.readAt, MemoryState.sameBits_storeCopy.definedAt]
   have h0 : ¬p.offset.uaddOverflow 0#64 := by simp [BitVec.uaddOverflow, p.offset.isLt]
   have e1 := MemoryState.readAt_add_storeDef (off := 0#64) hi h0 (by simpa) x d
   have e2 := MemoryState.definedAt_add_storeDef (off := 0#64) hi h0 (by simpa) x d
   simp only [Pointer.add_zero', BitVec.toNat_ofNat, Nat.zero_mod, Nat.zero_mul] at e1 e2
   exact ⟨e1, e2⟩
 
-/-- A masked store inside a block, over its bits and definedness: spliced in. -/
+/-- A copy's write inside a block, over its bits and definedness: spliced in. -/
 theorem splice_def {m m' : MemoryState} {p : Pointer} {off : BitVec 64} {X D : BitVec V}
-    {x d : BitVec w} (hm : m' = m.storeDef (p.add off) x d) (hi : Room m p V)
-    (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ V) (hX : m.readAt p V = X)
-    (hD : m.definedAt p V = D) :
+    {x d : BitVec w} {P : Nat → Option Pointer} (hm : m' = m.storeCopy (p.add off) x d P)
+    (hi : Room m p V) (hov : ¬p.offset.uaddOverflow off) (hw : off.toNat * 8 + w ≤ V)
+    (hX : m.readAt p V = X) (hD : m.definedAt p V = D) :
     m'.readAt p V = spliceBits X (off.toNat * 8) x ∧
       m'.definedAt p V = spliceBits D (off.toNat * 8) d := by
   subst hm hX hD
+  rw [MemoryState.sameBits_storeCopy.readAt, MemoryState.sameBits_storeCopy.definedAt]
   exact
     ⟨MemoryState.readAt_add_storeDef hi hov hw x d,
       MemoryState.definedAt_add_storeDef hi hov hw x d⟩
@@ -532,14 +538,20 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
   have hiv_d :
     S.mem.definedAt iv 1792 = 0#120 ++ BitVec.allOnes 8 ++ 0#1024 ++ BitVec.allOnes 640 :=
     hdefined_iv.trans (by decide +kernel)
+  have hiv_p : PtrFree S.mem iv 1792 := PtrFree.of_global hwf hglobal_iv rfl rfl
   clear hread_iv hdefined_iv
   checkpoint hck0
   rename' S => S₁
   step_pure
+  -- the slots hold no pointer: their copies carry none
   step_alloca with v
+  have hv_p : PtrFree S.mem v 4736 := by rw [hS, hv]; mem_fact
   step_alloca with h
+  have hh_p : PtrFree S.mem h 1792 := by rw [hS, hh]; mem_fact
   step_alloca with pr
+  have hpr_p : PtrFree S.mem pr 1344 := by rw [hS, hpr]; mem_fact
   step_alloca with pa
+  have hpa_p : PtrFree S.mem pa 1344 := by rw [hS, hpa]; mem_fact
   step_alloca with rc
   have hpr_z : S.mem.readAt pr 1344 = 0 ∧ S.mem.definedAt pr 1344 = 0 :=
     fresh_slot (s := (S₁.alloca 592).alloca 224)
@@ -770,8 +782,8 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
           have hov (k : BitVec 64) (hk : k.toNat ≤ 592) : ¬v.offset.uaddOverflow k := by
             simp [BitVec.uaddOverflow, hv_off]; omega
           checkpoint hck6
-          have hV := fun m' (x d : BitVec 1792) hm =>
-            splice_def0 (m' := m') (x := x) (d := d) hm hv_room (by omega) hv_zb hv_zd
+          have hV := fun m' (x d : BitVec 1792) P hm =>
+            splice_def0 (m' := m') (x := x) (d := d) (P := P) hm hv_room (by omega) hv_zb hv_zd
           clear hv_zb hv_zd
           step_memcpy
           v_post
@@ -784,23 +796,24 @@ public theorem Verifier_init.call_eq (out sig pk : Pointer) (s : GlobalState) (h
           checkpoint hck7
           step_memcpy
           obtain ⟨hv_zb, hv_zd⟩ := hV _ (congrArg GlobalState.mem hS)
-          have hvr : Room S.mem v 4736 ∧ True := ⟨hv_room, trivial⟩
+          have hvr : Room S.mem v 4736 ∧ PtrFree S.mem v 4736 := ⟨hv_room, hv_p⟩
           clear hV
           clear_facts v
           have hv_room := hvr.1
+          have hv_p := hvr.2
           clear hvr
           step_pure
           checkpoint hck8
-          have hV := fun m' (x d : BitVec 1344) hm =>
-            splice_def (m' := m') (x := x) (d := d) (off := 224#64) hm hv_room
+          have hV := fun m' (x d : BitVec 1344) P hm =>
+            splice_def (m' := m') (x := x) (d := d) (P := P) (off := 224#64) hm hv_room
               (hov _ (by decide)) (by simp) hv_zb hv_zd
           clear hv_zb hv_zd
           step_memcpy
           v_post
           step_pure
           checkpoint hck9
-          have hV := fun m' (x d : BitVec 1344) hm =>
-            splice_def (m' := m') (x := x) (d := d) (off := 392#64) hm hv_room
+          have hV := fun m' (x d : BitVec 1344) P hm =>
+            splice_def (m' := m') (x := x) (d := d) (P := P) (off := 392#64) hm hv_room
               (hov _ (by decide)) (by simp) hv_zb hv_zd
           clear hv_zb hv_zd
           step_memcpy

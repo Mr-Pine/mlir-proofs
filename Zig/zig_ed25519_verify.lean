@@ -314,14 +314,24 @@ public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig
     step_call using Verifier_init.call_eq_ok consuming hsgf hsgr hsgS hvi4752
     obtain ⟨hcf, hcr, hvb, hvd⟩ := hpost _ (congrArg GlobalState.mem hS)
     clear hpost
+    -- the stored object holds no pointer: its copies carry none
+    have hvip : PtrFree S.mem vi 4736 := by
+      have h := hroom_vi
+      rw [hS] at h ⊢
+      exact PtrFree.storeDef_self ((Room.storeDef_iff.mp h).mono (by omega)) (by omega)
+        (by decide)
     checkpoint hck2
     have hv1c :=
       fun m' (hm : m' = S.mem.storeDef v1 (Verifier.init.bits r Sv A) Verifier.init.defs) =>
       (hm ▸ copy_facts hroom_v1 :
         m'.readAt v1 4736 = Verifier.init.bits r Sv A ∧ m'.definedAt v1 4736 = Verifier.init.defs)
-    step_memcpy consuming hvb hvd
+    step_memcpy consuming hvb hvd hvip
     obtain ⟨hv1b, hv1d⟩ := hv1c _ (congrArg GlobalState.mem hS)
     clear hv1c
+    have hv1p : PtrFree S.mem v1 4736 := by
+      have h := hroom_v1
+      rw [hS] at h ⊢
+      exact PtrFree.storeDef_self (Room.storeDef_iff.mp h) (by omega) (by decide)
     step_pure
     step_load only [hcr] consuming hcf hcr
     iterate 2 step_pure
@@ -332,7 +342,7 @@ public theorem zig_ed25519_verify.call_eq (msg : Pointer) (len : BitVec 64) (sig
       fun m' (hm : m' = S.mem.storeDef v2 (Verifier.init.bits r Sv A) Verifier.init.defs) =>
       (hm ▸ copy_facts hroom_v2 :
         m'.readAt v2 4736 = Verifier.init.bits r Sv A ∧ m'.definedAt v2 4736 = Verifier.init.defs)
-    step_memcpy consuming hv1b hv1d
+    step_memcpy consuming hv1b hv1d hv1p
     obtain ⟨hv2b, hv2d⟩ := hv2c _ (congrArg GlobalState.mem hS)
     clear hv2c
     obtain ⟨hFit, hAbs, hpa, hpaP, hpr, hprP, hsf, hsfr⟩ :=

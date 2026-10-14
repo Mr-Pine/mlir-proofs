@@ -17,9 +17,10 @@ namespace Sha512_Update_chain_slice_u8
 
 open BlockBuffer_UInt_UTerm_B1_B0_Eager_digest_blocks_Sha512_Update_update_closure_0 (updateMem)
 
-/-- sha2's `Sha512` at `self` moved to `out`: its 208 bytes, defined where they were. -/
+/-- sha2's `Sha512` at `self` moved to `out`: its 208 bytes, defined where they were, and the
+pointers stored among them. -/
 def copyObj (m : MemoryState) (out self : Pointer) : MemoryState :=
-  m.storeDef out (m.readAt self 1664) (m.definedAt self 1664)
+  m.storeCopy out (m.readAt self 1664) (m.definedAt self 1664) (m.ptrsIn self 1664)
 
 end Sha512_Update_chain_slice_u8
 
@@ -39,7 +40,7 @@ attribute [local mlir_transport] room_updateMem wf_updateMem
 /-- `copyObj` keeps a state well-formed. -/
 public theorem wf_copyObj {a : AllocState} {m : MemoryState} (h : (⟨a, m⟩ : GlobalState).WF) :
     (⟨a, copyObj m out self⟩ : GlobalState).WF :=
-  GlobalState.WF.storeDef_mk h
+  GlobalState.WF.storeCopy_mk h
 
 /-- `<Sha512 as Update>::chain(self, data)`: `len` bytes at `data` absorbed by sha2's `Sha512` at
 `self` (`updateMem`), which then moves to `out`. The buffer's length (its last byte) is below `128`
@@ -83,7 +84,7 @@ theorem copy_fits {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout :
     (hoo : out.offset.toNat + 208 < 2 ^ 64) (hso : self.offset.toNat + 208 < 2 ^ 64)
     (hk : k.toNat * 8 + w ≤ 1664) (hs : Fits m (self.add k) w) :
     Fits (copyObj m out self) (out.add k) w :=
-  Fits.storeDef_definedAt hout hs
+  Fits.storeCopy_definedAt hout hs
     (by
       simp [BitVec.uaddOverflow]; omega)
     (by
@@ -95,7 +96,7 @@ theorem copy_read {m : MemoryState} {out self : Pointer} {k : BitVec 64} (hout :
     (hself : Room m self 1664) (hoo : out.offset.toNat + 208 < 2 ^ 64)
     (hso : self.offset.toNat + 208 < 2 ^ 64) (hk : k.toNat * 8 + w ≤ 1664) :
     (copyObj m out self).readAt (out.add k) w = m.readAt (self.add k) w :=
-  MemoryState.readAt_storeDef_readAt_add hout hself.inBounds
+  MemoryState.readAt_storeCopy_readAt_add hout hself.inBounds
     (by
       simp [BitVec.uaddOverflow]; omega)
     (by
@@ -114,14 +115,14 @@ theorem absorbed_copy {m : MemoryState} {out self : Pointer} {M : List (BitVec 8
   have hlt : M.length % 128 < 128 := Nat.mod_lt _ (by decide)
   simp only [add_128] at h1 h2 h3 h4 h5 h6 h7 hst
   refine
-    ⟨hoo, Room.storeDef hout, copy_fits hout hoo hso (by decide) hpf, ?_,
-      Fits.storeDef_definedAt_self hout hbf (by omega), ?_,
+    ⟨hoo, Room.storeCopy hout, copy_fits hout hoo hso (by decide) hpf, ?_,
+      Fits.storeCopy_definedAt_self hout hbf (by omega), ?_,
       ⟨by
         simp only [Pointer.add, BitVec.toNat_add, BitVec.toNat_ofNat]; omega, ?_, ?_, ?_, ?_, ?_,
         ?_, ?_, ?_⟩,
       ?_, copy_fits hout hoo hso (by decide) hcf, ?_⟩
   · rw [copy_read hout hroom hoo hso (by decide), hp]
-  · rw [copyObj, MemoryState.readAt_storeDef_readAt_le hout (by omega), hb]
+  · rw [copyObj, MemoryState.readAt_storeCopy_readAt_le hout (by omega), hb]
   · exact copy_fits hout hoo hso (by decide) h0
   · simp only [add_128]; exact copy_fits hout hoo hso (by decide) h1
   · simp only [add_128]; exact copy_fits hout hoo hso (by decide) h2

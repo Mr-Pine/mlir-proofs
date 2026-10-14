@@ -66,12 +66,12 @@ local macro "checkpoint " hck:ident : tactic => `(tactic| (have $hck:ident := hS
 
 set_option hygiene false in
 /-- Before a copy into entry `j`: `hS` checkpointed, the table facts `hA`, `hD` kept as `hT` for any
-copied bits. -/
+copied bits and pointers. -/
 local macro "tbl_pre " j:num : tactic =>
   `(tactic|
     ( checkpoint hck
-      have hT := fun x d (m' : MemoryState) hm =>
-        tbl_storeDef (m' := m') hc_room hc_off hA hD (j := $j) (by omega) x d hm
+      have hT := fun x d P (m' : MemoryState) hm =>
+        tbl_storeCopy (m' := m') hc_room hc_off hA hD (j := $j) (by omega) x d P hm
       have hdst :=
         Room.add_of_le (entry_ov hc_off (j := $j) (by omega)).2
           (by
@@ -81,14 +81,19 @@ local macro "tbl_pre " j:num : tactic =>
       clear hA hD))
 
 set_option hygiene false in
-/-- After a copy of `x`, defined `d`, into an entry: `hT`'s table facts, as `hA`, `hD` on `S`. -/
+/-- After a copy of `x`, defined `d`, into an entry (a copy of no pointers as one): `hT`'s table
+facts, as `hA`, `hD` on `S`. -/
 local macro "tbl_post " x:term:max d:term:max : tactic =>
   `(tactic|
-    ( obtain ⟨hA, hD⟩ := hT $x $d S.mem (congrArg GlobalState.mem hS)
-      have hcr : Room S.mem c 12096 ∧ True := ⟨hc_room, trivial⟩
+    ( have hSc := hS
+      try rw [← MemoryState.storeCopy_none] at hSc
+      obtain ⟨hA, hD⟩ := hT $x $d _ S.mem (congrArg GlobalState.mem hSc)
+      clear hSc
+      have hcr : Room S.mem c 12096 ∧ PtrFree S.mem c 12096 := ⟨hc_room, hcF⟩
       clear hT
       clear_facts c
       have hc_room := hcr.1
+      have hcF := hcr.2
       clear hcr))
 
 set_option hygiene false in
@@ -221,6 +226,17 @@ theorem tbl_storeDef {m m' : MemoryState} {c : Pointer} {v dv : Vector (BitVec 1
     spliceBits_packLanes9 hj]
   exact ⟨rfl, rfl⟩
 
+/-- `tbl_storeDef` for a copy carrying pointers `P`. -/
+theorem tbl_storeCopy {m m' : MemoryState} {c : Pointer} {v dv : Vector (BitVec 1344) 9}
+    (hf : Room m c 12096) (ho : c.offset = 0) (hA : m.readAt c 12096 = BitVec.packLanes v)
+    (hD : m.definedAt c 12096 = BitVec.packLanes dv) (hj : j < 9) (x d : BitVec 1344)
+    (P : Nat → Option Pointer) (hm : m' = m.storeCopy (c.add (BitVec.ofNat 64 (j * 168))) x d P) :
+    m'.readAt c 12096 = BitVec.packLanes (v.set j x) ∧
+      m'.definedAt c 12096 = BitVec.packLanes (dv.set j d) := by
+  subst hm
+  rw [MemoryState.sameBits_storeCopy.readAt, MemoryState.sameBits_storeCopy.definedAt]
+  exact tbl_storeDef hf ho hA hD hj x d rfl
+
 /-- Entry `j` of the table at `c`: lane `j`'s bits and definedness. -/
 theorem tbl_entry {m : MemoryState} {c : Pointer} {v dv : Vector (BitVec 1344) 9}
     (hf : Room m c 12096) (ho : c.offset = 0) (hA : m.readAt c 12096 = BitVec.packLanes v)
@@ -303,7 +319,7 @@ set_option maxHeartbeats 3000000 in
 bytes, `1` `p`'s, the others as fresh slots hold them; for limbs below `2^53`. -/
 public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalState) (hwf : s.WF)
     (hg : s.mem.Globals Edwards25519_precompute.globals)
-    (hout : Room s.mem out 12096) (hp : s.mem.PtLimbsFit p) (hP : (s.mem.readPt p).Lt (2 ^ 53)) :
+    (hout : Room s.mem out 12096) (hp : s.mem.PtFit p) (hP : (s.mem.readPt p).Lt (2 ^ 53)) :
     Edwards25519_precompute.call (Edwards25519_precompute.args (.value out) (.value p)) s =
       .value
         (.nil,
@@ -365,11 +381,13 @@ public theorem Edwards25519_precompute.call_eq (out p : Pointer) (s : GlobalStat
     rw [packLanes_zero, hS, hcp]; exact MemoryState.readAt_alloca_allocaPtr
   have hD : S.mem.definedAt c 12096 = BitVec.packLanes (Vector.replicate 9 0#1344) := by
     rw [packLanes_zero, hS, hcp]; exact MemoryState.definedAt_alloca_allocaPtr
+  -- no pointer in the table: its copy to `out` carries none
+  have hcF : PtrFree S.mem c 12096 := by rw [hS, hcp]; exact PtrFree.allocaPtr
   clear hcp
   have hR₁ : R.extractLsb' 0 1280 = P.bits := by
     rw [← hRd, ← hPd]; exact MemoryState.readAt_pt_bits hp.2.1.inBounds hp.1
   have hD₁ : D.extractLsb' 0 1280 = BitVec.allOnes 1280 := by
-    rw [← hDd]; exact hp.definedAt
+    rw [← hDd]; exact hp.ptLimbsFit.definedAt
   -- entry 0: the identity global's bytes
   tbl_pre 0
   step_memcpy
