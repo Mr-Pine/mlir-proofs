@@ -573,7 +573,8 @@ theorem group_trip (batch : Vals [.bv 64, .ptr, .ptr, .ptr] → EffectM (Vals []
   have hc : cnt.toNat = min r 8 := by
     rw [hcnt]; exact umin_eight_toNat (by omega)
   rw [← hc] at hB hback hexit
-  step_call using (hx a it) consuming hg hB
+  have h3 : 3 ≤ cnt.toNat := by omega
+  step_call using (hx a it) consuming hg hB h3
   -- msgs += cnt; …; batch_sz -= cnt
   iterate 6 step_pure
   step_pure
@@ -889,7 +890,8 @@ theorem group_trip (batch : Vals [.bv 64, .ptr, .ptr, .ptr] → EffectM (Vals []
   have hc : cnt.toNat = min r 8 := by
     rw [hcnt]; exact umin_eight_toNat (by omega)
   rw [← hc] at hB hback hexit
-  step_call using (hx a it) consuming hg hB
+  have h3 : 3 ≤ cnt.toNat := by omega
+  step_call using (hx a it) consuming hg hB h3
   -- msgs += cnt; …; batch_sz -= cnt
   iterate 6 step_pure
   step_pure

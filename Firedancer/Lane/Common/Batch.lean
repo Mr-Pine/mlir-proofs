@@ -396,14 +396,15 @@ noncomputable def x8Mem (m : MemoryState) (results : Pointer) (it : Nat → Item
   storeResults (streamMem m it (fun j => X.liveAt j && 1232 < (it j).msgSz.toNat) cnt) results
     X.resultAt cnt
 
-/-- `verify_x8( msgs, msg_szs, sigs, public_keys, shas, results, cnt )` on a batch of `cnt ≤ 8`
-items stores each item's `x8` code at `results[j]` and the streamed items' hash objects
+/-- `verify_x8( msgs, msg_szs, sigs, public_keys, shas, results, cnt )` on a batch of
+`3 ≤ cnt ≤ 8` items (clang gives `cnt` the range `[3, 2^64)` its callers keep to, and runs items
+0–2 unconditionally) stores each item's `x8` code at `results[j]` and the streamed items' hash objects
 (`x8Mem`); its frame `nb …` blocks. -/
 def X8CallEq (batch : Vals [.bv 64, .ptr, .ptr, .ptr] → EffectM (Vals [])) (G : List Global)
     (nb : Arrays → (Nat → Item) → Nat → GlobalState → Nat) : Prop :=
   ∀ (a : Arrays) (it : Nat → Item) (cnt : BitVec 64) (s : GlobalState), s.WF →
     s.mem.Globals ((_root_.Firedancer.Lane.Mlir.verify_x8 batch).globals ++ G) →
-    cnt.toNat ≤ 8 → BatchOk s.mem a it cnt.toNat →
+    3 ≤ cnt.toNat → cnt.toNat ≤ 8 → BatchOk s.mem a it cnt.toNat →
     (_root_.Firedancer.Lane.Mlir.verify_x8 batch).call
         (_root_.Firedancer.Lane.Mlir.verify_x8.args (.value a.msgs) (.value a.msgSzs)
           (.value a.sigs) (.value a.pks) (.value a.shas) (.value a.results) (.value cnt))
