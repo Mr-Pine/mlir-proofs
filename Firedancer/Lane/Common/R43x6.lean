@@ -220,8 +220,7 @@ theorem runBodyFrom_sqrPermRunA {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {p
 
 /-- A lane below `2^43` doubles without losing a bit. -/
 theorem shl_one_ok (a : BitVec 64) (h : a < 0x80000000000#64) :
-    a <<< 1 >>> 1 = a ∧ (a <<< 1).sshiftRight 1 = a := by
-  constructor <;> bv_decide
+    a <<< 1 >>> 1 = a ∧ (a <<< 1).sshiftRight 1 = a := by constructor <;> bv_decide
 
 /-- `sqrPermRun` with the doublings flagged `nuw nsw`, as compiled where `x`'s lanes are known
 small. -/
@@ -290,8 +289,9 @@ theorem runBodyFrom_sqrPermRunNW {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
   step_pure [sqrDbl_lt] with w4
   rw [hE, ← hK (Ty.wrap v0) (Ty.wrap v2) (Ty.wrap v4)]
   subst hv1 hv3 hv5
-  congr <;> simp [hw0, hw2, hw4, sqrDbl0, sqrDbl2, sqrDbl4, expandOfFn, o0, o0', o1, o1', o2, o2',
-    o3, o3', o4, o4', o7, o7']
+  congr <;>
+    simp [hw0, hw2, hw4, sqrDbl0, sqrDbl2, sqrDbl4, expandOfFn, o0, o0', o1, o1', o2, o2', o3, o3',
+      o4, o4', o7, o7']
 
 /-- `~mask1` (`wwl_andnot`'s complement): lanes 2 to 7. -/
 def sqrMaskN1 : Vector (BitVec 64) 8 :=
@@ -1075,8 +1075,7 @@ theorem runBodyFrom_mulRowsRun (X : Wwl) {blk : BasicBlock Γ tRets bp} {E : ⟪
   subst hvzh
   step_pattern using runBodyFrom_fold152Run with vz
   step_pattern using runBodyFrom_foldRun with vr
-  have e : vr = fd_r43x6_mul X Y := by
-    rw [hvr, hvz, fd_r43x6_mul, fd_r43x6_mul_fast.spec, tail_eq]
+  have e : vr = fd_r43x6_mul X Y := by rw [hvr, hvz, fd_r43x6_mul, fd_r43x6_mul_fast.spec, tail_eq]
   rw [hE, hS, e]
   exact hK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
@@ -1231,9 +1230,9 @@ theorem runBodyFrom_sqrRunNW {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
     {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        sqrRunNW (.val x.i x.h) p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h
-            t2 p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl
-            zhhs zlht zhl zh0 zh mask c7 c24 za zb b7 s7 b24 z m s k a b c r ++
+        sqrRunNW (.val x.i x.h) p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1
+            p1h t2 p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh
+            zlhs zl zhhs zlht zhl zh0 zh mask c7 c24 za zb b7 s7 b24 z m s k a b c r ++
           rest)
     (hx : E.read (.val x.i x.h) = Ty.wrap X) (hX : ∀ i (h : i < 8), X[i] < 0x80000000000#64)
     (hC : SqrConsts E s0 s2 s4 zero nine mn1 mn2 m1l m2l m1h m2h pz zp mask c7 c24 m s k)
@@ -1282,9 +1281,8 @@ theorem runBodyFrom_sqrRunNW {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
     rw [hvr, hvz, hvp2h, hvd4, fd_r43x6_sqr, fd_r43x6_sqr_fast.spec_eq]
     rfl
   rw [hE, hS, e]
-  exact hK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-    _
-
+  exact
+    hK _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 end
 
