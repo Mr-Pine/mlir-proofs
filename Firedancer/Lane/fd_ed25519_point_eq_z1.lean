@@ -42,6 +42,9 @@ local macro "nz_step_with " x:ident : tactic =>
       tail5_add_sshr43, tail5_add_lshr43, sshr43_add_and43, sshr43_add_and40, sel19_add_and43,
       lanesBelow_getElem] with $x:ident)
 
+-- the patterns, also stepped where `fd_ed25519_verify_equation` inlines this function
+@[expose] public section
+
 /-- The code's `select( z_dy, z_dx, false )`, widened, from the two `is_nonzero` answers. -/
 theorem zero_test_and (u v : BitVec 32) (hu : u = 0 ∨ u = 1) (hv : v = 0 ∨ v = 1) :
     BitVec.setWidth 32
@@ -351,6 +354,8 @@ theorem runBodyFrom_unpackSubRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {
         m40, add_sub_comm']
   rw [hE, ← hx, ← hy]
   exact hK _ _ _ _ _ _ _ _ _ _
+
+end
 
 /-- `fd_ed25519_point_eq_z1` returns `spec` of the points at `a` and `b` and leaves the state as it
 is. -/
