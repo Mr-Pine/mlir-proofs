@@ -391,19 +391,24 @@ theorem GlobalState.WF.add_blocks_storeFe {s : GlobalState} (h : s.WF) :
 
 /-- Limb 0 of a stored field element, as a load reads it. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeFe_l0 (h : m.FeRoom p) :
+theorem MemoryState.readAt_storeFe_l0 (hov : ¬p.offset.uaddOverflow 320#64) (hr : Room m p 2560) :
     (m.storeFe p a).readAt p 512 = BitVec.packLanes a.l0 := by
+  have h : m.FeRoom p := ⟨hov, hr⟩
   have d0 (b : BitVec 64) (hb : b.toNat ≤ 256 := by decide) (h64 : 64 ≤ b.toNat := by decide) :
-      (Range.of (p.add b) 512).Disjoint (Range.of p 512) := by
-    simpa using h.disjoint b 0#64 hb (by decide) (by simp; omega)
-  simp only [storeFe, storeVec, readAt_storeAt_disjoint (d0 256#64), readAt_storeAt_disjoint (d0 192#64),
-    readAt_storeAt_disjoint (d0 128#64), readAt_storeAt_disjoint (d0 64#64),
-    readAt_storeAt_self h.room_limb0]
+    (Range.of (p.add b) 512).Disjoint (Range.of p 512) := by
+    simpa using
+      h.disjoint b 0#64 hb (by decide)
+        (by
+          simp; omega)
+  simp only [storeFe, storeVec, readAt_storeAt_disjoint (d0 256#64),
+    readAt_storeAt_disjoint (d0 192#64), readAt_storeAt_disjoint (d0 128#64),
+    readAt_storeAt_disjoint (d0 64#64), readAt_storeAt_self h.room_limb0]
 
 /-- Limb 1 of a stored field element, as a load reads it. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeFe_l1 (h : m.FeRoom p) :
+theorem MemoryState.readAt_storeFe_l1 (hov : ¬p.offset.uaddOverflow 320#64) (hr : Room m p 2560) :
     (m.storeFe p a).readAt (p.add 64#64) 512 = BitVec.packLanes a.l1 := by
+  have h : m.FeRoom p := ⟨hov, hr⟩
   simp only [storeFe, storeVec,
     readAt_storeAt_disjoint (h.disjoint 256#64 64#64 (by decide) (by decide) (by decide)),
     readAt_storeAt_disjoint (h.disjoint 192#64 64#64 (by decide) (by decide) (by decide)),
@@ -412,8 +417,9 @@ theorem MemoryState.readAt_storeFe_l1 (h : m.FeRoom p) :
 
 /-- Limb 2 of a stored field element, as a load reads it. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeFe_l2 (h : m.FeRoom p) :
+theorem MemoryState.readAt_storeFe_l2 (hov : ¬p.offset.uaddOverflow 320#64) (hr : Room m p 2560) :
     (m.storeFe p a).readAt (p.add 128#64) 512 = BitVec.packLanes a.l2 := by
+  have h : m.FeRoom p := ⟨hov, hr⟩
   simp only [storeFe, storeVec,
     readAt_storeAt_disjoint (h.disjoint 256#64 128#64 (by decide) (by decide) (by decide)),
     readAt_storeAt_disjoint (h.disjoint 192#64 128#64 (by decide) (by decide) (by decide)),
@@ -421,17 +427,20 @@ theorem MemoryState.readAt_storeFe_l2 (h : m.FeRoom p) :
 
 /-- Limb 3 of a stored field element, as a load reads it. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeFe_l3 (h : m.FeRoom p) :
+theorem MemoryState.readAt_storeFe_l3 (hov : ¬p.offset.uaddOverflow 320#64) (hr : Room m p 2560) :
     (m.storeFe p a).readAt (p.add 192#64) 512 = BitVec.packLanes a.l3 := by
+  have h : m.FeRoom p := ⟨hov, hr⟩
   simp only [storeFe, storeVec,
     readAt_storeAt_disjoint (h.disjoint 256#64 192#64 (by decide) (by decide) (by decide)),
     readAt_storeAt_self (h.room_limb 192#64).storeAt.storeAt.storeAt]
 
 /-- Limb 4 of a stored field element, as a load reads it. -/
 @[mlir_read]
-theorem MemoryState.readAt_storeFe_l4 (h : m.FeRoom p) :
+theorem MemoryState.readAt_storeFe_l4 (hov : ¬p.offset.uaddOverflow 320#64) (hr : Room m p 2560) :
     (m.storeFe p a).readAt (p.add 256#64) 512 = BitVec.packLanes a.l4 := by
-  simp only [storeFe, storeVec, readAt_storeAt_self (h.room_limb 256#64).storeAt.storeAt.storeAt.storeAt]
+  have h : m.FeRoom p := ⟨hov, hr⟩
+  simp only [storeFe, storeVec,
+    readAt_storeAt_self (h.room_limb 256#64).storeAt.storeAt.storeAt.storeAt]
 
 /-- A field element stored where there is room is known. -/
 @[mlir_fresh, mlir_mem]
@@ -961,15 +970,21 @@ theorem _root_.BitVec.eq_of_cells64 {n : Nat} {x y : BitVec (64 * n)}
   exact hk
 
 /-- A read of `64 n` bits whose 64-bit cells are known. -/
-theorem MemoryState.readAt_eq_of_cells {m : MemoryState} {p : Pointer} {n : Nat} {X : BitVec (64 * n)}
-    (hb : InBounds m p (64 * n)) (hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 (8 * n)))
-    (hn : 8 * n < 2 ^ 64)
+theorem MemoryState.readAt_eq_of_cells {m : MemoryState} {p : Pointer} {n : Nat}
+    {X : BitVec (64 * n)} (hb : InBounds m p (64 * n))
+    (hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 (8 * n))) (hn : 8 * n < 2 ^ 64)
     (h : ∀ k < n, m.readAt (p.add (BitVec.ofNat 64 (8 * k))) 64 = X.extractLsb' (64 * k) 64) :
     m.readAt p (64 * n) = X := by
   apply BitVec.eq_of_cells64
   intro k hk
-  rw [← h k hk, MemoryState.readAt_add_of_readAt hb
-    (BitVec.not_uaddOverflow_of_le hov (by simp; omega)) (by simp; omega) rfl]
+  rw [← h k hk,
+    MemoryState.readAt_add_of_readAt hb
+      (BitVec.not_uaddOverflow_of_le hov
+        (by
+          simp; omega))
+      (by
+        simp; omega)
+      rfl]
   congr 1
   simp; omega
 
@@ -977,10 +992,14 @@ theorem MemoryState.readAt_eq_of_cells {m : MemoryState} {p : Pointer} {n : Nat}
 theorem MemoryState.storeFe_eq_storeAt {m : MemoryState} {p : Pointer} {a : Fe}
     (hov : ¬p.offset.uaddOverflow 320#64) :
     m.storeFe p a =
-      m.storeAt p (BitVec.packLanes a.l4 ++ (BitVec.packLanes a.l3 ++ (BitVec.packLanes a.l2 ++
-        (BitVec.packLanes a.l1 ++ BitVec.packLanes a.l0)))) := by
+      m.storeAt p
+        (BitVec.packLanes a.l4 ++
+          (BitVec.packLanes a.l3 ++
+            (BitVec.packLanes a.l2 ++ (BitVec.packLanes a.l1 ++ BitVec.packLanes a.l0)))) := by
   have ho (o : Nat) (h : o ≤ 320) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 o) :=
-    BitVec.not_uaddOverflow_of_le hov (by simp; omega)
+    BitVec.not_uaddOverflow_of_le hov
+      (by
+        simp; omega)
   simp only [storeFe, storeVec]
   rw [show (64#64 : BitVec 64) = BitVec.ofNat 64 64 from rfl,
     storeAt_storeAt_append (ho 64 (by omega)) (by rfl) (by decide),
@@ -991,11 +1010,12 @@ theorem MemoryState.storeFe_eq_storeAt {m : MemoryState} {p : Pointer} {a : Fe}
     show (256#64 : BitVec 64) = BitVec.ofNat 64 256 from rfl,
     storeAt_storeAt_append (ho 256 (by omega)) (by rfl) (by decide)]
 
-
 theorem _root_.BitVec.getLsbD_packLanes64 {n : Nat} (v : Vector (BitVec 64) n) {i : Nat}
-    (hi : i < 64 * n) : (BitVec.packLanes v).getLsbD i = (v[i / 64]'(by omega)).getLsbD (i % 64) := by
-  have h := congrArg (·.getLsbD 0)
-    (BitVec.extractLsb'_packLanes_of_lt v (s := i) (w := 1) (by omega) (by omega))
+    (hi : i < 64 * n) :
+    (BitVec.packLanes v).getLsbD i = (v[i / 64]'(by omega)).getLsbD (i % 64) := by
+  have h :=
+    congrArg (·.getLsbD 0)
+      (BitVec.extractLsb'_packLanes_of_lt v (s := i) (w := 1) (by omega) (by omega))
   simpa using h
 
 theorem _root_.BitVec.eq_of_cells512 {n : Nat} {x y : BitVec (512 * n)}
@@ -1014,22 +1034,28 @@ theorem MemoryState.readAt_eq_of_cells512 {m : MemoryState} {p : Pointer} {n : N
     m.readAt p (512 * n) = X := by
   apply BitVec.eq_of_cells512
   intro k hk
-  rw [← h k hk, MemoryState.readAt_add_of_readAt hb
-    (BitVec.not_uaddOverflow_of_le hov (by simp; omega)) (by simp; omega) rfl]
+  rw [← h k hk,
+    MemoryState.readAt_add_of_readAt hb
+      (BitVec.not_uaddOverflow_of_le hov
+        (by
+          simp; omega))
+      (by
+        simp; omega)
+      rfl]
   congr 1
   simp; omega
 
 /-- Eight copies of a vector's lanes, packed: each 512-bit cell is the vector. -/
 theorem packLanes_rep8_cell (A : Vector (BitVec 64) 8) (k : Nat) (hk : k < 8) :
-    (BitVec.packLanes (Vector.ofFn fun j : Fin 64 => A[j.val % 8])).extractLsb'
-      (512 * k) 512 = BitVec.packLanes A := by
+    (BitVec.packLanes (Vector.ofFn fun j : Fin 64 => A[j.val % 8])).extractLsb' (512 * k) 512 =
+      BitVec.packLanes A := by
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
   rw [BitVec.getLsbD_extractLsb', BitVec.getLsbD_packLanes64 _ (by omega),
     BitVec.getLsbD_packLanes64 _ (by omega)]
   simp only [hi, decide_true, Bool.true_and, Vector.getElem_ofFn]
-  simp only [show (512 * k + i) / 64 % 8 = i / 64 by omega, show (512 * k + i) % 64 = i % 64 by omega]
-
+  simp only [show (512 * k + i) / 64 % 8 = i / 64 by omega,
+    show (512 * k + i) % 64 = i % 64 by omega]
 
 end
 
