@@ -152,7 +152,7 @@ theorem fold_smulOverflow {h l : BitVec 64} (hh : h ≤ 1#64) :
     (BitVec.extractLsb' 64 64 ((h ++ l) <<< 1)).smulOverflow 19#64 = false := by bv_decide
 
 /-- The top limb's `carry + (l & (2^63 - 1))` does not wrap. -/
-@[simp]
+@[local simp]
 theorem carry_add_mask_uaddOverflow (a b l : BitVec 64) :
     (carry a b).uaddOverflow (l &&& 9223372036854775807#64) = false := by bv_decide
 
