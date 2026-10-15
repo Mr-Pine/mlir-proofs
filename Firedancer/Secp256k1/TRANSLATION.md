@@ -145,3 +145,29 @@ Independent audit, 2026-10-15: every def read against its C function; differenti
 
 Checked against the HOL specs, no change: `bignum_neg_p256k1` needs only `x <= p` (the model's
 `x < p` is stronger); every other value precondition and result equals the model's.
+
+## Conformance
+
+`recoverSpec` (`Math/Recover.lean`, proved equal to both builds) against libsecp256k1-core 0.3.0
+`ECMultContext::recover_raw` (`src/ecdsa.rs:58`) with libsecp256k1 0.7.2's `Signature::parse_standard`,
+`Message::parse`, `RecoveryId::parse` and `PublicKey::serialize` (`src/lib.rs`). Agreeing:
+
+- r, s: big-endian halves of `sig`; `parse_standard` rejects ≥ n, `recover_raw` rejects 0. Same as
+  `0 < r, s < n`. High s is accepted by both (no low-s check; `normalize_s` is separate).
+- Message: `Scalar::set_b32` reduces mod n and ignores the overflow flag, as `e = msg mod n`.
+- Bit 1 of the id: both reject `r ≥ p − n` and use `x = r + n`; `u₁`, `u₂` are inverted from the
+  unbumped r in both.
+- R: both return failure when `x³ + 7` is not a square and pick the root whose normalized value has
+  parity bit 0 of the id.
+- `Q = u₂ R + u₁ G` with `u₁ = −e r⁻¹`, `u₂ = s r⁻¹`; the point at infinity is an error in both.
+
+Differences:
+
+1. Output: Rust serializes 65 bytes `0x04 ‖ x ‖ y`; Firedancer writes 64 bytes `x ‖ y` (Agave's
+   syscall drops the tag byte). On failure Firedancer leaves `public_key` unchanged.
+2. Recovery id type: Rust takes `u8` (`parse` rejects ≥ 4); Firedancer takes a signed `int` and
+   rejects outside `[0, 3]`. The syscall (`flamenco/vm/syscall/fd_vm_syscall_crypto.c:429`)
+   rejects `ulong` ids ≥ 4 first, so the two agree there.
+3. `recoverSpec` matches `Signature::parse_standard` (rejects r, s ≥ n), not `parse_overflowing`
+   (reduces them). Agave uses `parse_standard_slice` in both the syscall (`syscalls/src/lib.rs:978`)
+   and the precompile (`precompiles/src/secp256k1.rs:65`), so this is not a divergence.
