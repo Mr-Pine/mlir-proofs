@@ -2,8 +2,9 @@
 import os,re,sys
 d=sys.argv[1]; mod=sys.argv[2]
 # too big for the code generator: "maximum recursion depth" there
-roots={'fd_ed25519_base_point_wnaf_table','fd_ed25519_lane_base_table','fd_r43x6_ge_decode2',
-       'fd_ed25519_lane_pow22523_2'}
+roots={'fd_ed25519_base_point_const_time_table','fd_ed25519_base_point_wnaf_table',
+       'fd_ed25519_lane_base_table','fd_ed25519_lane_pow22523_2','fd_r43x6_ge_decode2',
+       'fd_ristretto255_map_to_curve','fd_ristretto255_point_tobytes'}
 names=[f[:-5] for f in os.listdir(d) if f.endswith('.lean')]
 deps={n:set(re.findall(rf'^public import {re.escape(mod)}\.(\w+)$',open(os.path.join(d,n+'.lean')).read(),re.M)) for n in names}
 nc=set(roots)&set(names)

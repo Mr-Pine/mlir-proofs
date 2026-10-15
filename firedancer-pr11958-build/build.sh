@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Firedancer PR 11958 (ac6d4a84b, eight-lane multi-message batch verify), lifted with the MLIR
-# extractor from the closure of fd_ed25519_verify_batch_multi_msg(_cached).
+# extractor: every function of the ed25519 link set (ballet/ed25519, sha512, fd_hash).
 #
 #   FD=<firedancer checkout at ac6d4a84b> ./build.sh   # rewrites out/module.mlir, ../Firedancer/Lane/Mlir
 #
@@ -21,10 +21,14 @@ rm -rf out/build
 "$EXTRACTOR" --llvm-bin "$LLVM" compile out/compile_commands.json out
 "$EXTRACTOR" --llvm-bin "$LLVM" translate out/module.ll out
 rm -rf "$OUT" blocked
+# every function of the module; those the framework cannot lift yet stay in blocked/
+roots=$(grep -o '^  "llvm.func"() <{.*sym_name = "[^"]*"' out/module.mlir | sed 's/.*sym_name = "//; s/"$//')
 "$EXTRACTOR" import out/module.mlir .. Firedancer/Lane/Mlir Firedancer.Lane.Mlir \
-  --root-func fd_ed25519_verify_batch_multi_msg --root-func fd_ed25519_verify_batch_multi_msg_cached
+  $(for r in $roots; do echo --root-func "$r"; done)
 python3 postprocess.py "$OUT" Firedancer.Lane.Mlir
 mkdir -p blocked
-for f in fd_sha512_private_batch_avx fd_sha512_private_batch_avx512; do
+# inttoptr (the multi-buffer SHA-512), variadic calls (FD_LOG_*), inline asm barriers, ctpop,
+# zero_call_used_regs, thread_local_, load.relative, and their callers
+for f in $(cat blocked.txt); do
   mv "$OUT/$f.lean" blocked/
 done
