@@ -37,7 +37,7 @@ public theorem not_le_toNat_of_lt64 {x : BitVec 64} (h : x < 64#64) : ¬64 ≤ x
   simp only [BitVec.toNat_ofNat] at h
   omega
 
-/-- `i` as the loop's shift amount: nonnegative, below `64`, and `-1 << i` without signed overflow. -/
+/-- `i` as the loop's shift amount: nonnegative, below `64`, `-1 << i` without signed overflow. -/
 public theorem i_facts {C : BitVec 64} {s : PD} (h : Good C s) :
     s.i.toNat % 18446744073709551616 = s.i.toNat ∧ s.i.msb = false ∧ ¬64 ≤ s.i.toNat ∧
       (18446744073709551615#64 <<< s.i.toNat).sshiftRight s.i.toNat = 18446744073709551615#64 := by
@@ -134,7 +134,8 @@ public theorem init_divide (eta f g : BitVec 64) (j : BitVec 32) :
     (⟨eta, f, g, 1, 0, 0, 1, 62, j⟩ : PD).divide =
       let z := (g ||| 13835058055282163712#64).ctz.setWidth 32
       ⟨eta - z.setWidth 64, f, g >>> (z.setWidth 64).toNat, 1#64 <<< (z.setWidth 64).toNat, 0, 0,
-        1, 62#32 - z, z &&& (BitVec.setWidth 32 (f >>> 1) ^^^ BitVec.setWidth 32 (f >>> 2)) ^^^ j⟩ := by
+        1, 62#32 - z,
+        z &&& (BitVec.setWidth 32 (f >>> 1) ^^^ BitVec.setWidth 32 (f >>> 2)) ^^^ j⟩ := by
   simp only [PD.divide, PD.mk.injEq]
   and_intros <;> first | exact True.intro | bv_decide
 

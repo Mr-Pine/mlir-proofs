@@ -183,8 +183,8 @@ theorem loop (eta0 f0 g0 : BitVec 64) (t jac : Pointer) (C : BitVec 64)
 
 end fd_f25519_posdivsteps_62_var
 
-/-- `fd_f25519_posdivsteps_62_var( eta, f0, g0, t, &jac )` for odd `f0` and `|eta| ≤ 2^30`: the final
-`posdivsteps` state's matrix stored at `t` as `[u, v, q, r]`, its symbol bit at `jac`, its `eta`
+/-- `fd_f25519_posdivsteps_62_var( eta, f0, g0, t, &jac )` for odd `f0` and `|eta| ≤ 2^30`: the
+final `posdivsteps` state's matrix stored at `t` as `[u, v, q, r]`, its `j` at `jac`, its `eta`
 returned. -/
 public theorem _root_.Firedancer.LaneNI.Mlir.fd_f25519_posdivsteps_62_var.call_eq
     (eta f0 g0 : BitVec 64) (t jac : Pointer) (s : GlobalState) (hwf : s.WF)
