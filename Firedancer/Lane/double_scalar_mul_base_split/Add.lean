@@ -4,6 +4,7 @@ public import MLIR.Run.Tactic
 public import Firedancer.Lane.Common.Split
 public import Firedancer.Lane.Common.SplitRuns
 public import Firedancer.Lane.Common.SplitTactics
+public import Firedancer.Lane.Common.R43x6
 public import Firedancer.Lane.Mlir.double_scalar_mul_base_split
 
 namespace MLIR.Firedancer.Lane
@@ -33,7 +34,8 @@ local macro "%%" k:num : term =>
   `(rir_reg% _root_.Firedancer.Lane.Mlir.double_scalar_mul_base_split.hty $k)
 
 /-- The constants the main loop reads: the folds' shifts, masks and biases, the products' shifts,
-the lane operations' `p` limbs, `19` for the folds' top carries, and the counters'. -/
+the lane operations' `p` limbs, `19` for the folds' top carries, the counters', and the decode
+steps' squarings' and bounds. -/
 abbrev Consts (E : ⟪Γ⟫) : Prop :=
   E ⊨ [%1 := 1#64, %2 := m4340, %3 := Vector.replicate 8 1048576#64, %4 := bias03,
     %5 := Vector.replicate 8 8796093022207#64, %7 := s4340, %8 := Vector.replicate 8 43#64,
@@ -61,7 +63,13 @@ abbrev Consts (E : ⟪Γ⟫) : Prop :=
       .value 8796093022207#64, .poison, .poison, .value 8796093022207#64] : ⟦.vec 8 64⟧),
     %196 :=
     (#v[.value 8796093022207#64, .poison, .poison, .value 8796093022207#64,
-      .value 1099511627775#64, .poison, .poison, .value 1099511627775#64] : ⟦.vec 8 64⟧)]
+      .value 1099511627775#64, .poison, .poison, .value 1099511627775#64] : ⟦.vec 8 64⟧),
+    %18 := 12#64, %19 := 18446744073709551613#64, %56 := 3#64, %20 := foldK,
+    %21 := foldShifts, %22 := foldMask,
+    %25 := (#v[-1, -1, -1, -1, -1, -1, 0, 0] : Vector (BitVec 64) 8), %58 := sqrDbl0,
+    %59 := sqrDbl2, %60 := sqrDbl4, %64 := sqrMaskN1, %65 := sqrMaskN2,
+    %76 := lanesBelow 6 sqrMask1, %84 := lanesBelow 6 sqrMask2, %92 := lanesBelow 5 sqrMask1,
+    %100 := lanesBelow 5 sqrMask2, %108 := lanesFrom 7 wwl_zero, %116 := lanesBelow 5 wwl_zero]
 
 set_option hygiene false in
 /-- `FD_R43X6_GE_ADD_TABLE_ALT( P3, t, X )` on `t` in registers and `X` loaded, from the

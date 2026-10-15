@@ -668,6 +668,8 @@ abbrev PreLive (r n1s n2s bt tp : Pointer) (E : ⟪Γ⟫) : Prop :=
   Consts E ∧ SConsts E ∧
     E ⊨ [%197 := n1s, %198 := n2s, %199 := bt, %200 := tp, %208 := r.add 64#64]
 
+-- a bit's 16 loads and the constants carried past them: over 200000 heartbeats
+set_option maxHeartbeats 400000 in
 /-- `^bb1`, the search at bit `k`: on to `^bb2` if no segment has a digit there, else to `^bb4`
 at `k`. -/
 theorem bb1_block (r n1 ta n2 tb dec n1s n2s bt tp : Pointer) (w1 w2 : Vector Int 256)
@@ -738,6 +740,8 @@ theorem bb1_block (r n1 ta n2 tb dec n1s n2s bt tp : Pointer) (w1 w2 : Vector In
     exact hnz (fun h => hbr ((nzAt_eq_zero hw1 hw2 k).mpr h)) E hArgs
       ⟨by env_reads, by env_reads, by env_reads⟩ (by env_reads)
 
+-- a bit's 16 loads and the constants carried past them: over 200000 heartbeats
+set_option maxHeartbeats 400000 in
 /-- `^bb2`, the search at bit `k` from the counter `k + 1`: on to `^bb3` if no segment has a digit
 there, else to `^bb4` at `k`. -/
 theorem bb2_block (r n1 ta n2 tb dec n1s n2s bt tp : Pointer) (w1 w2 : Vector Int 256)
