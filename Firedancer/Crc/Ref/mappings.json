@@ -1,0 +1,4 @@
+[
+  ["fd_sha512_core_avx2", "Firedancer/R52x5/Extern", "MLIR.Firedancer.R52x5"],
+  ["fd_log_.*|fd_yield|fd_sha512_private_batch_avx|crc_adx_(base|comb)_table_init", "Firedancer/Crc/Ref/Extern", "MLIR.Firedancer.Crc.Ref"]
+]
