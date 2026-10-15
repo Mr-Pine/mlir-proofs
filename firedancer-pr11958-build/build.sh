@@ -8,8 +8,8 @@
 # with -g0 (debug intrinsics would swell every op) and without -falign-functions (a function
 # attribute the framework rejects); neither changes the code. postprocess.py marks lifts too big for
 # the code generator noncomputable, and makes the callees the framework
-# cannot lift yet (blocked/: inttoptr in the multi-buffer SHA-512, a pointer-vector GEP in the
-# cached verify) parameters of their callers.
+# cannot lift yet (blocked/: inttoptr in the multi-buffer SHA-512) parameters of their callers, and
+# the cached verify a parameter of the cached batch entry until it is proved.
 set -euo pipefail
 cd "$(dirname "$0")"
 FD=${FD:-$HOME/pr11958/firedancer}
@@ -25,7 +25,6 @@ rm -rf "$OUT" blocked
   --root-func fd_ed25519_verify_batch_multi_msg --root-func fd_ed25519_verify_batch_multi_msg_cached
 python3 postprocess.py "$OUT" Firedancer.Lane.Mlir
 mkdir -p blocked
-for f in fd_sha512_private_batch_avx fd_sha512_private_batch_avx512 double_scalar_mul_base_split \
-    fd_ed25519_double_scalar_mul_base_split_decode verify_one fd_ed25519_verify_cached; do
+for f in fd_sha512_private_batch_avx fd_sha512_private_batch_avx512; do
   mv "$OUT/$f.lean" blocked/
 done
