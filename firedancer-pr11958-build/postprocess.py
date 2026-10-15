@@ -1,18 +1,6 @@
-# Lean names for dotted symbols: `a.b` -> `a_b` in file, module and def names; `@a.b` keys stay.
-# Then `noncomputable` on the lifts too big for the code generator and on all that reach them.
+# `noncomputable` on the lifts too big for the code generator and on all that reach them.
 import os,re,sys
 d=sys.argv[1]; mod=sys.argv[2]
-dotted=[f[:-5] for f in os.listdir(d) if f.endswith('.lean') and '.' in f[:-5]]
-for f in os.listdir(d):
-    p=os.path.join(d,f); t=open(p).read(); t0=t
-    for s in dotted:
-        u=s.replace('.','_')
-        t=t.replace(f'{mod}.{s}\n',f'{mod}.{u}\n').replace(f'{mod}.{s},',f'{mod}.{u},')
-        t=re.sub(rf'(mlir_(?:const_)?def) {re.escape(s)} :=',rf'\1 {u} :=',t)
-    if t!=t0: open(p,'w').write(t)
-for s in dotted: os.rename(os.path.join(d,s+'.lean'),os.path.join(d,s.replace('.','_')+'.lean'))
-print(dotted)
-
 # too big for the code generator: "maximum recursion depth" there
 roots={'fd_ed25519_base_point_wnaf_table','fd_ed25519_lane_base_table','fd_r43x6_ge_decode2',
        'fd_ed25519_lane_pow22523_2'}

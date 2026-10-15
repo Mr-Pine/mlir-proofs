@@ -6,8 +6,8 @@
 #
 # The flags are a clang build's for this machine (znver4, -O3, FD_HAS_AVX512, FD_SHA512_CORE_IMPL=0),
 # with -g0 (debug intrinsics would swell every op) and without -falign-functions (a function
-# attribute the framework rejects); neither changes the code. postprocess.py names dotted symbols,
-# marks lifts too big for the code generator noncomputable, and makes the callees the framework
+# attribute the framework rejects); neither changes the code. postprocess.py marks lifts too big for
+# the code generator noncomputable, and makes the callees the framework
 # cannot lift yet (blocked/: inttoptr in the multi-buffer SHA-512, a pointer-vector GEP in the
 # cached verify) parameters of their callers.
 set -euo pipefail
