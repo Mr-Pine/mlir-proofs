@@ -6,11 +6,12 @@ public import Firedancer.Crc.Ref.MemMlir
 public import Firedancer.Crc.Ref.Mlir.fd_sha512_init
 public import Firedancer.Crc.Ref.Mlir.fd_sha512_append
 public import Firedancer.Crc.Ref.Mlir.fd_sha512_fini
+public import Firedancer.Crc.Ref.Mlir.fd_sha512_clear
 import Std.Tactic.BVDecide
 import Firedancer.Common.Counter
 
 /-!
-# `fd_sha512_init`, `fd_sha512_append`, `fd_sha512_fini` (MLIR lift ↔ spec)
+# `fd_sha512_init`, `fd_sha512_append`, `fd_sha512_fini`, `fd_sha512_clear` (MLIR lift ↔ spec)
 
 Stated with the tree's specs (`Firedancer.Ref.fd_sha512_append.spec`, `….fd_sha512_fini.spec`),
 which `ShaState.Absorbed.fini` relates to `Sha512.digest`. The block core is the axiomatized
@@ -684,6 +685,41 @@ public theorem fd_sha512_fini.call_eq (sha hash : Pointer) (s : GlobalState) (hw
     rfl
 
 end Fini
+
+/-- Zero bytes replicated are zero. -/
+theorem replicate_zero_eq (n w : Nat) : BitVec.replicate n 0#w = 0#(w * n) := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp [BitVec.getLsbD_replicate]
+
+/-- `fd_sha512_clear` runs `fd_sha512_init`, then zeroes `buf` (bytes `0 … 127`). -/
+public theorem fd_sha512_clear.call_eq (sha : Pointer) (s : GlobalState) (hwf : s.WF)
+    (hroom : Room s.mem sha (8 * 256)) (hoff : ¬sha.offset.uaddOverflow 256#64) :
+    fd_sha512_clear.call (fd_sha512_clear.args (.value sha)) s =
+      .value
+        (.nil,
+          { s with
+            mem :=
+              (((((((((s.mem.storeAt (sha.add 128#64) sha512IV[0]).storeAt (sha.add 136#64)
+                                                sha512IV[1]).storeAt
+                                            (sha.add 144#64) sha512IV[2]).storeAt
+                                        (sha.add 152#64) sha512IV[3]).storeAt
+                                    (sha.add 160#64) sha512IV[4]).storeAt
+                                (sha.add 168#64) sha512IV[5]).storeAt
+                            (sha.add 176#64) sha512IV[6]).storeAt
+                        (sha.add 184#64) sha512IV[7]).storeAt
+                    (sha.add 200#64) ((0#8).replicate 24)).storeAt
+                sha ((0#8).replicate 128) }) := by
+  -- the zeroes left opaque, so `func_init` does not evaluate them
+  generalize hz : (0#8).replicate 128 = z
+  func_init
+  block_init
+  step_pure
+  step_call using fd_sha512_init.call_eq
+  step_call using fd_memzero_explicit.call_eq
+  finish_block
+  subst hz
+  rw [hS, replicate_zero_eq 24 8, replicate_zero_eq 128 8]
 
 end Proof
 

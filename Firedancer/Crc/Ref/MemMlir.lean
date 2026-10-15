@@ -5,11 +5,12 @@ public import Firedancer.Ref.fd_ulong_bswap
 public import Firedancer.Crc.Ref.Mlir.fd_memcpy
 public import Firedancer.Crc.Ref.Mlir.fd_memcpy_68
 public import Firedancer.Crc.Ref.Mlir.fd_memset
+public import Firedancer.Crc.Ref.Mlir.fd_memzero_explicit
 public import Firedancer.Crc.Ref.Mlir.fd_ulong_bswap
 import Std.Tactic.BVDecide
 
 /-!
-# `fd_memcpy`, `fd_memset`, `fd_ulong_bswap` (MLIR lift ↔ spec)
+# `fd_memcpy`, `fd_memset`, `fd_memzero_explicit`, `fd_ulong_bswap` (MLIR lift ↔ spec)
 
 The out-of-line helpers the SHA-512 lifts call. Both `fd_memcpy` copies return `d`.
 -/
@@ -52,6 +53,18 @@ public theorem fd_memset.call_eq (d : Pointer) (sz : BitVec 64) (s : GlobalState
     fd_memset.call (fd_memset.args (.value d) (.value sz)) s =
       .value
         (.cons (.value d) .nil, { s with mem := s.mem.storeAt d ((0#8).replicate sz.toNat) }) := by
+  func_init
+  block_init
+  step_pure
+  step_memset
+  finish_block
+  rw [hS]
+
+/-- `fd_memzero_explicit` stores `sz` zero bytes at `d` (the compiler barrier is no instruction). -/
+public theorem fd_memzero_explicit.call_eq (d : Pointer) (sz : BitVec 64) (s : GlobalState)
+    (hwf : s.WF) (hd : Room s.mem d (8 * sz.toNat)) :
+    fd_memzero_explicit.call (fd_memzero_explicit.args (.value d) (.value sz)) s =
+      .value (.nil, { s with mem := s.mem.storeAt d ((0#8).replicate sz.toNat) }) := by
   func_init
   block_init
   step_pure
