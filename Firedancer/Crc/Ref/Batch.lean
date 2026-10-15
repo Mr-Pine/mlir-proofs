@@ -30,9 +30,13 @@ open MLIR.Firedancer.Crc.Ref.Verdict
 def multiMsg (verify : α → BitVec 32) (batch : List α) : List (BitVec 32) :=
   batch.map verify
 
-/-- `fd_ed25519_verify_batch_single_msg`: the transaction verdict of the per-signature codes. -/
+/-- `FD_ED25519_ERR_SIG`. -/
+def ERR_SIG : BitVec 32 := -1
+
+/-- `fd_ed25519_verify_batch_single_msg`: `ERR_SIG` unless `1 ≤ batch_sz ≤ 16`, else the
+transaction verdict of the per-signature codes (the C guards `batch_sz==0 || batch_sz>16`). -/
 def singleMsg (verify : α → BitVec 32) (batch : List α) : BitVec 32 :=
-  verdict (multiMsg verify batch)
+  if batch = [] ∨ 16 < batch.length then ERR_SIG else verdict (multiMsg verify batch)
 
 /-- `CRC_ADX_CACHE_CREDIT_MAX = 64 · 8`. -/
 def creditMax : Nat := 64 * 8
@@ -47,11 +51,23 @@ theorem multiMsg_get (verify : α → BitVec 32) (batch : List α) (j : Nat) (hj
     (multiMsg verify batch)[j]'(by simpa [multiMsg] using hj) = verify batch[j] := by
   simp [multiMsg]
 
-/-- **Transaction acceptance.** A single-message batch accepts exactly when every signature in it
-verifies (`SUCCESS`). -/
-theorem singleMsg_accepts_iff (verify : α → BitVec 32) (batch : List α) :
-    singleMsg verify batch = SUCCESS ↔ ∀ item ∈ batch, verify item = SUCCESS :=
-  verdict_accepts_iff_all_verify verify batch
+/-- **Transaction acceptance.** A well-formed single-message batch (`1 ≤ size ≤ 16`) accepts
+exactly when every signature in it verifies (`SUCCESS`). -/
+theorem singleMsg_accepts_iff (verify : α → BitVec 32) (batch : List α)
+    (hne : batch ≠ []) (hle : batch.length ≤ 16) :
+    singleMsg verify batch = SUCCESS ↔ ∀ item ∈ batch, verify item = SUCCESS := by
+  unfold singleMsg
+  split_ifs with h
+  · exact absurd h (by rintro (h | h); exacts [hne h, by omega])
+  · exact verdict_accepts_iff_all_verify verify batch
+
+/-- Outside `1 ≤ size ≤ 16` the single-message batch is rejected with `ERR_SIG`, as the C guards. -/
+theorem singleMsg_guard (verify : α → BitVec 32) (batch : List α)
+    (h : batch = [] ∨ 16 < batch.length) : singleMsg verify batch = ERR_SIG := by
+  unfold singleMsg
+  split
+  · rfl
+  · rename_i h'; exact absurd h h'
 
 /-- **Credit bound.** The credit counter never exceeds its cap, and a bounded counter stays
 bounded. -/
