@@ -984,6 +984,111 @@ theorem DecSt.stepSlowF_stage {D : DecSt} {n k : BitVec 64} (f : Nat) (hn : n �
   have h1' : ¬n - k = 0 := h1
   simp only [DecSt.stepSlowF, ne_eq, hn, not_false_eq_true, hs, and_self, ite_true, hk, h1', h2]
 
+/-- `fd_r43x6_ge_decode_step( st, n )`: `n` squarings if the stage has them left, else
+`fd_r43x6_ge_decode_step_slow` unless the chain is done. -/
+def DecSt.step (D : DecSt) (n : BitVec 64) : DecSt :=
+  if ¬D.rem.ult n then D.sqrs n else if D.stage < 12 then D.stepSlow n else D
+
+/-- No squarings. -/
+theorem DecSt.sqrs_zero (D : DecSt) : D.sqrs 0#64 = D := by
+  simp [DecSt.sqrs, Avx512.fd_r43x6_repsqr_mul2.sqrN]
+
+/-- The slow step with nothing to do. -/
+theorem DecSt.stepSlowF_done {D : DecSt} {n : BitVec 64} (f : Nat)
+    (h : ¬(n ≠ 0 ∧ D.stage < 12)) : D.stepSlowF f n = D := by
+  cases f with
+  | zero => rfl
+  | succ f => simp only [DecSt.stepSlowF, h, ite_false]
+
+/-- No squarings left once the stages are done. -/
+def DecSt.Fin (D : DecSt) : Prop :=
+  12 ≤ D.stage.toNat → D.rem = 0
+
+/-- The inline step is `fd_r43x6_ge_decode_step_slow`'s, for a chain whose end has no squarings
+left. -/
+theorem DecSt.step_eq_stepSlow {D : DecSt} (h : D.Fin) (n : BitVec 64) :
+    D.step n = D.stepSlow n := by
+  unfold DecSt.step DecSt.stepSlow
+  by_cases hr : D.rem.ult n
+  · by_cases hs : D.stage < 12
+    · rw [ite_eq_right (not_not.2 hr), ite_eq_left hs]
+    · rw [ite_eq_right (not_not.2 hr), ite_eq_right hs]
+      exact (DecSt.stepSlowF_done 13 (fun hc => hs hc.2)).symm
+  · rw [ite_eq_left hr]
+    by_cases hn : n = 0#64
+    · subst hn
+      rw [DecSt.sqrs_zero, DecSt.stepSlowF_zero]
+    by_cases hs : D.stage < 12
+    · have hk : (if D.rem.ult n then D.rem else n) = n := by simp [hr]
+      exact (DecSt.stepSlowF_sqrs 12 hn hs hk (by simp)).symm
+    · have h0 := h (by
+        rw [BitVec.lt_def] at hs
+        simp at hs
+        omega)
+      rw [h0] at hr
+      exact absurd (BitVec.eq_of_toNat_eq (by simpa [BitVec.ult] using hr)) hn
+
+/-- The slow step keeps `Ok`. -/
+theorem DecSt.Ok.stepSlowF : ∀ (f : Nat) {D : DecSt} (n : BitVec 64), D.Ok → (D.stepSlowF f n).Ok
+  | 0, _, _, h => h
+  | f + 1, D, n, h => by
+    by_cases hc : n ≠ 0 ∧ D.stage < 12
+    · have hs : D.stage.toNat < 12 := by
+        have := BitVec.lt_def.mp hc.2
+        simpa using this
+      rw [DecSt.stepSlowF, ite_eq_left hc]
+      generalize (if D.rem.ult n then D.rem else n) = k
+      by_cases hc2 : n - k ≠ 0 ∧ (D.sqrs k).rem = 0
+      · rw [ite_eq_left hc2]
+        exact DecSt.Ok.stepSlowF f _ ((h.sqrs k).stageOp hs)
+      · rw [ite_eq_right hc2]
+        exact DecSt.Ok.stepSlowF f _ (h.sqrs k)
+    · rw [DecSt.stepSlowF_done _ hc]
+      exact h
+
+/-- A stage's multiply and start keep `Fin`. -/
+theorem DecSt.Fin.stageOp (D : DecSt) : D.stageOp.Fin := by
+  intro h
+  simp only [DecSt.stageOp] at h ⊢
+  refine ite_eq_right_iff.2 ?_
+  intro h'
+  have := BitVec.lt_def.mp h'
+  have e : (12 : BitVec 64).toNat = 12 := rfl
+  omega
+
+/-- The slow step keeps `Fin`. -/
+theorem DecSt.Fin.stepSlowF : ∀ (f : Nat) {D : DecSt} (n : BitVec 64), D.Fin → (D.stepSlowF f n).Fin
+  | 0, _, _, h => h
+  | f + 1, D, n, h => by
+    by_cases hc : n ≠ 0 ∧ D.stage < 12
+    · have hs : ¬12 ≤ D.stage.toNat := by
+        have := BitVec.lt_def.mp hc.2
+        simp at this
+        omega
+      rw [DecSt.stepSlowF, ite_eq_left hc]
+      generalize (if D.rem.ult n then D.rem else n) = k
+      by_cases hc2 : n - k ≠ 0 ∧ (D.sqrs k).rem = 0
+      · rw [ite_eq_left hc2]
+        exact DecSt.Fin.stepSlowF f _ (DecSt.Fin.stageOp _)
+      · rw [ite_eq_right hc2]
+        exact DecSt.Fin.stepSlowF f _ fun h' => absurd h' hs
+    · rw [DecSt.stepSlowF_done _ hc]
+      exact h
+
+/-- The inline step keeps `Ok`. -/
+theorem DecSt.Ok.step {D : DecSt} (h : D.Ok) (n : BitVec 64) : (D.step n).Ok := by
+  unfold DecSt.step
+  split
+  · exact h.sqrs n
+  split
+  · exact DecSt.Ok.stepSlowF 13 n h
+  · exact h
+
+/-- The inline step keeps `Fin`. -/
+theorem DecSt.Fin.step {D : DecSt} (h : D.Fin) (n : BitVec 64) : (D.step n).Fin := by
+  rw [DecSt.step_eq_stepSlow h]
+  exact DecSt.Fin.stepSlowF 13 n h
+
 open Firedancer.Avx512.fd_r43x6_ge_decode2 (decodePt sqrtM1 quadOf zeroQuad vsub) in
 /-- `fd_r43x6_ge_decode_fini` on the state `D`: the chain finished, `x = u v³ t0`, the checks of
 `v x² ∓ u`; `-1` and zeros if both are nonzero, else `0` and the point `(x, y, 1, x y)`, `x`
@@ -1302,6 +1407,40 @@ theorem MemoryState.readAt_storeDec_of_id_ne {q : Pointer} (h : st.id ≠ q.id) 
 @[mlir_mem, mlir_transport]
 theorem Room.storeDec {p : Pointer} (h : Room m p w) : Room (m.storeDec st D) p w :=
   Room.storeDec_iff.2 h
+
+/-- `storeDec` keeps every block and its length. -/
+@[mlir_mem, mlir_transport]
+theorem InBounds.storeDec {p : Pointer} (h : InBounds m p w) : InBounds (m.storeDec st D) p w :=
+  InBounds.storeDec_iff.2 h
+
+/-- `storeDec` keeps every block writable that was. -/
+@[mlir_mem, mlir_transport]
+theorem Writable.storeDec {p : Pointer} (h : Writable m p) : Writable (m.storeDec st D) p := by
+  rcases D with ⟨x, mm, z, z2, z9, z10, z50, y, u, v, uv3, sg, rem, x0⟩
+  cases z2 <;> cases z9 <;> cases z10 <;> cases z50 <;>
+    simp only [MemoryState.storeDec, MemoryState.storeOpt, MemoryState.storeVec] <;>
+    repeat (first | apply Writable.storeAt | exact h)
+
+/-- `storeDec` keeps a point's room. -/
+@[mlir_mem, mlir_transport]
+theorem MemoryState.QuadRoom.storeDec {p : Pointer} (h : m.QuadRoom p) :
+    (m.storeDec st D).QuadRoom p :=
+  ⟨h.1, Room.storeDec h.2.1, Room.storeDec h.2.2.1, Room.storeDec h.2.2.2⟩
+
+/-- A vector store keeps every block writable that was. -/
+@[mlir_mem, mlir_transport]
+theorem writable_storeVec {m : MemoryState} {p q : Pointer} {v : Wwl} (h : Writable m p) :
+    Writable (m.storeVec q v) p :=
+  Writable.storeAt h
+
+/-- Erasing a frame commutes with `storeDec`. -/
+@[mlir_frame, mlir_erase]
+theorem MemoryState.eraseFrom_storeDec :
+    (m.storeDec st D).eraseFrom n = (m.eraseFrom n).storeDec st D := by
+  rcases D with ⟨x, mm, z, z2, z9, z10, z50, y, u, v, uv3, sg, rem, x0⟩
+  cases z2 <;> cases z9 <;> cases z10 <;> cases z50 <;>
+    simp only [MemoryState.storeDec, MemoryState.storeOpt, MemoryState.storeVec,
+      MemoryState.eraseFrom_storeAt]
 
 /-- `storeDec` keeps the state's room. -/
 @[mlir_transport]
