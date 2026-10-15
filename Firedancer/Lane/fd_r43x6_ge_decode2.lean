@@ -438,10 +438,10 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   step_pattern using runBodyFrom_mulRowsRun d with dysqb
   step_pure with vb
   -- `FD_R43X6_SQR2_INL( v2a, va, v2b, vb )`, then `v4`
-  step_pattern using runBodyFrom_sqrRun with v2a
-  step_pattern using runBodyFrom_sqrRun with v2b
-  step_pattern using runBodyFrom_sqrRun with v4a
-  step_pattern using runBodyFrom_sqrRun with v4b
+  step_pattern using runBodyFrom_r43SqrRun with v2a
+  step_pattern using runBodyFrom_r43SqrRun with v2b
+  step_pattern using runBodyFrom_r43SqrRun with v4a
+  step_pattern using runBodyFrom_r43SqrRun with v4b
   -- `FD_R43X6_MUL2_INL( v3a, va,v2a, v3b, vb,v2b )`, `va vb` broadcast once for `vx2` too
   step_pure with bva0
   step_pure with bva1
@@ -483,8 +483,8 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   -- `FD_R43X6_MUL2_INL( xa, uv3a,t0a, xb, uv3b,t0b )`, `x2`, then `vx2 = v x2`
   step_pattern using runBodyFrom_mulRowsRun uv3a with xa
   step_pattern using runBodyFrom_mulRowsRun uv3b with xb
-  step_pattern using runBodyFrom_sqrRun with x2a
-  step_pattern using runBodyFrom_sqrRun with x2b
+  step_pattern using runBodyFrom_r43SqrRun with x2a
+  step_pattern using runBodyFrom_r43SqrRun with x2b
   step_pattern using runBodyFrom_mulRowsRun va with vx2a
   step_pattern using runBodyFrom_mulRowsRun vb with vx2b
   -- `t1a = fd_r43x6_sub_fast( vx2a, ua )`, `t1b` likewise (lanes `0 … 5`), `t2a = vx2a + ua`

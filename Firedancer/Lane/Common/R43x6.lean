@@ -11,7 +11,7 @@ import Mathlib.Tactic.FinCases
 import Std.Tactic.BVDecide
 
 /-! `fd_r43x6_sqr_fast` and `fd_r43x6_mul_fast` inlined, each with the `fd_r43x6_fold_unsigned`
-after it, as the lane build compiles them: one pattern each (`sqrRun`, `mulRun`), its constants
+after it, as the lane build compiles them: one pattern each (`r43SqrRun`, `mulRun`), its constants
 read from the entry block. The parts are the `Avx512` callee proofs' patterns, copied (they are
 private there) with the input a value or an argument. -/
 
@@ -63,10 +63,10 @@ local macro "mul_run_steps" : tactic =>
           _ _ _ _ _ _))
 
 set_option hygiene false in
-/-- `sqrRun`'s steps, the permutes by `perm`: the five patterns; then `reduce`'s lets. -/
+/-- `r43SqrRun`'s steps, the permutes by `perm`: the five patterns; then `reduce`'s lets. -/
 local macro "sqr_run_steps " perm:ident : tactic =>
   `(tactic|
-    ( simp only [sqrRun] at hbody
+    ( simp only [r43SqrRun] at hbody
       step_pattern using $perm:ident with vd4
       step_pattern using runBodyFrom_sqrProdRun with vp2h
       step_pattern using runBodyFrom_sqrSumsRun with vzh
@@ -1081,7 +1081,7 @@ theorem runBodyFrom_mulRowsRun (X : Wwl) {blk : BasicBlock Γ tRets bp} {E : ⟪
 
 /-- `fd_r43x6_sqr_fast` then `fd_r43x6_fold_unsigned` on `x` into `r`: the permutes, the products,
 the sums, `za + 152 zb`, the fold. -/
-def sqrRun (x : Reg Γ V)
+def r43SqrRun (x : Reg Γ V)
     (p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V)
     (mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl
       zh0 zh : Dst Γ V)
@@ -1092,7 +1092,7 @@ def sqrRun (x : Reg Γ V)
           zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl zh0 zh ++
         (fold152Run zl zh mask c7 c24 za zb b7 s7 b24 z ++ foldRun z m s p k a b c r)))
 
-/-- `sqrRun`'s constants: the doublings' shifts, the splats, the masks and their complements, the
+/-- `r43SqrRun`'s constants: the doublings' shifts, the splats, the masks and their complements, the
 slides' zero operands, `za`'s mask and `7 24`, the fold's. -/
 abbrev SqrConsts (E : ⟪Γ⟫)
     (s0 s2 s4 zero nine mn1 mn2 m1l m2l m1h m2h pz zp mask c7 c24 m s k : Dst Γ V) : Prop :=
@@ -1103,10 +1103,10 @@ abbrev SqrConsts (E : ⟪Γ⟫)
     c7 := Vector.replicate 8 7, c24 := Vector.replicate 8 24, m := foldMask, s := foldShifts, k :=
     foldK]
 
-/-- Where the body at `pos` is `sqrRun`, `x` holds `X` and the others the constants: running on from
+/-- Where the body at `pos` is `r43SqrRun`, `x` holds `X` and the others the constants: running on from
 `pos` then `g` gives `K` if it does from `pos + 47` with `fd_r43x6_sqr X` in `r`, whatever the
 intermediates hold. -/
-theorem runBodyFrom_sqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
+theorem runBodyFrom_r43SqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {x p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V}
     {mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl
       zh0 zh : Dst Γ V}
@@ -1115,7 +1115,7 @@ theorem runBodyFrom_sqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : 
     {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        sqrRun (.val x.i x.h) p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h
+        r43SqrRun (.val x.i x.h) p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h
             t2 p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl
             zhhs zlht zhl zh0 zh mask c7 c24 za zb b7 s7 b24 z m s k a b c r ++
           rest)
@@ -1156,7 +1156,7 @@ theorem runBodyFrom_sqrRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : 
               K) :
     (blk.runBodyFrom E pos S >>= g) = K := by sqr_run_steps runBodyFrom_sqrPermRun
 
-/-- `runBodyFrom_sqrRun` with `x` an argument. -/
+/-- `runBodyFrom_r43SqrRun` with `x` an argument. -/
 theorem runBodyFrom_sqrRunA {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {xa : Fin Γ.args.length} {hxa : Γ.args[xa] = V}
     {p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V}
@@ -1167,7 +1167,7 @@ theorem runBodyFrom_sqrRunA {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos :
     {K : PoisonOr β}
     (hbody :
       blk.body.drop pos =
-        sqrRun (.arg xa hxa) p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h
+        r43SqrRun (.arg xa hxa) p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h
             t2 p2h mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl
             zhhs zlht zhl zh0 zh mask c7 c24 za zb b7 s7 b24 z m s k a b c r ++
           rest)
@@ -1208,7 +1208,7 @@ theorem runBodyFrom_sqrRunA {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos :
               K) :
     (blk.runBodyFrom E pos S >>= g) = K := by sqr_run_steps runBodyFrom_sqrPermRunA
 
-/-- `sqrRun` with `sqrPermRunNW`'s flagged doublings. -/
+/-- `r43SqrRun` with `sqrPermRunNW`'s flagged doublings. -/
 def sqrRunNW (x : Reg Γ V)
     (p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V)
     (mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl
@@ -1220,7 +1220,7 @@ def sqrRunNW (x : Reg Γ V)
           zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl zh0 zh ++
         (fold152Run zl zh mask c7 c24 za zb b7 s7 b24 z ++ foldRun z m s p k a b c r)))
 
-/-- `runBodyFrom_sqrRun` for `sqrRunNW`, `X`'s lanes below `2^43`. -/
+/-- `runBodyFrom_r43SqrRun` for `sqrRunNW`, `X`'s lanes below `2^43`. -/
 theorem runBodyFrom_sqrRunNW {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
     {x p x0 x1 x2 x3 x4 x5 s0 s2 s4 d0 d2 d4 zero nine p1l p2l t0 p0h t1 p1h t2 p2h : Dst Γ V}
     {mn1 mn2 m1l m2l m1h m2h pz zp l1 l2 ls zll h1 h2 zlh0 zlh k1 k2 j1 j2 zhh zlhs zl zhhs zlht zhl

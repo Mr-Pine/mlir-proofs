@@ -118,8 +118,8 @@ theorem loop (za zb : Pointer) (xa0 ya xb0 yb : Wwl) (n : BitVec 64) (S : Global
         hc41, hc49, hc57, hc65, hc73, hc81, hc89, hc97, hc105, hc113, hc121, hc129, hc137⟩ :=
       hC
     block_init
-    step_pattern using runBodyFrom_sqrRun with xa'
-    step_pattern using runBodyFrom_sqrRun with xb'
+    step_pattern using runBodyFrom_r43SqrRun with xa'
+    step_pattern using runBodyFrom_r43SqrRun with xb'
     step_pure [dec_nsw (k + 1) h0 h, dec_eq (k + 1) h0 h]
     step_pure
     finish_block
