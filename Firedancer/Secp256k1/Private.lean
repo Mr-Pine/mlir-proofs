@@ -17,7 +17,8 @@ abbrev fd_secp256k1_scalar_t := fd_uint256_t
 /-- `fd_secp256k1_fp_t` (`fd_secp256k1_private.h:12`). -/
 abbrev fd_secp256k1_fp_t := fd_uint256_t
 
-/-- `struct fd_secp256k1_point` (`fd_secp256k1_private.h:15`), Jacobian coordinates. -/
+/-- `struct fd_secp256k1_point` (`fd_secp256k1_private.h:15`), projective coordinates
+(the C comment says Jacobian). -/
 structure fd_secp256k1_point_t where
   x : fd_secp256k1_fp_t
   y : fd_secp256k1_fp_t

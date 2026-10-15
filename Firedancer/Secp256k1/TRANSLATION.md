@@ -125,3 +125,23 @@ Other proof obligations:
    Fermat, while s2n `bignum_modinv(0, p)` is outside its contract; unreachable here.
 8. `rs` is used unchanged (not `r`) for the inverse after the `recovery_id & 2` bump, as the
    C comment says.
+
+## Audit
+
+Independent audit, 2026-10-15: every def read against its C function; differential tests in
+`~/fd-specs/difftest` (`gen.py`, `gen_contract.py`, `run.sh`; drivers `Main.lean`,
+`Contract.lean`). No semantic mismatch was found between the Lean and the C. Changes:
+
+1. `S2n.lean` `bignum_modinv.spec`: Pre lacked `k < 2^57`, which upstream's
+   `BIGNUM_MODINV_SUBROUTINE_CORRECT` (`{x86,arm}/proofs/bignum_modinv.ml` at cba3956) assumes.
+   Added. Found by comparing each model with its HOL spec. Irrelevant at the call sites (k = 4).
+2. `S2n.lean` prose: aliasing is not "restricted by no contract" or known only from the asm. The
+   HOL specs state it: fixed-size routines need `z` disjoint only from code and stack;
+   `bignum_montmul` needs `z` disjoint from `x`, `y`, `m`; `bignum_demont` needs `z` disjoint
+   from `m` and `x = z` or disjoint; `bignum_modinv` needs `z`, `t` disjoint from each other and
+   from `a`, `b`. The docstrings now cite them. This supersedes "recollection of the HOL specs"
+   in note 1 above.
+3. `Private.lean:20`: docstring said "Jacobian"; the coordinates are projective (note 5).
+
+Checked against the HOL specs, no change: `bignum_neg_p256k1` needs only `x <= p` (the model's
+`x < p` is stronger); every other value precondition and result equals the model's.

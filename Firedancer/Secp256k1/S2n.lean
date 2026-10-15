@@ -3,7 +3,9 @@ module
 public import Firedancer.Secp256k1.Bits
 
 /-! The s2n-bignum routines `fd_secp256k1_s2n.c` calls, modelled by their documented contracts
-(the banner of each `third_party/s2n-bignum/{x86,arm}/…/<name>.S` and `include/s2n-bignum.h`).
+(the banner of each `third_party/s2n-bignum/{x86,arm}/…/<name>.S` and `include/s2n-bignum.h`;
+preconditions and aliasing as in upstream's `{x86,arm}/proofs/<name>.ml` at the vendored commit
+cba3956, `<NAME>_SUBROUTINE_CORRECT`).
 Each model is the contract value when its precondition holds, and an opaque `<name>_unspec` of
 the inputs otherwise. Results stated as `… mod m` are the canonical representative in `[0, m)`. -/
 
@@ -19,8 +21,8 @@ def n_256k1 : Nat := 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd
 
 /-! ## Fixed-size `p_256k1` and `n_256k1` routines
 
-Every input limb is loaded before the first store to `z` (x86 and arm), so `z` may alias an
-input; no contract restricts aliasing. -/
+Their HOL specs require `z` disjoint only from the code and stack, so `z` may alias an input
+(every input limb is also loaded before the first store, x86 and arm). -/
 
 opaque bignum_add_p256k1_unspec : (Vector (BitVec 64) 4) → (Vector (BitVec 64) 4) → Vector (BitVec 64) 4
 
@@ -131,16 +133,15 @@ def bignum_mod_n256k1_4.spec (x : Vector (BitVec 64) 4) : Vector (BitVec 64) 4 :
 
 /-! ## Generic `k`-limb routines
 
-These take the `k` the C passes. Their banners say nothing about aliasing; the `Bool` arguments
-say whether the call site's buffers overlap, and the preconditions forbid the overlaps that are
-not known to be safe (see `TRANSLATION.md`). -/
+These take the `k` the C passes. Their banners say nothing about aliasing; the HOL specs do, and
+the `Bool` arguments say whether the call site's buffers overlap in a way the spec forbids. -/
 
 opaque bignum_montmul_unspec : (k : BitVec 64) → (Vector (BitVec 64) k.toNat) →
   (Vector (BitVec 64) k.toNat) → (Vector (BitVec 64) k.toNat) → Bool → Vector (BitVec 64) k.toNat
 
 /-- `bignum_montmul` (`{x86,arm}/generic/bignum_montmul.S:5-12`): "z := (x * y / 2^{64k}) mod m,
-assuming x * y <= 2^{64k} * m"; also `m` odd (else `2^{-64k} mod m` does not exist) and `z`
-disjoint from `x`, `y`, `m` (`zOverlap`; the loop stores to `z` while reading `x`). -/
+assuming x * y <= 2^{64k} * m"; the HOL spec also needs `m` odd and `z` disjoint from `x`, `y`,
+`m` (`zOverlap`). -/
 def bignum_montmul.spec (k : BitVec 64) (x y m : Vector (BitVec 64) k.toNat) (zOverlap : Bool) :
     Vector (BitVec 64) k.toNat :=
   if limbsEval x * limbsEval y ≤ 2 ^ (64 * k.toNat) * limbsEval m ∧ limbsEval m % 2 = 1 ∧
@@ -153,8 +154,8 @@ opaque bignum_demont_unspec : (k : BitVec 64) → (Vector (BitVec 64) k.toNat) �
   (Vector (BitVec 64) k.toNat) → Bool → Vector (BitVec 64) k.toNat
 
 /-- `bignum_demont` (`{x86,arm}/generic/bignum_demont.S:5-13`): "z := (x / 2^{64k}) mod m"; "can
-handle almost-Montgomery inputs, i.e. any k-digit bignum"; also `m` odd and `z` disjoint from
-`m` (`zmOverlap`). `z = x` is safe: `x` is copied to `z` before any other store. -/
+handle almost-Montgomery inputs, i.e. any k-digit bignum"; the HOL spec also needs `m` odd, `z`
+disjoint from `m` (`zmOverlap`) and `x = z` or disjoint (the call sites pass `x = z`). -/
 def bignum_demont.spec (k : BitVec 64) (x m : Vector (BitVec 64) k.toNat) (zmOverlap : Bool) :
     Vector (BitVec 64) k.toNat :=
   if limbsEval m % 2 = 1 ∧ zmOverlap = false then
@@ -165,13 +166,13 @@ opaque bignum_modinv_unspec : (k : BitVec 64) → (Vector (BitVec 64) k.toNat) �
   (Vector (BitVec 64) k.toNat) → Nat → Bool → Vector (BitVec 64) k.toNat
 
 /-- `bignum_modinv` (`{x86,arm}/generic/bignum_modinv.S:5-11`): "z = (1/a) mod b, assuming b is
-an odd number > 1, coprime a", with "temporary buffer t[>=3*k]" (`tWords` words); also `z` and
-`t` disjoint from each other and from `a`, `b` (`overlap`). The model is the output `z`; `t` is
-scratch. -/
+an odd number > 1, coprime a", with "temporary buffer t[>=3*k]" (`tWords` words); the HOL spec
+also needs `k < 2^57` and `z`, `t` disjoint from each other and from `a`, `b` (`overlap`). The
+model is the output `z`; `t` is scratch. -/
 def bignum_modinv.spec (k : BitVec 64) (a b : Vector (BitVec 64) k.toNat) (tWords : Nat)
     (overlap : Bool) : Vector (BitVec 64) k.toNat :=
   if limbsEval b % 2 = 1 ∧ 1 < limbsEval b ∧ Nat.gcd (limbsEval a) (limbsEval b) = 1 ∧
-      3 * k.toNat ≤ tWords ∧ overlap = false then
+      3 * k.toNat ≤ tWords ∧ k.toNat < 2 ^ 57 ∧ overlap = false then
     limbsOfNat k.toNat (invMod (limbsEval a) (limbsEval b))
   else bignum_modinv_unspec k a b tWords overlap
 
