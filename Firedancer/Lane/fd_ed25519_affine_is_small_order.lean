@@ -22,6 +22,9 @@ attribute [local mlir_operation] zipWith_and_wrap zipWith_add_wrap zipWith_sub_w
   zipWith_lshr_wrap zipWith_ashr_wrap zipWith_shl_wrap zipWith_add_nsw_wrap zipWith_add_nsw_nuw_wrap
   zipWith_sub_nsw_wrap
 
+-- the tests' lemmas, also used where `fd_ed25519_verify` inlines this function
+@[expose] public section
+
 /-- Bit `i` of eight packed one-bit lanes: lane `i`. -/
 theorem getLsbD_packLanes_bv1 (v : Vector (BitVec 1) 8) (i : Nat) (hi : i < 8) :
     (BitVec.packLanes v).getLsbD i = v[i].getLsbD 0 := by
@@ -194,6 +197,8 @@ theorem foldMask_add_bias_ok (d : Wwl) :
     | simp only [wwl_and, foldMask, Vector.getElem_ofFn, Fin.getElem_fin, Vector.getElem_mk,
         List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]
       constructor <;> bv_decide
+
+end
 
 /-- `fd_ed25519_affine_is_small_order` returns `spec` of the point at `a` and leaves the state as it
 is. -/
