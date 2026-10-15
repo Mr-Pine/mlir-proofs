@@ -160,6 +160,82 @@ theorem digits_mem_shape (bits : Nat) (hbits : 1 ≤ bits) :
       · exact ⟨digit_zero_or_odd bits (w + 1), digit_bound bits (w + 1) hbits⟩
       · exact ih _ d hd
 
+/-! ## Length -/
+
+/-- A peel step never grows `w`. -/
+theorem next_le (bits w : Nat) (hbits : 1 ≤ bits) : ((w : Int) - digit bits w).toNat / 2 ≤ w := by
+  rcases Nat.eq_zero_or_pos w with rfl | hw
+  · simp [digit]
+  · exact (next_lt bits w hbits hw).le
+
+/-- A peel step halves a power-of-two bound: `w ≤ 2^k` (`k ≥ 1`) gives `(w − digit)/2 ≤ 2^(k-1)`. -/
+theorem next_le_pow (bits w k : Nat) (hk : 1 ≤ k) (hw : w ≤ 2 ^ k) :
+    ((w : Int) - digit bits w).toNat / 2 ≤ 2 ^ (k - 1) := by
+  have hk2 : (2 : Nat) ^ k = 2 * 2 ^ (k - 1) := by
+    rw [← pow_succ']; congr 1; omega
+  have hlo : (w : Int) % 2 ^ (bits + 1) = ((w % 2 ^ (bits + 1) : Nat) : Int) := by
+    push_cast; rfl
+  have hPc : ((2 ^ (bits + 1) : Nat) : Int) = (2 : Int) ^ (bits + 1) := by push_cast; rfl
+  have hBc : ((2 ^ bits : Nat) : Int) = (2 : Int) ^ bits := by push_cast; rfl
+  have hdiv := Nat.mod_add_div w (2 ^ (bits + 1))
+  have hP2 : (2 : Nat) ^ (bits + 1) = 2 * 2 ^ bits := by rw [pow_succ']
+  have hmodlt : w % 2 ^ (bits + 1) < 2 ^ (bits + 1) := Nat.mod_lt _ (by positivity)
+  unfold digit
+  rw [hlo]
+  split_ifs with h1 h2
+  · omega
+  · -- negative digit: `w − lo + 2^(bits+1) = 2^(bits+1)·(q+1) ≤ 2^k`
+    rw [← hBc] at h2
+    have h2' : 2 ^ bits ≤ w % 2 ^ (bits + 1) := by exact_mod_cast h2
+    have hwlt : w < 2 ^ k := by omega
+    have hq : 2 ^ (bits + 1) * (w / 2 ^ (bits + 1)) + 2 ^ (bits + 1) ≤ 2 ^ k := by
+      by_cases hkb : bits + 1 ≤ k
+      · have hM : (2 : Nat) ^ k = 2 ^ (bits + 1) * 2 ^ (k - (bits + 1)) := by
+          rw [← pow_add]; congr 1; omega
+        have hlt : w / 2 ^ (bits + 1) < 2 ^ (k - (bits + 1)) :=
+          Nat.lt_of_mul_lt_mul_left (a := 2 ^ (bits + 1)) (by omega)
+        have := Nat.mul_le_mul_left (2 ^ (bits + 1)) (Nat.succ_le_of_lt hlt)
+        rw [Nat.mul_succ] at this
+        omega
+      · have hpk : (2 : Nat) ^ k ≤ 2 ^ bits := Nat.pow_le_pow_right (by norm_num) (by omega)
+        rw [Nat.mod_eq_of_lt (by omega)] at h2'
+        omega
+    rw [← hPc]
+    omega
+  · omega
+
+/-- **Length.** From `w ≤ 2^k` at most `k + 1` digits are produced. -/
+theorem length_digits_le (bits : Nat) (hbits : 1 ≤ bits) :
+    ∀ k f w, w ≤ 2 ^ k → (digits bits f w).length ≤ k + 1 := by
+  intro k
+  induction k with
+  | zero =>
+    intro f w hw
+    cases f with
+    | zero => simp [digits]
+    | succ f =>
+      cases w with
+      | zero => simp [digits]
+      | succ w =>
+        obtain rfl : w = 0 := by simp at hw; omega
+        have h0 : (((0 + 1 : Nat) : Int) - digit bits (0 + 1)).toNat / 2 = 0 := by
+          have := next_lt bits (0 + 1) hbits (by omega); omega
+        simp only [digits, List.length_cons, h0]
+        cases f <;> simp [digits]
+  | succ k ih =>
+    intro f w hw
+    cases f with
+    | zero => simp [digits]
+    | succ f =>
+      cases w with
+      | zero => simp [digits]
+      | succ w =>
+        simp only [digits, List.length_cons]
+        have h := next_le_pow bits (w + 1) (k + 1) (by omega) hw
+        rw [Nat.add_sub_cancel] at h
+        have := ih f _ h
+        omega
+
 /-! ## Reuse of the tree's reconstruction
 
 The tree's `fd_curve25519_scalar_wnaf` produces the same signed-digit sequence by a set-bit scan;
