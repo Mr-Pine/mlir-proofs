@@ -1,3 +1,6 @@
 out/build/
 out/module.ll
 out/compile_commands.json
+out-noinline/build/
+out-noinline/module.ll
+out-noinline/compile_commands.json
