@@ -142,7 +142,7 @@ public theorem fd_ulong_sub_borrow.call_eq (r b : Pointer) (a0 a1 : BitVec 64) (
 @[inherit_doc fd_ulong_sub_borrow.call_eq]
 public theorem fd_ulong_sub_borrow_51.call_eq (r b : Pointer) (a0 a1 : BitVec 64) (bi : BitVec 32)
     (s : GlobalState) (hwf : s.WF) (hr : Room s.mem r 64) (hb : Room s.mem b 32) :
-    fd_ulong_sub_borrow.call
+    fd_ulong_sub_borrow_51.call
         (fd_ulong_sub_borrow_51.args (.value r) (.value b) (.value a0) (.value a1) (.value bi)) s =
       .value (.nil,
         { s with
