@@ -205,3 +205,27 @@ weights.
 - `fd_wsample_t.tree_copy` stands for the restore region. It is never written here
   (`restore_enabled = 0`).
 - `fd_stake_weights_by_node` takes the iterator's records directly.
+
+## Audit
+
+Independent audit at 8eb188e against `~/firedancer` 1be38beb58. Harnesses and results in
+`~/fd-specs/difftest-leaders` (`run.sh`, `runconf.sh`; C `#include`d from the read-only checkout).
+
+- **Transcription errors: none found.** Every def in the six files was checked line by line
+  against its C (widths, wrapping, `fd_ulong_if` both arms, `uwide_mul`, refill trigger and
+  buffer indices, tree build and descent window, MOD/SHIFT zones, quicksort pivots, partition,
+  pushes and insertion sort, comparators, layout arithmetic, abort order). No edits made.
+- **Differential, Lean vs C.** 21117 commands (ChaCha blocks, RNG streams to 60000 ulongs,
+  685455 rolls with 221936 rejections, wsample, schedules, the stake sort, id weights): Lean
+  output identical to the portable C build. Epoch-454 mainnet fixture: Lean `sched` equals
+  `epoch-leaders-idx-454.bin`.
+- **Excluded paths.** The same commands give identical streams, rolls, samples and schedules
+  on the noint128, SSE (`fd_chacha_sse.c`), AVX (`refill_avx`, BUFSZ 512) and AVX512
+  (`refill_avx512`, BUFSZ 1024, AVX512 child count) builds; only `buf_fill` differs.
+- **Fuel.** No `outOfFuel` in any run. The sort bound holds: each partition loop runs exactly
+  `n` times, pops are at most `3·cnt+1`, and at most one retry per partition.
+- **Agave.** C pipeline (sort + `fd_epoch_leaders_new`) vs Agave `WeightedU64Index` +
+  `rand_chacha` 0.9.0: 6000 sets plus epochs 454/455 identical slot for slot when `4 | len`
+  (391 cases abort on both sides, stake total ≥ 2^64). For `len % 4 ≠ 0` the first `⌊len/4⌋`
+  rotations agree; the tail differs (Firedancer samples it, Agave wraps to rotation 0).
+  Duplicate `(stake, vote)` records diverge, as expected.
