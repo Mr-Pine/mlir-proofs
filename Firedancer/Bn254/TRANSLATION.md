@@ -187,3 +187,24 @@ reference 310/310 (points G, a test point, 3 random; scalars 0, 1, 2, 3, r−2, 
 p−1, p, λ', λ'+1, 2^128±, 2^255, 2^256−1, ⌊(2^256−1)/r⌋r, 12 random); compress/decompress 65/65
 (round trips BE/LE, LE vectors, infinity flag, 32 reference decompressions incl. non-residues);
 rejections 40/40 (x = p, y = p, off-curve, both flags, inf/neg flags, lengths 0/64/127/129/95/97).
+
+## Audit
+
+Independent audit against `~/firedancer` HEAD 4f96237db1 (differs from 8e5473de39 only in
+`bigint/test_uint256.c`). No transcription error found; no Lean change made.
+
+- Line by line: every def in `Bits`, `Fiat`, `S2n`, `Field`, `Glv`, `G1`, `Syscall` against its C
+  (widths, `uint128` wraps, carries/borrows, signed compares, branch order, early returns, partial
+  stores, aliasing, flag bytes, endianness). All match.
+- Constants re-derived (`~/fd-specs/difftest-bn254/scripts/consts.py`, 25 checks): all limbs,
+  `p_inv`, `β`, lattice (for λ' as item 1 says), `g1`/`g2` (floor = round), no-wrap of the
+  `sxg*` accumulators, 3 non-residue, −3 non-cube.
+- Contracts: fiat models match the `bn254_64.c` pre/postconditions and the NOTE at line 7.
+  `bignum_modinv` matches `BIGNUM_MODINV_SUBROUTINE_CORRECT` (x86 and arm at cba3956). The
+  vendored `{x86,arm}/generic/bignum_modinv.S` is byte-identical to upstream cba3956.
+- Differential (`~/fd-specs/difftest-bn254`, `run.sh`): ~108.7k in-contract cases (two seeds;
+  fp ops on arbitrary 256-bit inputs, GLV helpers, every point function, syscalls, VM-level
+  forms). Lean `.s2n`/`.ref` match the C on every case for portable x86 (`FD_HAS_X86=0`),
+  aarch64 (zig/musl, qemu), x86 no-ADX (intrinsic `_subborrow_u64`) and production ADX (gcc and
+  clang), and -O0 = -O2. 199 of 525 out-of-Pre cases differ, all fiat calls with inputs ≥ p
+  (opaque). Agave (solana-bn254 3.2.1) agrees on all 13,272 VM-level cases.
