@@ -236,3 +236,109 @@ Contract sources:
   - `footprint(0)==FOOTPRINT(0)`.
   - `commit_fini` on 0 leaves gives `ub`.
 - **Not run:** the 1,000,000-leaf root (too slow interpreted).
+
+## Audit
+
+Independent audit against `~/firedancer` 1be38beb58 (clean tree). The Agave checkout used is
+6bc983f254, not the submodule pin c8630b6b36.
+
+**Fixes: none.** Every def was read line by line against its C (`fd_bmtree.c:51-623`,
+`fd_sha256.c:139-217,384-532`, `fd_sha256.h:321-348`, `fd_bits.h`, `fd_smallset.c`). No
+transcription error was found, and the differential test found no Lean/C difference.
+
+**Differential test** (`~/fd-specs/difftest-bmtree`, `run.sh SEED SECTION`). The compiled
+Lean driver is compared with the C (`#include`d) built five ways:
+- portable;
+- AVX: bmtree AVX branches, AVX batch;
+- zen3: SHA-NI core, reference batch;
+- AVX512: SHA-NI core, AVX512 batch, masked `get_proof` store;
+- portable under ASan/UBSan.
+
+It compares outputs, return values, `dest` bytes and an FNV hash of the whole state region
+(`node_buf` and `inclusion_proofs` through the end of the footprint, so this includes the
+dummy/bitmap overlap). This holds on failure paths too. The generator (`gen/gen.py`) uses an
+independent hashlib model for expected digests and roots.
+
+Sections:
+- `sha`: one-shot, streaming in random chunks, batch, `hash_leaf`.
+- `tree`, `treeL`: leaf counts 1..300 and large counts, configs (32,1), (20,26) and odd
+  ones, layer counts 0..13. Leaves are appended one at a time, in bulk (the batch path), or
+  in random chunks. Then `fini`, `get_proof` on every index including out-of-range ones,
+  and `from_proof` at the true index, at a phantom or neighbour index, at extra or short
+  depth, and with corrupted proofs.
+- `proof`: `from_proof` on arbitrary inputs, with indices up to 2^64-1 and depths up to 63.
+- `commitp`, `fec`, `fecflow`: `commitp_insert` in random orders with valid, corrupted,
+  truncated, deep, wrong-leaf and out-of-range/2^63-wrapping inserts, then `commitp_fini`.
+  `fecflow` follows the FEC resolver: depth 6, 64 leaves, recovered leaves inserted with
+  `NULL`.
+
+Result: 751,987 commands over 19 seeded runs, each run on all five builds, with 0
+differences:
+- sha: 9,900.
+- tree: 327,421 (5,715 trees, 101,873 `from_proof`, 103,769 `get_proof`).
+- treeL: 128,781.
+- proof: 9,000.
+- commitp: 81,294.
+- fec: 76,791.
+- fecflow: 118,800 (900 sessions, 57,600 inserts).
+
+All hashlib expectations hold. The exceptions are 9 `commitp` sessions in which an
+unauthenticated first insert (a corrupted proof, or a depth-0 leaf) fixed a different tree,
+as designed. ASan/UBSan stayed silent.
+
+**Rulings on the modelling doubts.**
+- The flat byte region with the dummy node aliasing the bitmap is what C does. The region
+  hash matches in every leaf-tree case with a small layer count, where the clamped writes
+  land on the bitmap.
+- `hash_sz > 32` as `ub` is acceptable. The header says `<= 32`, every caller uses 20 or
+  32, and the AVX merge loads only 32 bytes per child anyway.
+- The `commitp_fini` `inc_idx` loop `ub` is unrealizable. Every `HAS` past the region is
+  already `ub` first.
+- Zero-initialised locals are sound. No unwritten byte reaches a hash or an output, also in
+  the AVX branches, where the 32-byte loads past `hash_sz` land beyond the hashed length.
+- Pointer returns as 32 bytes are fine for every caller. `commit_fini`'s root is copied
+  right away, and `commitp_fini`'s is only tested against `NULL`.
+- Modelling `hash_leaf` and `merge` as `sha.hash` of the concatenation, rather than the
+  literal `init/append*/fini` chain, is backed by the `S`-vs-`H` tests.
+
+**Rulings on the `ub` list.** Every listed case is UB in C. None is reachable from a caller:
+- `commit_fini` on 0 leaves is guarded by the leaf-count checks in `fd_execle_tile.c` and
+  `fd_bank_tile.c`, and by ≥1 signature per transaction in `fd_sched.c`.
+- The `from_proof` depth is bounded by the callers' proof-size checks.
+- The rest need more than 2^62 leaves.
+
+Two notes:
+- `fd_ulong_find_lsb(0)` is `ffsl-1 = -1` (defined) on non-BMI targets. It is reached only
+  after the `node_buf-1` UB.
+- `fd_ptr_if` forms the unselected out-of-object pointer (`:370,577`), which strictly is
+  also UB. This is ignored, as everywhere else.
+
+**Findings 1-7 confirmed** by the differential test:
+- Finding 2: `get_proof` returns -1 after partial `dest` writes.
+- Finding 4: an insert at 2^63+i is accepted as leaf i.
+- Finding 6: phantom-index `from_proof`.
+
+**Exploitability of the phantom index and the 2^63 wrap.** Neither is reachable:
+- FEC resolver (`fd_fec_resolver.c:560,662-668,686`): requires 32:32, `in_type_idx < 32`
+  and depth 6. A 64-leaf tree is full, so no node is self-paired, and `shred_idx < 64`.
+- `fd_shred_merkle_root` (`fd_shred.c:107-129`, eqvoc): depth 6, `shred_idx < 2^33`, so
+  idx ≥ 64 is rejected (`:467`).
+- Repair (`fd_repair.c:291-318`) and rotor (`fd_rotor_serde.c:225-258`): the exact proof
+  depth is required, and the FEC-root index is below `fec_set_cnt`, while every phantom
+  index is ≥ the leaf count. The parent-info leaf hashes `fec_set_count`, which binds its
+  own index.
+- In all shred paths the leaf bytes contain the shred's index fields, so a phantom position
+  would need a SHA-256 collision.
+
+**Agave conformance** (`~/fd-specs/difftest-bmtree/agave`: Agave's Rust files copied
+verbatim, run against the C).
+- Entry root (`solana-merkle-tree`) matches for 0..1100 leaves and large counts. For 0
+  leaves Agave gives zeros, and the Firedancer tiles write zeros without calling fini.
+- Shred roots and proofs match for 1..200 leaves. Agave's `get_merkle_root`
+  (`merkle_tree.rs:115-131`) accepts the same phantom indices.
+- Block ids match for 1..1024 FEC sets.
+- Difference: Agave's FEC-root repair check (`serve_repair.rs:307-326`) has no proof-length
+  check, so it accepts a layer-1 node with a shorter proof. Firedancer rejects it.
+- Difference: Agave does not require the 6-entry shred proof, while Firedancer does
+  (`fd_fec_resolver.c:686`). A grep of `ledger`/`core`/`turbine` found no equality check
+  on `proof_size`. This is policy outside bmtree and not yet confirmed end to end.
