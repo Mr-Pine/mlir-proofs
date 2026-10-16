@@ -233,3 +233,15 @@ Independent audit (2026-10-15) of the new defs against `~/firedancer` at `ac6d4a
 sources `#include`d into one TU (`c/fd_all.c`, `FD_HAS_AVX512` 0, syscall helpers extracted
 verbatim), the s2n asm assembled from the vendored `.S`; each C result emitted as a
 `decide +kernel` theorem.
+
+Results: 1140 distinct cases pass, none disagree with the C. Per function: `ed_dec_enc` 171,
+`ed_validate` 118, `rist_validate` 100, `rist_frombytes` 88, `ed_mul_sys` 58, `posdivsteps` 54,
+`ed_add_sys`/`ed_sub_sys` 42 each, `update_fg` 42, `rist_mul_sys` 40, `jacobi` 34,
+`is_square_var` 33, `rist_add_sys`/`rist_sub_sys` 30 each, `ed_scalar_mul` 22, MSM (edwards and
+ristretto, syscall helper and `fd_ed25519_multi_scalar_mul`) 101 including sizes 0–4, 6, 8, 12,
+16, 31–34, 64, 65, bad points/scalars at positions 1, 31, 35 of 40, and s2n variants; `inv`,
+`inv_s2n` 17 each, `rist_tobytes` 18, `ed_tobytes` 10 and `ed_tobytes_s2n` 9, `rist_eq`/`_eq_neg` 12 each, `inv_sqrt` 12,
+`ed_add` 16, `ed_sub` 12. Every reported `FAIL` was a heartbeat timeout, not a refutation.
+Unchecked: 8 dense MSM cases (edwards, 1–64 points, specific seeds) that exceed 3 h of kernel
+evaluation; the same sizes pass with other inputs. Negated controls also count heartbeat
+timeouts as rejections, so they are weak evidence.
