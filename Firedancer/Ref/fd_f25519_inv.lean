@@ -51,15 +51,11 @@ def fd_f25519_inv.spec (a : Fin 5 → BitVec 64) : Fin 5 → BitVec 64 :=
 def p_25519 : Nat :=
   2 ^ 255 - 19
 
-opaque bignum_inv_p25519_unspec : BitVec 256 → BitVec 256
-
-/-- `bignum_inv_p25519` (`third_party/s2n-bignum/{x86,arm}/curve25519/bignum_inv_p25519.S:5-12`):
-"assuming the 4-digit input x is coprime to p_25519, returns z < p_25519 such that x * z == 1
-(mod p_25519)"; `x`, `z` as little-endian 256-bit values. -/
+/-- `bignum_inv_p25519` by s2n-bignum's `BIGNUM_INV_P25519_SUBROUTINE_CORRECT` (`cba3956c`): `0` if
+`p_25519 ∣ x`, else `x⁻¹ mod p_25519`. -/
 def bignum_inv_p25519.spec (x : BitVec 256) : BitVec 256 :=
-  if Nat.Coprime x.toNat p_25519 then
-    BitVec.ofNat 256 (Nat.gcdA x.toNat p_25519 % (p_25519 : Int)).toNat
-  else bignum_inv_p25519_unspec x
+  if p_25519 ∣ x.toNat then 0#256
+  else BitVec.ofNat 256 (Nat.gcdA x.toNat p_25519 % (p_25519 : Int)).toNat
 
 /-- `fd_f25519_inv` (`ballet/ed25519/fd_f25519.c:86`, `FD_HAS_S2NBIGNUM` set); `fd_msan_unpoison`
 is a no-op. -/

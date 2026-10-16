@@ -99,10 +99,10 @@ Not reached: `fd_ed25519_point_frombytes_2x` (the syscall has a `//TODO` to use 
   never passed). jacobi `cnt < 25`, MSM batch loops: exact trip counts.
 - **s2n.** `FD_HAS_S2NBIGNUM` changes only `fd_f25519_inv` in this graph (→ `bignum_inv_p25519`,
   used by `fd_ed25519_point_tobytes`). `fd_ed25519_s2n.c` (scalarmulbase/double, verify) is
-  not reached. Model: if `gcd(x, p) = 1` the inverse in `[0,p)`, else opaque
-  `bignum_inv_p25519_unspec`; from the `.S` banner (the HOL proof is not vendored, so the
-  `x ≡ 0` case could be refined from upstream's `BIGNUM_INV_P25519_CORRECT`). The ref chain
-  gives `inv 0 = 0`. Firedancer asm/intrinsic branches: none reached in the ref build.
+  not reached. Model: upstream's HOL Light `BIGNUM_INV_P25519_SUBROUTINE_CORRECT` (x86 and arm,
+  `cba3956c`): `0` if `p ∣ x`, else `inverse_mod p x`, for every `x`; its Pre is only
+  non-overlap of `z` with the stack and code, which the distinct locals satisfy (see Audit).
+  The ref chain also gives `inv 0 = 0`. Firedancer asm/intrinsic branches: none reached in the ref build.
 - **Ristretto MUL/MSM** use the edwards scalar mult. on the decoded representative; only the
   encoding differs.
 
@@ -153,7 +153,7 @@ inner batch) and calls `with_opts(…, base_sz = 0)`: per point the wNAF (width 
   `frombytes(...) != NULL` rests on `v = d y² + 1 ≠ 0` (`fd_curve25519.c:68-73`). Checked on 29
   inputs here; to be proved.
 - `fd_f25519_jacobi_var` returns 0 if 25 batches do not converge; `is_square_var` then falls
-  back to `sqrt_ratio(a, 1)`. Translated; the fallback is believed unreachable.
+  back to `sqrt_ratio(a, 1)`. Translated; the fallback is reachable (see Audit).
 - frombytes accepts non-canonical `y` and `x = 0` with the sign bit set (documented Dalek
   compatibility, `fd_curve25519.c:53-57`); ristretto frombytes requires canonical, even `s`.
 - `with_opts` passes `b_Z_is_one = (n == ±1)` for `ai[j][0]`, valid only for affine `a[j]`
@@ -185,3 +185,51 @@ C test vectors:
 - `fd_f25519_inv.spec d` = `fd_f25519_inv.s2n d` (by `#eval`) = Python's `d⁻¹`; `inv 0 = 0`;
 - a deliberately false claim is rejected.
 Times: 1–30 s each, the 33-point MSM ~100 s.
+
+## Audit
+
+Independent audit (2026-10-15) of the new defs against `~/firedancer` at `ac6d4a84b`, ref build.
+
+**Line-by-line.** Checked against their C, no mismatch: `fd_ed25519_point_validate`, `_tobytes`
+(`.withInv`, both variants), `_add`, `_sub`, `fd_ed25519_scalar_mul` (`start`, `ladder`),
+`…multi_scalar_mul_with_opts` (`adds`, `iter`, `ladder`, `spec_tbl`), `…multi_scalar_mul`
+(`loop`, `BATCH_SZ`), `fd_ristretto255_point_{frombytes,tobytes,validate,eq,eq_neg}`,
+`fd_f25519_{inv,inv_sqrt,is_square_var,jacobi_var,posdivsteps_62_var,update_fg_62_var}`,
+`fd_int_min`, `multi_scalar_mul_{edwards,ristretto}` (`decode`, `loop`). Constants
+(`fd_f25519_two`, `invsqrt_a_minus_d`, `p` in 62-bit limbs, `M62`) bit-for-bit. The borrowed
+`aiTable`/`addDigit`/`add1` are the same C lines (`fd_curve25519.c:152-160,168-169` =
+`:195-203,212-213` = `:351-359,372-373`, with `(n==1)`/`(n==-1)` flags).
+
+**Fixed.**
+- `bignum_inv_p25519.spec` (`fd_f25519_inv.lean`): was the `.S` banner (inverse if coprime, else
+  opaque `bignum_inv_p25519_unspec`); now upstream's HOL contract, `0` when `p ∣ x`
+  (`{x86,arm}/proofs/bignum_inv_p25519.ml`, `BIGNUM_INV_P25519_SUBROUTINE_CORRECT`; fetched to
+  `~/fd-specs/ref-crates/s2n-bignum`). Found by the comparison asked for; the old model was
+  sound but left `tobytes.s2n` of `Z ≡ 0` unspecified. Checked by `#eval` against the asm on
+  2019 inputs (34 multiples of `p`, inputs `≥ p`, in-place `z == x`): 0 mismatches.
+
+**Rulings.**
+- `posdivsteps` fuel 256 is never exhausted from `jacobi_var`, for any `x` (5 longs): `f0` is
+  odd at every call (`p` initially; the loop keeps `u f0 + v g0 ≡ f·2^(62-i) (mod 2^64)`, so
+  `update_fg`'s new `f` — exact in `int128`, low limb exact even if the top limb wraps — is
+  `≡` the loop's odd `f` mod 4), so after the first pass each pass cancels ≥ 1 bit
+  (`f w ≡ 1 (mod 16)`, `(f²-1)² ≡ 0 (mod 64)`) and lowers `i`: ≤ 63 passes. `|eta| ≤ 1+62·25`,
+  so `(int)eta+1 ≥ 1` and every shift is defined. Measured max 32 passes over 7.2e7 calls.
+- `jacobi_var` returning 0 is reachable: it does not converge for `x = 27, 29, 63, 75, …` (93
+  values below 2e5), and `validate` hits the fallback for e.g. the bytes `6c9ad59c…0c4a197c`
+  (`u v = 27`, `difftest-curve/c/fallback_y.txt`). Modelled; tested.
+- Build variant of `tobytes`: `config/extra/with-x86-64.mk:18` and `with-arm.mk:31` always
+  include `with-s2nbignum.mk`, so every x86-64/arm build runs `fd_ed25519_point_tobytes.s2n`;
+  `.spec` (ref inverse) is only the no-s2n build. Proofs about the deployed syscall need `.s2n`.
+- `with_opts`' table parameter: every syscall path reaches it via `fd_ed25519_multi_scalar_mul`
+  with `base_sz = 0`, so `spec_tbl` covers all of them.
+- UB edges: `update_fg` `len ∈ [1,5]` always (starts 5, drops only when `> 1`); `with_opts`
+  gets `batch_sz ≤ 32`; `points_len ≤ 512` bounds all `ulong` index arithmetic. Unreachable.
+- `b_Z_is_one = (n == ±1)`: every MSM/scalar-mul point comes from (ed or ristretto)
+  `frombytes`, which stores `Z = fd_f25519_one`. The flag only affects the group-law meaning,
+  not faithfulness: the C and the spec both ignore `B.Z` then.
+
+**Differential tests** (`~/fd-specs/difftest-curve`, see its `scripts/run.py`): Firedancer's ref
+sources `#include`d into one TU (`c/fd_all.c`, `FD_HAS_AVX512` 0, syscall helpers extracted
+verbatim), the s2n asm assembled from the vendored `.S`; each C result emitted as a
+`decide +kernel` theorem.
