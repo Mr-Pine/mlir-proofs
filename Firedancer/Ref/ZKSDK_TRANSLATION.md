@@ -226,3 +226,26 @@ Not translated (runtime/accounts/context state):
   `pubkey2`, points built with `fd_ristretto255_point_tobytes.spec`, `c` from the Lean transcript in
   the test's order): case A returns 0 (66 s), forged cases B (`handle2 = G`) and C (`handle2 = H`)
   return -1 (148 s together).
+
+## Audit
+
+Independent audit at `bc35596` against Firedancer `2d3b8a36e6`. No transcription errors found; no
+Lean file changed.
+
+- Read line by line: every new def vs its C (branch order, early returns, `val |=`, failure-path
+  transcripts, aliasing in `muladd`/`percentage_with_cap`, NULL `_hi` args only read under
+  `batched`, MSM term lists and counts). Struct sizes/offsets and the size tables checked with
+  `gcc` (`offsetof`/`sizeof`). `muladd` body diffed mechanically against the C (329 statements).
+  `keccak_round`/`round_constants` diffed mechanically against `keccak_spec.ml`.
+- Basepoints: Lean limbs = ref table; the AVX512 table (`r43x6` quad layout) holds the same X, Y,
+  Z, T mod p for G and H. Ref H limbs exceed 2^51 (uncarried, < 2^52).
+- Differential (`~/fd-specs/difftest-zksdk/`), both s2n and portable Keccak, all equal: Keccak
+  1700 states (`.s2n`, `.spec`, `keccakF`), STROBE/Merlin 400 sequences (4930 states, `begin_op`
+  at pos 163-165), transcript helpers 3155 outputs, `muladd` 3076, other scalar ops ~1300,
+  reused `reduce` 1312 / `validate` 1445. UBSan: no signed overflow in `muladd` on 300k
+  arbitrary 256-bit inputs, so the wrapping `long` model is never exercised. Verifiers by
+  `decide +kernel`: 877 cases (16 valid vectors, 861 mutations reaching every early return),
+  `fd_zksdk_process_verify_proof` 35 cases; the batched 3-handle valid case needs
+  `maxRecDepth` raised (kernel deep recursion, ~20 GB).
+- vs Rust zk-sdk 5.0.1: `ciphertext_commitment_equality` weights its equations `w², w, 1` (C,
+  Lean) where Rust uses `1, w, w²`; same accepts except on a w-dependent measure-zero set.
