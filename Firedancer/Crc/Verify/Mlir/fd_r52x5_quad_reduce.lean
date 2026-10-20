@@ -1,0 +1,45 @@
+module
+
+-- crc/out/mlirproofs/regions/verify/fd_r52x5_quad_reduce.mlir
+
+public import MLIR.Semantics.Func
+public import MLIR.Syntax.Elab
+
+meta import MLIR.Semantics.Func
+
+namespace MLIR.Firedancer.Crc.Verify
+
+@[expose] public section
+
+mlir_def fd_r52x5_quad_reduce :=
+"llvm.func"() <{CConv = #llvm.cconv<fastcc>, arg_attrs = [{llvm.nocapture, llvm.nonnull, llvm.noundef, llvm.writeonly}, {llvm.nocapture, llvm.nonnull, llvm.noundef, llvm.writeonly}, {llvm.nocapture, llvm.nonnull, llvm.noundef, llvm.writeonly}, {llvm.nocapture, llvm.nonnull, llvm.noundef, llvm.writeonly}, {llvm.nocapture, llvm.nonnull, llvm.noundef, llvm.writeonly}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}, {llvm.noundef}], dso_local, frame_pointer = #llvm.framePointerKind<all>, function_type = !llvm.func<void (ptr, ptr, ptr, ptr, ptr, vector<4xi64>, vector<4xi64>, vector<4xi64>, vector<4xi64>, vector<4xi64>)>, linkage = #llvm.linkage<internal>, memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_inline, no_unwind, passthrough = ["mustprogress", "nofree", "norecurse", "nosync", "sspstrong", ["min-legal-vector-width", "256"], ["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"], ["target-cpu", "icelake-server"]], sym_name = "fd_r52x5_quad_reduce", target_cpu = "icelake-server", target_features = #llvm.target_features<["+adx", "+aes", "+avx", "+avx2", "+avx512bitalg", "+avx512bw", "+avx512cd", "+avx512dq", "+avx512f", "+avx512ifma", "+avx512vbmi", "+avx512vbmi2", "+avx512vl", "+avx512vnni", "+avx512vpopcntdq", "+bmi", "+bmi2", "+clflushopt", "+clwb", "+cmov", "+crc32", "+cx16", "+cx8", "+f16c", "+fma", "+fsgsbase", "+fxsr", "+gfni", "+invpcid", "+lzcnt", "+mmx", "+movbe", "+pclmul", "+pconfig", "+pku", "+popcnt", "+prfchw", "+rdpid", "+rdrnd", "+rdseed", "+sahf", "+sgx", "+sha", "+sse", "+sse2", "+sse3", "+sse4.1", "+sse4.2", "+ssse3", "+vaes", "+vpclmulqdq", "+wbnoinvd", "+x87", "+xsave", "+xsavec", "+xsaveopt", "+xsaves"]>, tune_cpu = "icelake-server", unnamed_addr = 2 : i64, uwtable_kind = #llvm.uwtableKind<async>, visibility_ = 0 : i64, will_return}> ({
+^bb0(%arg74: !llvm.ptr, %arg75: !llvm.ptr, %arg76: !llvm.ptr, %arg77: !llvm.ptr, %arg78: !llvm.ptr, %arg79: vector<4xi64>, %arg80: vector<4xi64>, %arg81: vector<4xi64>, %arg82: vector<4xi64>, %arg83: vector<4xi64>):
+  %414 = "llvm.mlir.constant"() <{value = dense<2251799813685247> : vector<4xi64>}> : () -> vector<4xi64>
+  %415 = "llvm.mlir.constant"() <{value = dense<51> : vector<4xi64>}> : () -> vector<4xi64>
+  %416 = "llvm.mlir.constant"() <{value = dense<19> : vector<4xi64>}> : () -> vector<4xi64>
+  %417 = "llvm.and"(%arg79, %414) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %418 = "llvm.lshr"(%arg83, %415) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %419 = "llvm.call_intrinsic"(%417, %416, %418) <{fastmathFlags = #llvm.fastmath<none>, intrin = "llvm.x86.avx512.vpmadd52l.uq.256", op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 3, 0>}> : (vector<4xi64>, vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %420 = "llvm.lshr"(%arg79, %415) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %421 = "llvm.and"(%arg80, %414) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %422 = "llvm.add"(%421, %420) <{overflowFlags = 3 : i32}> : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %423 = "llvm.lshr"(%arg80, %415) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %424 = "llvm.and"(%arg81, %414) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %425 = "llvm.add"(%424, %423) <{overflowFlags = 3 : i32}> : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %426 = "llvm.lshr"(%arg81, %415) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %427 = "llvm.and"(%arg82, %414) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %428 = "llvm.add"(%427, %426) <{overflowFlags = 3 : i32}> : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %429 = "llvm.lshr"(%arg82, %415) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %430 = "llvm.and"(%arg83, %414) : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  %431 = "llvm.add"(%430, %429) <{overflowFlags = 3 : i32}> : (vector<4xi64>, vector<4xi64>) -> vector<4xi64>
+  "llvm.store"(%419, %arg74) <{alignment = 32 : i64, ordering = 0 : i64}> : (vector<4xi64>, !llvm.ptr) -> ()
+  "llvm.store"(%422, %arg75) <{alignment = 32 : i64, ordering = 0 : i64}> : (vector<4xi64>, !llvm.ptr) -> ()
+  "llvm.store"(%425, %arg76) <{alignment = 32 : i64, ordering = 0 : i64}> : (vector<4xi64>, !llvm.ptr) -> ()
+  "llvm.store"(%428, %arg77) <{alignment = 32 : i64, ordering = 0 : i64}> : (vector<4xi64>, !llvm.ptr) -> ()
+  "llvm.store"(%431, %arg78) <{alignment = 32 : i64, ordering = 0 : i64}> : (vector<4xi64>, !llvm.ptr) -> ()
+  "llvm.return"() : () -> ()
+}) : () -> ()
+
+end
+
+end MLIR.Firedancer.Crc.Verify
