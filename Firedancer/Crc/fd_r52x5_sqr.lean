@@ -173,59 +173,38 @@ public theorem fd_r52x5_sqr.call_eq (a : Wwl) (s : GlobalState) (hwf : s.WF) :
   step_pure with t2
   rw [permute_bcast_3] at ht2
   step_pure with t3
-  rw [ofFn_madd52hi] at ht3
   step_pure with t5
-  rw [wwl_shl_ofFn] at ht5
   step_pure with t6
   rw [permute_bcast_4] at ht6
   step_pure with t7
-  rw [ofFn_madd52lo] at ht7
   step_pure with t8
-  rw [← wwl_slide_zero_4] at ht8
   step_pure with t9
-  rw [ofFn_madd52hi] at ht9
   step_pure with t10
-  rw [wwl_shl_ofFn] at ht10
   step_pure with t11
-  rw [← wwl_slide_zero_3] at ht11
   step_pure with t13
   rw [permute_bcast_0] at ht13
   step_pure with t14
-  rw [ofFn_madd52hi] at ht14
   step_pure with t15
-  rw [wwl_shl_ofFn] at ht15
   step_pure with t16
   rw [permute_bcast_1] at ht16
   step_pure with t17
-  rw [ofFn_madd52lo] at ht17
   step_pure with t18
-  rw [← wwl_slide_zero_7] at ht18
   step_pure with t19
-  rw [ofFn_madd52lo] at ht19
   step_pure with t20
-  rw [ofFn_madd52hi] at ht20
   step_pure with t21
-  rw [wwl_shl_ofFn] at ht21
   step_pure with t22
   rw [permute_bcast_2] at ht22
   step_pure with t23
-  rw [ofFn_madd52lo] at ht23
   step_pure with t24
-  rw [← wwl_slide_zero_6] at ht24
   step_pure with t25
-  rw [ofFn_madd52hi] at ht25
   step_pure with t26
-  rw [wwl_shl_ofFn] at ht26
   step_pure with t27
-  rw [ofFn_madd52lo] at ht27
   step_pure with t28
-  rw [← wwl_slide_zero_5] at ht28
   -- `t31`, the low column sums, in the compiled order
   step_pure with t12
   step_pure with s1
   step_pure with s2
   step_pure with t31
-  rw [wwl_add_ofFn] at ht12 hs1 hs2 ht31
   step_pure with t32
   rw [if_lanes5] at ht32
   -- `t37`, the high column sums, with lanes `5 … 7` poison
@@ -245,7 +224,6 @@ public theorem fd_r52x5_sqr.call_eq (a : Wwl) (s : GlobalState) (hwf : s.WF) :
   step_pure with t39
   step_pure with t42
   step_pure with t43
-  rw [wwl_add_ofFn] at ht39 ht43
   rw [ofFn_mul18] at ht42
   -- the fold
   step_pure with t44

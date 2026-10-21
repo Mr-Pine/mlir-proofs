@@ -662,7 +662,7 @@ theorem insert_y_eq (a b : BitVec 64) (h0 h1) :
     (yUndef.set 0 (.value a) h0).set 1 (.value b) h1 = (Ty.wrap (wl a b 0 0) : ⟦Ty.vec 4 64⟧) := by
   ext i hi
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
-  all_goals simp [yUndef, Ty.wrap_vec, wl]
+  all_goals simp [yUndef, wl]
 
 
 /-- `%777`: the mask vector before its lanes `0 … 3` are set. -/
