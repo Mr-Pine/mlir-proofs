@@ -61,9 +61,6 @@ theorem wwl_shl_ofFn (a : Vector (BitVec 64) 8) (n : Nat) :
 theorem wwl_add_getElem (a b : Vector (BitVec 64) 8) (i : Nat) (h : i < 8) :
     a[i] + b[i] = (wwl_add a b)[i] := by simp [wwl_add]
 
-theorem wwl_and_getElem (a b : Vector (BitVec 64) 8) (i : Nat) (h : i < 8) :
-    (wwl_and a b)[i] = a[i] &&& b[i] := by simp [wwl_and]
-
 instance : Std.Associative wwl_add :=
   ⟨fun a b c => by
     ext i hi : 1; simp [wwl_add, BitVec.add_assoc]⟩

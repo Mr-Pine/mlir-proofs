@@ -272,12 +272,6 @@ theorem MemoryState.readAt_storeHashState_buf (hm : Room m c 1664)
   simp only [HashState.bits, HashState.low, BitVec.toNat_ofNat]
   bv_decide
 
-/-- The state words of a stored struct, as one read. -/
-theorem MemoryState.readAt_storeHashState_state (hm : Room m c 1664) :
-    (m.storeHashState c v).readAt c 512 = (v.low.setWidth 512) := by
-  rw [MemoryState.storeHashState, MemoryState.readAt_overlay_le hm (by decide), HashState.bits]
-  bv_decide
-
 /-- `buf`'s first `8 k` bits known, when `bufDef` says so. -/
 theorem Fits.storeHashState_buf (hm : Room m c 1664) (hc : ¬c.offset.uaddOverflow 208#64)
     (hk : k ≤ 1024) (hd : v.bufDef.extractLsb' 0 k = BitVec.allOnes k) :
@@ -416,13 +410,6 @@ theorem MemoryState.storeAt_count1_eq (h : m.HashStateFit c) {x : BitVec 64} :
     m.storeAt (c.add 72#64) x = m.storeHashState c { m.readHashState c with count1 := x } := by
   conv_lhs => rw [← MemoryState.storeHashState_readHashState_self h]
   exact MemoryState.storeHashState_storeAt_count1 h.1
-
-/-- Bytes stored into `buf` of the struct at `c`, as a store of the whole struct. -/
-theorem MemoryState.storeAt_hashBuf_eq (h : m.HashStateFit c) {off : BitVec 64} {x : BitVec w}
-    (h80 : 80 ≤ off.toNat) (hw : off.toNat * 8 + w ≤ 1664) :
-    m.storeAt (c.add off) x = m.storeHashState c ((m.readHashState c).fill (off - 80#64) x) := by
-  conv_lhs => rw [← MemoryState.storeHashState_readHashState_self h]
-  exact MemoryState.storeHashState_storeAt_buf h.1 h80 hw
 
 end Struct
 
@@ -564,17 +551,6 @@ theorem MemoryState.readAt_storeHashState_of_id_ne (h : q.id ≠ c.id) :
 theorem MemoryState.readHashState_of_getElem?_eq {m' : MemoryState} (h : m'[c.id]? = m[c.id]?) :
     m'.readHashState c = m.readHashState c := by
   simp only [MemoryState.readHashState, MemoryState.readAt, MemoryState.definedAt, h]
-
-/-- A new block keeps the struct. -/
-theorem MemoryState.readHashState_addBlock_of_id_ne {b : BlockId} {x : BitVec w} (h : c.id ≠ b) :
-    (m.addBlock b n x).readHashState c = m.readHashState c := by
-  have hget : (m.addBlock b n x)[c.id]? = m[c.id]? := by
-    simp only [MemoryState.addBlock, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_insert]
-    split
-    · rename_i heq
-      exact absurd (beq_iff_eq.mp heq).symm h
-    · rfl
-  simp only [MemoryState.readHashState, MemoryState.readAt, MemoryState.definedAt, hget]
 
 /-- Erasing a frame commutes with storing the struct. -/
 @[mlir_frame, mlir_erase]

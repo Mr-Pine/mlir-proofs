@@ -112,10 +112,6 @@ public theorem Repr.mono (h : Repr x e z a b) (ha : a ≤ a') (hb : b ≤ b') : 
 public theorem Repr.of_bounded (h : Bounded x a b) (e : Fin 4) : Repr x e (val x e) a b :=
   ⟨rfl, fun i => h i e⟩
 
-/-- A field element with every element bounded. -/
-public theorem bounded_of_repr {z : Fin 4 → ZMod p} (h : ∀ e, Repr x e (z e) a b) : Bounded x a b :=
-  fun i e => (h e).2 i
-
 /-- `x.shuffle(c)` where `c` moves element `e'` to `e`. -/
 public theorem Repr.shuffle {c : Fin 8 → Fin 8} (h : Repr x e' z a b)
     (hc : c (evenLane e) = evenLane e' ∧ c (oddLane e) = oddLane e') :

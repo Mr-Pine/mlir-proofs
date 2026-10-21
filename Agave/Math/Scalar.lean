@@ -59,8 +59,6 @@ namespace Scalar52
 
 /-! ## The constants -/
 
-public theorem nat_L : nat L = ell := by decide +kernel
-
 public theorem nat_R : nat R = 2 ^ 260 % ell := by decide +kernel
 
 public theorem nat_RR : nat RR = 2 ^ 520 % ell := by decide +kernel

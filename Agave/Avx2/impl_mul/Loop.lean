@@ -958,11 +958,6 @@ theorem out_room {m : MemoryState} {p : Pointer} (h : Room m p 1280)
       simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega)
     hk h
 
-/-- No wrap `k < 160` bytes into `out`. -/
-theorem out_noOverflow {p : Pointer} (ho : p.offset.toNat + 160 ≤ 2 ^ 64) {k : BitVec 64}
-    (hk : k.toNat < 160) : ¬p.offset.uaddOverflow k := by
-  simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le]; omega
-
 -- 33 loads and 16 stores, the shuffles' lane indices decided at each step: past the default
 -- heartbeats
 set_option maxHeartbeats 4000000 in

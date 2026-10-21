@@ -257,38 +257,6 @@ theorem digit_spec {x : BitVec 256} {w : ℕ} (h2 : 2 ≤ w) (h8 : w ≤ 8) (hx 
   rw [Scalar_non_adjacent_form.toInt_lane_spec h2 h8 hx i hi]
   exact Naf.digit_naf h2 hx i hi
 
-/-- `a_naf[i]`'s `table_A` index, for a positive digit: below `8`. -/
-public theorem idxA_pos {a : BitVec 256} (ha : a.toNat < 2 ^ 255) {i : ℕ} (hi : i < 256)
-    (hp : (0#8).slt (digit (Scalar_non_adjacent_form.spec a 5) i) = true) :
-    ((digit (Scalar_non_adjacent_form.spec a 5) i) >>> 1).toNat < 8 := by
-  have := (idx_pos (digit_spec (by decide) (by decide) ha hi) hp).2
-  rw [show (2 : ℕ) ^ (5 - 1) = 16 from rfl] at this
-  omega
-
-/-- `a_naf[i]`'s `table_A` index, for a negative digit: below `8`. -/
-public theorem idxA_neg {a : BitVec 256} (ha : a.toNat < 2 ^ 255) {i : ℕ} (hi : i < 256)
-    (hn : (digit (Scalar_non_adjacent_form.spec a 5) i).slt 0#8 = true) :
-    ((-digit (Scalar_non_adjacent_form.spec a 5) i) >>> 1).toNat < 8 := by
-  have := (idx_neg (by decide) (digit_spec (by decide) (by decide) ha hi) hn).2
-  rw [show (2 : ℕ) ^ (5 - 1) = 16 from rfl] at this
-  omega
-
-/-- `b_naf[i]`'s `table_B` index, for a positive digit: below `64`. -/
-public theorem idxB_pos {b : BitVec 256} (hb : b.toNat < 2 ^ 255) {i : ℕ} (hi : i < 256)
-    (hp : (0#8).slt (digit (Scalar_non_adjacent_form.spec b 8) i) = true) :
-    ((digit (Scalar_non_adjacent_form.spec b 8) i) >>> 1).toNat < 64 := by
-  have := (idx_pos (digit_spec (by decide) (by decide) hb hi) hp).2
-  rw [show (2 : ℕ) ^ (8 - 1) = 128 from rfl] at this
-  omega
-
-/-- `b_naf[i]`'s `table_B` index, for a negative digit: below `64`. -/
-public theorem idxB_neg {b : BitVec 256} (hb : b.toNat < 2 ^ 255) {i : ℕ} (hi : i < 256)
-    (hn : (digit (Scalar_non_adjacent_form.spec b 8) i).slt 0#8 = true) :
-    ((-digit (Scalar_non_adjacent_form.spec b 8) i) >>> 1).toNat < 64 := by
-  have := (idx_neg (by decide) (digit_spec (by decide) (by decide) hb hi) hn).2
-  rw [show (2 : ℕ) ^ (8 - 1) = 128 from rfl] at this
-  omega
-
 /-! ## The adds and an iteration -/
 
 /-- Projective coordinates of `R`, below `2^52`. -/

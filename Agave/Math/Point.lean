@@ -136,16 +136,6 @@ public theorem IsCached.isExt {a b c e : ZMod p} (h : IsCached x y a b c e) :
   obtain ⟨Z, hZ, rfl, rfl, rfl, rfl⟩ := h
   exact ⟨Z, ⟨hZ, rfl, rfl, by ring⟩, by ring, by ring, by ring, by ring⟩
 
-/-- Projective coordinates of the neutral point, as `ct_eq` with `(0 : 1 : 1)` tests them. -/
-public theorem IsProj.eq_zero_iff {P : Point} (h : IsProj P.x P.y X Y Z) :
-    X * 1 = 0 * Z ∧ Y * 1 = 1 * Z ↔ P = 0 := by
-  obtain ⟨hZ, hX, hY⟩ := h
-  rw [Point.ext_iff, Point.zero_x, Point.zero_y, mul_one, mul_one, zero_mul, one_mul, hX, hY,
-    mul_eq_zero, or_iff_left hZ]
-  exact
-    and_congr_right fun _ =>
-      ⟨fun h => mul_right_cancel₀ hZ (h.trans (one_mul Z).symm), fun h => by rw [h, one_mul]⟩
-
 end Conversions
 
 /-! ## Doubling -/

@@ -167,11 +167,6 @@ theorem finalState_eraseFrom {s : GlobalState} {d : Pointer} (hd : d.id.id < N) 
   rw [roundState_eraseFrom hd h80 ⟨0⟩, lenState_eraseFrom hd ⟨0⟩, padState_eraseFrom hd ⟨0⟩]
   rfl
 
-/-- A frame above the object commutes with `finalMem`. -/
-public theorem finalMem_eraseFrom {m : MemoryState} {d : Pointer} (hd : d.id.id < N) :
-    (finalMem m d).eraseFrom N = finalMem (m.eraseFrom N) d :=
-  finalState_eraseFrom (s := ⟨⟨0⟩, m⟩) hd
-
 /-- `post`'s memory with a frame holding `out` erased: `finalMem`'s. -/
 theorem post_eraseFrom {s : GlobalState} {d out : Pointer} (hd : d.id.id < N) (ho : N ≤ out.id.id) :
     (Sha512_final.post s d out).mem.eraseFrom N = finalMem (s.mem.eraseFrom N) d := by

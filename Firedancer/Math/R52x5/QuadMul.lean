@@ -98,11 +98,6 @@ theorem toNat_madd52hi_19 (z : BitVec 64) : (madd52hi 19 z).toNat = hi19 z.toNat
   rw [madd52hi_and, madd52hi_toNat (by decide) (by omega), this]
   rfl
 
-theorem toNat_madd52lo_19_shr (z : BitVec 64) :
-    (madd52lo 19 (z >>> 52)).toNat = 19 * (z.toNat / 2 ^ 52) := by
-  have := z.isLt
-  rw [toNat_madd52lo_19, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, lo19_of_lt (by omega)]
-
 /-- The fold's limbs in `ℕ`, for `zk_1`, `zk_2` below `2^60`. -/
 theorem quadFold_toNat {z0_1 z1_1 z2_1 z3_1 z4_1 z1_2 z2_2 z3_2 z4_2 z5 z6 z7 z8 z9 : Wl}
     (j : Fin 4) (ha0 : z0_1[j].toNat < 2 ^ 60) (ha1 : z1_1[j].toNat < 2 ^ 60)

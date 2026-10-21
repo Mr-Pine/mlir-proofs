@@ -101,9 +101,6 @@ abbrev maskBytes (z : BitVec 8) : ⟦Ty32x8⟧ :=
     PoisonOr.value 0#8, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison,
     PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison]
 
-theorem mask1Bytes_maskBytes : mask1Bytes = maskBytes 1#8 := rfl
-theorem mask0Bytes_maskBytes : mask0Bytes = maskBytes 0#8 := rfl
-
 /-- The bytes of `a`, `b` and the `i64` `z`, the last 8 poison: `pairBytes a b` with
 `maskBytes z` shuffled in. -/
 def limbPre (a b : BitVec 64) (z : BitVec 8) : ⟦Ty32x8⟧ :=

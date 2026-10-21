@@ -123,15 +123,6 @@ theorem live_lenStores {m : MemoryState} {d : Pointer} :
   | succ n ih =>
     intro i x; rw [lenStores, ih, Sha512_update.live_storeAt_iff]
 
-theorem inBounds_lenStores {m : MemoryState} {d : Pointer} :
-    ∀ n i (x : BitVec 128), InBounds (lenStores d x i n m) p w ↔ InBounds m p w := by
-  intro n
-  induction n generalizing m with
-  | zero =>
-    intro _ _; rfl
-  | succ n ih =>
-    intro i x; rw [lenStores, ih]; simp
-
 theorem Fits.lenStores {m : MemoryState} {d : Pointer} (h : Fits m p w) :
     ∀ n i (x : BitVec 128), Fits (Sha512_final.lenStores d x i n m) p w := by
   intro n

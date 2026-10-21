@@ -865,12 +865,6 @@ public theorem state_setState {m : MemoryState} {d : Pointer} (hr : Room m d 179
 
 /-! ### `Pend` through the code's steps -/
 
-public theorem disjoint_buf {d : Pointer} (hdo : d.offset.toNat + 224 < 2 ^ 64) :
-    (Range.of (d.add 16#64) 512).Disjoint (Range.of (d.add 80#64) 1024) := by
-  simp only [Range.Disjoint, Range.of, Pointer.offsetInBits, Pointer.add, BitVec.toNat_add,
-    BitVec.toNat_ofNat]
-  right; left; omega
-
 /-- A round on a whole block `B` read at `p`, after whole blocks `P`. -/
 theorem pend_round {s : GlobalState} {d p : Pointer} {P : List (BitVec 8)} (hP : Pend s.mem d P)
     (h0 : P.length % 128 = 0) (hr : Room s.mem d 1792) (hdo : d.offset.toNat + 224 < 2 ^ 64) :

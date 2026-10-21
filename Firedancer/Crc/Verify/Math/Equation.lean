@@ -98,13 +98,6 @@ public theorem oddTab_B (n : Nat) :
     OddTab (fd_r52x5_odd_table.spec fd_r52x5_base_table_build.B) n Ed25519.basePoint :=
   odd_table_oddTab B_extF n
 
-/-- A table of `TB`'s entries read from memory over an `OddTab`: an `OddTab`. -/
-public theorem TableAt.oddTab {M : MemoryState} {q : Pointer} {T T' : Nat → Quad5} {P : Point}
-    (h : TableAt M q 128 T) (h' : TableAt M q 128 T') (hT : OddTab T 128 P) : OddTab T' 128 P := by
-  intro k hk
-  rw [← (h' k hk).2, (h k hk).2]
-  exact hT k hk
-
 /-- The memory `fd_r52x5_base_table_build` leaves holds the odd table of `B` at `tb`. -/
 public theorem built_tableAt {m : MemoryState} {tbB tsB : BlockId} (hne : tbB ≠ tsB)
     (hR : Room m ⟨tbB, 0⟩ 196608) :

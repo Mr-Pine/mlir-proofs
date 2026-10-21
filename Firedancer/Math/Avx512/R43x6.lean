@@ -555,10 +555,6 @@ public theorem HighZero.sub_fast {x y : Wwl} (hx : HighZero x) (hy : HighZero y)
   rw [HighZero, sub_fast_get, sub_fast_get, hx.1, hx.2, hy.1, hy.2, HighZero.p.1, HighZero.p.2]
   decide
 
-public theorem HighZero.neg_fast {x : Wwl} (hx : HighZero x) : HighZero (fd_r43x6_neg_fast x) := by
-  rw [HighZero, neg_fast_get, neg_fast_get, hx.1, hx.2, HighZero.p.1, HighZero.p.2]
-  decide
-
 /-- `fd_r43x6_add_fast` adds signed limbs, one more bit. -/
 public theorem fd_r43x6_add_fast_spec {x y : Wwl} (hx : Signed m x) (hy : Signed m y)
     (hm : m ≤ 62) :

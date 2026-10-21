@@ -21,42 +21,6 @@ open MLIR.Firedancer.R52x5
 
 @[expose] public section
 
-/-- The byte `shufflevector` taking lanes 0 and 3 of `x` (stored, read back as bytes) and lanes 1
-and 2 of `y` (`bitcast` to bytes). -/
-theorem shuf_0330 (x y : Wl) (u : Vector (BitVec 8) 32) (hu : u = wlBytes y) :
-    (#v[Ty.extractVecElem 32 8 0 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 1 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 2 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 3 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 4 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 5 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 6 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 7 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), u[8], u[9], u[10], u[11], u[12], u[13], u[14], u[15], u[16], u[17], u[18], u[19], u[20], u[21], u[22], u[23], Ty.extractVecElem 32 8 24 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 25 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 26 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 27 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 28 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 29 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 30 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)), Ty.extractVecElem 32 8 31 ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32))] : Vector (BitVec 8) 32) =
-      wlBytes (wlBlend true false false true x y) := by
-  subst hu
-  have hx := fd_r52x5_ge_decode2.ofFn_extractVecElem_packLanes x
-  have hx' (k : Fin 32) : Ty.extractVecElem 32 8 k
-      ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)) = (wlBytes x)[k] := by
-    rw [← hx]; simp
-  simp only [show ∀ k : Nat, (hk : k < 32) → Ty.extractVecElem 32 8 (⟨k, hk⟩ : Fin 32)
-      ((BitVec.packLanes (we := 64) (n := 4) x :) : BitVec (8 * 32)) = (wlBytes x)[k] from
-    fun k hk => hx' ⟨k, hk⟩]
-  ext k hk : 1
-  obtain h | h | h | h : k / 8 = 0 ∨ k / 8 = 1 ∨ k / 8 = 2 ∨ k / 8 = 3 := by omega
-  all_goals
-    obtain hm | hm | hm | hm | hm | hm | hm | hm : k % 8 = 0 ∨ k % 8 = 1 ∨ k % 8 = 2 ∨ k % 8 = 3 ∨
-      k % 8 = 4 ∨ k % 8 = 5 ∨ k % 8 = 6 ∨ k % 8 = 7 := by omega
-  all_goals
-    have hk' : k = 8 * (k / 8) + k % 8 := by omega
-    rw [h, hm] at hk'
-    subst hk'
-    simp only [wlBytes, wlBlend, Vector.getElem_ofFn, Vector.getElem_mk, List.getElem_toArray]
-    rfl
-
-/-- Five `wl_t`s stored as bytes at a point's offsets, lane-blended `1 0 0 1` from `X` and `Y`. -/
-theorem storeAt_laneIf_1001 {m : MemoryState} {p : Pointer} (X Y : Quad5) :
-    (((((m.storeAt p (BitVec.packLanes (wlBytes (wlBlend true false false true X.P0 Y.P0)))).storeAt
-      (p.add 32#64) (BitVec.packLanes (wlBytes (wlBlend true false false true X.P1 Y.P1)))).storeAt
-      (p.add 64#64) (BitVec.packLanes (wlBytes (wlBlend true false false true X.P2 Y.P2)))).storeAt
-      (p.add 96#64) (BitVec.packLanes (wlBytes (wlBlend true false false true X.P3 Y.P3)))).storeAt
-      (p.add 128#64) (BitVec.packLanes (wlBytes (wlBlend true false false true X.P4 Y.P4)))) =
-      m.storeQuad5 p (Quad5.laneIf 1 0 0 1 X Y) := by
-  simp only [MemoryState.storeAt_packLanes_wlBytes]
-  rfl
-
 /-- `reduce`'s scalar is below `2^253`. -/
 theorem reduce_lt (x : BitVec 512) : (Ref.fd_curve25519_scalar_reduce.spec x).toNat < 2 ^ 253 := by
   rw [Ref.fd_curve25519_scalar_reduce.spec_val]

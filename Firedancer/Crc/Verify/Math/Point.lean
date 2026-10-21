@@ -29,8 +29,6 @@ public theorem negate_lazy_eq (X : Quad5) : fd_r52x5_quad_negate_lazy.spec X = Q
 
 public theorem add_nc_eq (X Y : Quad5) : fd_r52x5_quad_add_nc.spec X Y = Quad5.addFast Y X := rfl
 
-public theorem quad5_zero_eq : quad5_zero = quad5Zero := rfl
-
 public theorem quad5_zero_is : quad5_zero.Is ![0, 0, 0, 0] (fun _ => 0) := by
   intro j
   refine ⟨?_, fun i => ?_⟩ <;> fin_cases j <;> (try fin_cases i) <;>

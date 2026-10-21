@@ -212,9 +212,6 @@ public theorem idx_val_neg {d : BitVec 8} (hneg : d.slt 0#8 = true) (ho : Odd d.
   rw [Nat.shiftRight_one]
   omega
 
-theorem slt_self_zero : (0#8).slt 0#8 = false :=
-  rfl
-
 /-- A digit neither positive nor negative is `0`. -/
 theorem eq_zero_of_not' {d : BitVec 8} (hp : ¬(0#8).slt d = true) (hn : ¬d.slt 0#8 = true) :
     d = 0#8 := by

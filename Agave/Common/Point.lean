@@ -92,14 +92,6 @@ theorem MemoryState.readLimbs_storeLimbs_coord_le {m : MemoryState} {p : Pointer
   readLimbs_storeLimbs_of_disjoint (Range.disjoint_coords_le hp ha hb hab)
     (Pointer.coord_offset_le hp ha) (Pointer.coord_offset_le hp hb)
 
-/-- `readLimbs_storeLimbs_coord_le` for a store to the first one. -/
-theorem MemoryState.readLimbs_storeLimbs_coord_le_X {m : MemoryState} {p : Pointer} {b n : Nat}
-    (hp : p.offset.toNat + n ≤ 2 ^ 64) (hb : b + 40 ≤ n) (h40 : 40 ≤ b) :
-    (m.storeLimbs p l).readLimbs (p.add (BitVec.ofNat 64 b)) =
-      m.readLimbs (p.add (BitVec.ofNat 64 b)) := by
-  simpa [Pointer.add_zero'] using
-    readLimbs_storeLimbs_coord_le (m := m) (l := l) (a := 0) hp (by omega) hb (by omega)
-
 /-- `readLimbs_storeLimbs_coord_le` for a read of the first one. -/
 theorem MemoryState.readLimbs_storeLimbs_coord_le_of_X {m : MemoryState} {p : Pointer} {a n : Nat}
     (hp : p.offset.toNat + n ≤ 2 ^ 64) (ha : a + 40 ≤ n) (h40 : 40 ≤ a) :

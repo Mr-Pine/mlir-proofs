@@ -184,63 +184,6 @@ theorem toInt_small {a : BitVec 64} (h : a.toNat < 2 ^ 43) :
   rw [toInt_of_lt (by omega)]
   omega
 
-theorem add19 {a : BitVec 64} (h : a.toNat < 2 ^ 43) : (a + 19).toInt = a.toNat + 19 := by
-  obtain ⟨e, -, -⟩ := toInt_small h
-  have h19 : (19 : BitVec 64).toInt = 19 := by decide
-  rw [toInt_add' (by rw [e, h19]; omega) (by rw [e, h19]; omega), e, h19]
-
-theorem sub_ite19 {a c : BitVec 64} (h : a.toNat < 2 ^ 43) :
-    (a - if c = 0 then 19 else 0).toInt = a.toNat - if c.toInt = 0 then 19 else 0 := by
-  obtain ⟨e, -, -⟩ := toInt_small h
-  have hc : c = 0 ↔ c.toInt = 0 := by
-    constructor
-    · rintro rfl; rfl
-    · intro h0; exact BitVec.toInt_inj.mp (by rw [h0]; rfl)
-  have h19 : (19 : BitVec 64).toInt = 19 := by decide
-  by_cases h0 : c = 0
-  · have h0' := hc.mp h0
-    have hz : (0 : BitVec 64).toInt = 0 := by decide
-    simp only [h0, hz, ↓reduceIte]
-    rw [toInt_sub' (by rw [e, h19]; omega) (by rw [e, h19]; omega), e, h19]
-  · have h0' := mt hc.mpr h0
-    simp only [h0, h0', ↓reduceIte, Int.sub_zero]
-    rw [show a - 0 = a from BitVec.sub_zero a, e]
-
-/-- `carryLimbs` of signed limbs: limbs in `[0, 2^43)` and a carry out of limb 4 that together
-keep the integer. -/
-theorem carryLimbs_spec {z0 z1 z2 z3 z4 : BitVec 64} (h1 : -2 ^ 62 ≤ z1.toInt ∧ z1.toInt < 2 ^ 62)
-    (h2 : -2 ^ 62 ≤ z2.toInt ∧ z2.toInt < 2 ^ 62) (h3 : -2 ^ 62 ≤ z3.toInt ∧ z3.toInt < 2 ^ 62)
-    (h4 : -2 ^ 62 ≤ z4.toInt ∧ z4.toInt < 2 ^ 62) :
-    let y := carryLimbs z0 z1 z2 z3 z4
-    y.y0.toNat < 2 ^ 43 ∧ y.y1.toNat < 2 ^ 43 ∧ y.y2.toNat < 2 ^ 43 ∧ y.y3.toNat < 2 ^ 43 ∧
-      y.y4.toNat < 2 ^ 43 ∧ -2 ^ 20 ≤ y.c.toInt ∧ y.c.toInt ≤ 2 ^ 20 ∧
-      (y.y0.toNat + y.y1.toNat * 2 ^ 43 + y.y2.toNat * 2 ^ 86 + y.y3.toNat * 2 ^ 129 +
-          y.y4.toNat * 2 ^ 172 : ℤ) + y.c.toInt * 2 ^ 215 =
-        z0.toInt + z1.toInt * 2 ^ 43 + z2.toInt * 2 ^ 86 + z3.toInt * 2 ^ 129 +
-          z4.toInt * 2 ^ 172 := by
-  intro y
-  simp only [y, carryLimbs, carrySums]
-  obtain ⟨Hs1, -⟩ := add_shr43 (s := z0) h1
-  generalize z1 + z0.sshiftRight 43 = s1 at Hs1 ⊢
-  obtain ⟨Hs2, -⟩ := add_shr43 (s := s1) h2
-  generalize z2 + s1.sshiftRight 43 = s2 at Hs2 ⊢
-  obtain ⟨Hs3, -⟩ := add_shr43 (s := s2) h3
-  generalize z3 + s2.sshiftRight 43 = s3 at Hs3 ⊢
-  obtain ⟨Hs4, -⟩ := add_shr43 (s := s3) h4
-  generalize z4 + s3.sshiftRight 43 = s4 at Hs4 ⊢
-  have Hc := toInt_sshiftRight' s4 43
-  have := toInt_bounds s4
-  refine ⟨and_m43_lt _, and_m43_lt _, and_m43_lt _, and_m43_lt _, and_m43_lt _, by omega,
-    by omega, ?_⟩
-  rw [toInt_and_m43, toInt_and_m43, toInt_and_m43, toInt_and_m43, toInt_and_m43, Hc]
-  have m0 := Int.emod_def z0.toInt (2 ^ 43)
-  have m1 := Int.emod_def s1.toInt (2 ^ 43)
-  have m2 := Int.emod_def s2.toInt (2 ^ 43)
-  have m3 := Int.emod_def s3.toInt (2 ^ 43)
-  have m4 := Int.emod_def s4.toInt (2 ^ 43)
-  linear_combination m0 + 2 ^ 43 * m1 + 2 ^ 86 * m2 + 2 ^ 129 * m3 + 2 ^ 172 * m4 +
-    2 ^ 43 * Hs1 + 2 ^ 86 * Hs2 + 2 ^ 129 * Hs3 + 2 ^ 172 * Hs4
-
 /-- Six limbs packed into 320 bits, limb `i` at bit `43 i`. -/
 def pack320 (l : Limbs) : BitVec 320 :=
   l.y0.zeroExtend 320 + (l.y1.zeroExtend 320 <<< 43) + (l.y2.zeroExtend 320 <<< 86) +
