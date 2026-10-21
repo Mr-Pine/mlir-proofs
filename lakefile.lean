@@ -33,7 +33,7 @@ where
 @[implemented_by modulesImpl]
 opaque modules (dir : FilePath) (root : Name) (tests : Bool) : Array Glob
 
-def libs : Array Name := #[`Ed25519, `Firedancer, `Zig, `Agave, `Boringssl, `Sodium]
+def libs : Array Name := #[`Ed25519, `Firedancer, `Zig, `Agave, `Boringssl, `Sodium, `Wolfssl]
 
 -- Ed25519 as mathematics: the field, the curve's group, SHA-512, decoding, verification.
 @[default_target]
@@ -64,6 +64,11 @@ lean_lib Boringssl where
 @[default_target]
 lean_lib Sodium where
   globs := modules __dir__ `Sodium false
+
+-- wolfSSL's ed25519 scalar arithmetic, lifted with the extractor and proved.
+@[default_target]
+lean_lib Wolfssl where
+  globs := modules __dir__ `Wolfssl false
 
 -- The `Tests` directories of every port above: `lake build Tests`.
 lean_lib Tests where

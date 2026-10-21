@@ -10,13 +10,6 @@ public import Firedancer.Ref.Mlir.fd_f25519_set
 public import Firedancer.Ref.Mlir.fd_f25519_sub_nr
 public import Firedancer.Ref.Mlir.fd_f25519_k
 
-meta import MLIR.Semantics.Func
-meta import Firedancer.Ref.Mlir.fd_f25519_add_nr
-meta import Firedancer.Ref.Mlir.fd_f25519_mul
-meta import Firedancer.Ref.Mlir.fd_f25519_set
-meta import Firedancer.Ref.Mlir.fd_f25519_sub_nr
-meta import Firedancer.Ref.Mlir.fd_f25519_k
-
 namespace MLIR.Firedancer.Ref
 
 @[expose] public section
