@@ -189,12 +189,6 @@ theorem shr_lanes12 (W : BitVec 256) :
   rw [ofFn_two]
   exact congrArg₂ (fun a b => #v[a, b]) (shr_w1 W) (shr_w2 W)
 
-theorem shr_lanes23 (W : BitVec 256) :
-    #v[((W.extractLsb' 192 64 ++ W.extractLsb' 128 64) <<< 63).extractLsb' 64 64,
-        W.extractLsb' 192 64 >>> 1] =
-      #v[(W >>> 1).extractLsb' 128 64, (W >>> 1).extractLsb' 192 64] := by
-  rw [shr_w2, shr_w3]
-
 /-- The constants `^bb0` computes from `bits = B` and the scalar's test, as `chunk0b` leaves them. -/
 abbrev Out0b (E : ⟪Γ⟫) (v : Pointer) (B : Nat) (x : BitVec 256) : Prop :=
   E ⊨ [%3132 := 1#32, %3133 := 0#64, %3134 := 1#64, %3135 := 18446744073709551615#64,

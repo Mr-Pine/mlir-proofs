@@ -719,15 +719,6 @@ def entryEnv (E₀ : ⟪Γ⟫) (B : GlobalState) : ⟪Γ⟫ :=
 theorem yUndef_eq : yUndef = (((Vector.replicate 4 PoisonOr.poison).set 2 (PoisonOr.value 0#64) (by decide)).set 3 (PoisonOr.value 0#64) (by decide) : ⟦Ty.vec 4 64⟧) := by
   rfl
 
-theorem m8Undef_eq : (((((Vector.replicate 8 PoisonOr.poison).set 4 (PoisonOr.value 0#32) (by decide)).set 5 (PoisonOr.value 0#32) (by decide)).set 6 (PoisonOr.value 0#32) (by decide)).set 7 (PoisonOr.value 0#32) (by decide) : ⟦Ty.vec 8 32⟧) = m8Undef := by
-  rfl
-
-theorem mask1Bytes_eq : (((((((((((((((((Vector.replicate 32 PoisonOr.poison).set 16 (PoisonOr.value 1#8) (by decide)).set 17 (PoisonOr.value 0#8) (by decide)).set 18 (PoisonOr.value 0#8) (by decide)).set 19 (PoisonOr.value 0#8) (by decide)).set 20 (PoisonOr.value 0#8) (by decide)).set 21 (PoisonOr.value 0#8) (by decide)).set 22 (PoisonOr.value 0#8) (by decide)).set 23 (PoisonOr.value 0#8) (by decide)).set 24 PoisonOr.poison (by decide)).set 25 PoisonOr.poison (by decide)).set 26 PoisonOr.poison (by decide)).set 27 PoisonOr.poison (by decide)).set 28 PoisonOr.poison (by decide)).set 29 PoisonOr.poison (by decide)).set 30 PoisonOr.poison (by decide)).set 31 PoisonOr.poison (by decide) : ⟦Ty.vec 32 8⟧) = mask1Bytes := by
-  rfl
-
-theorem mask0Bytes_eq : (((((((((((((((((Vector.replicate 32 PoisonOr.poison).set 16 (PoisonOr.value 0#8) (by decide)).set 17 (PoisonOr.value 0#8) (by decide)).set 18 (PoisonOr.value 0#8) (by decide)).set 19 (PoisonOr.value 0#8) (by decide)).set 20 (PoisonOr.value 0#8) (by decide)).set 21 (PoisonOr.value 0#8) (by decide)).set 22 (PoisonOr.value 0#8) (by decide)).set 23 (PoisonOr.value 0#8) (by decide)).set 24 PoisonOr.poison (by decide)).set 25 PoisonOr.poison (by decide)).set 26 PoisonOr.poison (by decide)).set 27 PoisonOr.poison (by decide)).set 28 PoisonOr.poison (by decide)).set 29 PoisonOr.poison (by decide)).set 30 PoisonOr.poison (by decide)).set 31 PoisonOr.poison (by decide) : ⟦Ty.vec 32 8⟧) = mask0Bytes := by
-  rfl
-
 /-! ### The specification -/
 
 /-- `FD_R52X5_QUAD_SQR( D, S )`. -/
@@ -891,12 +882,6 @@ theorem blocks_eq (n : Nat) (R : BitVec 32 × Option (Quad5 × Quad5)) :
   unfold blocks
   rcases R with ⟨r, _ | _⟩ <;> simp only []
 
-theorem readAt_storeLimbs_k {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVec 64}
-    (h : m.LimbsRoom p) (k : Fin 5) :
-    (m.storeLimbs p l).readAt (p.add (BitVec.ofNat 64 (8 * k.val))) 64 = l k := by
-  have := congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) k
-  fin_cases k <;> simpa [MemoryState.readLimbs, Pointer.add] using this
-
 theorem readAt_storeLimbs_0 {m : MemoryState} {p : Pointer} {l : Fin 5 → BitVec 64}
     (h : m.LimbsRoom p) : (m.storeLimbs p l).readAt p 64 = l 0 :=
   congrFun (MemoryState.readLimbs_storeLimbs_self (l := l) h) 0
@@ -952,9 +937,6 @@ theorem signExtend_ofBool (b : Bool) :
     BitVec.signExtend 32 (BitVec.ofBool b) = -(if b then 1#32 else 0#32) := by
   cases b <;> decide
 
-theorem ite01 (b : Bool) : (if b then 1#32 else 0#32) = 0 ∨ (if b then 1#32 else 0#32) = 1 := by
-  cases b <;> simp
-
 theorem setWidth_shr7 (b : BitVec 8) :
     BitVec.setWidth 32 (b >>> 7) = BitVec.setWidth 32 b >>> 7 := by bv_decide
 
@@ -966,35 +948,6 @@ theorem flip_eq (X : Quad5) (j : Fin 4) (e : BitVec 256) :
   unfold flip
   rw [setWidth_shr7]
   split <;> simp_all
-
-/-- One limb of a decoded point from the `^bb14` steps that assemble it: lanes `a`, `b` of `x`,
-`y`, the `i64` byte `z` (lane 2) and lane `3` of `tv` (the permuted `x y`). -/
-theorem limb_of (a b : BitVec 64) (z : BitVec 8) (tv : Wl) (u0 : Vector (PoisonOr (BitVec 64)) 4)
-    (u1 u2 u4 : Vector (PoisonOr (BitVec 8)) 32) (u3 : Vector (BitVec 8) 32)
-    (h0 : u0 = #v[PoisonOr.value a, PoisonOr.value b, PoisonOr.poison, PoisonOr.poison])
-    (h1 : u1 = #v[Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 0 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 8 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 16 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 24 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 32 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 40 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 48 8 u0[0].getValue)), Operation.poisonIf u0[0].isPoison (PoisonOr.value (BitVec.extractLsb' 56 8 u0[0].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 0 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 8 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 16 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 24 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 32 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 40 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 48 8 u0[1].getValue)), Operation.poisonIf u0[1].isPoison (PoisonOr.value (BitVec.extractLsb' 56 8 u0[1].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 0 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 8 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 16 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 24 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 32 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 40 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 48 8 u0[2].getValue)), Operation.poisonIf u0[2].isPoison (PoisonOr.value (BitVec.extractLsb' 56 8 u0[2].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 0 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 8 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 16 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 24 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 32 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 40 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 48 8 u0[3].getValue)), Operation.poisonIf u0[3].isPoison (PoisonOr.value (BitVec.extractLsb' 56 8 u0[3].getValue))])
-    (h2 : u2 = #v[u1[0], u1[1], u1[2], u1[3], u1[4], u1[5], u1[6], u1[7], u1[8], u1[9], u1[10], u1[11], u1[12], u1[13], u1[14], u1[15], PoisonOr.value z, PoisonOr.value 0#8, PoisonOr.value 0#8, PoisonOr.value 0#8, PoisonOr.value 0#8, PoisonOr.value 0#8, PoisonOr.value 0#8, PoisonOr.value 0#8, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison, PoisonOr.poison])
-    (h3 : u3 = wlBytes tv)
-    (h4 : u4 = #v[u2[0], u2[1], u2[2], u2[3], u2[4], u2[5], u2[6], u2[7], u2[8], u2[9], u2[10], u2[11], u2[12], u2[13], u2[14], u2[15], u2[16], u2[17], u2[18], u2[19], u2[20], u2[21], u2[22], u2[23], PoisonOr.value u3[24], PoisonOr.value u3[25], PoisonOr.value u3[26], PoisonOr.value u3[27], PoisonOr.value u3[28], PoisonOr.value u3[29], PoisonOr.value u3[30], PoisonOr.value u3[31]]) :
-    u4 = Ty.wrap (t := .vec 32 8) (wlBytes (wl a b (z.setWidth 64) tv[3])) := by
-  have z0 : (z.setWidth 64).extractLsb' 0 8 = z := by bv_decide
-  have z1 : (z.setWidth 64).extractLsb' 8 8 = 0#8 := by bv_decide
-  have z2 : (z.setWidth 64).extractLsb' 16 8 = 0#8 := by bv_decide
-  have z3 : (z.setWidth 64).extractLsb' 24 8 = 0#8 := by bv_decide
-  have z4 : (z.setWidth 64).extractLsb' 32 8 = 0#8 := by bv_decide
-  have z5 : (z.setWidth 64).extractLsb' 40 8 = 0#8 := by bv_decide
-  have z6 : (z.setWidth 64).extractLsb' 48 8 = 0#8 := by bv_decide
-  have z7 : (z.setWidth 64).extractLsb' 56 8 = 0#8 := by bv_decide
-  subst h0 h1 h2 h3 h4
-  simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
-    List.getElem_cons_succ, wlBytes_eq, Ty.wrap_vec, Vector.map_mk, List.map_toArray, List.map_cons,
-    List.map_nil, wl, Operation.poisonIf, PoisonOr.isPoison_value, PoisonOr.getValue_value,
-    Bool.cond_false, z0, z1, z2, z3, z4, z5, z6, z7]
-
-theorem permute_limb (x y t : Wl) (j : Nat) (hj : j < 4) (z : BitVec 8) :
-    wl (wlPermute x j j j j)[0] (wlPermute y j j j j)[1] (z.setWidth 64) (wlPermute t j j j j)[3] =
-      wl x[j] y[j] (z.setWidth 64) t[j] := by
-  simp [wlPermute, wl, Nat.mod_eq_of_lt hj]
 
 /-! ### `^bb0`'s `Y` -/
 

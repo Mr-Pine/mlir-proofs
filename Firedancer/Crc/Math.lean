@@ -431,22 +431,4 @@ public theorem fd_r52x5_ge_to_table.spec_val {X Y Z T : Wwl} (bX : Below 52 X) (
   refine ⟨?_, ?_, rfl, ?_, b1, b2, bZ, b3⟩ <;>
     simp only [r, fd_r52x5_ge_to_table.spec, v1, v2, v3, vk] <;> ring
 
-/-- `fd_r52x5_ge_add_table` with the entry `fd_r52x5_ge_to_table` makes of `(X2, Y2, Z2, T2)`:
-the sum, as `fd_r52x5_ge_add` gives it. -/
-public theorem fd_r52x5_ge_add_table.to_table_ext {X1 Y1 Z1 T1 X2 Y2 Z2 T2 : Wwl}
-    {x₁ y₁ x₂ y₂ : ZMod p} (h1 : IsExt x₁ y₁ (val X1) (val Y1) (val T1) (val Z1))
-    (h2 : IsExt x₂ y₂ (val X2) (val Y2) (val T2) (val Z2)) (c1 : OnCurve x₁ y₁)
-    (c2 : OnCurve x₂ y₂) (bX1 : Below 52 X1) (bY1 : Below 52 Y1) (bZ1 : Below 52 Z1)
-    (bT1 : Below 52 T1) (bX2 : Below 52 X2) (bY2 : Below 52 Y2) (bZ2 : Below 52 Z2)
-    (bT2 : Below 52 T2) :
-    let Q := Ed25519.add x₁ y₁ x₂ y₂
-    let e := fd_r52x5_ge_to_table.spec X2 Y2 Z2 T2
-    let r := fd_r52x5_ge_add_table.spec X1 Y1 Z1 T1 e.1 e.2.1 e.2.2.1 e.2.2.2
-    IsExt Q.1 Q.2 (val r.1) (val r.2.1) (val r.2.2.2) (val r.2.2.1) ∧
-      Below 52 r.1 ∧ Below 52 r.2.1 ∧ Below 52 r.2.2.1 ∧ Below 52 r.2.2.2 := by
-  intro Q e r
-  obtain ⟨e1, e2, e3, e4, b1, b2, b3, b4⟩ := fd_r52x5_ge_to_table.spec_val bX2 bY2 bZ2 bT2
-  exact fd_r52x5_ge_add_table.spec_ext h1 h2 e1 e2 (congrArg val e3) e4 c1 c2 bX1 bY1 bZ1 bT1 b1
-    b2 b3 b4
-
 end MLIR.Firedancer.Crc

@@ -1198,75 +1198,6 @@ theorem set_chain_8 {α : Type} (V : Vector α 8) (a0 a1 a2 a3 a4 a5 a6 a7 : α)
   | 7, _ => rfl
   | _ + 8, h => exact absurd h (by omega)
 
-/-- Where the body at `pos` is `insertRun_8_32`, `i0 … i7` hold `0 … 7` and `xk` holds `ak`:
-running on from `pos` then `g` gives `K` if it does from `pos + 8` with the vector of the `ak` in
-`d7`. -/
-theorem runBodyFrom_insertRun_8_32 {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {v : Reg Γ (.vec 8 32)} {x0 x1 x2 x3 x4 x5 x6 x7 : Reg Γ (.bv 32)}
-    {i0 i1 i2 i3 i4 i5 i6 i7 : Reg Γ (.bv 32)} {d0 d1 d2 d3 d4 d5 d6 d7 : Dst Γ (.vec 8 32)}
-    {rest : List (Instr Γ)} {a0 a1 a2 a3 a4 a5 a6 a7 : ⟦.bv 32⟧} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody : blk.body.drop pos = insertRun_8_32 v x0 x1 x2 x3 x4 x5 x6 x7 i0 i1 i2 i3 i4 i5 i6 i7 d0 d1 d2 d3 d4 d5 d6 d7 ++ rest)
-    (hR :
-      E ⊨ [i0 := (0#32 : BitVec 32),
-        i1 := (1#32 : BitVec 32),
-        i2 := (2#32 : BitVec 32),
-        i3 := (3#32 : BitVec 32),
-        i4 := (4#32 : BitVec 32),
-        i5 := (5#32 : BitVec 32),
-        i6 := (6#32 : BitVec 32),
-        i7 := (7#32 : BitVec 32),
-        x0 := a0,
-        x1 := a1,
-        x2 := a2,
-        x3 := a3,
-        x4 := a4,
-        x5 := a5,
-        x6 := a6,
-        x7 := a7])
-    (hK :
-      ∀ v0 v1 v2 v3 v4 v5 v6 : ⟦.vec 8 32⟧,
-        (blk.runBodyFrom
-              E[d0 := v0,
-                d1 := v1,
-                d2 := v2,
-                d3 := v3,
-                d4 := v4,
-                d5 := v5,
-                d6 := v6,
-                d7 := (#v[a0, a1, a2, a3, a4, a5, a6, a7] : ⟦.vec 8 32⟧)]
-              (pos + 8) S >>=
-            g) =
-          K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  have hb : blk.body.drop pos = _ :: _ := hbody
-  refine runBodyFrom_insertelement_at (a := a0) 0 (by decide) hb rfl
-    hR.2.2.2.2.2.2.2.2.1
-    hR.1 (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a1) 1 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.1])
-    (by simp only [read_write_vec_of_bv, hR.2.1]) (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a2) 2 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.2.1])
-    (by simp only [read_write_vec_of_bv, hR.2.2.1]) (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a3) 3 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.2.2.1])
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.1]) (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a4) 4 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.2.2.2.1])
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.1]) (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a5) 5 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.2.2.2.2.1])
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.1]) (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a6) 6 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1])
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.1]) (by decide) fun hb => ?_
-  refine runBodyFrom_insertelement_at (a := a7) 7 (by decide) hb (Env.read_write_dst _ _ _)
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2])
-    (by simp only [read_write_vec_of_bv, hR.2.2.2.2.2.2.2.1]) (by decide) fun hb => ?_
-  rw [set_chain_8]
-  exact hK _ _ _ _ _ _ _
-
 /-- A full `insertelement` chain on a `<32 x i8>`: lane `k` of the vector before set to `xk` at
 index `ik`, into `dk`. -/
 def insertRun_32_8 (v : Reg Γ (.vec 32 8)) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 x30 x31 : Reg Γ (.bv 8))
@@ -1559,34 +1490,6 @@ theorem runBodyFrom_insertRun_32_8 {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
 /-- A QUAD's five stores: `qk` to `pk`. -/
 def storeRun (q0 q1 q2 q3 q4 : Reg Γ (.vec 4 64)) (p0 p1 p2 p3 p4 : Reg Γ .ptr) : List (Instr Γ) :=
   [.store p0 q0, .store p1 q1, .store p2 q2, .store p3 q3, .store p4 q4]
-
-/-- Where the body at `pos` is `storeRun`, `q0 … q4` hold `Q` and `p0 … p4` point to room for a
-`wl_t` each: running on from `pos` then `g` gives `K` if it does from `pos + 5` with `Q` stored
-there (`storeTmp5`). -/
-theorem runBodyFrom_storeRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : Nat}
-    {q0 q1 q2 q3 q4 : Reg Γ (.vec 4 64)} {p0 p1 p2 p3 p4 : Reg Γ .ptr} {rest : List (Instr Γ)}
-    {Q : Quad5} {P0 P1 P2 P3 P4 : Pointer} {S : GlobalState}
-    {g : ⟪Γ⟫ × GlobalState → PoisonOr β} {K : PoisonOr β}
-    (hbody : blk.body.drop pos = storeRun q0 q1 q2 q3 q4 p0 p1 p2 p3 p4 ++ rest)
-    (hR :
-      E ⊨ [q0 := Q.P0, q1 := Q.P1, q2 := Q.P2, q3 := Q.P3, q4 := Q.P4, p0 := P0, p1 := P1,
-        p2 := P2, p3 := P3, p4 := P4])
-    (hP :
-      Room S.mem P0 256 ∧ Room S.mem P1 256 ∧ Room S.mem P2 256 ∧ Room S.mem P3 256 ∧
-        Room S.mem P4 256)
-    (hK :
-      (blk.runBodyFrom E (pos + 5)
-            { alloc := S.alloc, mem := S.mem.storeTmp5 P0 P1 P2 P3 P4 Q } >>= g) = K) :
-    (blk.runBodyFrom E pos S >>= g) = K := by
-  obtain ⟨hp0, hp1, hp2, hp3, hp4⟩ := hP
-  have e : S.mem.storeTmp5 P0 P1 P2 P3 P4 Q =
-      ((((S.mem.storeAt P0 (BitVec.packLanes Q.P0)).storeAt P1 (BitVec.packLanes Q.P1)).storeAt P2
-        (BitVec.packLanes Q.P2)).storeAt P3 (BitVec.packLanes Q.P3)).storeAt P4
-        (BitVec.packLanes Q.P4) := rfl
-  rw [e] at hK
-  iterate 5 step_store
-  rw [hS]
-  exact hK
 
 /-- The point at `p` loaded into `x0 … x4`, through `g1 … g4` (`p + 32`, …, `p + 128`). -/
 def quad5LoadRun (p : Reg Γ .ptr) (x0 x1 x2 x3 x4 : Dst Γ (.vec 4 64)) (g1 g2 g3 g4 : Dst Γ .ptr) :

@@ -954,42 +954,6 @@ theorem add_two64 {a : Nat} (h : a + 2 < 2 ^ 63) :
   · apply BitVec.eq_of_toNat_eq
     simp [h2, Nat.mod_eq_of_lt (show a + 2 < 2 ^ 64 by omega)]
 
-/-- The byte count `2 * (n - k)` of the digit-array tail memset, from the region's
-`((n + (k xor -1)) zext) << 1 + 2` (with `k < n`). -/
-theorem memset_len {n k : Nat} (hn : n < 2 ^ 31) (hk : k < n) :
-    (((BitVec.ofNat 32 n + (BitVec.ofNat 32 k ^^^ 4294967295#32)).setWidth 64 <<< 1) + 2#64).toNat
-      = 2 * (n - k) := by
-  have hx : BitVec.ofNat 32 k ^^^ 4294967295#32 = ~~~ BitVec.ofNat 32 k := by
-    rw [show (4294967295#32) = BitVec.allOnes 32 from rfl, BitVec.xor_allOnes]
-  rw [hx]
-  have hnk : (BitVec.ofNat 32 n + ~~~ BitVec.ofNat 32 k).toNat = n - k - 1 := by
-    rw [BitVec.toNat_add, BitVec.toNat_not, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
-      Nat.mod_eq_of_lt (show n < 2 ^ 32 by omega), Nat.mod_eq_of_lt (show k < 2 ^ 32 by omega)]
-    rw [show n + (2 ^ 32 - 1 - k) = (n - k - 1) + 2 ^ 32 by omega, Nat.add_mod_right]
-    exact Nat.mod_eq_of_lt (by omega)
-  rw [BitVec.toNat_add, BitVec.toNat_shiftLeft, BitVec.toNat_setWidth, hnk, Nat.shiftLeft_eq]
-  simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
-  rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
-  omega
-
-/-- The shifted index does not overflow (`shl nuw nsw`), and equals `2 * (n - k - 1)`. -/
-theorem memset_shl {n k : Nat} (hn : n < 2 ^ 31) (hk : k < n) :
-    let z := (BitVec.ofNat 32 n + (BitVec.ofNat 32 k ^^^ 4294967295#32)).setWidth 64
-    z <<< 1 >>> 1 = z ∧ (z <<< 1).sshiftRight 1 = z ∧ z <<< 1 = BitVec.ofNat 64 (2 * (n - k - 1)) := by
-  intro z
-  have hx : BitVec.ofNat 32 k ^^^ 4294967295#32 = ~~~ BitVec.ofNat 32 k := by
-    rw [show (4294967295#32) = BitVec.allOnes 32 from rfl, BitVec.xor_allOnes]
-  have hz : z = BitVec.ofNat 64 (n - k - 1) := by
-    apply BitVec.eq_of_toNat_eq
-    simp only [z, hx, BitVec.toNat_setWidth, BitVec.toNat_add, BitVec.toNat_not, BitVec.toNat_ofNat,
-      Nat.reducePow]
-    rw [Nat.mod_eq_of_lt (show n < 2 ^ 32 by omega), Nat.mod_eq_of_lt (show k < 2 ^ 32 by omega),
-      show n + (2 ^ 32 - 1 - k) = (n - k - 1) + 2 ^ 32 by omega, Nat.add_mod_right,
-      Nat.mod_eq_of_lt (show n - k - 1 < 2 ^ 32 by omega), Nat.mod_eq_of_lt (by omega)]
-  rw [hz]
-  obtain ⟨h1, h2, h3⟩ := shl1_64 (a := n - k - 1) (by omega)
-  exact ⟨h2, h1, h3⟩
-
 theorem sub32 {a b : Nat} (hb : b ≤ a) (ha : a < 2 ^ 32) :
     BitVec.ofNat 32 a - BitVec.ofNat 32 b = BitVec.ofNat 32 (a - b) := by
   apply BitVec.eq_of_toNat_eq
@@ -998,12 +962,6 @@ theorem sub32 {a b : Nat} (hb : b ≤ a) (ha : a < 2 ^ 32) :
     Nat.mod_eq_of_lt (show a - b < 2 ^ 32 by omega)]
   rw [show 2 ^ 32 - b + a = (a - b) + 2 ^ 32 by omega, Nat.add_mod_right]
   exact Nat.mod_eq_of_lt (by omega)
-
-theorem add32 {a b : Nat} (h : a + b < 2 ^ 32) :
-    BitVec.ofNat 32 a + BitVec.ofNat 32 b = BitVec.ofNat 32 (a + b) := by
-  apply BitVec.eq_of_toNat_eq
-  rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (show a < 2 ^ 32 by omega), Nat.mod_eq_of_lt (show b < 2 ^ 32 by omega)]
 
 theorem setWidth64_ofNat32 {a : Nat} (h : a < 2 ^ 32) :
     (BitVec.ofNat 32 a).setWidth 64 = BitVec.ofNat 64 a := by
