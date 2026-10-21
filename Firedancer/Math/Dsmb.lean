@@ -123,7 +123,7 @@ public theorem low_succ (w : Vector Int 256) {i : ℕ} (h : i < 256) :
 
 /-- All digits: `w`'s value. -/
 public theorem low_256 (w : Vector Int 256) :
-    low w 256 = ∑ i : Fin 256, w[i] * 2 ^ (i : ℕ) := by
+    ∑ i : Fin 256, w[i] * 2 ^ (i : ℕ) = low w 256 := by
   rw [low, ← Fin.sum_univ_eq_sum_range]
   simp
 
@@ -261,7 +261,7 @@ public theorem spec_val {tbl : ℕ → PointLimbs} {A : PointLimbs}
   have hw2 (k) (hk : k < 256) := (fd_curve25519_scalar_wnaf.wnaf8_digit n2 hk).imp_right And.left
   have s1 := fd_curve25519_scalar_wnaf.wnaf_sum n1 (bits := 4) (by decide) h1
   have s2 := fd_curve25519_scalar_wnaf.wnaf_sum n2 (bits := 8) (by decide) h2
-  rw [← low_256] at s1 s2
+  rw [low_256] at s1 s2
   rw [← natCast_zsmul, ← natCast_zsmul, ← s1, ← s2]
   unfold spec
   dsimp only

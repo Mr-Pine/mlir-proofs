@@ -389,7 +389,7 @@ theorem runBodyFrom_sqrSumsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
       vzl =
         Ty.wrap (t := V)
           (fd_r43x6_sqr_fast.sums (wwl_madd52lo wwl_zero X0 X1) P1L P2L P0H P1H P2H).1 := by
-    simp only [hvzl, wrapGetElem, PoisonOr.value_bind, pullWrapOfFn, ← wwl_add_getElem,
+    simp only [hvzl, wrapGetElem, PoisonOr.value_bind, pullWrapOfFn, wwl_add_getElem,
       Vector.ofFn_getElem, fd_r43x6_sqr_fast.sums, and_sqrMaskN1, and_sqrMaskN2]
     ac_rfl
   have e2 :

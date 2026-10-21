@@ -50,7 +50,7 @@ public theorem fd_r52x5_reduce.call_eq (x : Pointer) (s : GlobalState) (hwf : s.
         (.nil,
           { s with mem := s.mem.storeLimbs x (fd_r52x5_reduce.spec (s.mem.readLimbs x)) }) := by
   have hx256 : Room s.mem x 256 := (hx.room hxw).room320.mono (by omega)
-  rw [← MemoryState.storeLimbsV_eq (hx.room hxw)]
+  rw [MemoryState.storeLimbsV_eq (hx.room hxw)]
   func_init
   block_init
   iterate 9 step_pure

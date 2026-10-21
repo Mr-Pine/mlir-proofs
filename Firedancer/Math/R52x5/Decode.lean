@@ -216,7 +216,7 @@ theorem dec_ok_iff (s : BitVec 256) {xp : Wwl} (hxp : val xp = val (pre s).uv7 ^
   rw [ne_eq, Ed25519.decode_eq_none, not_forall_not, exists_decodes_iff, Dec.err_eq_false, h1, h2,
     flags_and_eq_zero, exists_onCurve_iff]
   generalize ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) = y at hx ⊢
-  rw [← sqrt_ratio_iff (v_ne y) hx]
+  rw [sqrt_ratio_iff (v_ne y) hx]
   generalize val (dec (pre s) xp).x = x
   constructor
   · rintro (h | h)

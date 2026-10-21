@@ -19,7 +19,8 @@ public section
 square. -/
 theorem sqrt_ratio_iff {u v x : ZMod p} (hv : v ≠ 0)
     (hx : x = u * v ^ 3 * (u * v ^ 7) ^ ((p - 5) / 8)) :
-    (v * x ^ 2 = u ∨ v * x ^ 2 = -u) ↔ IsSquare (u / v) := by
+    IsSquare (u / v) ↔ (v * x ^ 2 = u ∨ v * x ^ 2 = -u) := by
+  rw [Iff.comm]
   by_cases hu : u = 0
   · subst hu
     simp only [hx, zero_mul, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,

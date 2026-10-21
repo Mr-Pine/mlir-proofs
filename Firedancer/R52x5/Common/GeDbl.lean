@@ -40,7 +40,7 @@ def geDbl (P1 : Quad5) : Quad5 :=
   (fd_r52x5_quad_mul_fast.spec _ta _tb).reduce
 
 /-- `wl_zero()`'s bytes. -/
-theorem wlBytes_zero : wlBytes wl_zero = Vector.replicate 32 0#8 := by
+theorem wlBytes_zero : Vector.replicate 32 0#8 = wlBytes wl_zero := by
   ext k hk
   simp [wlBytes]
 
@@ -131,7 +131,7 @@ theorem runBodyFrom_laneIfZeroMaskRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ t
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨h0, h1, h2, h3⟩ := hi
   obtain ⟨hz, hR⟩ := hR
-  rw [← wlBytes_zero] at hz
+  rw [wlBytes_zero] at hz
   step_pattern using runBodyFrom_blendLimbRun' i0 i1 i2 i3 (T := wl_zero) inline
   step_pattern using runBodyFrom_blendLimbRun' i0 i1 i2 i3 (T := wl_zero) inline
   step_pattern using runBodyFrom_blendLimbRun' i0 i1 i2 i3 (T := wl_zero) inline
@@ -197,7 +197,7 @@ theorem runBodyFrom_laneIfZeroRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ tRets
   have hc2 := laneImm_ne_intMin h2
   have hc3 := laneImm_ne_intMin h3
   obtain ⟨hz, hR⟩ := hR
-  rw [← wlBytes_zero] at hz
+  rw [wlBytes_zero] at hz
   step_call using wc_bcast_wide.call_eq
   step_pattern using runBodyFrom_bytesRun inline
   step_pattern using runBodyFrom_bytesRun inline
@@ -248,7 +248,7 @@ theorem runBodyFrom_laneIfBytesMaskRun (i0 i1 i2 i3 : Nat) {blk : BasicBlock Γ 
     (blk.runBodyFrom E pos S >>= g) = K := by
   obtain ⟨h0, h1, h2, h3⟩ := hi
   obtain ⟨hz, hR⟩ := hR
-  rw [← wlBytes_zero] at hz
+  rw [wlBytes_zero] at hz
   step_pattern using runBodyFrom_blendBackRun i0 i1 i2 i3 (T := wl_zero) inline
   step_pattern using runBodyFrom_blendBackRun i0 i1 i2 i3 (T := wl_zero) inline
   step_pattern using runBodyFrom_blendBackRun i0 i1 i2 i3 (T := wl_zero) inline

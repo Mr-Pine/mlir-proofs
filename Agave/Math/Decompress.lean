@@ -245,7 +245,7 @@ public theorem FieldElement51_sqrt_ratio_i.spec_val {u v : Fin 5 → BitVec 64}
     split <;> simp [vnr1]
   rw [vr2]
   obtain ⟨heven, hsq2⟩ := neg_if_odd_even (Limbs.val r1)
-  have hiff := (Firedancer.Ref.sqrt_ratio_iff hv0 hβ).trans Iff.rfl
+  have hiff := (Firedancer.Ref.sqrt_ratio_iff hv0 hβ).symm
   refine ⟨?_, fun hsq => ?_, heven, ?_⟩
   · by_cases hsq : IsSquare (Limbs.val u / Limbs.val v)
     · rw [ite_eq_left (Or.comm.1 (hiff.2 hsq)), ite_eq_left hsq]

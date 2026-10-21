@@ -1034,7 +1034,7 @@ theorem MemoryState.storeAt_zero_14_25 {m : MemoryState} {p : Pointer}
   have hadd : (p.add 64#64).add 64#64 = p.add 128#64 := by
     simp only [Pointer.add, BitVec.add_assoc]
     rfl
-  rw [← hadd, ← MemoryState.storeAt_append hov rfl, BitVec.packLanes_zero]
+  rw [← hadd, MemoryState.storeAt_storeAt_concat hov rfl, BitVec.packLanes_zero]
   simp
 
 /-- A second store to the same range replaces the first. -/

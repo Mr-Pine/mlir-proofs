@@ -149,7 +149,7 @@ def wv320 (u : Wv) : BitVec 320 :=
   u[0].zeroExtend 320 + (u[1].zeroExtend 320 <<< 64) + (u[2].zeroExtend 320 <<< 128) +
     (u[3].zeroExtend 320 <<< 192)
 
-theorem pack320w_toNat (x : Wwl) : (pack320w x).toNat = nat x := by
+theorem pack320w_toNat (x : Wwl) : nat x = (pack320w x).toNat := by
   have := x[0].isLt
   have := x[1].isLt
   have := x[2].isLt
@@ -191,7 +191,7 @@ public theorem fd_r43x6_unpack_spec (u : Wv) :
       (wvNat u < 2 * p → NearlyReduced (fd_r43x6_unpack.spec u)) ∧
       (wvNat u < p → Reduced (fd_r43x6_unpack.spec u)) := by
   have hn : nat (fd_r43x6_unpack.spec u) = wvNat u := by
-    rw [← pack320w_toNat, unpack_pack, wv320_toNat]
+    rw [pack320w_toNat, unpack_pack, wv320_toNat]
   have hu : Unpacked (fd_r43x6_unpack.spec u) := by
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, unpack_lane67 u⟩ <;>
       simp only [unpack_lane0, unpack_lane1, unpack_lane2, unpack_lane3, unpack_lane4,

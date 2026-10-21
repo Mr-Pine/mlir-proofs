@@ -337,7 +337,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
       finish_block
       subst hS
       dsimp only at hal ⊢
-      rw [← MemoryState.storeQuad5_mk, MemoryState.eraseFrom_storeQuad5, hm, hal]
+      rw [MemoryState.storeQuad5_mk, MemoryState.eraseFrom_storeQuad5, hm, hal]
       subst S
       erase_frame
       rw [MemoryState.storeQuad5_storeQuad5_self hro, ← hres]

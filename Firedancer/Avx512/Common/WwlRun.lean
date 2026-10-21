@@ -59,7 +59,7 @@ theorem wwl_shl_ofFn (a : Vector (BitVec 64) 8) (n : Nat) :
     (Vector.ofFn fun i => a[i.1] <<< n) = wwl_shl a n := by simp [wwl_shl]
 
 theorem wwl_add_getElem (a b : Vector (BitVec 64) 8) (i : Nat) (h : i < 8) :
-    (wwl_add a b)[i] = a[i] + b[i] := by simp [wwl_add]
+    a[i] + b[i] = (wwl_add a b)[i] := by simp [wwl_add]
 
 theorem wwl_and_getElem (a b : Vector (BitVec 64) 8) (i : Nat) (h : i < 8) :
     (wwl_and a b)[i] = a[i] &&& b[i] := by simp [wwl_and]

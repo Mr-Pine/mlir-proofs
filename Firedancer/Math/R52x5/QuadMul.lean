@@ -81,21 +81,21 @@ theorem toNat_and_m52 (z : BitVec 64) : (z &&& Firedancer.Avx512.m52).toNat = z.
   exact Firedancer.Avx512.R43x6.and_m52 _
 
 theorem madd52lo_and (a b : BitVec 64) :
-    madd52lo a (b &&& Firedancer.Avx512.m52) = madd52lo a b := by
+    madd52lo a b = madd52lo a (b &&& Firedancer.Avx512.m52) := by
   unfold madd52lo; rw [BitVec.and_assoc, BitVec.and_self]
 
 theorem madd52hi_and (a b : BitVec 64) :
-    madd52hi a (b &&& Firedancer.Avx512.m52) = madd52hi a b := by
+    madd52hi a b = madd52hi a (b &&& Firedancer.Avx512.m52) := by
   unfold madd52hi; rw [BitVec.and_assoc, BitVec.and_self]
 
 theorem toNat_madd52lo_19 (z : BitVec 64) : (madd52lo 19 z).toNat = lo19 z.toNat := by
   have := toNat_and_m52 z
-  rw [← madd52lo_and, madd52lo_toNat (by decide) (by omega), this]
+  rw [madd52lo_and, madd52lo_toNat (by decide) (by omega), this]
   rfl
 
 theorem toNat_madd52hi_19 (z : BitVec 64) : (madd52hi 19 z).toNat = hi19 z.toNat := by
   have := toNat_and_m52 z
-  rw [← madd52hi_and, madd52hi_toNat (by decide) (by omega), this]
+  rw [madd52hi_and, madd52hi_toNat (by decide) (by omega), this]
   rfl
 
 theorem toNat_madd52lo_19_shr (z : BitVec 64) :

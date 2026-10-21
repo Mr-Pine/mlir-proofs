@@ -30,8 +30,8 @@ attribute [local mlir_operation] zipWith_sub_wl
 
 /-- Lane `T` of the negation reads only lane `T`, which `PERMUTE( 1,0,2,3 )` keeps. -/
 theorem laneIf_0001_permute (A X : Quad5) :
-    Quad5.laneIf 0 0 0 1 (A.permute 1 0 2 3).negateLazy.reduce X =
-      Quad5.laneIf 0 0 0 1 A.negateLazy.reduce X := by
+    Quad5.laneIf 0 0 0 1 A.negateLazy.reduce X =
+      Quad5.laneIf 0 0 0 1 (A.permute 1 0 2 3).negateLazy.reduce X := by
   simp [Quad5.laneIf, wlBlend, Quad5.reduce, Quad5.negateLazy, Quad5.permute, wlPermute,
     wl_madd52lo, wl_add, wl_and, wl_shru, wl_sub]
 
@@ -93,7 +93,7 @@ public theorem fd_ed25519_point_neg_precomputed.call_eq (r a : Pointer) (s : Glo
     erase_frame
   -- the permuted point's stores, overwritten; aliased, `a->P` reloaded permuted
   · rw [← MemoryState.storeQuad5_storeQuad5_self (P := (S₀.mem.readQuad5 r).permute 1 0 2 3) hp,
-      fd_ed25519_point_neg_precomputed.spec, ← laneIf_0001_permute]
+      fd_ed25519_point_neg_precomputed.spec, laneIf_0001_permute]
     rfl
   · rw [← MemoryState.storeQuad5_storeQuad5_self (P := (S₀.mem.readQuad5 a).permute 1 0 2 3) hp]
     rfl

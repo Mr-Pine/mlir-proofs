@@ -28,7 +28,7 @@ open fd_r43x6_ge_decode2
 section Lanes
 
 /-- `vadd` is `fd_r43x6_add_fast`. -/
-theorem vadd_eq (x y : Wwl) : vadd x y = fd_r43x6_add_fast x y := by
+theorem vadd_eq (x y : Wwl) : fd_r43x6_add_fast x y = vadd x y := by
   ext i hi : 1
   simp [vadd, fd_r43x6_add_fast, wwl_add]
 
@@ -62,7 +62,7 @@ set_option linter.unusedSimpArgs false in
 /-- `fd_r43x6_fold_signed` as compiled: `foldSignedPre` of the unbiased lanes, the bias added
 back. -/
 theorem foldSignedPre_eq (w : Wwl) :
-    vadd (foldSignedPre w) negBias = fd_r43x6_fold_signed (vadd w negBias) := by
+    fd_r43x6_fold_signed (vadd w negBias) = vadd (foldSignedPre w) negBias := by
   rw [R43x6.fd_r43x6_fold_signed_eq, foldSignedBias]
   vec_lanes simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ, vadd, Vector.getElem_ofFn, foldSignedPre_get, R43x6.wwl_add_get,
@@ -74,7 +74,7 @@ theorem foldSignedPre_eq (w : Wwl) :
 -- the lane `simp` set is shared by all lanes, each using part of it
 set_option linter.unusedSimpArgs false in
 /-- `fd_r43x6_sub( x, one )` as compiled: `x + (p - 1 - _b)`, the bias added back. -/
-theorem pSubOne_eq (x : Wwl) : vadd (vadd x pSubOne) negBias = fd_r43x6_sub_fast x one := by
+theorem pSubOne_eq (x : Wwl) : fd_r43x6_sub_fast x one = vadd (vadd x pSubOne) negBias := by
   vec_lanes simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_zero,
     List.getElem_cons_succ, vadd, Vector.getElem_ofFn, fd_r43x6_sub_fast, R43x6.wwl_add_get,
     R43x6.wwl_sub_get, fd_r43x6_p, R43x6.wwl_get0,
@@ -85,7 +85,7 @@ theorem pSubOne_eq (x : Wwl) : vadd (vadd x pSubOne) negBias = fd_r43x6_sub_fast
 set_option linter.unusedSimpArgs false in
 /-- `fd_r43x6_sub_fast( a, u )` for `u = pre + _b` as compiled: `(a - pre) + (p - _b)`. -/
 theorem vsub_negP_eq (a pre : Wwl) :
-    vadd (vsub a pre) negP = fd_r43x6_sub_fast a (vadd pre negBias) := by
+    fd_r43x6_sub_fast a (vadd pre negBias) = vadd (vsub a pre) negP := by
   ext i hi : 1
   match i, hi with
   | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ | 5, _ | 6, _ | 7, _ =>
@@ -232,19 +232,19 @@ theorem dec_spec (s : BitVec 256) :
   have e1 : D.t1nz = fd_r43x6_is_nonzero.spec (fd_r43x6_sub_fast
       (fold (fd_r43x6_mul_fast.spec D.v (fold (fd_r43x6_sqr_fast.spec D.x)))) D.u) := by
     change _ = fd_r43x6_is_nonzero.spec (fd_r43x6_sub_fast _ (vadd D.pre negBias))
-    rw [← vsub_negP_eq]
+    rw [vsub_negP_eq]
     rfl
   have e2 : D.t2nz = fd_r43x6_is_nonzero.spec (fd_r43x6_add_fast
       (fold (fd_r43x6_mul_fast.spec D.v (fold (fd_r43x6_sqr_fast.spec D.x)))) D.u) := by
-    rw [← vadd_eq]
+    rw [vadd_eq]
     rfl
   have eu : D.u = fd_r43x6_fold_signed (fd_r43x6_sub_fast (fold (fd_r43x6_sqr_fast.spec D.y))
       one) := by
-    rw [← pSubOne_eq, ← foldSignedPre_eq]
+    rw [pSubOne_eq, foldSignedPre_eq]
     rfl
   have ev : D.v = fd_r43x6_add_fast (fold (fd_r43x6_mul_fast.spec fd_r43x6_ge_decode2.d
       (fold (fd_r43x6_sqr_fast.spec D.y)))) one := by
-    rw [← vadd_eq]
+    rw [vadd_eq]
     rfl
   have ex : D.x = fold (fd_r43x6_mul_fast.spec
       (fold (fd_r43x6_mul_fast.spec D.u (fold (fd_r43x6_mul_fast.spec D.v
@@ -307,7 +307,7 @@ theorem dec_ok_iff (s : BitVec 256) : (dec s).ok ↔ ∃ P, Ed25519.Decodes s P 
   obtain ⟨-, -, hx, -, -, h1, h2⟩ := dec_spec s
   rw [exists_decodes_iff, Dec.ok, h1, h2, flags_and_eq_zero, exists_onCurve_iff]
   generalize ((s.toNat % 2 ^ 255 : ℕ) : ZMod p) = y at hx ⊢
-  rw [← sqrt_ratio_iff (v_ne y) hx]
+  rw [sqrt_ratio_iff (v_ne y) hx]
   generalize R43x6.val (dec s).x = x
   constructor
   · rintro (h | h)
