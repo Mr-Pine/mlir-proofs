@@ -95,6 +95,27 @@ theorem toNat_ushiftRight_7 (n : BitVec 64) : (n >>> 7).toNat = n.toNat / 128 :=
 /-- A byte shifted right by 7 has a clear sign bit. -/
 theorem lshr_seven_msb (b : BitVec 8) : (b >>> 7).msb = false := by bv_decide
 
+/-- A small `int` sign-extends to the same `long`. -/
+theorem signExtend_ofNat32 {a : Nat} (h : a < 2 ^ 31) :
+    (BitVec.ofNat 32 a).signExtend 64 = BitVec.ofNat 64 a := by
+  rw [BitVec.signExtend_eq_setWidth_of_msb_false (msb_ofNat32 h)]
+  exact setWidth_ofNat32 (by omega)
+
+/-- The counter's test at `N`, back in `ℕ`. -/
+theorem counter_eq {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
+    (h : BitVec.ofNat 32 i + 1#32 = BitVec.ofNat 32 N) : i + 1 = N := by
+  have := congrArg BitVec.toNat h
+  simp [BitVec.toNat_add] at this
+  omega
+
+/-- The counter's test failing at `N`: still below it. -/
+theorem counter_ne {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
+    (h : ¬BitVec.ofNat 32 i + 1#32 = BitVec.ofNat 32 N) : i + 1 < N := by
+  rcases Nat.lt_or_eq_of_le hi with h' | h'
+  · exact h'
+  · subst h'
+    exact absurd (by rw [BitVec.ofNat_add]) h
+
 end
 
 end MLIR.Firedancer

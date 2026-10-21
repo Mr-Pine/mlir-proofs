@@ -50,6 +50,29 @@ public theorem MemoryState.readAt_of_fits {m : MemoryState} (hfits : Fits m p v)
       (by simpa using hw) rfl
   simpa [Pointer.add] using this
 
+/-! `subborrow`'s borrow out is `a.toNat < b.toNat + c'`; these turn the chain into compares
+`bv_decide` reads. -/
+
+public theorem lt_add_ite {a n : Nat} {c : Prop} [Decidable c] :
+    (a < n + if c then 0 else 1) ↔ c ∧ a < n ∨ ¬c ∧ a < n + 1 := by split <;> simp [*]
+
+public theorem add_ite_le {a n : Nat} {c : Prop} [Decidable c] :
+    (n + (if c then 0 else 1) ≤ a) ↔ c ∧ n ≤ a ∨ ¬c ∧ n + 1 ≤ a := by split <;> simp [*]
+
+public theorem ite_le {a : Nat} {c : Prop} [Decidable c] :
+    ((if c then 0 else 1) ≤ a) ↔ c ∨ 1 ≤ a := by
+  split <;> simp [*]
+
+public theorem toNat_lt_iff {x : BitVec 64} {n : Nat} (h : n < 2 ^ 64) :
+    x.toNat < n ↔ x < BitVec.ofNat 64 n := by simp [BitVec.lt_def, Nat.mod_eq_of_lt h]
+
+public theorem le_toNat_iff {x : BitVec 64} {n : Nat} (h : n < 2 ^ 64) :
+    n ≤ x.toNat ↔ BitVec.ofNat 64 n ≤ x := by simp [BitVec.le_def, Nat.mod_eq_of_lt h]
+
+public theorem ite_flip {α : Type} {x y : α} {A B : Prop} [Decidable A] [Decidable B]
+    (h : A ↔ ¬B) : (if A then x else y) = if B then y else x := by
+  by_cases hb : B <;> simp [h, hb]
+
 /-! ## Proof -/
 
 section Proof

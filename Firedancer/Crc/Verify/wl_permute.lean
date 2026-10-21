@@ -23,36 +23,12 @@ private theorem idx_facts {i : BitVec 32} (h : i.toNat < 4) :
   ⟨by
     rw [BitVec.msb_eq_false_iff_two_mul_lt]; omega, Nat.mod_eq_of_lt (by omega), by omega⟩
 
-/-- Lane `k` of the slot `t`: in its `Fits`. -/
-private theorem lane_fits {m : MemoryState} {t : Pointer} (h : Fits m t 256) (ho : t.offset = 0)
-    (hk : k < 4) : Fits m (t.add (BitVec.ofNat 64 (k * 8))) 64 :=
-  Fits.add_of_le
-    (by
-      simp [BitVec.uaddOverflow, ho]; omega)
-    (by
-      simp; omega)
-    h
-
-/-- Lane `k` of the slot `t` holding `x`: `x[k]`. -/
-private theorem lane_read {m : MemoryState} {t : Pointer} {x : Wl} (h : Fits m t 256)
-    (ho : t.offset = 0) (hr : m.readAt t 256 = BitVec.packLanes x) (hk : k < 4) :
-    m.readAt (t.add (BitVec.ofNat 64 (k * 8))) 64 = x[k] := by
-  rw [MemoryState.readAt_add_of_readAt h.inBounds
-      (by
-        simp [BitVec.uaddOverflow, ho]; omega)
-      (by
-        simp; omega)
-      hr]
-  have e : (BitVec.ofNat 64 (k * 8)).toNat * 8 = k * 64 := by
-    simp; omega
-  rw [e, BitVec.extractLsb'_packLanes x k hk]
-
 set_option hygiene false in
 /-- `u.l[k] = t.l[ imm_ik ]`'s `zext`, `getelementptr` and `load`, the lane named `v`. -/
 local macro "lane " hk:ident v:ident : tactic =>
   `(tactic|
-    ( have hf := lane_fits hfits_t ht_off $hk
-      have hr := lane_read hfits_t ht_off hread_t $hk
+    ( have hf := hfits_t.wl_lane ht_off $hk
+      have hr := MemoryState.readAt_wl_lane hfits_t ht_off hread_t $hk
       obtain ⟨hm, hmod, hmul⟩ := idx_facts $hk
       step_pure
       step_pure [hm, hmod, hmul]

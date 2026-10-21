@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.R52x5.Common.QuadMem
+public import Firedancer.R52x5.Common.Frame
 public import Firedancer.Crc.Verify.fd_r52x5_quad_ge_dbl
 public import Firedancer.Crc.Verify.fd_r52x5_quad_ge_add
 public import Firedancer.Crc.Verify.fd_r52x5_quad_to_table
@@ -167,31 +168,6 @@ namespace fd_r52x5_odd_table
 
 /-! Reads and fits of blocks below `n` pass through `eraseFrom n`; a pointer below a frame's
 `nextFreeBlock` is in none of its slots. -/
-
-theorem readAt_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n) :
-    (m.eraseFrom n).readAt p w = m.readAt p w := by
-  simp only [MemoryState.readAt, MemoryState.eraseFrom, MemoryState.getElem?_eq,
-    Std.ExtHashMap.getElem?_filter', h, decide_true]
-  cases m.mem[p.id]? <;> rfl
-
-theorem readQuad5_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n) :
-    (m.eraseFrom n).readQuad5 p = m.readQuad5 p := by
-  have h' : ∀ o : BitVec 64, (p.add o).id.id < n := fun o => by simpa using h
-  simp only [MemoryState.readQuad5, MemoryState.readWv, readAt_eraseFrom_of_lt h,
-    readAt_eraseFrom_of_lt (h' _)]
-
-theorem fits_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Fits (m.eraseFrom n) p w) :
-    Fits m p w := by
-  obtain ⟨b, hb, hl, hw, hd⟩ := h
-  refine ⟨b, ?_, hl, hw, hd⟩
-  simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter'] at hb
-  rw [MemoryState.getElem?_eq]
-  cases hm : m.mem[p.id]? <;> simp_all
-
-theorem quad5Fit_of_eraseFrom {m : MemoryState} {p : Pointer} (h : (m.eraseFrom n).Quad5Fit p) :
-    m.Quad5Fit p :=
-  ⟨h.1, fits_of_eraseFrom h.2.1, fits_of_eraseFrom h.2.2.1, fits_of_eraseFrom h.2.2.2.1,
-    fits_of_eraseFrom h.2.2.2.2.1, fits_of_eraseFrom h.2.2.2.2.2⟩
 
 /-- A pointer below the frame is in no slot. -/
 theorem ne_slot {B : GlobalState} {p : Pointer} (h : p.id.id < B.alloc.nextFreeBlock) :
@@ -414,9 +390,9 @@ public theorem fd_r52x5_odd_table.call_eq (tab a : Pointer) (cnt : BitVec 32) (s
   have hrb : tab.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hq0.2.1.mem
   have hab : a.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt ha.2.1.inBounds.mem
   have hA' : S'.mem.readQuad5 a = A := by
-    rw [← fd_r52x5_odd_table.readQuad5_eraseFrom_of_lt hab, hE0, hA]
+    rw [← readQuad5_eraseFrom_of_lt hab, hE0, hA]
   obtain ⟨hao, hf0, hf1, hf2, hf3, hf4⟩ : S'.mem.Quad5Fit a :=
-    fd_r52x5_odd_table.quad5Fit_of_eraseFrom (by rw [hE0]; exact ha)
+    quad5Fit_of_eraseFrom (by rw [hE0]; exact ha)
   have ht' : oddTabRoom S'.mem tab cnt.toNat := by
     unfold oddTabRoom at ht ⊢; exact hRoom _ _ ht
   have hq0' : S'.mem.Quad5Room tab :=

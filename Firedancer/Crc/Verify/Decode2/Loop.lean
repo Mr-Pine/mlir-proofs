@@ -16,20 +16,6 @@ namespace fd_r52x5_ge_decode2
 
 attribute [local mlir_env 1100] read_write_same
 
-/-- The counter's test at `N`, back in `ℕ`. -/
-theorem counter_eq {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
-    (h : BitVec.ofNat 32 i + 1#32 = BitVec.ofNat 32 N) : i + 1 = N := by
-  have := congrArg BitVec.toNat h
-  simp [BitVec.toNat_add] at this
-  omega
-
-theorem counter_ne {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
-    (h : ¬BitVec.ofNat 32 i + 1#32 = BitVec.ofNat 32 N) : i + 1 < N := by
-  rcases Nat.lt_or_eq_of_le hi with h' | h'
-  · exact h'
-  · subst h'
-    exact absurd (by rw [BitVec.ofNat_add]) h
-
 section Loops
 
 variable {β : Type} (k exit : Fin 16) (N lo hi : Nat) (hdr : ⟪Γ⟫ → Quad5 → Nat → ⟪Γ⟫)

@@ -8,32 +8,12 @@ import Std.Tactic.BVDecide
 
 namespace MLIR.Firedancer.R52x5
 
-open Ref (scalarL MemoryState.readAt_add_of_fits MemoryState.readAt_of_fits)
+open Ref (scalarL MemoryState.readAt_add_of_fits MemoryState.readAt_of_fits
+  lt_add_ite add_ite_le ite_le toNat_lt_iff le_toNat_iff ite_flip)
 
 /-! ## Proof -/
 
 section Proof
-
-/-! `subborrow`'s borrow out is `a.toNat < b.toNat + c'`; these turn the chain into compares
-`bv_decide` reads. -/
-
-theorem lt_add_ite {a n : Nat} {c : Prop} [Decidable c] :
-    (a < n + if c then 0 else 1) ↔ c ∧ a < n ∨ ¬c ∧ a < n + 1 := by split <;> simp [*]
-
-theorem add_ite_le {a n : Nat} {c : Prop} [Decidable c] :
-    (n + (if c then 0 else 1) ≤ a) ↔ c ∧ n ≤ a ∨ ¬c ∧ n + 1 ≤ a := by split <;> simp [*]
-
-theorem ite_le {a : Nat} {c : Prop} [Decidable c] : ((if c then 0 else 1) ≤ a) ↔ c ∨ 1 ≤ a := by
-  split <;> simp [*]
-
-theorem toNat_lt_iff {x : BitVec 64} {n : Nat} (h : n < 2 ^ 64) :
-    x.toNat < n ↔ x < BitVec.ofNat 64 n := by simp [BitVec.lt_def, Nat.mod_eq_of_lt h]
-
-theorem le_toNat_iff {x : BitVec 64} {n : Nat} (h : n < 2 ^ 64) :
-    n ≤ x.toNat ↔ BitVec.ofNat 64 n ≤ x := by simp [BitVec.le_def, Nat.mod_eq_of_lt h]
-
-theorem ite_flip {α : Type} {x y : α} {A B : Prop} [Decidable A] [Decidable B] (h : A ↔ ¬B) :
-    (if A then x else y) = if B then y else x := by by_cases hb : B <;> simp [h, hb]
 
 /-- `validate` returns `p` when the 32 bytes at `p` are a canonical scalar (below `ℓ`), else
 `NULL`, and leaves the state alone. -/

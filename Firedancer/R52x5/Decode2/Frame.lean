@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.R52x5.Common.QuadMem
+public import Firedancer.R52x5.Common.Frame
 public import Firedancer.R52x5.Globals
 public import Firedancer.R52x5.Decode2.Spec
 public import Firedancer.R52x5.Mlir.fd_r52x5_ge_decode2
@@ -23,98 +24,6 @@ abbrev argsOf (Pa0 Pa1 Pa2 Pa3 Pa4 sa Pb0 Pb1 Pb2 Pb3 Pb4 sb : Pointer) : Vals �
   args (.value Pa0) (.value Pa1) (.value Pa2) (.value Pa3) (.value Pa4) (.value sa) (.value Pb0)
     (.value Pb1) (.value Pb2) (.value Pb3) (.value Pb4) (.value sb)
 
-/-- A register read right after its write, whatever the proofs of its type: no cast to reduce,
-which for a register past the `500`th unfolds `Γ`'s types to it (the steps take it as a local
-`mlir_env` lemma). -/
-theorem read_write_same {Γ : Ctx} {t : Ty} (env : ⟪Γ⟫) (i : Fin Γ.n) (h h' : Γ.ty i = t)
-    (v : ⟦t⟧) : (env.write ⟨i, h⟩ v).read (.val i h') = v := by
-  subst h
-  exact Env.read_write_dst env ⟨i, rfl⟩ v
-
-/-! ### A run of `alloca`s -/
-
-section Allocas
-
-variable {Γ : Ctx}
-
-/-- `alloca`s into `d` of `n` bytes, one per `(d, n)`, dead until their `lifetime.start`s. -/
-def allocaRun : List (Dst Γ .ptr × Nat) → List (Instr Γ)
-  | [] => []
-  | (d, n) :: ds => .alloca d n true :: allocaRun ds
-
-/-- `s` after dead `alloca`s of the sizes `ns`. -/
-def allocas (s : GlobalState) : List Nat → GlobalState
-  | [] => s
-  | n :: ns => allocas (s.alloca n true) ns
-
-/-- `E` with the slots `B.slot k`, `B.slot (k + 1)`, … written to the destinations of `ds`. -/
-def writeSlots (E : ⟪Γ⟫) (B : GlobalState) (k : Nat) : List (Dst Γ .ptr × Nat) → ⟪Γ⟫
-  | [] => E
-  | (d, _) :: ds => writeSlots (E.write d (.value (B.slot k))) B (k + 1) ds
-
-theorem runBodyFrom_allocaRun {blk : BasicBlock Γ tRets bp} {rest : List (Instr Γ)}
-    (B : GlobalState) :
-    ∀ (ds : List (Dst Γ .ptr × Nat)) (E : ⟪Γ⟫) (s : GlobalState) (pos k : Nat),
-      s.alloc.nextFreeBlock = B.alloc.nextFreeBlock + k →
-        blk.body.drop pos = allocaRun ds ++ rest →
-        blk.runBodyFrom E pos s =
-          blk.runBodyFrom (writeSlots E B k ds) (pos + ds.length) (allocas s (ds.map (·.2)))
-  | [], E, s, pos, k, _, _ => rfl
-  | (d, n) :: ds, E, s, pos, k, hk, hbody => by
-    have hb : blk.body.drop pos = .alloca d n true :: (allocaRun ds ++ rest) := hbody
-    have hptr : s.allocaPtr = B.slot k := by
-      simp only [GlobalState.allocaPtr, GlobalState.slot, hk]; rfl
-    rw [BasicBlock.runBodyFrom_step_of_run (List.lt_length_of_drop_eq_cons hb)
-        (by
-          rw [List.getElem_of_drop_eq_cons hb]; rfl),
-      hptr,
-      runBodyFrom_allocaRun B ds _ _ (pos + 1) (k + 1)
-        (by
-          simp [hk]; omega)
-        (List.drop_succ_of_drop_eq_cons hb)]
-    simp only [writeSlots, allocas, List.length_cons, List.map_cons, Nat.add_assoc, Nat.add_comm 1]
-
-theorem writeSlots_args (B : GlobalState) :
-    ∀ (ds : List (Dst Γ .ptr × Nat)) (E : ⟪Γ⟫) (k : Nat), (writeSlots E B k ds).args = E.args
-  | [], _, _ => rfl
-  | _ :: ds, _, k => (writeSlots_args B ds _ (k + 1)).trans rfl
-
-end Allocas
-
-/-! ### Registers the entry writes -/
-
-section Writes
-
-variable {Γ : Ctx}
-
-/-- `E` is `E₁` written in the registers `lo … hi - 1` only: the same arguments, the same values
-elsewhere. -/
-def Writes (E₁ E : ⟪Γ⟫) (lo hi : Nat) : Prop :=
-  E.args = E₁.args ∧ ∀ i : Fin Γ.n, (i.val < lo ∨ hi ≤ i.val) → E.vals i = E₁.vals i
-
-theorem Writes.refl (E : ⟪Γ⟫) (lo hi : Nat) : Writes E E lo hi :=
-  ⟨rfl, fun _ _ => rfl⟩
-
-theorem Writes.mono {E₁ E : ⟪Γ⟫} (h : Writes E₁ E lo hi) (hlo : lo' ≤ lo := by decide)
-    (hhi : hi ≤ hi' := by decide) : Writes E₁ E lo' hi' :=
-  ⟨h.1, fun i hi => h.2 i (by omega)⟩
-
-theorem Writes.trans {E₁ E₂ E₃ : ⟪Γ⟫} (h₁ : Writes E₁ E₂ lo hi) (h₂ : Writes E₂ E₃ lo hi) :
-    Writes E₁ E₃ lo hi :=
-  ⟨h₂.1.trans h₁.1, fun i hi => (h₂.2 i hi).trans (h₁.2 i hi)⟩
-
-theorem Writes.write {E₁ E : ⟪Γ⟫} {d : Dst Γ t} {v : ⟦t⟧} (h : Writes E₁ E lo hi)
-    (hd : lo ≤ d.i.val ∧ d.i.val < hi := by decide) : Writes E₁ (E.write d v) lo hi := by
-  refine ⟨h.1, fun i hi' => ?_⟩
-  have hne : i ≠ d.i := fun he => by subst he; omega
-  simp only [Env.write, Env.set, hne, ↓reduceDIte]
-  exact h.2 i hi'
-
-theorem Writes.read {E₁ E : ⟪Γ⟫} (h : Writes E₁ E lo hi) {i : Fin Γ.n}
-    (hi : i.val < lo ∨ hi ≤ i.val := by decide) {ht : Γ.ty i = t} :
-    E.read (.val i ht) = E₁.read (.val i ht) := by simp only [Env.read, h.2 i hi]
-
-end Writes
 
 /-! ### The slots -/
 
@@ -318,91 +227,6 @@ theorem Frame.callTmp5_slots {B : GlobalState} {m : MemoryState} (h : Frame B m)
         (GlobalState.slot_id_ne (by omega)))
     fun _ => Writable.callTmp5
 
-theorem WF_allocas : ∀ (ns : List Nat) (s : GlobalState), s.WF → (allocas s ns).WF
-  | [], _, h => h
-  | _ :: ns, _, h => WF_allocas ns _ h.alloca
-
-theorem fits_allocas_of {p : Pointer} {w : Nat} :
-    ∀ (ns : List Nat) (s : GlobalState), s.WF → Fits s.mem p w → Fits (allocas s ns).mem p w
-  | [], _, _, h => h
-  | _ :: ns, _, hwf, h => fits_allocas_of ns _ hwf.alloca (h.alloca hwf)
-
-theorem writable_allocas_of {p : Pointer} :
-    ∀ (ns : List Nat) (s : GlobalState), s.WF → Writable s.mem p → Writable (allocas s ns).mem p
-  | [], _, _, h => h
-  | _ :: ns, _, hwf, h => writable_allocas_of ns _ hwf.alloca (h.alloca hwf)
-
-theorem inBounds_allocas_of {p : Pointer} {w : Nat} :
-    ∀ (ns : List Nat) (s : GlobalState), s.WF → InBounds s.mem p w → InBounds (allocas s ns).mem p w
-  | [], _, _, h => h
-  | _ :: ns, _, hwf, h => inBounds_allocas_of ns _ hwf.alloca (h.alloca hwf)
-
-theorem alloc_allocas :
-    ∀ (ns : List Nat) (s : GlobalState),
-      (allocas s ns).alloc.nextFreeBlock = s.alloc.nextFreeBlock + ns.length
-  | [], _ => rfl
-  | _ :: ns, s => by simp [allocas, alloc_allocas ns, Nat.add_assoc, Nat.add_comm 1]
-
-/-- The slots after their `alloca`s, from slot `k` on: each in bounds for its bytes. -/
-theorem fits_allocas (B : GlobalState) :
-    ∀ (ns : List Nat) (s : GlobalState) (k j : Nat),
-      s.WF →
-        s.alloc.nextFreeBlock = B.alloc.nextFreeBlock + k →
-        j < ns.length → InBounds (allocas s ns).mem (B.slot (k + j)) (8 * ns[j]!)
-  | [], _, _, _, _, _, hj => absurd hj (by simp)
-  | n :: ns, s, k, j, hwf, hk, hj => by
-    simp only [allocas]
-    cases j with
-    | zero =>
-      have : s.allocaPtr = B.slot k := by
-        simp only [GlobalState.allocaPtr, GlobalState.slot, hk]; rfl
-      simpa [← this] using
-        inBounds_allocas_of ns _ hwf.alloca (InBounds.allocaPtr (n := n) (d := true) (le_refl _))
-    | succ
-      j =>
-      have :=
-        fits_allocas B ns (s.alloca n true) (k + 1) j hwf.alloca
-          (by
-            simp [hk]; omega)
-          (by simpa using hj)
-      simpa [Nat.add_assoc, Nat.add_comm 1] using this
-
-/-- The slots after their `alloca`s, from slot `k` on: each writable. -/
-theorem writable_allocas (B : GlobalState) :
-    ∀ (ns : List Nat) (s : GlobalState) (k j : Nat),
-      s.WF →
-        s.alloc.nextFreeBlock = B.alloc.nextFreeBlock + k →
-        j < ns.length → Writable (allocas s ns).mem (B.slot (k + j))
-  | [], _, _, _, _, _, hj => absurd hj (by simp)
-  | n :: ns, s, k, j, hwf, hk, hj => by
-    simp only [allocas]
-    cases j with
-    | zero =>
-      have : s.allocaPtr = B.slot k := by
-        simp only [GlobalState.allocaPtr, GlobalState.slot, hk]; rfl
-      simpa [← this] using
-        writable_allocas_of ns _ hwf.alloca (Writable.allocaPtr (n := n) (d := true))
-    | succ
-      j =>
-      have :=
-        writable_allocas B ns (s.alloca n true) (k + 1) j hwf.alloca
-          (by
-            simp [hk]; omega)
-          (by simpa using hj)
-      simpa [Nat.add_assoc, Nat.add_comm 1] using this
-
-/-- The memory below `n` after `alloca`s from `n` on. -/
-theorem eraseFrom_allocas {n : Nat} :
-    ∀ (ns : List Nat) (s : GlobalState),
-      n ≤ s.alloc.nextFreeBlock → (allocas s ns).mem.eraseFrom n = s.mem.eraseFrom n
-  | [], _, _ => rfl
-  | _ :: ns, s, h => by
-    rw [allocas,
-      eraseFrom_allocas ns _
-        (by
-          simp; omega),
-      GlobalState.eraseFrom_alloca_of_le h]
-
 /-- The slots' sizes. -/
 abbrev slotSizes : List Nat :=
   (List.range' 3 201).map slotBytes
@@ -588,23 +412,6 @@ theorem readAt_eq_packLanes_readVec {m : MemoryState} {p : Pointer} :
 
 /-! ### The state after the entry -/
 
-theorem readAt_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n) :
-    (m.eraseFrom n).readAt p w = m.readAt p w := by
-  simp only [MemoryState.readAt, MemoryState.eraseFrom, MemoryState.getElem?_eq,
-    Std.ExtHashMap.getElem?_filter', h, decide_true]
-  cases m.mem[p.id]? <;> rfl
-
-theorem eraseFrom_eraseFrom {m : MemoryState} (h : n ≤ n') :
-    (m.eraseFrom n').eraseFrom n = m.eraseFrom n := by
-  simp only [MemoryState.eraseFrom, MemoryState.mk.injEq, and_true]
-  apply Std.ExtHashMap.ext_getElem?
-  intro k
-  simp only [Std.ExtHashMap.getElem?_filter']
-  cases m.mem[k]? <;> simp only [Option.filter_none, Option.filter_some]
-  by_cases hk : k.id < n
-  · simp [hk, show k.id < n' by omega]
-  · simp [hk]
-
 /-- The state at each point after the entry: well-formed, the frame's slots fit, below the frame
 (`B`'s blocks and the globals') still `M`, and the counter `c` blocks past the frame. -/
 structure Inv (B : GlobalState) (M : MemoryState) (c : Nat) (S : GlobalState) : Prop where
@@ -630,26 +437,10 @@ theorem Inv.readVec {B S : GlobalState} {M : MemoryState} (h : Inv B M c S) {p :
     (hp : p.id.id < B.alloc.nextFreeBlock + 3) : S.mem.readVec p = M.readVec p := by
   simp only [MemoryState.readVec, h.readAt hp]
 
-theorem fits_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Fits (m.eraseFrom n) p w) :
-    Fits m p w := by
-  obtain ⟨b, hb, hl, hw, hd⟩ := h
-  refine ⟨b, ?_, hl, hw, hd⟩
-  simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter'] at hb
-  rw [MemoryState.getElem?_eq]
-  cases hm : m.mem[p.id]? <;> simp_all
-
 /-- Below the frame, what fits in `M` fits in `S`. -/
 theorem Inv.fits {B S : GlobalState} {M : MemoryState} (h : Inv B M c S) {p : Pointer}
     (hf : Fits M p w) : Fits S.mem p w :=
   fits_of_eraseFrom (h.erase ▸ hf)
-
-theorem room_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Room (m.eraseFrom n) p w) :
-    Room m p w := by
-  obtain ⟨b, hb, hl, hw, hwr⟩ := h.block
-  refine Room.of_block ?_ hl hw hwr
-  simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter'] at hb
-  rw [MemoryState.getElem?_eq]
-  cases hm : m.mem[p.id]? <;> simp_all
 
 /-- Below the frame, room in `M` is room in `S`. -/
 theorem Inv.room {B S : GlobalState} {M : MemoryState} (h : Inv B M c S) {p : Pointer}

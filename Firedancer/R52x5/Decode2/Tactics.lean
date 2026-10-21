@@ -134,7 +134,7 @@ partial def chainRead (facts : Array (Expr × Expr))
       unless E' == E && (k < lo || hi ≤ k) do
         continue
       let saved ← saveState
-      let thm ← mkConstWithFreshMVarLevels `MLIR.Firedancer.R52x5.fd_r52x5_ge_decode2.Writes.read
+      let thm ← mkConstWithFreshMVarLevels `MLIR.Firedancer.Writes.read
       let (args, _, concl) ← forallMetaTelescopeReducing (← inferType thm)
       let some (_, l, rX) := concl.eq? | continue
       unless ← isDefEq l lhs do
@@ -146,7 +146,7 @@ partial def chainRead (facts : Array (Expr × Expr))
         if ← a.mvarId!.isAssigned then
           continue
         let aty ← instantiateMVars (← inferType a)
-        if aty.consumeTypeAnnotations.isAppOf `MLIR.Firedancer.R52x5.fd_r52x5_ge_decode2.Writes then
+        if aty.consumeTypeAnnotations.isAppOf `MLIR.Firedancer.Writes then
           unless ← isDefEq a h do
             ok := false
         else if ← isProp aty then
@@ -172,7 +172,7 @@ elab "chain_reads" : tactic =>
       if d.isImplementationDetail || !(← isProp d.type) then
         continue
       let ty ← instantiateMVars d.type
-      if ty.isAppOfArity `MLIR.Firedancer.R52x5.fd_r52x5_ge_decode2.Writes 5 then
+      if ty.isAppOfArity `MLIR.Firedancer.Writes 5 then
         let nat (e : Expr) : MetaM Nat := do
           return (e.nat? <|> (← whnf e).rawNatLit?).getD 0
         chains :=
