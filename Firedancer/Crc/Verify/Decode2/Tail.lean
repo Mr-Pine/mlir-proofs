@@ -505,9 +505,7 @@ theorem runBodyFrom_blendBackRun {c0 c1 : BitVec 32} (h0 : c0 = 0 ∨ c0 = 1)
         K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
   step_pure [pblendvb_fixMask h0 h1]
-  step_pure with xr
-  rw [wlBytes_concat] at hxr
-  subst hxr
+  step_pure
   rw [hE]
   exact hK
 
@@ -539,9 +537,7 @@ theorem runBodyFrom_blendBytesRun {c0 c1 : BitVec 32} (h0 : c0 = 0 ∨ c0 = 1)
   rw [← wlBytes_eq] at hxb'
   subst hxb'
   step_pure [pblendvb_fixMask h0 h1]
-  step_pure with xr
-  rw [wlBytes_concat] at hxr
-  subst hxr
+  step_pure
   rw [hE]
   exact hK
 
