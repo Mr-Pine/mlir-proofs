@@ -105,12 +105,6 @@ abbrev hdr13 (E : ⟪Γ⟫) (n : Nat) (W : BitVec 256) (y : BitVec 16) : ⟪Γ�
     %3205 := Ty.wrap #v[W.extractLsb' 128 64, W.extractLsb' 192 64],
     %3206 := Ty.wrap #v[W.extractLsb' 64 64, W.extractLsb' 128 64]]
 
-/-- A small `int` sign-extends to the same `long`. -/
-theorem signExtend_ofNat32 {a : Nat} (h : a < 2 ^ 31) :
-    (BitVec.ofNat 32 a).signExtend 64 = BitVec.ofNat 64 a := by
-  rw [BitVec.signExtend_eq_setWidth_of_msb_false (msb_ofNat32 h)]
-  exact setWidth_ofNat32 (by omega)
-
 /-- A two-lane `Vector.ofFn` as a literal. -/
 theorem ofFn_two {α : Type} (f : Fin 2 → α) : Vector.ofFn f = #v[f 0, f 1] := by
   apply Vector.ext

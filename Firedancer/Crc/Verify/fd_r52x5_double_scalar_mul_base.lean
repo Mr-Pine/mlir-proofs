@@ -2,6 +2,7 @@ module
 
 public import MLIR.Run.Tactic
 public import Firedancer.R52x5.Common.QuadMem
+public import Firedancer.R52x5.Common.Frame
 public import Firedancer.R52x5.Common.VecRun
 public import Firedancer.Common.Dsmb
 public import Firedancer.Crc.Verify.fd_r52x5_quad_ge_dbl
@@ -57,34 +58,9 @@ theorem Frame.callTmp5 {B : GlobalState} {m : MemoryState} (h : Frame B m) :
     Frame B (m.callTmp5 t0 t1 t2 t3 t4 Q) :=
   h.of (fun _ _ => InBounds.callTmp5) fun _ => Writable.callTmp5
 
-theorem readAt_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n) :
-    (m.eraseFrom n).readAt p w = m.readAt p w := by
-  simp only [MemoryState.readAt, MemoryState.eraseFrom, MemoryState.getElem?_eq,
-    Std.ExtHashMap.getElem?_filter', h, decide_true]
-  cases m.mem[p.id]? <;> rfl
-
-theorem readQuad5_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n) :
-    (m.eraseFrom n).readQuad5 p = m.readQuad5 p := by
-  have h' : ∀ o : BitVec 64, (p.add o).id.id < n := fun o => by simpa using h
-  simp only [MemoryState.readQuad5, MemoryState.readWv, readAt_eraseFrom_of_lt h,
-    readAt_eraseFrom_of_lt (h' _)]
-
 theorem readWv_eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n) :
     (m.eraseFrom n).readWv p = m.readWv p := by
   simp only [MemoryState.readWv, readAt_eraseFrom_of_lt h]
-
-theorem fits_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Fits (m.eraseFrom n) p w) :
-    Fits m p w := by
-  obtain ⟨b, hb, hl, hw, hd⟩ := h
-  refine ⟨b, ?_, hl, hw, hd⟩
-  simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter'] at hb
-  rw [MemoryState.getElem?_eq]
-  cases hm : m.mem[p.id]? <;> simp_all
-
-theorem quad5Fit_of_eraseFrom {m : MemoryState} {p : Pointer} (h : (m.eraseFrom n).Quad5Fit p) :
-    m.Quad5Fit p :=
-  ⟨h.1, fits_of_eraseFrom h.2.1, fits_of_eraseFrom h.2.2.1, fits_of_eraseFrom h.2.2.2.1,
-    fits_of_eraseFrom h.2.2.2.2.1, fits_of_eraseFrom h.2.2.2.2.2⟩
 
 /-- The state at each point of the loop: well-formed, the frame in bounds, below the frame
 (`ta`, `dk`, `ds` and the globals) still `M`, and `c` blocks past the frame. -/
@@ -890,14 +866,6 @@ theorem slt32 {a b : Nat} (ha : a < 2 ^ 31) (hb : b < 2 ^ 31) :
   simp only [BitVec.slt, h1, h2]
   simp
 
-theorem signExtend_ofNat32 {a : Nat} (h : a < 2 ^ 31) :
-    (BitVec.ofNat 32 a).signExtend 64 = BitVec.ofNat 64 a := by
-  have hm : (BitVec.ofNat 32 a).msb = false := by
-    rw [BitVec.msb_eq_decide, BitVec.toNat_ofNat]; simp; omega
-  rw [BitVec.signExtend_eq_setWidth_of_msb_false hm]
-  apply BitVec.eq_of_toNat_eq
-  simp [Nat.mod_eq_of_lt (show a < 2 ^ 32 by omega)]
-
 theorem shl1_64 {a : Nat} (h : a < 2 ^ 62) :
     (BitVec.ofNat 64 a <<< 1).sshiftRight 1 = BitVec.ofNat 64 a ∧
       BitVec.ofNat 64 a <<< 1 >>> 1 = BitVec.ofNat 64 a ∧
@@ -973,17 +941,6 @@ theorem msb32_false {a : Nat} (h : a < 2 ^ 31) : (BitVec.ofNat 32 a).msb = false
 
 
 /-! ### Memory helpers of the entry and exit blocks -/
-
-theorem eraseFrom_eraseFrom {m : MemoryState} (h : n ≤ n') :
-    (m.eraseFrom n').eraseFrom n = m.eraseFrom n := by
-  simp only [MemoryState.eraseFrom, MemoryState.mk.injEq, and_true]
-  apply Std.ExtHashMap.ext_getElem?
-  intro k
-  simp only [Std.ExtHashMap.getElem?_filter']
-  cases m.mem[k]? <;> simp only [Option.filter_none, Option.filter_some]
-  by_cases hk : k.id < n
-  · simp [hk, show k.id < n' by omega]
-  · simp [hk]
 
 /-- `d[i]`'s `Room`, inside `d`'s 512 bytes. -/
 theorem lane_room {m : MemoryState} {d : Pointer} (hd : Room m d (8 * 512))
@@ -1154,18 +1111,6 @@ theorem writable_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Writable (m.e
   rw [MemoryState.getElem?_eq]
   cases hm : m.mem[p.id]? <;> simp_all
 
-theorem room_of_eraseFrom {m : MemoryState} {p : Pointer} (h : Room (m.eraseFrom n) p w) :
-    Room m p w := by
-  have hn : p.id.id < n := by
-    obtain ⟨⟨b, hb, -, -⟩, -⟩ := h
-    by_contra hc
-    simp only [MemoryState.eraseFrom, MemoryState.getElem?_eq, Std.ExtHashMap.getElem?_filter',
-      hc, decide_false] at hb
-    cases m.mem[p.id]? <;> simp at hb
-  obtain ⟨⟨b, hb, hl, hw⟩, ⟨b', hb', hw'⟩⟩ := h
-  rw [getElem?_eraseFrom_of_lt hn] at hb hb'
-  exact ⟨⟨b, hb, hl, hw⟩, ⟨b', hb', hw'⟩⟩
-
 theorem Quad5Fit.eraseFrom_of_lt {m : MemoryState} {p : Pointer} (h : p.id.id < n)
     (hf : m.Quad5Fit p) : (m.eraseFrom n).Quad5Fit p := by
   have h' : ∀ o : BitVec 64, (p.add o).id.id < n := fun o => by simpa using h
@@ -1178,14 +1123,6 @@ theorem Inv.room {B S : GlobalState} {M : MemoryState} (h : Inv B M c S) {p : Po
   room_of_eraseFrom (h.erase ▸ hr)
 
 /-! ### The exit block: store the result, end the lifetimes, return -/
-
-theorem storeQuad5_mk {m : MemoryState} {P : Pointer} {x0 x1 x2 x3 x4 : Wl} :
-    ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
-              (P.add 64#64) (BitVec.packLanes x2)).storeAt
-          (P.add 96#64) (BitVec.packLanes x3)).storeAt
-        (P.add 128#64) (BitVec.packLanes x4) =
-      m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ :=
-  rfl
 
 set_option maxHeartbeats 2000000 in
 theorem exit_block (r kp a s tb : Pointer) (B : GlobalState) (M : MemoryState) (c : Nat)
@@ -1211,7 +1148,7 @@ theorem exit_block (r kp a s tb : Pointer) (B : GlobalState) (M : MemoryState) (
   subst hS
   dsimp only
   rw [MemoryState.eraseFrom_lifetimeEnd_of_le (by simp), MemoryState.eraseFrom_lifetimeEnd_of_le (by simp),
-    MemoryState.eraseFrom_lifetimeEnd_of_le (by simp), storeQuad5_mk,
+    MemoryState.eraseFrom_lifetimeEnd_of_le (by simp), MemoryState.storeQuad5_mk,
     MemoryState.eraseFrom_storeQuad5, ← eraseFrom_eraseFrom (show B.alloc.nextFreeBlock ≤ B.alloc.nextFreeBlock + 3 by omega),
     herase]
   congr 3

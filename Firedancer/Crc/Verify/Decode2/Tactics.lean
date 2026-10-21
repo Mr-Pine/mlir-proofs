@@ -109,7 +109,7 @@ partial def chainRead (facts : Array (Expr × Expr × Expr × Nat))
       let saved ← saveState
       let hout ← mkDecideProof (← mkAppM ``Or #[← mkLt (← mkAppM ``Fin.val #[i]) (mkNatLit lo),
         ← mkLe (mkNatLit hi) (← mkAppM ``Fin.val #[i])])
-      let step := mkAppN (mkConst `MLIR.Firedancer.Crc.Verify.fd_r52x5_ge_decode2.Writes.read)
+      let step := mkAppN (mkConst `MLIR.Firedancer.Writes.read)
         #[Γ, mkNatLit lo, mkNatLit hi, t, X, E, h, i, hout, ht]
       let rX := mkApp4 (mkConst ``Env.read) Γ t X r
       let g2 ← mkFreshExprSyntheticOpaqueMVar (← mkEq rX rhs)
@@ -139,7 +139,7 @@ elab "chain_reads" : tactic =>
       if d.isImplementationDetail || !(← isProp d.type) then
         continue
       let ty ← instantiateMVars d.type
-      if ty.isAppOfArity `MLIR.Firedancer.Crc.Verify.fd_r52x5_ge_decode2.Writes 5 then
+      if ty.isAppOfArity `MLIR.Firedancer.Writes 5 then
         let nat (e : Expr) : MetaM Nat := do
           return (e.nat? <|> (← whnf e).rawNatLit?).getD 0
         chains :=
@@ -173,7 +173,7 @@ elab "chain_reads" : tactic =>
 /-- The term `writes_chain` builds: `Writes E₁ e lo hi` for `e` a write chain over `E₁`. -/
 partial def writesChainTerm (Γ E₁ lo hi e : Expr) : MetaM Expr := do
   if e == E₁ then
-    return mkApp4 (mkConst `MLIR.Firedancer.Crc.Verify.fd_r52x5_ge_decode2.Writes.refl) Γ E₁ lo hi
+    return mkApp4 (mkConst `MLIR.Firedancer.Writes.refl) Γ E₁ lo hi
   let_expr Env.write _ t base d v := e | throwError "`writes_chain`: not a write{indentExpr e}"
   let inner ← writesChainTerm Γ E₁ lo hi base
   let iv := mkApp2 (mkConst ``Fin.val) (mkApp (mkConst ``Ctx.n) Γ) (mkApp3 (mkConst ``Dst.i) Γ t d)
@@ -184,7 +184,7 @@ partial def writesChainTerm (Γ E₁ lo hi e : Expr) : MetaM Expr := do
     (mkApp2 (mkConst ``Nat.decLt) iv hi)
   let hd := mkApp3 (mkConst ``of_decide_eq_true) p inst
     (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.true))
-  return mkAppN (mkConst `MLIR.Firedancer.Crc.Verify.fd_r52x5_ge_decode2.Writes.write) #[Γ, t, lo, hi, E₁, base, d, v, inner, hd]
+  return mkAppN (mkConst `MLIR.Firedancer.Writes.write) #[Γ, t, lo, hi, E₁, base, d, v, inner, hd]
 
 /-- `writes_chain` closes `Writes E₁ (E₁[d := v, …]) lo hi` (each `d` a literal register in
 `lo … hi - 1`) by one term: `Writes.write` per write, its bound by `decide` with the instance
@@ -193,7 +193,7 @@ elab "writes_chain" : tactic =>
   withMainContext do
     let g ← getMainGoal
     let ty ← whnfR (← instantiateMVars (← g.getType))
-    unless ty.isAppOfArity `MLIR.Firedancer.Crc.Verify.fd_r52x5_ge_decode2.Writes 5 do
+    unless ty.isAppOfArity `MLIR.Firedancer.Writes 5 do
       throwError "`writes_chain`: not a `Writes` goal"
     g.assign (← writesChainTerm (ty.getArg! 0) (ty.getArg! 1) (ty.getArg! 3) (ty.getArg! 4)
       (ty.getArg! 2))

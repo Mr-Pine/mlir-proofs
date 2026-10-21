@@ -286,10 +286,10 @@ attribute [local mlir_transport] fd_r52x5_verify_core.SlotFrame.hashMem
 /-- A read below the counter is unaffected by `alloca`s. -/
 theorem fd_r52x5_verify_core.readAt_allocas {s : GlobalState} {p : Pointer}
     (hp : p.id.id < s.alloc.nextFreeBlock) :
-    ∀ ns : List Nat, (fd_r52x5_ge_decode2.allocas s ns).mem.readAt p w = s.mem.readAt p w
+    ∀ ns : List Nat, (allocas s ns).mem.readAt p w = s.mem.readAt p w
   | [] => rfl
   | n :: ns => by
-    simp only [fd_r52x5_ge_decode2.allocas]
+    simp only [allocas]
     rw [readAt_allocas (s := s.alloca n true) (by simp [GlobalState.alloca_alloc]; omega) ns]
     simp only [MemoryState.readAt]
     rw [GlobalState.getElem?_alloca (fun h => by
@@ -990,7 +990,7 @@ public theorem fd_r52x5_verify_core.call_eq (msg : Pointer) (msgSz : BitVec 64)
   step_alloca with k
   iterate 5 step_alloca
   -- the entry's reads past the `alloca`s, stated after them so the steps do not carry them
-  have hS13 : S.mem = (fd_r52x5_ge_decode2.allocas S₀ [192, 192, 192, 64, 40, 40, 32, 64, 32, 32, 32,
+  have hS13 : S.mem = (allocas S₀ [192, 192, 192, 64, 40, 40, 32, 64, 32, 32, 32,
       32, 32]).mem := by rw [hS]; rfl
   have hlt {p : Pointer} {w : Nat} (h : Fits S₀.mem p w) : p.id.id < S₀.alloc.nextFreeBlock :=
     hwf₀.lt h.mem

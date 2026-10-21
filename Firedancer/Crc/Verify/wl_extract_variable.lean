@@ -13,30 +13,6 @@ open MLIR.Firedancer.R52x5 (Wl)
 
 section Proof
 
-/-- Lane `k` of the slot `t`: in its `Fits`. -/
-private theorem lane_fits {m : MemoryState} {t : Pointer} (h : Fits m t 256) (ho : t.offset = 0)
-    (hk : k < 4) : Fits m (t.add (BitVec.ofNat 64 (k * 8))) 64 :=
-  Fits.add_of_le
-    (by
-      simp [BitVec.uaddOverflow, ho]; omega)
-    (by
-      simp; omega)
-    h
-
-/-- Lane `k` of the slot `t` holding `x`: `x[k]`. -/
-private theorem lane_read {m : MemoryState} {t : Pointer} {x : Wl} (h : Fits m t 256)
-    (ho : t.offset = 0) (hr : m.readAt t 256 = BitVec.packLanes x) (hk : k < 4) :
-    m.readAt (t.add (BitVec.ofNat 64 (k * 8))) 64 = x[k] := by
-  rw [MemoryState.readAt_add_of_readAt h.inBounds
-      (by
-        simp [BitVec.uaddOverflow, ho]; omega)
-      (by
-        simp; omega)
-      hr]
-  have e : (BitVec.ofNat 64 (k * 8)).toNat * 8 = k * 64 := by
-    simp; omega
-  rw [e, BitVec.extractLsb'_packLanes x k hk]
-
 /-- `wl_extract_variable( x, i )` returns lane `i` of `x`, `i` below 4; its union is freed, the
 counter moves on by one block. -/
 public theorem wl_extract_variable.call_eq (x : Wl) (i : BitVec 32) (s : GlobalState)
@@ -56,8 +32,8 @@ public theorem wl_extract_variable.call_eq (x : Wl) (i : BitVec 32) (s : GlobalS
   step_store
   step_pure
   step_pure [hm, hmod, hmul]
-  have hf := lane_fits hfits_t ht_off hi
-  have hr := lane_read hfits_t ht_off hread_t hi
+  have hf := hfits_t.wl_lane ht_off hi
+  have hr := MemoryState.readAt_wl_lane hfits_t ht_off hread_t hi
   step_load
   step_pure
   finish_block
