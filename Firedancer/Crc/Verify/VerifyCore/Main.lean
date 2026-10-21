@@ -337,7 +337,7 @@ theorem fd_r52x5_verify_core.none_run {E : ⟪fd_r52x5_verify_core.Γ⟫} {S : G
   step_pure
   finish_block
   case isTrue =>
-    step_loop using fd_r52x5_verify_core.exit_run
+    run_from using fd_r52x5_verify_core.exit_run
     exact hKa (by simpa using hbr)
   have hb1 : ¬d &&& 1#32 = 0#32 := by simpa using hbr
   clear hbr
@@ -349,7 +349,7 @@ theorem fd_r52x5_verify_core.none_run {E : ⟪fd_r52x5_verify_core.Γ⟫} {S : G
     rcases hd with h | h
     · exact hb1 h
     · simp [h] at hbr
-  step_loop using fd_r52x5_verify_core.exit_run
+  run_from using fd_r52x5_verify_core.exit_run
   exact hKb hb1
 
 open fd_r52x5_double_scalar_mul_base in
@@ -508,7 +508,7 @@ theorem fd_r52x5_verify_core.main_run {E : ⟪fd_r52x5_verify_core.Γ⟫} {S B :
   block_init
   step_pure
   finish_block
-  step_loop using fd_r52x5_verify_core.exit_run
+  run_from using fd_r52x5_verify_core.exit_run
   subst hS
   erase_frame
   rw [herase, ← hK, hH]
@@ -614,7 +614,7 @@ theorem fd_r52x5_verify_core.checks_run {E : ⟪fd_r52x5_verify_core.Γ⟫} {S B
   step_pure
   finish_block
   case isFalse =>
-    step_loop using fd_r52x5_verify_core.exit_run
+    run_from using fd_r52x5_verify_core.exit_run
     subst hS
     erase_frame
     rw [herase]
@@ -626,7 +626,7 @@ theorem fd_r52x5_verify_core.checks_run {E : ⟪fd_r52x5_verify_core.Γ⟫} {S B
   step_pure
   finish_block
   case isFalse =>
-    step_loop using fd_r52x5_verify_core.exit_run
+    run_from using fd_r52x5_verify_core.exit_run
     subst hS
     erase_frame
     rw [herase]
@@ -639,7 +639,7 @@ theorem fd_r52x5_verify_core.checks_run {E : ⟪fd_r52x5_verify_core.Γ⟫} {S B
   step_pure
   finish_block
   case isTrue =>
-    step_loop using fd_r52x5_verify_core.exit_run
+    run_from using fd_r52x5_verify_core.exit_run
     subst hS
     erase_frame
     rw [herase]

@@ -151,7 +151,7 @@ theorem trip (r a : Pointer) (z0 z1 z2 z3 z4 : Pointer) (b k : Nat)
     have hb' := fun E' hA hL => hback E' S hA hL ⟨hwf, hr, h0, h1, h2, h3, h4, w0, w1, w2, w3, w4⟩
       (by rw [hS]) (by rw [hS]; exact MemoryState.eraseFrom_callTmp5_of_le hb0 hb1 hb2 hb3 hb4) h33
     clear hback hwf hr h0 h1 h2 h3 h4 w0 w1 w2 w3 w4 this
-    step_loop using hb'
+    run_from using hb'
     exact (BitVec.ofNat_add _ _).symm
 
 /-- The loop from `^bb2` at counter `k` with `P` in the registers and `m + 1` trips left: at the
@@ -234,7 +234,7 @@ public theorem fd_r52x5_ge_dbln.call_eq (r a : Pointer) (s : GlobalState) (hwf :
   have hI : fd_r52x5_ge_dbln.Inv S r (S₀.slot 0) (S₀.slot 1) (S₀.slot 2) (S₀.slot 3) (S₀.slot 4) :=
     ⟨hwf, hr, hv3_bounds, hv4_bounds, hv5_bounds, hv6_bounds, hv7_bounds, hwritable_v3,
       hwritable_v4, hwritable_v5, hwritable_v6, hwritable_v7⟩
-  step_loop using fd_r52x5_ge_dbln.loop r a _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ S₀
+  run_from using fd_r52x5_ge_dbln.loop r a _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ S₀
     ⟨rfl, rfl, rfl, rfl, rfl⟩ hZ 32 0
     (S₀.mem.readQuad5 a)
   · intro _ _ _ hal hm

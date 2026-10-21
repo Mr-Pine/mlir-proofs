@@ -330,11 +330,11 @@ theorem trip (tab a : Pointer) (cnt : BitVec 32) (A : Quad5) (n : Nat) (B : Glob
   · have hjn1 : j + 1 = n := by
       have := congrArg BitVec.toNat hbr; simp [BitVec.toNat_add] at this; omega
     simp only [hjn1, ite_true] at hK'
-    step_loop using hK'
+    run_from using hK'
   · have hjn1 : j + 1 ≠ n := by
       intro e; apply hbr; rw [hj1, e]
     simp only [hjn1, ite_false] at hK'
-    step_loop using hK'
+    run_from using hK'
 
 public theorem eraseFrom_storesFrom {m : MemoryState} :
     ∀ (c j : Nat), (fd_r52x5_odd_table.storesFrom m tab A j c).eraseFrom b =
@@ -459,7 +459,7 @@ public theorem fd_r52x5_odd_table.call_eq (tab a : Pointer) (cnt : BitVec 32) (s
     obtain rfl : k = 0 := by omega
     simp only [Nat.mul_zero, Pointer.add_ofNat_zero]
     exact ⟨hqT, hread_tab_readQuad5⟩
-  step_loop using fd_r52x5_odd_table.loop tab a cnt A cnt.toNat S₀ _ _ hrb hto (by omega)
+  run_from using fd_r52x5_odd_table.loop tab a cnt A cnt.toNat S₀ _ _ hrb hto (by omega)
     (cnt.toNat - 2) 1
   · intro hmsb
     exfalso
