@@ -639,7 +639,7 @@ theorem skip_iter (r n1 a n2 tbl n1s n2s ai a2 tp : Pointer) (w1 w2 : Vector Int
       step_pure [saddOverflow_neg_one32 (show i < 2 ^ 31 by omega)]
       step_pure
       finish_block
-      case isTrue => step_loop using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
+      case isTrue => run_from using hnone ⟨h1, h2⟩ (eq_zero_of_ofNat32 (by omega) hbr)
       case isFalse =>
         have hi0 : 1 ≤ i := Nat.one_le_iff_ne_zero.mpr fun h => hbr (by rw [h])
         subst hS

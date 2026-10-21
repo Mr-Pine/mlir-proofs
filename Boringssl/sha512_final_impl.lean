@@ -262,7 +262,7 @@ theorem out_loop (out c : Pointer) (M' : MemoryState) (H : Nat → BitVec 64)
           K := by
         rw [← hK, hS, Nat.add_assoc, Nat.add_comm 1 (m + 1)]
       clear hroom hK hSm
-      step_loop using ih (i + 1) S
+      run_from using ih (i + 1) S
       all_goals
         first
         | exact (BitVec.ofNat_add i 1).symm
@@ -401,7 +401,7 @@ theorem last_block (out c : Pointer) (n : BitVec 64) (M : MemoryState) (v : Sha5
         g) := by
     rw [storeOut_eight, hS]
   have hst := hMf.storeShaCtx (v := vF)
-  step_loop using
+  run_from using
     out_loop out c (M.storeShaCtx c vF) (fun k => vF.h[k]!)
       (fun k hk => readAt_storeShaCtx_h hMf.2.1 hco hk)
       (fun k hk => fits_h hst.words8Fit hk) hco hoo hsep g _ 7 0 S
@@ -507,7 +507,7 @@ public theorem sha512_final_impl.call_eq (out c : Pointer) (s : GlobalState) (hw
     have hM := congrArg GlobalState.mem hS
     dsimp only at hM
     finish_block
-    step_loop using
+    run_from using
       last_block out c 0#64 S₀.mem _ (hM := hM) (hn := by decide) (hpre := Sha512Ctx.prefix_zero _)
         (hK := ?_)
     have hcond : (112#64).ult (v₀.num.setWidth 64 + 1#64) = true := by
@@ -536,7 +536,7 @@ public theorem sha512_final_impl.call_eq (out c : Pointer) (s : GlobalState) (hw
       omega
     have hM := congrArg GlobalState.mem hS
     dsimp only at hM
-    step_loop using
+    run_from using
       last_block out c (v₀.num.setWidth 64 + 1#64) S₀.mem _ (hM := hM) (hn := by omega) (hpre := by
         rw [hn1]; exact hpre1) (hK := ?_)
     have hcond : (112#64).ult (v₀.num.setWidth 64 + 1#64) = false := by

@@ -353,7 +353,7 @@ theorem loop32 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast : BitVe
     index_add 4
     step_pure
     finish_block
-    · step_loop using hK
+    · run_from using hK
       simp only [mem, BitVec.extractLsb'_eq_self]
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).2 (by omega)) hbr
   | succ q ih =>
@@ -376,7 +376,7 @@ theorem loop32 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast : BitVe
     step_pure
     finish_block
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).1 hbr) (by omega)
-    · step_loop using ih (j + 4)
+    · run_from using ih (j + 4)
 
 /-- The constants live from `^bb14` on. -/
 abbrev Consts14 (E : ⟪Γ⟫) : Prop :=
@@ -407,10 +407,10 @@ theorem block16 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast : BitV
   · have hjR : j = 128 - R := by
       simp at hbr; omega
     subst hjR
-    step_loop using hK
+    run_from using hK
     simp only [mem, BitVec.extractLsb'_eq_self]
   · have : ¬(125 ≤ i0 + R ∧ i0 + R < 128) := by simpa using hbr
-    step_loop using
+    run_from using
       loop32 st inp tmp inlen R ast M w A g K hRlt hn hMf hin hino hsep hK ((128 - R - j) / 4 - 1) j
 
 /-- `^bb15`, the byte prologue at `j = i0 + c`, `q + 1` bytes left of `p = (128 - r - i0) % 4`. -/
@@ -444,7 +444,7 @@ theorem loop15 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast : BitVe
     step_pure [ofNat_add_toNat]
     step_pure
     finish_block
-    · step_loop using
+    · run_from using
         block16 st inp tmp inlen R ast M w A g K hRlt hn hMf hin hino hsep hK i0 (j + 1)
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).2 (by omega)) hbr
   | succ q ih =>
@@ -457,7 +457,7 @@ theorem loop15 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast : BitVe
     step_pure
     finish_block
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).1 hbr) (by omega)
-    · step_loop using ih (j + 1) (c + 1)
+    · run_from using ih (j + 1) (c + 1)
 
 /-- `^bb14`: the bytes from `i0`, a multiple of 4, by the byte prologue and `^bb16`. -/
 theorem block14 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : BitVec 64)
@@ -484,10 +484,10 @@ theorem block14 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : B
   · have h0 : (128 - R) % 4 = 0 := by
       have := (ofNat64_eq_iff (b := 0) (by omega) (by decide)).1 hbr
       omega
-    step_loop using block16 st inp tmp inlen R ast M w A g K hRlt hn hMf hin hino hsep hK i0 i0
+    run_from using block16 st inp tmp inlen R ast M w A g K hRlt hn hMf hin hino hsep hK i0 i0
   · have h0 : (128 - R) % 4 ≠ 0 := fun h =>
       hbr ((ofNat64_eq_iff (b := 0) (by omega) (by decide)).2 h)
-    step_loop using
+    run_from using
       loop15 st inp tmp inlen R ast M w A g K hRlt hn hMf hin hino hsep hK i0 ((128 - R) % 4) hi0
         (by omega) ((128 - R) % 4 - 1) i0 0
 
@@ -523,11 +523,11 @@ theorem loop12 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : Bi
       step_pure
       finish_block
       · have he : (128 - R) / 4 * 4 = 128 - R := ((ofNat64_eq_iff (by omega) (by omega)).1 hbr).symm
-        step_loop using hK
+        run_from using hK
         simp only [mem, BitVec.extractLsb'_eq_self]
       · have hne : (128 - R) / 4 * 4 ≠ 128 - R := fun h =>
           hbr ((ofNat64_eq_iff (by omega) (by omega)).2 h.symm)
-        step_loop using
+        run_from using
           block14 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK (j + 4)
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).2 (by omega)) hbr
   | succ q ih =>
@@ -538,7 +538,7 @@ theorem loop12 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : Bi
     step_pure
     finish_block
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).1 hbr) (by omega)
-    · step_loop using ih (j + 4)
+    · run_from using ih (j + 4)
 
 /-- The constants live from `^bb11` on. -/
 abbrev Consts11 (E : ⟪Γ⟫) : Prop :=
@@ -565,7 +565,7 @@ theorem block11 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : B
   block_init
   step_pure [and252 (show 128 - R < 256 by omega)]
   finish_block
-  step_loop using
+  run_from using
     loop12 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
       (((128 - R) / 4 * 4 - i0) / 4 - 1) i0
 
@@ -589,7 +589,7 @@ theorem block9 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : Bi
   step_pure
   finish_block
   · have he : (128 - R) / 32 * 32 = 128 - R := ((ofNat64_eq_iff (by omega) (by omega)).1 hbr).symm
-    step_loop using hK
+    run_from using hK
     simp only [mem, BitVec.extractLsb'_eq_self]
   · have hne : (128 - R) / 32 * 32 ≠ 128 - R := fun h =>
       hbr ((ofNat64_eq_iff (by omega) (by omega)).2 h.symm)
@@ -597,12 +597,12 @@ theorem block9 (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (ast c1 : Bi
     step_pure
     finish_block
     · have h0 : (128 - R) % 32 / 4 * 4 = 0 := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-      step_loop using
+      run_from using
         block14 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
           ((128 - R) / 32 * 32)
     · have h0 : (128 - R) % 32 / 4 * 4 ≠ 0 := fun h =>
         hbr ((ofNat64_eq_iff (by omega) (by decide)).2 h)
-      step_loop using
+      run_from using
         block11 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
           ((128 - R) / 32 * 32)
 
@@ -641,21 +641,21 @@ public theorem fill_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
   finish_block
   · -- r > 124: bytewise
     have : 124 < R := by simpa [BitVec.ult, Nat.mod_eq_of_lt (show R < 2 ^ 64 by omega)] using hbr
-    step_loop using block14 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK 0
+    run_from using block14 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK 0
   · have hR124 : R ≤ 124 := by
       simpa [BitVec.ult, Nat.mod_eq_of_lt (show R < 2 ^ 64 by omega)] using hbr
     block_init
     iterate 4 step_pure
     finish_block
     · -- the ranges may overlap: bytewise
-      step_loop using block14 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK 0
+      run_from using block14 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK 0
     · block_init
       step_pure
       finish_block
       · -- r > 96: no 32-byte chunk
         have : 96 < R := by
           simpa [BitVec.ult, Nat.mod_eq_of_lt (show R < 2 ^ 64 by omega)] using hbr
-        step_loop using
+        run_from using
           block11 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK 0
       · have : R ≤ 96 := by
           simpa [BitVec.ult, Nat.mod_eq_of_lt (show R < 2 ^ 64 by omega)] using hbr
@@ -693,7 +693,7 @@ public theorem fill_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
         step_pure
         finish_block
         · have h32 : (128 - R) / 32 * 32 = 32 := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-          step_loop using
+          run_from using
             block9 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
         · have h32 : (128 - R) / 32 * 32 ≠ 32 := fun h =>
             hbr ((ofNat64_eq_iff (by omega) (by decide)).2 h)
@@ -704,7 +704,7 @@ public theorem fill_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
           step_pure
           finish_block
           · have h64 : (128 - R) / 32 * 32 = 64 := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-            step_loop using
+            run_from using
               block9 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
           · have h64 : (128 - R) / 32 * 32 ≠ 64 := fun h =>
               hbr ((ofNat64_eq_iff (by omega) (by decide)).2 h)
@@ -715,7 +715,7 @@ public theorem fill_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
             step_pure
             finish_block
             · have h96 : (128 - R) / 32 * 32 = 96 := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-              step_loop using
+              run_from using
                 block9 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
             · have h96 : (128 - R) / 32 * 32 ≠ 96 := fun h =>
                 hbr ((ofNat64_eq_iff (by omega) (by decide)).2 h)
@@ -725,7 +725,7 @@ public theorem fill_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
               copy32 96 112
               finish_block
               have h128 : (128 - R) / 32 * 32 = 128 := by omega
-              step_loop using
+              run_from using
                 block9 st inp tmp inlen R ast c1 M w A g K hc1 hRlt hn hMf hin hino hsep hK
 
 end MLIR.Sodium.crypto_hash_sha512_update

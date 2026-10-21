@@ -143,7 +143,7 @@ theorem last_block (sha hash : Pointer) (lo hi x : BitVec 64) (M : MemoryState) 
   step_load [MemoryState.readAt_storeSha_state hMf hMw]
   step_call using fd_ulong_bswap.call_eq
   step_store
-  iterate 7 
+  iterate 7
     step_pure
     step_load [MemoryState.readAt_storeSha_state hMf hMw]
     step_call using fd_ulong_bswap.call_eq
@@ -250,7 +250,7 @@ public theorem fd_sha512_fini.call_eq (sha hash : Pointer) (s : GlobalState) (hw
     have hM := congrArg GlobalState.mem hS
     dsimp only at hM
     finish_block
-    step_loop using
+    run_from using
       fd_sha512_fini.last_block sha hash bit_cnt_lo bit_cnt_hi 0#64 S₀.mem _ (hM := hM) (hx := by
         decide) (hlo := by
         rw [hbit_cnt_lo]; rfl) (hhi := by
@@ -280,7 +280,7 @@ public theorem fd_sha512_fini.call_eq (sha hash : Pointer) (s : GlobalState) (hw
       have := hbr
       simp [BitVec.ult, hx1] at this
       omega
-    step_loop using
+    run_from using
       fd_sha512_fini.last_block sha hash bit_cnt_lo bit_cnt_hi _ S₀.mem
         { S₀.mem.readSha sha with
           buf :=

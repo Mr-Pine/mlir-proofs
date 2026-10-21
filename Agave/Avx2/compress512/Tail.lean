@@ -144,7 +144,7 @@ public theorem tail (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (i₀ : N
       loop9 st blocks Kp ms t2 ms2 n n.toNat D g K hmo hto hKo hne1 hne2 hne3 hbm hbt hn56 hdo
         ((n.toNat - i₀) / 2 - 1) i₀ H S
     rw [show (n.toNat - i₀) / 2 - 1 + 1 = (n.toNat - i₀) / 2 by omega] at L
-    step_loop using L
+    run_from using L
     intro _ _ _
     clear L
     have hstw' : Writable S.mem st := by rw [hS]; exact Writable.pairsLoop hstw

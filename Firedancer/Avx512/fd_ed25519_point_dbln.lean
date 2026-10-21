@@ -176,7 +176,7 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
       d15]
   finish_block
   · rw [hQ] at hback
-    step_loop using hback
+    run_from using hback
     · exact (BitVec.ofNat_add _ _).symm
     · simp only [MemoryState.eraseFrom_storeVec, MemoryState.eraseFrom_lifetimeStart,
         MemoryState.eraseFrom_lifetimeEnd, MemoryState.lifetimeStart_eraseFrom_of_le hb0,
@@ -192,7 +192,7 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 : Pointer) (b k 
         storeVec_eraseFrom_of_le hb4, storeVec_eraseFrom_of_le hb5]
     · exact Quad.foldUnsignedC_lt _hu
   · rw [hQ] at hexit
-    step_loop using hexit
+    run_from using hexit
     simp only [MemoryState.eraseFrom_storeVec, MemoryState.eraseFrom_lifetimeStart,
       MemoryState.eraseFrom_lifetimeEnd, MemoryState.lifetimeStart_eraseFrom_of_le hb0,
       MemoryState.lifetimeStart_eraseFrom_of_le hb1, MemoryState.lifetimeStart_eraseFrom_of_le hb2,
@@ -331,7 +331,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
     have hn2 : 2 ≤ n.toNat := by
       simp [BitVec.slt, BitVec.toInt_eq_toNat_of_lt (show 2 * n.toNat < 2 ^ 32 by omega)] at hbr
       omega
-    step_loop using
+    run_from using
       fd_ed25519_point_dbln.loop r a n v87 v88 v89 v90 v91 v92 S₀.alloc.nextFreeBlock _ _
         (n.toNat - 2) 1 ⟨u03, u14, u25⟩
     · exact Quad.foldUnsignedC_lt _hu

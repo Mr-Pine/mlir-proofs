@@ -141,7 +141,7 @@ theorem loop (out a tmp fe : Pointer) (n : BitVec 64) (g : Vals [] × GlobalStat
     block_init
     step_pure
     finish_block
-    · step_loop using hK
+    · run_from using hK
       rfl
     · exfalso
       simp [BitVec.toNat_eq] at hbr

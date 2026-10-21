@@ -91,7 +91,7 @@ theorem bb3_run (E : ⟪Γ⟫) (S : GlobalState)
   block_init
   iterate 5 step_store
   finish_block
-  step_loop using bb5_run
+  run_from using bb5_run
 
 /-- `^bb4`: the second encoding does not decode; all six out-vectors zeroed (`%1919`), then `-2`
 (`%1917`). -/
@@ -113,7 +113,7 @@ theorem bb4_run (E : ⟪Γ⟫) (S : GlobalState)
   block_init
   iterate 5 step_store
   finish_block
-  step_loop using bb5_run
+  run_from using bb5_run
 
 /-- `^bb1`: the checks of the second point, `x + y` (`%2116 + %2022`) nonzero as `%2123` is. Both
 nonzero: on to `^bb2` (`hK`'s first case); else `^bb4`'s failure. -/
@@ -156,7 +156,7 @@ theorem bb1_run (E : ⟪Γ⟫) (S : GlobalState)
   · subst_vars
     contradiction
   · subst hK
-    step_loop using bb4_run
+    run_from using bb4_run
 
 /-! ### `^bb0`'s copies of the encodings -/
 
@@ -427,7 +427,7 @@ theorem bb2_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   step_pattern using runBodyFrom_quadFoldRun with b'
   finish_block
   -- `^bb5`'s result, then the named values against the statement's
-  step_loop using bb5_run (v := b') (r := 0)
+  run_from using bb5_run (v := b') (r := 0)
   subst_vars
   rfl
 
@@ -627,10 +627,10 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   · -- `^bb1`
     simp only [result, Dec.ok, hF]
     rw [ite_eq_left hbr]
-    step_loop using bb1_run (x := vx2b) (y := ub) (z := Vector.replicate 8 0) (c := t1nzb) (r := -2)
+    run_from using bb1_run (x := vx2b) (y := ub) (z := Vector.replicate 8 0) (c := t1nzb) (r := -2)
     -- both sides test `B`'s checks
     split
-    · step_loop using
+    · run_from using
         bb2_run' (sa := sa) (sb := sb) (ht1nza01 := ht1nza ▸ fd_r43x6_is_nonzero.spec_01 _)
           (ht1nzb01 := ht1nzb ▸ fd_r43x6_is_nonzero.spec_01 _)
       rw [hE] at hArgs
@@ -640,7 +640,7 @@ theorem bb0_run (E : ⟪Γ⟫) (S₀ : GlobalState)
   · -- `^bb3`
     simp only [result, Dec.ok, hF]
     rw [ite_eq_right hbr]
-    step_loop using bb3_run
+    run_from using bb3_run
 
 /-- `fd_r43x6_ge_decode2` on the encodings at `sa sb`, into the out-vectors `a03 … b25`: `result`
 over the caller's memory, with `24` blocks counted for the frames it used. -/

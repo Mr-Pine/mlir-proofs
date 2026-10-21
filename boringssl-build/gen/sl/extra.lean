@@ -40,7 +40,7 @@ theorem latch_exit (r a : Pointer) (Sb : GlobalState) (K : PoisonOr (Vals [] × 
   step_pure [cnt_sadd (by decide : 255 < 256), cnt_succ]
   step_pure
   finish_block
-  step_loop using hK
+  run_from using hK
 
 /-- `^bb56` at `i < 255`: back to `^bb2` at `i + 1`. -/
 theorem latch_next (r a : Pointer) (Sb : GlobalState) (i : Nat) (hi : i < 255)
@@ -59,7 +59,7 @@ theorem latch_next (r a : Pointer) (Sb : GlobalState) (i : Nat) (hi : i < 255)
   step_pure
   finish_block
   · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-  · step_loop using hK
+  · run_from using hK
 
 /-- The `i` loop's test, as the code selects it. -/
 theorem sel_iff {c : Prop} [Decidable c] (hi : i < 256) :
@@ -105,8 +105,8 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     · exact absurd ((sel_iff hi0).1 hbr).2 (by omega)
     · rw [loop_skip hi0 (fun h => hbr ((sel_iff hi0).2 h)), loop_done (by omega)] at hK
       obtain rfl : i = 255 := by omega
-      step_loop using latch_exit r a Sb K v
-      step_loop using hK
+      run_from using latch_exit r a Sb K v
+      run_from using hK
   | succ n ih =>
     intro i v E hArgs hn hK
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
@@ -119,12 +119,11 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_pure
     finish_block
     · rw [loop_window hi0 ((sel_iff hi0).1 hbr)] at hK
-      step_loop using window1 r a Sb hr hr_off i ((sel_iff hi0).1 hbr).2 K v
-      step_loop using latch_next r a Sb i ((sel_iff hi0).1 hbr).2 K (window v i 1)
-      step_loop using ih (i + 1) (window v i 1) _ _ (by omega)
-      step_loop using hK
+      run_from using window1 r a Sb hr hr_off i ((sel_iff hi0).1 hbr).2 K v
+      run_from using latch_next r a Sb i ((sel_iff hi0).1 hbr).2 K (window v i 1)
+      run_from using ih (i + 1) (window v i 1) _ _ (by omega)
+      run_from using hK
     · rw [loop_skip hi0 (fun h => hbr ((sel_iff hi0).2 h))] at hK
-      step_loop using latch_next r a Sb i (by omega) K v
-      step_loop using ih (i + 1) v _ _ (by omega)
-      step_loop using hK
-
+      run_from using latch_next r a Sb i (by omega) K v
+      run_from using ih (i + 1) v _ _ (by omega)
+      run_from using hK

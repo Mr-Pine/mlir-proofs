@@ -96,7 +96,7 @@ theorem carry6_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -106,7 +106,7 @@ theorem carry6_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
@@ -122,7 +122,7 @@ theorem carry6_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -132,8 +132,8 @@ theorem carry6_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 
 /-- `^bb47`, the window at `b = 6`: on to `^bb56` with `window v i 6`. -/
 theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -156,7 +156,7 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   · rw [window_stop
         (by
           have := guard_eq (b := 6) (by decide) hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + 6 < 256 := by
     have := guard_ne (b := 6) (by decide) hi hbr; omega
   have C := carry6_loop r a Sb hr hr_off i K (255 - (i + 6)) (i + 6)
@@ -169,7 +169,7 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   · rw [window_skip (by decide) hib hbr] at hK
     simp only [Nat.reduceAdd] at hK
     rw [window_stop (by omega)] at hK
-    step_loop using hK
+    run_from using hK
   have h0 := hbr
   -- if (r[i] + (r[i + b] << b) <= 15)
   block_init
@@ -190,7 +190,7 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hib] at hS
     finish_block
-    step_loop using hK
+    run_from using hK
   have h1 := hbr
   -- if (cmp < -15) break
   block_init
@@ -198,7 +198,7 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_break (by decide) hib h0 h1 hbr] at hK
-    step_loop using hK
+    run_from using hK
   rw [window_sub (by decide) hib h0 h1 hbr] at hK
   simp only [Nat.reduceAdd] at hK
   rw [window_stop (by omega)] at hK
@@ -207,8 +207,8 @@ theorem window6 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_store
   rw [storeAt_byte hr_off hi0] at hS
   finish_block
-  step_loop using C
-  step_loop using hK
+  run_from using C
+  run_from using hK
 
 /-- `^bb43`, the carry loop of `b = 5` from `k`: on to `^bb47` with `carry v k`. -/
 theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -237,7 +237,7 @@ theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -247,7 +247,7 @@ theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
@@ -263,7 +263,7 @@ theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -273,8 +273,8 @@ theorem carry5_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 
 /-- `^bb38`, the window at `b = 5`: on to `^bb56` with `window v i 5`. -/
 theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -297,7 +297,7 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   · rw [window_stop
         (by
           have := guard_eq (b := 5) (by decide) hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + 5 < 256 := by
     have := guard_ne (b := 5) (by decide) hi hbr; omega
   have W := window6 r a Sb hr hr_off i hib K
@@ -310,8 +310,8 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
     simp only [Nat.reduceAdd] at hK
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h0 := hbr
   -- if (r[i] + (r[i + b] << b) <= 15)
   block_init
@@ -331,8 +331,8 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hib] at hS
     finish_block
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h1 := hbr
   -- if (cmp < -15) break
   block_init
@@ -340,7 +340,7 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_break (by decide) hib h0 h1 hbr] at hK
-    step_loop using hK
+    run_from using hK
   rw [window_sub (by decide) hib h0 h1 hbr] at hK
   simp only [Nat.reduceAdd] at hK
   block_init
@@ -348,9 +348,9 @@ theorem window5 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_store
   rw [storeAt_byte hr_off hi0] at hS
   finish_block
-  step_loop using C
-  step_loop using W _
-  step_loop using hK
+  run_from using C
+  run_from using W _
+  run_from using hK
 
 /-- `^bb34`, the carry loop of `b = 4` from `k`: on to `^bb38` with `carry v k`. -/
 theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -379,7 +379,7 @@ theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -389,7 +389,7 @@ theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
@@ -405,7 +405,7 @@ theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -415,8 +415,8 @@ theorem carry4_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 
 /-- `^bb29`, the window at `b = 4`: on to `^bb56` with `window v i 4`. -/
 theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -439,7 +439,7 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   · rw [window_stop
         (by
           have := guard_eq (b := 4) (by decide) hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + 4 < 256 := by
     have := guard_ne (b := 4) (by decide) hi hbr; omega
   have W := window5 r a Sb hr hr_off i hib K
@@ -452,8 +452,8 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
     simp only [Nat.reduceAdd] at hK
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h0 := hbr
   -- if (r[i] + (r[i + b] << b) <= 15)
   block_init
@@ -473,8 +473,8 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hib] at hS
     finish_block
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h1 := hbr
   -- if (cmp < -15) break
   block_init
@@ -482,7 +482,7 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_break (by decide) hib h0 h1 hbr] at hK
-    step_loop using hK
+    run_from using hK
   rw [window_sub (by decide) hib h0 h1 hbr] at hK
   simp only [Nat.reduceAdd] at hK
   block_init
@@ -490,9 +490,9 @@ theorem window4 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_store
   rw [storeAt_byte hr_off hi0] at hS
   finish_block
-  step_loop using C
-  step_loop using W _
-  step_loop using hK
+  run_from using C
+  run_from using W _
+  run_from using hK
 
 /-- `^bb25`, the carry loop of `b = 3` from `k`: on to `^bb29` with `carry v k`. -/
 theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -521,7 +521,7 @@ theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -531,7 +531,7 @@ theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
@@ -547,7 +547,7 @@ theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -557,8 +557,8 @@ theorem carry3_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 
 /-- `^bb20`, the window at `b = 3`: on to `^bb56` with `window v i 3`. -/
 theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -581,7 +581,7 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   · rw [window_stop
         (by
           have := guard_eq (b := 3) (by decide) hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + 3 < 256 := by
     have := guard_ne (b := 3) (by decide) hi hbr; omega
   have W := window4 r a Sb hr hr_off i hib K
@@ -594,8 +594,8 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
     simp only [Nat.reduceAdd] at hK
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h0 := hbr
   -- if (r[i] + (r[i + b] << b) <= 15)
   block_init
@@ -615,8 +615,8 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hib] at hS
     finish_block
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h1 := hbr
   -- if (cmp < -15) break
   block_init
@@ -624,7 +624,7 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_break (by decide) hib h0 h1 hbr] at hK
-    step_loop using hK
+    run_from using hK
   rw [window_sub (by decide) hib h0 h1 hbr] at hK
   simp only [Nat.reduceAdd] at hK
   block_init
@@ -632,9 +632,9 @@ theorem window3 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_store
   rw [storeAt_byte hr_off hi0] at hS
   finish_block
-  step_loop using C
-  step_loop using W _
-  step_loop using hK
+  run_from using C
+  run_from using W _
+  run_from using hK
 
 /-- `^bb16`, the carry loop of `b = 2` from `k`: on to `^bb20` with `carry v k`. -/
 theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -663,7 +663,7 @@ theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -673,7 +673,7 @@ theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
@@ -689,7 +689,7 @@ theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -699,8 +699,8 @@ theorem carry2_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 
 /-- `^bb11`, the window at `b = 2`: on to `^bb56` with `window v i 2`. -/
 theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -723,7 +723,7 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   · rw [window_stop
         (by
           have := cnt_eq hi hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + 2 < 256 := by
     have := cnt_ne hi hbr; omega
   have W := window3 r a Sb hr hr_off i hib K
@@ -736,8 +736,8 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
     simp only [Nat.reduceAdd] at hK
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h0 := hbr
   -- if (r[i] + (r[i + b] << b) <= 15)
   block_init
@@ -757,8 +757,8 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hib] at hS
     finish_block
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h1 := hbr
   -- if (cmp < -15) break
   block_init
@@ -766,7 +766,7 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_break (by decide) hib h0 h1 hbr] at hK
-    step_loop using hK
+    run_from using hK
   rw [window_sub (by decide) hib h0 h1 hbr] at hK
   simp only [Nat.reduceAdd] at hK
   block_init
@@ -774,9 +774,9 @@ theorem window2 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_store
   rw [storeAt_byte hr_off hi0] at hS
   finish_block
-  step_loop using C
-  step_loop using W _
-  step_loop using hK
+  run_from using C
+  run_from using W _
+  run_from using hK
 
 /-- `^bb8`, the carry loop of `b = 1` from `k`: on to `^bb11` with `carry v k`. -/
 theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -804,7 +804,7 @@ theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -814,7 +814,7 @@ theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
@@ -830,7 +830,7 @@ theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -840,8 +840,8 @@ theorem carry1_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
       step_pure
       finish_block
       · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 
 /-- `^bb3`, the window at `b = 1`: on to `^bb56` with `window v i 1`. -/
 theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -871,8 +871,8 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   finish_block
   · rw [window_skip (by decide) hib hbr] at hK
     simp only [Nat.reduceAdd] at hK
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h0 := hbr
   -- if (r[i] + (r[i + b] << b) <= 15)
   block_init
@@ -892,8 +892,8 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hib] at hS
     finish_block
-    step_loop using W _
-    step_loop using hK
+    run_from using W _
+    run_from using hK
   have h1 := hbr
   -- if (cmp < -15) break
   block_init
@@ -901,7 +901,7 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_break (by decide) hib h0 h1 hbr] at hK
-    step_loop using hK
+    run_from using hK
   rw [window_sub (by decide) hib h0 h1 hbr] at hK
   simp only [Nat.reduceAdd] at hK
   block_init
@@ -909,9 +909,9 @@ theorem window1 (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_store
   rw [storeAt_byte hr_off hi0] at hS
   finish_block
-  step_loop using C
-  step_loop using W _
-  step_loop using hK
+  run_from using C
+  run_from using W _
+  run_from using hK
 
 /-! ### The `i` loop -/
 
@@ -931,7 +931,7 @@ theorem latch_exit (r a : Pointer) (Sb : GlobalState) (K : PoisonOr (Vals [] × 
   step_pure [cnt_sadd (by decide : 255 < 256), cnt_succ]
   step_pure
   finish_block
-  step_loop using hK
+  run_from using hK
 
 /-- `^bb56` at `i < 255`: back to `^bb2` at `i + 1`. -/
 theorem latch_next (r a : Pointer) (Sb : GlobalState) (i : Nat) (hi : i < 255)
@@ -951,7 +951,7 @@ theorem latch_next (r a : Pointer) (Sb : GlobalState) (i : Nat) (hi : i < 255)
   step_pure
   finish_block
   · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-  · step_loop using hK
+  · run_from using hK
 
 /-- `^bb2`, the `i` loop from `i`: on to `^bb57` with `loop v i`. -/
 theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
@@ -978,8 +978,8 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     · exact absurd ((sel_iff hi0).1 hbr).2 (by omega)
     · rw [loop_skip hi0 (fun h => hbr ((sel_iff hi0).2 h)), loop_done (by omega)] at hK
       obtain rfl : i = 255 := by omega
-      step_loop using latch_exit r a Sb K v
-      step_loop using hK
+      run_from using latch_exit r a Sb K v
+      run_from using hK
   | succ n ih =>
     intro i v E hArgs hn hK
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
@@ -992,14 +992,14 @@ theorem main_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_pure
     finish_block
     · rw [loop_window hi0 ((sel_iff hi0).1 hbr)] at hK
-      step_loop using window1 r a Sb hr hr_off i ((sel_iff hi0).1 hbr).2 K v
-      step_loop using latch_next r a Sb i ((sel_iff hi0).1 hbr).2 K (window v i 1)
-      step_loop using ih (i + 1) (window v i 1) _ _ (by omega)
-      step_loop using hK
+      run_from using window1 r a Sb hr hr_off i ((sel_iff hi0).1 hbr).2 K v
+      run_from using latch_next r a Sb i ((sel_iff hi0).1 hbr).2 K (window v i 1)
+      run_from using ih (i + 1) (window v i 1) _ _ (by omega)
+      run_from using hK
     · rw [loop_skip hi0 (fun h => hbr ((sel_iff hi0).2 h))] at hK
-      step_loop using latch_next r a Sb i (by omega) K v
-      step_loop using ih (i + 1) v _ _ (by omega)
-      step_loop using hK
+      run_from using latch_next r a Sb i (by omega) K v
+      run_from using ih (i + 1) v _ _ (by omega)
+      run_from using hK
 
 /-! ### The bit loop -/
 
@@ -1068,7 +1068,7 @@ theorem bits_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_pure
     finish_block
     · rw [show j + 1 + 1 = 256 by omega, fill_full] at hS
-      step_loop using hK
+      run_from using hK
     · exact absurd (by rw [show j + 2 = 256 by omega]) hbr
   | succ n ih =>
     intro j E hArgs hj he hK
@@ -1108,8 +1108,8 @@ theorem bits_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_pure
     finish_block
     · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-    · step_loop using ih (j + 2) _ _ (by omega) (by omega)
-      step_loop using hK
+    · run_from using ih (j + 2) _ _ (by omega) (by omega)
+      run_from using hK
 
 /-! ### The function -/
 
@@ -1137,8 +1137,8 @@ public theorem slide_vartime.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
     S = { S₀ with mem := fill S₀ r (BitVec.packLanes (bits (S₀.mem.readAt a 256))) 0 } := by
     rw [h0, hS]
   rw [hfill]
-  step_loop using BL _ 127 0
-  step_loop using ML _ 255 0 _
+  run_from using BL _ 127 0
+  run_from using ML _ 255 0 _
   block_init
   finish_block
   rw [hS]

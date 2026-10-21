@@ -942,8 +942,8 @@ theorem words_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : BitV
   step_pure [o1, o1', ← BitVec.ofNat_add]
   step_pure
   finish_block
-  · step_loop using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
-  · step_loop using
+  · run_from using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
+  · run_from using
       hback
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)
@@ -1119,8 +1119,8 @@ theorem schedule_iter (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : B
   -- i++, i < 80
   step_pure
   finish_block
-  · step_loop using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
-  · step_loop using
+  · run_from using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
+  · run_from using
       hback
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)
@@ -1253,8 +1253,8 @@ theorem update_block (st data X Kp Wp : Pointer) (n : BitVec 64)
   step_pure [saddOverflow_sub_one hr, ofNat_add_neg_one]
   step_pure
   finish_block
-  · step_loop using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
-  · step_loop using
+  · run_from using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
+  · run_from using
       hback
         (by
           rintro rfl; exact hbr rfl)
@@ -1431,7 +1431,7 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
   -- the args through the env's writes, so the loops' continuations chain them without unfolding
   have hA : E.args = E₁.args := by
     rw [hE]; simp only [Env.write_args]
-  step_loop using words_loop st X Kp Wp H cnt block R hX hKo hWo hXK hXW 15 0 H
+  run_from using words_loop st X Kp Wp H cnt block R hX hKo hWo hXK hXW 15 0 H
   -- the stores into the started `X` make it known
   have hXr := room_mem1.1 (hS ▸ hroom_X)
   have hXf : Fits S.mem X 1024 := by
@@ -1446,10 +1446,10 @@ theorem rounds_block (st X Kp Wp : Pointer) (H : Vector (BitVec 64) 8) (cnt : Bi
   clear hroom_X
   have hA : E.args = E₁.args := by
     rw [hE]; simp only [Env.write_args]; exact hArgs₀
-  step_loop using schedule_loop st X Kp Wp H cnt R hX hKo hXK 63 16 (loop1 block 0 H) (X0 block)
+  run_from using schedule_loop st X Kp Wp H cnt R hX hKo hXK 63 16 (loop1 block 0 H) (X0 block)
   have hA : E.args = E₁.args := by
     rw [hE]; simp only [Env.write_args]; exact hArgs₀
-  step_loop using hcont
+  run_from using hcont
 
 /-- The blocks from `j`, `r + 1` of them left, on the state words `H`: each block's rounds and
 `state[k] += …`; then `^bb5` on `memBlocks`. -/
@@ -1588,7 +1588,7 @@ public theorem fd_sha512_core_ref.call_eq (st data : Pointer) (n : BitVec 64) (s
             mem :=
               memBlocks st X (S₀.mem.readAt data (1024 * n.toNat)) 0 (n.toNat - 1 + 1)
                 (S₀.mem.readWords8 st) S.mem }) := by
-    step_loop using
+    run_from using
       blocks_loop st data X Kp n n.toNat _ _ hX_off hKp_off hdo hXK hdata_ne_X.symm hst_ne_Kp.symm
         hst_ne_X hsep (n.toNat - 1) 0 (S₀.mem.readWords8 st)
     block_init

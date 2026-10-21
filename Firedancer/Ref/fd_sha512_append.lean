@@ -619,7 +619,7 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
     have h0 : n >>> 7 = 0#64 := by
       have := hbr
       bv_decide
-    step_loop using leftover_block sha data d sz n D M v (hK := ?_)
+    run_from using leftover_block sha data d sz n D M v (hK := ?_)
     simp [bulk, h0]
   · -- fd_sha512_core( state, data, block_cnt );
     have h0 : n >>> 7 ≠ 0#64 := by
@@ -651,7 +651,7 @@ theorem bulk_block (sha data d : Pointer) (sz n : BitVec 64) (D : BitVec (8 * n.
     rw [hstate, hblock, hM, MemoryState.storeSha_storeWords8_state] at hS
     have hM' := congrArg GlobalState.mem hS
     clear hread_d hblock hstate
-    step_loop using leftover_block sha data d sz n D M _ (hK := ?_)
+    run_from using leftover_block sha data d sz n D M _ (hK := ?_)
     simp [bulk, h0]
 
 end fd_sha512_append
@@ -707,7 +707,7 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
     step_pure
     finish_block
     · -- buf_used == 0
-      step_loop using fd_sha512_append.bulk_block sha data data sz sz _ S₀.mem _ (hK := ?_)
+      run_from using fd_sha512_append.bulk_block sha data data sz sz _ S₀.mem _ (hK := ?_)
       refine ⟨by simp [cores, MemoryState.readSha, hbr, hsz], ?_⟩
       rw [MemoryState.eraseFrom_storeSha, hwf₀.eraseFrom]
       simp [fd_sha512_append.spec, hsz, MemoryState.readSha, hbr]
@@ -854,7 +854,7 @@ public theorem fd_sha512_append.call_eq (sha data : Pointer) (sz : BitVec 64) (s
         generalize hr : 128#64 - S₀.mem.readAt (sha.add 200#64) 64 = rem at *
         generalize hn : sz - rem = n at *
         finish_block
-        step_loop using fd_sha512_append.bulk_block sha data _ sz _ _ S₀.mem _ (hK := ?_)
+        run_from using fd_sha512_append.bulk_block sha data _ sz _ _ S₀.mem _ (hK := ?_)
         refine ⟨?_, ?_⟩
         · simp only [cores, MemoryState.readSha, hsz, hr, hbr, hn]
           split <;> simp_all

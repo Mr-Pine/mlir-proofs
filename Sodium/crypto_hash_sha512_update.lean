@@ -217,7 +217,7 @@ theorem blocks_loop (st inp tmp : Pointer) (inlen ast : BitVec 64) (M : MemorySt
     have hc : ¬(127#64).ult (BitVec.ofNat 64 (inlen.toNat - a - 128)) = true := by
       simp only [BitVec.ult, BitVec.toNat_ofNat, decide_eq_true_eq]; omega
     finish_block
-    step_loop using hK _ _ (SHA512_Transform.tmp w.state (BitVec.extractLsb' (8 * a) 1024 D))
+    run_from using hK _ _ (SHA512_Transform.tmp w.state (BitVec.extractLsb' (8 * a) 1024 D))
     rfl
   | succ j ih =>
     intro a w X S E ha1 ha2 hArgs hC hR hwf hM hK

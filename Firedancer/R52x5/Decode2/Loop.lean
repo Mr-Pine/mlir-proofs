@@ -139,7 +139,7 @@ theorem iter2 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact
         (Keeps.refl _ _).callTmp5 111 112 113 114 115 (by decide) (by decide) (by decide)
           (by decide) (by decide)
-  · step_loop using hback (counter_ne (by decide) hi hbr)
+  · run_from using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
     · repeat refine Writes.write ?_ (by decide)
       exact Writes.refl _ _ _
@@ -199,7 +199,7 @@ theorem iter4 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact
         (Keeps.refl _ _).callTmp5 141 142 143 144 145 (by decide) (by decide) (by decide)
           (by decide) (by decide)
-  · step_loop using hback (counter_ne (by decide) hi hbr)
+  · run_from using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
     · repeat refine Writes.write ?_ (by decide)
       exact Writes.refl _ _ _
@@ -259,7 +259,7 @@ theorem iter6 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact
         (Keeps.refl _ _).callTmp5 156 157 158 159 160 (by decide) (by decide) (by decide)
           (by decide) (by decide)
-  · step_loop using hback (counter_ne (by decide) hi hbr)
+  · run_from using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
     · repeat refine Writes.write ?_ (by decide)
       exact Writes.refl _ _ _
@@ -319,7 +319,7 @@ theorem iter8 {β : Type} (B : GlobalState) (M : MemoryState) (c : Nat)
       exact
         (Keeps.refl _ _).callTmp5 171 172 173 174 175 (by decide) (by decide) (by decide)
           (by decide) (by decide)
-  · step_loop using hback (counter_ne (by decide) hi hbr)
+  · run_from using hback (counter_ne (by decide) hi hbr)
     · exact (BitVec.ofNat_add i 1).symm
     · repeat refine Writes.write ?_ (by decide)
       exact Writes.refl _ _ _

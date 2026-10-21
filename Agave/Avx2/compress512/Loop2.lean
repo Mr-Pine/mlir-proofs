@@ -172,8 +172,8 @@ theorem iter13 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b c : Nat
   rw [ev] at hexit hback
   step_pure
   finish_block
-  · step_loop using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
-  · step_loop using
+  · run_from using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
+  · run_from using
       hback
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)
@@ -254,11 +254,11 @@ theorem iter15 (st Kp ms t2 ms2 : Pointer) (H H' : Vector (BitVec 64) 8) (b c : 
   rw [ev] at hexit
   step_pure
   finish_block
-  · step_loop using
+  · run_from using
       hexit
         (by
           have := eq_of_ofNat_eq hbr (by omega) (by decide); omega)
-  · step_loop using
+  · run_from using
       hback
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)
@@ -479,17 +479,17 @@ theorem iter12 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (b c : Nat
       uaddOverflow_ofNat (i := i) (k := 1) (by omega), ← BitVec.ofNat_add]
     step_pure
     finish_block
-    · step_loop using hdone (by omega) (eq_of_ofNat_eq hbr (by omega) (by decide))
+    · run_from using hdone (by omega) (eq_of_ofNat_eq hbr (by omega) (by decide))
     · block_init
       step_pure [ofNat_shiftLeft, ofNat_mul_ushiftRight (show (i + 1) * 2 ^ 7 < 2 ^ 64 by omega),
         ofNat_mul_sshiftRight (show (i + 1) * 2 ^ 7 < 2 ^ 63 by omega)]
       step_pure [gepDyn_slot hto (show (i + 1) * 128 * 1 < 2 ^ 63 by omega) (by omega)]
       finish_block
-      step_loop using
+      run_from using
         hgroup (by omega)
           (by
             have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)
-  · step_loop using
+  · run_from using
       hnext
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)

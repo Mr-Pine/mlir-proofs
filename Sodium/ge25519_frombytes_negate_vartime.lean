@@ -159,7 +159,7 @@ theorem tail (h buf u v v3 vxx mrc prc : Pointer) (b : BitVec 256) (X : Fin 5 â†
     step_pure
     step_call using fe25519_mul.call_eq
     finish_block
-    step_loop using hK
+    run_from using hK
     simp only [negBlocks, negated, sign, hsgn, â†“reduceIte, true_and]
   case isFalse =>
     -- fe25519_mul(h->T, h->X, h->Y); return 0;
@@ -167,7 +167,7 @@ theorem tail (h buf u v v3 vxx mrc prc : Pointer) (b : BitVec 256) (X : Fin 5 â†
     step_pure
     step_call using fe25519_mul.call_eq
     finish_block
-    step_loop using hK
+    run_from using hK
     simp only [negBlocks, negated, sign, hsgn, â†“reduceIte, hkeep, true_and]
 
 end ge25519_frombytes_negate_vartime

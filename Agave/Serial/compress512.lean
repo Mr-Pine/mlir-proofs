@@ -394,7 +394,7 @@ public theorem compress512.call_eq (st blocks : Pointer) (n : BitVec 64) (s : Gl
     rcases Nat.eq_zero_or_pos n.toNat with h | h
     · exact absurd (BitVec.eq_of_toNat_eq (by simpa using h)) hn
     · exact h
-  step_loop using
+  run_from using
     blocks_loop st blocks Kp (blocks.add (n <<< 7)) _ n.toNat _ S _ _ hB hdo hBr (by rw [shl7_eq])
       hKp_fits hKp_off (readAt_K hKp_fits hKp_off hread_Kp) (n.toNat - 1) 0 (S₀.mem.readSha512 st)
   intro hst'

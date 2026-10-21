@@ -382,7 +382,7 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar v : Pointer) (bits :
         decide_eq_true_eq] at hbr
       omega
     · rw [((carry_spec n hw hcb).1 (.inr (by omega)))] at hS
-      step_loop using hK
+      run_from using hK
   | succ m ih =>
     intro cw cb n E hArgs hm hcb hK
     replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs.symm)
@@ -407,9 +407,9 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar v : Pointer) (bits :
       simp only [carry_cond, ult_ofNat64 (show cw < 2 ^ 64 by omega) (show 4 < 2 ^ 64 by omega),
         decide_eq_true_eq] at hbr
       have hn := (carry_spec n hw hcb).2 hbr.1 hbr.2
-      step_loop using ih (cw + 1) 0 _ _ _ (by omega) (by omega)
+      run_from using ih (cw + 1) 0 _ _ _ (by omega) (by omega)
       rw [hn] at hS
-      step_loop using hK
+      run_from using hK
     · simp only [carry_cond, ult_ofNat64 (show cw < 2 ^ 64 by omega) (show 4 < 2 ^ 64 by omega),
         decide_eq_true_eq, not_and] at hbr
       rw [((carry_spec n hw hcb).1
@@ -420,7 +420,7 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar v : Pointer) (bits :
                   (by
                     have := hbr h; omega)
             · exact .inl h))] at hS
-      step_loop using hK
+      run_from using hK
 
 /-! ### The digit -/
 
@@ -508,7 +508,7 @@ theorem fd_curve25519_scalar_wnaf.store_digit (slides scalar v : Pointer) (bits 
     step_pure [← BitVec.ofNat_add]
     finish_block
     simp only [digit, hbr, ↓reduceIte] at hK
-    step_loop using hK
+    run_from using hK
   · -- `_t[pos] = (short)((long)d - (long)(mask+1UL));`, the carry from `pos+wid`
     rw [ushiftRight_eq_zero_iff] at hbr
     block_init
@@ -528,12 +528,12 @@ theorem fd_curve25519_scalar_wnaf.store_digit (slides scalar v : Pointer) (bits 
     step_pure [ofNat_ushiftRight_6 (show p + (B + 1) < 2 ^ 64 by omega)]
     finish_block
     simp only [digit, hbr, ↓reduceIte] at hK
-    step_loop using
+    run_from using
       fd_curve25519_scalar_wnaf.carry_loop slides scalar v bits B (p + (B + 1)) Sb hfv hwv hv _ g K
         (4 - (p + (B + 1)) / 64) ((p + (B + 1)) / 64) ((p + (B + 1)) % 64) _ _ _ (by omega)
         (by omega)
     rw [show 64 * ((p + (B + 1)) / 64) + (p + (B + 1)) % 64 = p + (B + 1) by omega] at hS
-    step_loop using hK
+    run_from using hK
 
 /-- `64 - b`, `nsw nuw`. -/
 theorem sub_64 (h : b ≤ 64) :
@@ -600,16 +600,16 @@ theorem fd_curve25519_scalar_wnaf.clear_window (slides scalar v : Pointer) (bits
     step_store
     rw [storeAt_limb hv hw1, clear_spill n hw (by omega) hb hB] at hS
     finish_block
-    step_loop using
+    run_from using
       fd_curve25519_scalar_wnaf.store_digit slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
         g K (64 * w + b) (by omega) n t
-    step_loop using hK
+    run_from using hK
   · simp only [decide_eq_true_eq] at hbr
     rw [clear_one n hw (by omega) hB] at hS
-    step_loop using
+    run_from using
       fd_curve25519_scalar_wnaf.store_digit slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
         g K (64 * w + b) (by omega) n t
-    step_loop using hK
+    run_from using hK
 
 /-- `ctz` of a non-zero `y >> b0` stays within `y`'s 64 bits. -/
 theorem ctz_ushiftRight_lt {y : BitVec 64} (h : y >>> b0 ≠ 0#64) :
@@ -682,10 +682,10 @@ theorem fd_curve25519_scalar_wnaf.read_window (slides scalar v : Pointer) (bits 
       have := congrArg BitVec.toNat hbr
       simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show b < 2 ^ 64 by omega)] at this
       exact this
-    step_loop using
+    run_from using
       fd_curve25519_scalar_wnaf.clear_window slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
         g K w 0 hw (by omega) n t
-    step_loop using hK
+    run_from using hK
   · -- `lo |= n[w+1]<<(64UL-b);`
     have hb0 : 0 < b := by
       rcases Nat.eq_zero_or_pos b with h | h
@@ -700,10 +700,10 @@ theorem fd_curve25519_scalar_wnaf.read_window (slides scalar v : Pointer) (bits 
     step_pure [Nat.mod_eq_of_lt (show 64 - b < 2 ^ 64 by omega), show ¬64 ≤ 64 - b by omega]
     step_pure [hd, hlo]
     finish_block
-    step_loop using
+    run_from using
       fd_curve25519_scalar_wnaf.clear_window slides scalar v bits B hB Sb hfs hws hso hfv hwv hv hne
         g K w b hw hb64 n t
-    step_loop using hK
+    run_from using hK
 
 /-! ### The scan -/
 
@@ -882,12 +882,12 @@ theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : 
         have := congrArg BitVec.toNat hbr
         simp only [BitVec.toNat_ofNat] at this
         omega
-      step_loop using hK16 (nextBit_eq_none fun i h1 h2 => hz' i h1 (by omega))
+      run_from using hK16 (nextBit_eq_none fun i h1 h2 => hz' i h1 (by omega))
     · have h3 : w + 1 < 3 := by
         rcases Nat.lt_or_ge (w + 1) 3 with h | h
         · exact h
         · exact absurd (by rw [show w + 1 = 3 by omega]) hbr
-      step_loop using hnext h3 hz'
+      run_from using hnext h3 hz'
   · -- `pos = w<<6`
     have hx0 : n.extractLsb' (64 * (w + 1)) 64 >>> 0 ≠ 0#64 := by
       rw [BitVec.ushiftRight_zero]; exact hbr
@@ -895,7 +895,7 @@ theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : 
     block_init
     step_pure [h1, h2, h3]
     finish_block
-    step_loop using
+    run_from using
       fd_curve25519_scalar_wnaf.read_window slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv hv
         hne g K (w + 1) 0 _ (64 * (w + 1)) (by omega) (by omega) n t _
         (BitVec.ushiftRight_zero _).symm hbr rfl
@@ -904,7 +904,7 @@ theorem fd_curve25519_scalar_wnaf.scan_iter (slides scalar v : Pointer) (bits : 
     have hn :=
       nextBit_limb_shift (pos := pos) (by omega) (by omega) (fun i h1 h2 => hz i h1 (by omega)) hx0
     rw [BitVec.ushiftRight_zero] at hn
-    step_loop using hK15 _ _ hn
+    run_from using hK15 _ _ hn
 
 /-- `^bb4`, the scan, past word `w = 2 - m`, nothing set from `pos` on: to `^bb16` or `^bb15`. -/
 theorem fd_curve25519_scalar_wnaf.scan_loop (slides scalar v : Pointer) (bits : BitVec 32) (B : Nat)
@@ -1011,10 +1011,10 @@ theorem fd_curve25519_scalar_wnaf.main_loop (slides scalar v : Pointer) (bits : 
       block_init
       step_pure [ult_ofNat64 (show p + (B + 1) < 2 ^ 64 by omega) (show 256 < 2 ^ 64 by omega)]
       finish_block
-      · step_loop using ih (p + (B + 1)) _ _ _ _ (by simpa using hbr) (by omega)
-        step_loop using hK
+      · run_from using ih (p + (B + 1)) _ _ _ _ (by simpa using hbr) (by omega)
+        run_from using hK
       · rw [loop_ge (by simpa using hbr)] at hK
-        step_loop using hK
+        run_from using hK
     have hK16 :
       nextBit n 256 pos = 256 →
         ∀ E' : ⟪fd_curve25519_scalar_wnaf.Γ⟫,
@@ -1049,21 +1049,21 @@ theorem fd_curve25519_scalar_wnaf.main_loop (slides scalar v : Pointer) (bits : 
           have := congrArg BitVec.toNat hbr
           simp only [BitVec.toNat_ofNat] at this
           omega
-        step_loop using hK16 (nextBit_eq_none fun i h1 h2 => hz i h1 (by omega))
+        run_from using hK16 (nextBit_eq_none fun i h1 h2 => hz i h1 (by omega))
       · have h3 : w < 3 := by
           rcases Nat.lt_or_ge w 3 with h | h
           · exact h
           · exact absurd (by rw [show w = 3 by omega]) hbr
-        step_loop using
+        run_from using
           fd_curve25519_scalar_wnaf.scan_loop slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv
             hv hne g K (64 * w + b0) n t hK16 hK15 (2 - w) w _ _ (by omega) (by omega)
             (fun i h1 h2 => hz i h1 (by omega))
     · -- `pos += find_lsb( x );`
       have hlt := ctz_ushiftRight_lt hbr
-      step_loop using
+      run_from using
         fd_curve25519_scalar_wnaf.read_window slides scalar v bits B hB Sb hwf hfs hws hso hfv hwv
           hv hne g K w b0 _ (64 * w + b0) rfl hw n t _ rfl hbr rfl (by omega)
-      step_loop using hK15 _ _ (nextBit_limb_shift hw le_rfl (fun i h1 h2 => by omega) hbr)
+      run_from using hK15 _ _ (nextBit_limb_shift hw le_rfl (fun i h1 h2 => by omega) hbr)
 
 /-! ### The function -/
 
@@ -1168,7 +1168,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   step_pure [(ssubOverflow_63 (B := B) (by omega)).1, (ssubOverflow_63 (B := B) (by omega)).2]
   finish_block
   clear_reads
-  step_loop using
+  run_from using
     fd_curve25519_scalar_wnaf.main_loop slides scalar v bits B (by omega)
       { alloc := (S₀.alloca 40 true).alloc,
         mem := (((S₀.alloca 40 true).mem.lifetimeStart v).storeAt slides 0#4096).storeAt v 0#320 }

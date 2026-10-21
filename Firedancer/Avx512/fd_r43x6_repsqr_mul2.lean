@@ -90,13 +90,13 @@ theorem fd_r43x6_repsqr_mul2.loop (S : GlobalState) (hwf : S.WF)
       obtain rfl : k = 0 := by
         simp [BitVec.toNat_eq] at hbr
         omega
-      step_loop using hK
+      run_from using hK
       all_goals rfl
     · -- back to the header, one iteration fewer
-      step_loop using ih xa' xb'
+      run_from using ih xa' xb'
       · simp [BitVec.toNat_eq] at hbr
         omega
-      step_loop using hK
+      run_from using hK
       all_goals subst_vars; rfl
 
 /-- `repsqr_mul2` stores `spec xa ya n` at `_za`, then `spec xb yb n` at `_zb`. -/
@@ -137,7 +137,7 @@ public theorem fd_r43x6_repsqr_mul2.call_eq (za zb : Pointer) (xa ya xb yb : Wwl
     simp [fd_r43x6_repsqr_mul2.spec, fd_r43x6_repsqr_mul2.sqrN, fd_r43x6_mul, MemoryState.storeVec]
   case isFalse =>
     -- `^bb1`: the squaring loop, `n` times
-    step_loop using fd_r43x6_repsqr_mul2.loop _ _ _ n.toNat xa xb
+    run_from using fd_r43x6_repsqr_mul2.loop _ _ _ n.toNat xa xb
     · simp [BitVec.toNat_eq, hzero] at hbr
       omega
     -- `^bb2`, `FD_R43X6_MUL2_INL` on the squarings

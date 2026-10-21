@@ -21,10 +21,9 @@ public theorem slide.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.WF)
   have hfill : S = { S₀ with mem := fill S₀ r (BitVec.packLanes (bits (S₀.mem.readAt a 256))) 0 } := by
     rw [h0, hS]
   rw [hfill]
-  step_loop using BL _ 127 0
-  step_loop using ML _ 255 0 _
+  run_from using BL _ 127 0
+  run_from using ML _ 255 0 _
   block_init
   finish_block
   rw [hS]
   rfl
-

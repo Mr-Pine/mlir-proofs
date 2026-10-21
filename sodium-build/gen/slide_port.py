@@ -62,11 +62,11 @@ pat = re.compile(r"""(  -- else if \(r\[i\] - \(r\[i \+ b\] << b\) >= -15\)
   finish_block
 )  · rw \[window_sub \(by decide\) hib h0 h1 hbr\] at hK
 ((?:    [^\n]*\n)*)  rw \[window_break \(by decide\) hib h0 h1 hbr\] at hK
-  step_loop using hK
+  run_from using hK
 """)
 def swap(m):
     body = ''.join(l[2:] + '\n' for l in m.group(2).rstrip('\n').split('\n'))
-    return (m.group(1) + "  · rw [window_break (by decide) hib h0 h1 hbr] at hK\n    step_loop using hK\n"
+    return (m.group(1) + "  · rw [window_break (by decide) hib h0 h1 hbr] at hK\n    run_from using hK\n"
             + "  rw [window_sub (by decide) hib h0 h1 hbr] at hK\n" + body)
 t, n = pat.subn(swap, t)
 assert n == 6, n

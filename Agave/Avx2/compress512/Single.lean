@@ -219,7 +219,7 @@ public theorem single (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Ve
     hread_ms_112 hq0f hq1f hq2f hq3f hq4f hq5f hq6f hq7f
   have L := loop5 st Kp ms t2 ms2 H (bsched B) H g K hmo hKo hms_K (sched_bsched B) 31 0
   simp only [Nat.mul_zero, Nat.zero_add, rounds_zero, Nat.zero_div, Nat.zero_mod] at L
-  step_loop using L
+  run_from using L
   intro hL
   clear L
   have hR6 : HoldsR S.mem ms (bsched B) 64 80 := by
@@ -228,7 +228,7 @@ public theorem single (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Ve
         (Room.pairsMem_iff.1 (hS ▸ hF.room (by mem_fact))) (by decide) (by decide) hR
     rw [hS]; simpa using this
   clear hR
-  step_loop using loop6 st Kp ms t2 ms2 H (bsched B) H S g K hmo hF hR6 15 64
+  run_from using loop6 st Kp ms t2 ms2 H (bsched B) H S g K hmo hF hR6 15 64
   intro hL
   clear hK hR6 hKf hF
   -- `state`'s block through the pairs' stores, which the steps do not unfold
@@ -270,7 +270,7 @@ public theorem single (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Ve
     rw [hS, ← e40, ← hmem]; rfl
   clear e40 hmem
   finish_block
-  step_loop using hK'
+  run_from using hK'
 
 end Proof
 

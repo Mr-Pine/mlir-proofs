@@ -209,7 +209,7 @@ theorem quad_loop (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Memo
     intro i S E hArgs hR hk hwf hA hM
     quad_body
     finish_block
-    · step_loop using ret_block st inp tmp inlen R M w A g K hK
+    · run_from using ret_block st inp tmp inlen R M w A g K hK
       rw [store_chunk (c := 1) (wd := 8) hMf rfl (by omega) rfl,
         store_chunk (c := 1) (wd := 8) hMf rfl (by omega) rfl,
         store_chunk (c := 1) (wd := 8) hMf rfl (by omega) rfl,
@@ -228,7 +228,7 @@ theorem quad_loop (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Memo
     · have := congrArg BitVec.toNat hbr
       simp at this
       omega
-    · step_loop using ih (i + 4)
+    · run_from using ih (i + 4)
       all_goals
         first
         | omega
@@ -278,10 +278,10 @@ theorem prologue_done (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : 
   step_pure
   finish_block
   · rw [sub_ugt_iff (by omega)] at hbr
-    step_loop using ret_block st inp tmp inlen R M w A g K hK
+    run_from using ret_block st inp tmp inlen R M w A g K hK
     rw [show i0 + inlen.toNat % 4 = inlen.toNat by omega]
   · rw [sub_ugt_iff (by omega)] at hbr
-    step_loop using
+    run_from using
       quad_loop st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
         ((inlen.toNat - (i0 + inlen.toNat % 4)) / 4 - 1) (i0 + inlen.toNat % 4)
 
@@ -333,7 +333,7 @@ theorem pro_loop (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Memor
     step_pure [← BitVec.ofNat_add]
     step_pure
     finish_block
-    · step_loop using prologue_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK i0
+    · run_from using prologue_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK i0
       all_goals
         first
         | omega
@@ -367,7 +367,7 @@ theorem pro_loop (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Memor
       rw [toNat_and_3] at this
       simp at this
       omega
-    · step_loop using ih (j + 1)
+    · run_from using ih (j + 1)
       all_goals
         first
         | omega
@@ -405,13 +405,13 @@ theorem bytes_entry (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Me
   · have h3 : inlen.toNat % 4 = 0 := by
       have := congrArg BitVec.toNat hbr
       rwa [toNat_and_3] at this
-    step_loop using prologue_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK i0
+    run_from using prologue_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK i0
   · have h3 : inlen.toNat % 4 ≠ 0 := fun h =>
       hbr
         (BitVec.eq_of_toNat_eq
           (by
             rw [toNat_and_3]; exact h))
-    step_loop using
+    run_from using
       pro_loop st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK i0 hi0 hlt
         (inlen.toNat % 4 - 1) 0
 
@@ -480,13 +480,13 @@ theorem word_loop (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Memo
           rw [hS, hM, packLanes_ofFn_extractVecElem,
             store_chunk (c := 4) (wd := 32) hMf rfl (by omega) rfl,
             show i + 4 = inlen.toNat by omega]
-        step_loop using ret_block st inp tmp inlen R M w A g K hK
+        run_from using ret_block st inp tmp inlen R M w A g K hK
       · have e : inlen.toNat ≠ inlen.toNat / 4 * 4 := fun e =>
           hbr
             (BitVec.eq_of_toNat_eq
               (by
                 rw [toNat_and_neg4]; exact e))
-        step_loop using
+        run_from using
           bytes_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK (i + 4)
         all_goals
           first
@@ -520,7 +520,7 @@ theorem word_loop (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Memo
       rw [toNat_and_neg4] at this
       simp at this
       omega
-    · step_loop using ih (i + 4)
+    · run_from using ih (i + 4)
       all_goals
         first
         | omega
@@ -557,7 +557,7 @@ theorem word_entry (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Mem
     have := toNat_and_neg4 inlen
     rw [BitVec.toNat_and] at this
     exact this
-  step_loop using
+  run_from using
     word_loop st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
       ((inlen.toNat / 4 * 4 - i0) / 4 - 1) i0
 
@@ -614,7 +614,7 @@ theorem chunks_done (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Me
     have hM' :
       S.mem = M.storeHashState st (filled w R (M.readAt inp (8 * inlen.toNat)) inlen.toNat) := by
       rw [hM, ← e]
-    step_loop using ret_block st inp tmp inlen R M w A g K hK
+    run_from using ret_block st inp tmp inlen R M w A g K hK
   · have e : inlen.toNat ≠ inlen.toNat / 32 * 32 := fun e =>
       hbr
         (BitVec.eq_of_toNat_eq
@@ -625,7 +625,7 @@ theorem chunks_done (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Me
     finish_block
     · have e28 := congrArg BitVec.toNat hbr
       rw [toNat_and_28] at e28
-      step_loop using
+      run_from using
         bytes_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
           (inlen.toNat / 32 * 32)
       all_goals
@@ -638,7 +638,7 @@ theorem chunks_done (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat) (M : Me
           (BitVec.eq_of_toNat_eq
             (by
               rw [toNat_and_28]; exact e))
-      step_loop using
+      run_from using
         word_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK (inlen.toNat / 32 * 32)
       all_goals
         first
@@ -679,17 +679,17 @@ public theorem short_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
   step_pure
   finish_block
   · -- inlen < 4
-    step_loop using bytes_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK 0
+    run_from using bytes_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK 0
   · have h4 : 4 ≤ inlen.toNat := by simpa [BitVec.ult] using hbr
     block_init
     iterate 4 step_pure
     finish_block
     · -- the alias check: `buf + r` within 31 bytes past `in`
-      step_loop using bytes_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK 0
+      run_from using bytes_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK 0
     · block_init
       step_pure
       finish_block
-      · step_loop using word_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK 0
+      · run_from using word_entry st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK 0
       · have h32 : 32 ≤ inlen.toNat := by simpa [BitVec.ult] using hbr
         obtain ⟨hf0, hr0⟩ := inp_chunk (i := 0) (c := 16) (w := 128) hM hsep hin hino rfl (by omega)
         obtain ⟨hf1, hr1⟩ :=
@@ -721,7 +721,7 @@ public theorem short_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
               M.storeHashState st
                 (filled w R (M.readAt inp (8 * inlen.toNat)) (inlen.toNat / 32 * 32)) := by
             rw [hM32, e]
-          step_loop using chunks_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
+          run_from using chunks_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
         · have e : inlen.toNat / 32 * 32 ≠ 32 := fun e =>
             hbr
               (BitVec.eq_of_toNat_eq
@@ -765,7 +765,7 @@ public theorem short_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
                 M.storeHashState st
                   (filled w R (M.readAt inp (8 * inlen.toNat)) (inlen.toNat / 32 * 32)) := by
               rw [hM64, e]
-            step_loop using chunks_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
+            run_from using chunks_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
           · have e' : inlen.toNat / 32 * 32 ≠ 64 := fun e' =>
               hbr
                 (BitVec.eq_of_toNat_eq
@@ -807,6 +807,6 @@ public theorem short_block (st inp tmp : Pointer) (inlen : BitVec 64) (R : Nat)
                 packLanes_ofFn_extractVecElem,
                 store_chunk (k := 80) (c := 16) (wd := 128) hMf rfl (by omega) rfl,
                 show inlen.toNat / 32 * 32 = 96 by omega]
-            step_loop using chunks_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
+            run_from using chunks_done st inp tmp inlen R M w A hMf hin hino hsep hRlt hn g K hK
 
 end MLIR.Sodium.crypto_hash_sha512_update

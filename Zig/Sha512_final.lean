@@ -161,7 +161,7 @@ theorem len_loop (d out : Pointer) (R : PoisonOr (Vals [] × GlobalState))
     block_init
     step_pure
     finish_block
-    step_loop using hK
+    run_from using hK
   | succ m ih =>
     intro i x S E hi hi1 hArgs hr hK
     have hs1 : (127#64).ssubOverflow (BitVec.ofNat 64 i) = false := by
@@ -198,7 +198,7 @@ theorem len_loop (d out : Pointer) (R : PoisonOr (Vals [] × GlobalState))
       step_pure
       step_pure [o1, o2, ← BitVec.ofNat_add]
       finish_block
-      step_loop using ih (i + 1) (x >>> 8)
+      run_from using ih (i + 1) (x >>> 8)
       have hA : E₀.args = (Sha512_final.args (.value d) (.value out)).get := by
         rw [hE] at hArgs; simpa only [Env.write_args] using hArgs
       rw [hE, hS]
@@ -314,7 +314,7 @@ theorem out_loop (d out : Pointer) (f : Nat → BitVec 64) (R : PoisonOr (Vals [
       step_store consuming hfo
       step_pure [o1, o2, ← BitVec.ofNat_add]
       finish_block
-      step_loop using ih (j + 1)
+      run_from using ih (j + 1)
       · exact hw'
       · exact hfin
 
@@ -352,7 +352,7 @@ theorem fromBB1 (d out : Pointer) (S : GlobalState) (E : ⟪Γ⟫) (R : PoisonOr
   step_pure
   step_store consuming hf207
   finish_block
-  step_loop using len_loop d out R hdo 15 1 (T >>> 5)
+  run_from using len_loop d out R hdo 15 1 (T >>> 5)
   have hwf5 : S.WF := by
     rw [hS]; exact wf_lenStores 15 1 (T >>> 5) _ hwf
   have hdf5 : Fits S.mem d 640 := by
@@ -371,7 +371,7 @@ theorem fromBB1 (d out : Pointer) (S : GlobalState) (E : ⟪Γ⟫) (R : PoisonOr
   step_call using Sha512_round.call_eq consuming hwf5 hbuf5
   step_pure
   finish_block
-  step_loop using out_loop d out (fun k => (Sha512Obj.state S.mem d)[k]!) R hdo hoo hsep 8 0
+  run_from using out_loop d out (fun k => (Sha512Obj.state S.mem d)[k]!) R hdo hoo hsep 8 0
   · intro k hk
     simp [Sha512Obj.state, hk]
   · exact hfin
@@ -404,7 +404,7 @@ theorem bb2_run (d out : Pointer) (A : AllocState) (M : MemoryState) (E : ⟪Γ�
   step_call using Sha512_round.call_eq consuming hwf hdf hbuf hdr
   step_memset consuming hmz
   finish_block
-  step_loop using hK
+  run_from using hK
 
 theorem SameBlocks.lenStores {m m' : MemoryState} (h : Sha512_update.SameBlocks m m')
     {d : Pointer} :
@@ -541,7 +541,7 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Sh
                   (Sha512_update.roundState S d (d.add 80#64)).mem.storeAt (d.add 80#64) 0#1024 }
               d out) := by
       rw [hS] at hwf hdr hdf hb1024 ho ⊢
-      step_loop using
+      run_from using
         bb2_run d out _ _ (hwf := hwf) (hdr := hdr) (hdf := hdf) (hbuf := hb1024) (hdo := hdo)
       have hwf2 : S.WF := by
         rw [hS]; exact (Sha512_update.roundState_wf hwf).storeAt
@@ -561,7 +561,7 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Sh
       have ho2 : Room S.mem out 512 := by
         rw [hS]; exact (Sha512_update.room_roundState.2 ho).storeAt
       clear hwf hdr hdf hb1024 ho
-      step_loop using fromBB1 d out S (hfin := rfl)
+      run_from using fromBB1 d out S (hfin := rfl)
     rw [hrun, PoisonOr.value_bind]
     subst hS
     rw [fin_eq hwf₀
@@ -577,7 +577,7 @@ public theorem call_eq (d out : Pointer) (s : GlobalState) (hwf : s.WF) (hd : Sh
       simp [BitVec.ult] at hbr; omega
     clear hread_d_208 hfits_d_0
     have hrun : Sha512_final.runFrom E 1 S = .value (.nil, fromLen S d out) := by
-      step_loop using fromBB1 d out S (hbuf := hb1024) (hfin := rfl)
+      run_from using fromBB1 d out S (hbuf := hb1024) (hfin := rfl)
     rw [hrun, PoisonOr.value_bind]
     subst hS
     rw [fin_eq hwf₀

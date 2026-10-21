@@ -114,12 +114,12 @@ theorem FieldElement51_pow2k.loop (S : GlobalState) (K : PoisonOr (Vals [] × Gl
       obtain rfl : k = 0 := by
         simp [BitVec.toNat_eq] at hbr
         omega
-      step_loop using hK
+      run_from using hK
     · -- back to the header, one pass fewer
-      step_loop using ih (FieldElement51_pow2k.square a)
+      run_from using ih (FieldElement51_pow2k.square a)
       · simp [BitVec.toNat_eq] at hbr
         omega
-      step_loop using hK
+      run_from using hK
 
 /-- `a.pow2k(k)` stores `spec a k` at `out`, for `0 < k < 2^31` (the counter's `k -= 1` is
 `nsw`). The loads all come before the stores, so `out` may alias `a`. -/
@@ -141,7 +141,7 @@ public theorem FieldElement51_pow2k.call_eq (out a : Pointer) (k : BitVec 32) (s
     step_pure
     step_load
   finish_block
-  step_loop using FieldElement51_pow2k.loop _ _ k.toNat (S₀.mem.readLimbs a)
+  run_from using FieldElement51_pow2k.loop _ _ k.toNat (S₀.mem.readLimbs a)
   block_init
   step_store
   iterate 4

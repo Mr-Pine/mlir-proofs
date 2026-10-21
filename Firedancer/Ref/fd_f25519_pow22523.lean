@@ -76,11 +76,11 @@ local macro "iter_proof" : tactic =>
       step_pure [saddOverflow_one32 (i := i) (by omega), uaddOverflow_one32 (i := i) (by omega)]
       step_pure
       finish_block
-      · step_loop using
+      · run_from using
           hexit
             (by
               simp [BitVec.toNat_eq] at hbr; omega)
-      · step_loop using
+      · run_from using
           hback
             (by
               simp [BitVec.toNat_eq] at hbr; omega)
@@ -96,7 +96,7 @@ local macro "mul_sqr_proof" : tactic =>
       step_call using fd_f25519_mul.call_eq
       step_call using fd_f25519_sqr.call_eq
       finish_block
-      step_loop using hK))
+      run_from using hK))
 
 /-- A square, its result's limbs named `x`. -/
 local macro "sqr " x:ident : tactic =>
@@ -114,13 +114,13 @@ set_option hygiene false in
 /-- A loop from counter `1`, `n + 1` squarings, its limbs named `x`. -/
 local macro "loop " x:ident " using " it:ident n:num : tactic =>
   `(tactic|
-    ( step_loop using loop_of_iter ($it _ _ _) $n 1
+    ( run_from using loop_of_iter ($it _ _ _) $n 1
       name_limbs $x))
 
 /-- A block between two loops: its product named `x`, the square `y`. -/
 local macro "between " x:ident y:ident " using " b:ident : tactic =>
   `(tactic|
-    ( step_loop using $b _ _ _
+    ( run_from using $b _ _ _
       name_limbs $y
       name_limbs $x))
 

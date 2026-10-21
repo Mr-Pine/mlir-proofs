@@ -174,7 +174,7 @@ theorem bits_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_pure
     finish_block
     · rw [show j + 1 + 1 = 256 by omega, fill_full] at hS
-      step_loop using hK
+      run_from using hK
     · exact absurd (by rw [show j + 2 = 256 by omega]) hbr
   | succ n ih =>
     intro j E hArgs hj he hK
@@ -214,6 +214,5 @@ theorem bits_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_pure
     finish_block
     · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-    · step_loop using ih (j + 2) _ _ (by omega) (by omega)
-      step_loop using hK
-
+    · run_from using ih (j + 2) _ _ (by omega) (by omega)
+      run_from using hK

@@ -476,7 +476,7 @@ theorem loop1 (d b V W : Pointer) (B : BitVec 1024) (R : PoisonOr (Vals [] × Gl
     block_init
     step_pure
     finish_block
-    step_loop using hK
+    run_from using hK
   | succ m ih =>
     intro i S E hi hArgs hwf hWr hbf hB hK
     obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := shl3_facts (i := i) (by omega)
@@ -513,7 +513,7 @@ theorem loop1 (d b V W : Pointer) (B : BitVec 1024) (R : PoisonOr (Vals [] × Gl
       step_store consuming hfw
       step_pure [o1, o2, ← BitVec.ofNat_add]
       finish_block
-      step_loop using ih (i + 1)
+      run_from using ih (i + 1)
       rw [hE, hS]
       exact hK E₀ hArgs₀
 
@@ -578,7 +578,7 @@ theorem loop2 (d b V W : Pointer) (Wf : Nat → BitVec 64) (R : PoisonOr (Vals [
     block_init
     step_pure
     finish_block
-    step_loop using hK
+    run_from using hK
   | succ m ih =>
     intro i S E hi hi16 hArgs hwf hWr hH hK
     obtain ⟨-, -, -, h4, h5, -, h7⟩ := shl3_facts (i := i) (by omega)
@@ -628,7 +628,7 @@ theorem loop2 (d b V W : Pointer) (Wf : Nat → BitVec 64) (R : PoisonOr (Vals [
       step_pure [o1, o2, ← BitVec.ofNat_add]
       finish_block
       rw [sched_eq, ← hrec i hi16 (by omega)] at hS
-      step_loop using ih (i + 1)
+      run_from using ih (i + 1)
       rw [hE, hS]
       exact hK E₀ hArgs₀
 
@@ -704,7 +704,7 @@ theorem loop3 (d V : Pointer) (Hf vf : Nat → BitVec 64) (R : PoisonOr (Vals []
       step_store consuming fd
       step_pure [o1, o2, ← BitVec.ofNat_add]
       finish_block
-      step_loop using ih (i + 1)
+      run_from using ih (i + 1)
       · exact hd'
       · exact hR
 
@@ -804,7 +804,7 @@ theorem block5 (d V W : Pointer) (Wf : Nat → BitVec 64) (a b c dd e f g h : Bi
     step_store
   finish_block
   rw [hv] at hK
-  step_loop using hK
+  run_from using hK
 
 /-! ## The spec's words -/
 
@@ -938,7 +938,7 @@ public theorem Sha512_round.call_eq (d b : Pointer) (s : GlobalState) (hwf : s.W
                       S₀.mem.readAt (d.add 48#64) 64, S₀.mem.readAt (d.add 56#64) 64,
                       S₀.mem.readAt (d.add 64#64) 64, S₀.mem.readAt (d.add 72#64) 64])) }) := by
     clear hWf
-    step_loop using loop1 d b V W B _ hW_off hbo hb_ne_W.symm 16 0
+    run_from using loop1 d b V W B _ hW_off hbo hb_ne_W.symm 16 0
     have hwf1 : S.WF := hS ▸ wf_stores 16 0 _ hwf
     have hW1 : Room S.mem W 5120 := hS ▸ room_stores.2 hW_room
     have h16' : HoldsW S.mem W Wf 16 := hS ▸ h16

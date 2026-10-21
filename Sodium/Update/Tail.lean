@@ -15,7 +15,7 @@ set_option hygiene false in
 local macro "to45" : tactic =>
   `(tactic|
     ( have h := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-      step_loop using tail45_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK S
+      run_from using tail45_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK S
       all_goals
         first
         | omega
@@ -280,7 +280,7 @@ theorem bytes4_loop (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M : 
       uaddOverflow_ofNat64 (i := i) (k := 4) (by omega), ← BitVec.ofNat_add]
     step_pure [ofNat64_eq_iff (show i + 4 < 2 ^ 64 by omega) hm64]
     finish_block
-    · step_loop using
+    · run_from using
         done_block st tmp M _ A (htmp := htmp) (hK := hK) (hA := by rw [hS, hA]) (hM := by
           rw [hM, show i + 3 + 1 = m by omega])
     · exact absurd ((ofNat64_eq_iff (by omega) hm64).2 (by omega)) hbr
@@ -303,7 +303,7 @@ theorem bytes4_loop (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M : 
     finish_block
     · have := (ofNat64_eq_iff (by omega) hm64).1 hbr
       omega
-    · step_loop using ih (i + 4)
+    · run_from using ih (i + 4)
 
 /-- `^bb52`, from byte `j = i0 + m % 4`: done if fewer than 4 bytes were left at `i0`, else the
 4x-unrolled loop. -/
@@ -326,10 +326,10 @@ theorem tail52_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M :
   step_pure [ugt_neg4 hlt (by omega)]
   finish_block
   all_goals simp only [decide_eq_true_eq] at hbr
-  · step_loop using
+  · run_from using
       done_block st tmp M _ A (htmp := htmp) (hK := hK) (hA := hA) (hM := by
         rw [hM, show j = m by omega])
-  · step_loop using
+  · run_from using
       bytes4_loop st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK ((m - j) / 4 - 1) j
 
 /-- `^bb51`, the byte prologue from byte `i = i0 + c`, `k + 1` bytes left of `m % 4`. -/
@@ -363,7 +363,7 @@ theorem prologue_loop (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M 
     step_pure [← BitVec.ofNat_add]
     step_pure
     finish_block
-    · step_loop using
+    · run_from using
         tail52_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK i0 (i0 + c + 1)
     · exact absurd ((ofNat64_eq_iff (by omega) (by omega)).2 (by omega)) hbr
   | succ k ih =>
@@ -377,7 +377,7 @@ theorem prologue_loop (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M 
     finish_block
     · have := (ofNat64_eq_iff (by omega) (by omega)).1 hbr
       omega
-    · step_loop using ih (c + 1)
+    · run_from using ih (c + 1)
 
 /-- `^bb50`, the scalar copy from byte `i0`, a multiple of 4 below `m`. -/
 theorem tail50_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M : MemoryState)
@@ -400,10 +400,10 @@ theorem tail50_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M :
   step_pure
   finish_block
   · have h0 : m % 4 = 0 := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-    step_loop using
+    run_from using
       tail52_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK i0 i0 S
   · have h0 : m % 4 ≠ 0 := fun h => hbr ((ofNat64_eq_iff (by omega) (by decide)).2 h)
-    step_loop using
+    run_from using
       prologue_loop st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK i0 hi0 hlt
         (m % 4 - 1) 0 S
 
@@ -439,11 +439,11 @@ theorem word_loop (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M : Me
       step_pure
       finish_block
       · have h0 := (ofNat64_eq_iff hm64 (by omega)).1 hbr
-        step_loop using
+        run_from using
           done_block st tmp M _ A (htmp := htmp) (hK := hK) (hA := by rw [hS, hA]) (hM := by
             rw [hM, show i + 4 = m by omega])
       · have h0 : m ≠ m / 4 * 4 := fun h => hbr ((ofNat64_eq_iff hm64 (by omega)).2 h)
-        step_loop using
+        run_from using
           tail50_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK (m / 4 * 4)
         all_goals
           first
@@ -460,7 +460,7 @@ theorem word_loop (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M : Me
     finish_block
     · have := (ofNat64_eq_iff (by omega) (by omega)).1 hbr
       omega
-    · step_loop using ih (i + 4)
+    · run_from using ih (i + 4)
 
 /-- `^bb47`, the 4-byte vector loop's entry at byte `i0`, a multiple of 4 below `m & 124`. -/
 theorem tail47_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M : MemoryState)
@@ -481,7 +481,7 @@ theorem tail47_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M :
   block_init
   step_pure [and_ofNat64 hm64 (show 124 < 2 ^ 64 by decide), and124 m hm]
   finish_block
-  step_loop using
+  run_from using
     word_loop st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK
       ((m / 4 * 4 - i0) / 4 - 1) i0 S
 
@@ -505,17 +505,17 @@ theorem tail45_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat) (M :
   step_pure
   finish_block
   · have h0 := (ofNat64_eq_iff hm64 (by omega)).1 hbr
-    step_loop using
+    run_from using
       done_block st tmp M _ A (htmp := htmp) (hK := hK) (hA := hA) (hM := by rw [hM, ← h0])
   · have h0 : m ≠ m / 16 * 16 := fun h => hbr ((ofNat64_eq_iff hm64 (by omega)).2 h)
     block_init
     step_pure
     finish_block
     · have h1 := (ofNat64_eq_iff (by omega) (by decide)).1 hbr
-      step_loop using
+      run_from using
         tail50_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK (m / 16 * 16) S
     · have h1 : m % 16 / 4 * 4 ≠ 0 := fun h => hbr ((ofNat64_eq_iff (by omega) (by decide)).2 h)
-      step_loop using
+      run_from using
         tail47_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK (m / 16 * 16) S
 
 /-- All of `D`'s bytes. -/
@@ -572,24 +572,24 @@ public theorem tail_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat)
   finish_block
   · have h0 := (ofNat64_eq_iff hm64 (by decide)).1 hbr
     subst h0
-    step_loop using done_block st tmp M _ A (htmp := htmp) (hK := hK) (hA := hA) (hM := hM)
+    run_from using done_block st tmp M _ A (htmp := htmp) (hK := hK) (hA := hA) (hM := hM)
   have h0 : m ≠ 0 := fun h => hbr ((ofNat64_eq_iff hm64 (by decide)).2 h)
   -- fewer than 4 bytes: scalar
   block_init
   step_pure [ult_ofNat64 hm64 (show 4 < 2 ^ 64 by decide)]
   finish_block
-  · step_loop using tail50_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK 0 S
+  · run_from using tail50_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK 0 S
   have h4 : 4 ≤ m := by simpa using hbr
   -- the alias check: scalar if the buffer may overlap `in`
   block_init
   iterate 3 step_pure
   finish_block
-  · step_loop using tail50_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK 0 S
+  · run_from using tail50_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK 0 S
   -- fewer than 16 bytes: the 4-byte loop
   block_init
   step_pure [ult_ofNat64 hm64 (show 16 < 2 ^ 64 by decide)]
   finish_block
-  · step_loop using tail47_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK 0 S
+  · run_from using tail47_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK 0 S
   have h16 : 16 ≤ m := by simpa using hbr
   -- the 16-byte chunks, `m & 112` bytes
   block_init
@@ -645,7 +645,7 @@ public theorem tail_block (st inp tmp p : Pointer) (inlen : BitVec 64) (m : Nat)
   copy_pair 96 104hfits_st_176 hfits_st_184
   finish_block
   have h7 : m / 16 * 16 = 112 := by omega
-  step_loop using tail45_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK S
+  run_from using tail45_block st inp tmp p inlen m M w D A hMf hp hpo hD hsep htmp hm g K hK S
   all_goals
     first
     | omega

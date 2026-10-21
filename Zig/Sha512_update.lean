@@ -239,7 +239,7 @@ theorem loop_iter (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) 
   step_pure
   step_pure [h1, h2]
   finish_block
-  · step_loop using
+  · run_from using
       hexit
         (by
           simp [BitVec.ult] at hbr; omega)
@@ -258,7 +258,7 @@ theorem loop_iter (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) 
     block_init
     step_call using Sha512_round.call_eq consuming hwf hdf hdw hfb hbf
     finish_block
-    step_loop using hback hoff
+    run_from using hback hoff
 
 /-- `bb4`/`bb5` from offset `off`, `c` whole blocks left: their rounds, then `bb6`. -/
 theorem loop (d b : Pointer) (n : BitVec 64) (R : PoisonOr (Vals [] × GlobalState))
@@ -477,7 +477,7 @@ theorem fromBB3 (d b : Pointer) (n : BitVec 64) (off : Nat) (S : GlobalState) (E
   have hdo' : d.offset.toNat + 80 < 2 ^ 64 := by omega
   block_init
   finish_block
-  step_loop using loop d b n R hn hdo' hbo ((n.toNat - off) / 128) off S
+  run_from using loop d b n R hn hdo' hbo ((n.toNat - off) / 128) off S
   have hA : E₀.args = (Sha512_update.args (.value d) (.value b) (.value n)).get := by
     rw [hE] at hArgs; simpa only [Env.write_args] using hArgs
   rw [hE, hS]
@@ -621,7 +621,7 @@ public theorem call_eq (d b : Pointer) (n : BitVec 64) (s : GlobalState) (hwf : 
     have h2 : (Sha512Obj.totalLen S.mem d).toNat + n.toNat < 2 ^ 128 := by
       rw [hS]; omega
     have hrun : Sha512_update.runFrom E 3 S = .value (.nil, fromState S d b n 0) := by
-      step_loop using fromBB3 d b n 0 S (hbl := h1) (hT := h2) (hfin := rfl)
+      run_from using fromBB3 d b n 0 S (hbl := h1) (hT := h2) (hfin := rfl)
     rw [hrun, PoisonOr.value_bind]
     subst hS
     simp only [post, hb0, hbr]
@@ -715,7 +715,7 @@ public theorem call_eq (d b : Pointer) (n : BitVec 64) (s : GlobalState) (hwf : 
       have hrun :
         Sha512_update.runFrom E 3 (headState S₀ d b bl) =
           .value (.nil, fromState (headState S₀ d b bl) d b n (128 - bl.toNat)) := by
-        step_loop using
+        run_from using
           fromBB3 d b n (128 - bl.toNat) (headState S₀ d b bl) (hoffn := by omega) (hwf :=
             headState_wf hwf₀) (hdr := room_headState.2 hdr₀) (hdf := Fits.headState hdf₀) (hf208 :=
             Fits.headState hf208₀) (hbf := Fits.headState hbf₀) (hbl := h1) (hT := h2) (hfin := rfl)
@@ -730,7 +730,7 @@ public theorem call_eq (d b : Pointer) (n : BitVec 64) (s : GlobalState) (hwf : 
       have h2 : (Sha512Obj.totalLen S.mem d).toNat + n.toNat < 2 ^ 128 := by
         rw [hS]; omega
       have hrun : Sha512_update.runFrom E 3 S = .value (.nil, fromState S d b n 0) := by
-        step_loop using fromBB3 d b n 0 S (hbl := h1) (hT := h2) (hfin := rfl)
+        run_from using fromBB3 d b n 0 S (hbl := h1) (hT := h2) (hfin := rfl)
       rw [hrun, PoisonOr.value_bind]
       subst hS
       simp only [post, hb0]

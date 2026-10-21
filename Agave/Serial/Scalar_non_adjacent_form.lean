@@ -255,9 +255,9 @@ theorem Scalar_non_adjacent_form.main_loop (naf scalar xu : Pointer) (w : BitVec
         finish_block
         · rw [ofNat_eq_ofNat_iff (by omega) (by omega)] at hbr
           rw [loop_ge (show 256 ≤ pos + 1 by omega)] at hK
-          step_loop using hK
+          run_from using hK
         · rw [ofNat_eq_ofNat_iff (by omega) (by omega)] at hbr
-          step_loop using ih (pos + 1) c t _ _ (by omega) (by omega) hc hK
+          run_from using ih (pos + 1) c t _ _ (by omega) (by omega) hc hK
       · -- `naf[pos] = …; pos += w;`
         rw [and_one_eq_zero_iff, ow] at hbr
         have hpm : pos % 18446744073709551616 < 18446744073709551616 := Nat.mod_lt _ (by decide)
@@ -276,10 +276,10 @@ theorem Scalar_non_adjacent_form.main_loop (naf scalar xu : Pointer) (w : BitVec
           · simp only [decide_eq_true_eq] at hbr
             block_init
             finish_block
-            step_loop using ih (pos + W) 0 _ _ _ hbr (by omega) (by omega) hK
+            run_from using ih (pos + W) 0 _ _ _ hbr (by omega) (by omega) hK
           · simp only [decide_eq_true_eq] at hbr
             rw [loop_ge (by omega)] at hK
-            step_loop using hK
+            run_from using hK
         · rw [loop_odd_hi hpos hbr hl] at hK
           have hl' : 2 ^ W / 2 ≤ Naf.window W x.toNat pos c := by omega
           block_init
@@ -293,10 +293,10 @@ theorem Scalar_non_adjacent_form.main_loop (naf scalar xu : Pointer) (w : BitVec
           · simp only [decide_eq_true_eq] at hbr
             block_init
             finish_block
-            step_loop using ih (pos + W) 1 _ _ _ hbr (by omega) (by omega) hK
+            run_from using ih (pos + W) 1 _ _ _ hbr (by omega) (by omega) hK
           · simp only [decide_eq_true_eq] at hbr
             rw [loop_ge (by omega)] at hK
-            step_loop using hK
+            run_from using hK
     -- `u64_idx = pos / 64; bit_idx = pos % 64;`
     obtain ⟨k, b, rfl, hb⟩ : ∃ k b, pos = 64 * k + b ∧ b < 64 :=
       ⟨pos / 64, pos % 64, by omega, by omega⟩
@@ -314,7 +314,7 @@ theorem Scalar_non_adjacent_form.main_loop (naf scalar xu : Pointer) (w : BitVec
     finish_block
     · -- `bit_idx < 64 - w`: `x_u64[u64_idx] >> bit_idx`
       simp only [decide_eq_true_eq] at hbr
-      step_loop using hK5 _ _ _ (window_lo x k (by omega) hW64)
+      run_from using hK5 _ _ _ (window_lo x k (by omega) hW64)
     · -- `(x_u64[u64_idx] >> bit_idx) | (x_u64[1 + u64_idx] << (64 - bit_idx))`
       simp only [decide_eq_true_eq] at hbr
       have hb0 : 0 < b := by omega
@@ -327,7 +327,7 @@ theorem Scalar_non_adjacent_form.main_loop (naf scalar xu : Pointer) (w : BitVec
         show (64 * k + b) % 64 = b by omega, show ¬64 ≤ 64 - b by omega]
       step_pure
       finish_block
-      step_loop using hK5 _ _ _ (window_hi x hk hb0 hb hW64)
+      run_from using hK5 _ _ _ (window_hi x hk hb0 hb hW64)
 
 /-- `Scalar::non_adjacent_form(self, w)` stores `spec` of the scalar's 32 bytes at `naf`, for
 `2 ≤ w ≤ 8`; its `x_u64` is a frame slot. -/
@@ -389,7 +389,7 @@ public theorem Scalar_non_adjacent_form.call_eq (naf scalar : Pointer) (w : BitV
   clear_reads
   block_init
   finish_block
-  step_loop using
+  run_from using
     Scalar_non_adjacent_form.main_loop naf scalar xu w W hW hw.1 hw.2 x
       { alloc := (S₀.alloca 40 true).alloc, mem := (S₀.alloca 40 true).mem.lifetimeStart xu } _ hno
       _ hxu_off hnaf_ne_xu _ _ 256 0 0 (Vector.replicate 256 0) _ _ (by omega) (by omega) (by omega)

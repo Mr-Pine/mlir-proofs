@@ -218,7 +218,7 @@ theorem byte_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.t
     step_pure [uaddOverflow_ofNat64 (i := i) (k := 1) (by omega)]
     step_pure
     finish_block
-    · step_loop using hK
+    · run_from using hK
     · exact absurd ((ofNat64_add_one_eq_iff (by omega)).2 (by omega)) hbr
   | succ k ih =>
     intro i E hArgs hR hk
@@ -236,7 +236,7 @@ theorem byte_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.t
     finish_block
     · have := (ofNat64_add_one_eq_iff (by omega)).1 hbr
       omega
-    · step_loop using ih (i + 1)
+    · run_from using ih (i + 1)
       all_goals
         first
         | omega
@@ -289,7 +289,7 @@ theorem word_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.t
       · have e := congrArg BitVec.toNat hbr
         rw [toNat_and_neg4] at e
         rw [show i + 4 = len.toNat by omega] at hE
-        step_loop using hK
+        run_from using hK
       · block_init
         finish_block
         have e : len.toNat ≠ len.toNat / 4 * 4 := fun e =>
@@ -298,7 +298,7 @@ theorem word_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.t
               (by
                 rw [toNat_and_neg4]; exact e))
         subst hS
-        step_loop using
+        run_from using
           byte_loop b1 b2 v len x y _ g K hx hy hf1 hf2 ho1 ho2 hK (len.toNat - (i + 4) - 1) (i + 4)
         apply BitVec.eq_of_toNat_eq
         rw [toNat_and_neg4, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
@@ -333,7 +333,7 @@ theorem word_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.t
         have := toNat_and_neg4 len
         rw [BitVec.toNat_and] at this
         exact this
-      step_loop using ih (i + 4) acc'
+      run_from using ih (i + 4) acc'
       all_goals
         first
         | exact hor'
@@ -370,7 +370,7 @@ theorem word_entry (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.
     have := toNat_and_neg4 len
     rw [BitVec.toNat_and] at this
     exact this
-  step_loop using
+  run_from using
     word_loop b1 b2 v len x y S g K hx hy hf1 hf2 ho1 ho2 hK ((len.toNat / 4 * 4 - i0) / 4 - 1) i0
       #v[orRange (xorByte x y) i0, 0#8, 0#8, 0#8]
   all_goals
@@ -522,7 +522,7 @@ theorem block_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.
       · have e := congrArg BitVec.toNat hbr
         rw [toNat_and_neg32] at e
         rw [show i + 32 = len.toNat by omega] at hE
-        step_loop using hK
+        run_from using hK
       · have hne : len.toNat ≠ len.toNat / 32 * 32 := fun e =>
           hbr
             (BitVec.eq_of_toNat_eq
@@ -536,7 +536,7 @@ theorem block_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.
           block_init
           finish_block
           subst hS
-          step_loop using
+          run_from using
             byte_loop b1 b2 v len x y _ g K hx hy hf1 hf2 ho1 ho2 hK (len.toNat - (i + 32) - 1)
               (i + 32)
           apply BitVec.eq_of_toNat_eq
@@ -547,7 +547,7 @@ theorem block_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.
                 (by
                   rw [toNat_and_28]; exact e))
           subst hS
-          step_loop using word_entry b1 b2 v len x y _ g K hx hy hf1 hf2 ho1 ho2 hK (i + 32)
+          run_from using word_entry b1 b2 v len x y _ g K hx hy hf1 hf2 ho1 ho2 hK (i + 32)
           apply BitVec.eq_of_toNat_eq
           rw [toNat_and_neg32, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
     · exact
@@ -599,7 +599,7 @@ theorem block_loop (b1 b2 v : Pointer) (len : BitVec 64) (x y : BitVec (8 * len.
         have := toNat_and_neg32 len
         rw [BitVec.toNat_and] at this
         exact this
-      step_loop using ih (i + 32) acc1' acc2'
+      run_from using ih (i + 32) acc1' acc2'
       all_goals
         first
         | exact hor'
@@ -658,20 +658,20 @@ public theorem sodium_memcmp.call_eq (b1 b2 : Pointer) (len : BitVec 64) (s : Gl
     · have hlt : len.toNat < 4 := by simpa [BitVec.ult] using hbr
       block_init
       finish_block
-      step_loop using byte_loop b1 b2 e len x y _ _ _ hx hy hf1 hf2 ho1 ho2 ?_ (len.toNat - 1) 0
+      run_from using byte_loop b1 b2 e len x y _ _ _ hx hy hf1 hf2 ho1 ho2 ?_ (len.toNat - 1) 0
       tail_proof
     · have hge4 : 4 ≤ len.toNat := by simpa [BitVec.ult] using hbr
       block_init
       step_pure
       finish_block
-      · step_loop using word_entry b1 b2 e len x y _ _ _ hx hy hf1 hf2 ho1 ho2 ?_ 0
+      · run_from using word_entry b1 b2 e len x y _ _ _ hx hy hf1 hf2 ho1 ho2 ?_ 0
         tail_proof
       · have hge32 : 32 ≤ len.toNat := by simpa [BitVec.ult] using hbr
         block_init
         step_pure
         step_pure
         finish_block
-        step_loop using
+        run_from using
           block_loop b1 b2 e len x y _ _ _ hx hy hf1 hf2 ho1 ho2 ?_ (len.toNat / 32 - 1) 0
             (Vector.replicate 16 0#8) (Vector.replicate 16 0#8)
         · simp [orAll, orRange]

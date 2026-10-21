@@ -308,7 +308,7 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
     clear hq ht
     generalize hT : D.extractLsb' (8 * (n - (n &&& 127#64)).toNat) (8 * (n &&& 127#64).toNat) =
       T at hDt
-    step_loop using
+    run_from using
       leftover_block c data _ len _ T M _ (hn := htl) (hd := hdt) (hD := hDt) (hK := ?_)
     subst hT
     simp only [bulk, bulkCores, hbr, ↓reduceIte, Nat.mul_one]
@@ -316,7 +316,7 @@ theorem bulk_block (c data d : Pointer) (len n : BitVec 64) (D : BitVec (8 * n.t
       have := hbr
       simp [BitVec.ult] at this
       omega
-    step_loop using leftover_block c data d len n D M v (hK := ?_)
+    run_from using leftover_block c data d len n D M v (hK := ?_)
     simp [bulk, bulkCores, hbr]
 
 /-! ### The buffered block: `^bb3 … ^bb6` -/
@@ -352,7 +352,7 @@ theorem rest_block (c data : Pointer) (len : BitVec 64) (D : BitVec (8 * len.toN
   step_pure
   finish_block
   · -- c->num == 0
-    step_loop using bulk_block c data data len len D M v (hK := ?_)
+    run_from using bulk_block c data data len len D M v (hK := ?_)
     simp [rest, restCores, hbr]
   · have hnz : v.num ≠ 0#16 := hbr
     have hn := hv.1
@@ -475,7 +475,7 @@ theorem rest_block (c data : Pointer) (len : BitVec 64) (D : BitVec (8 * len.toN
       generalize hr : 128#64 - v.num.setWidth 64 = r at *
       generalize hn' : len - r = n at *
       finish_block
-      step_loop using bulk_block c data _ len _ _ M _ (hD := hD') (hK := ?_)
+      run_from using bulk_block c data _ len _ _ M _ (hD := hD') (hK := ?_)
       subst hv1 hn' hr
       simp only [rest, restCores, hnz, hbr, ↓reduceIte, Bool.false_eq_true]
       rw [Nat.mul_add, Nat.mul_one, ← Nat.add_assoc]
@@ -537,14 +537,14 @@ public theorem BCM_sha512_update.call_eq (c data : Pointer) (len : BitVec 64) (s
       have hM := congrArg GlobalState.mem hS
       dsimp only at hM
       finish_block
-      step_loop using rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hD := hD) (hK := ?_)
+      run_from using rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hD := hD) (hK := ?_)
       rw [MemoryState.eraseFrom_storeShaCtx, hwf₀.eraseFrom]
       simp only [BCM_sha512_update.spec, cores, hlen, hcarry, ↓reduceIte, restCores_counts,
         and_self]
     · have hcarry := hbr
       have hM := congrArg GlobalState.mem hS
       dsimp only at hM
-      step_loop using rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hD := hD) (hK := ?_)
+      run_from using rest_block c data len _ S₀.mem _ (hM := hM) (hv := hv₀) (hD := hD) (hK := ?_)
       rw [MemoryState.eraseFrom_storeShaCtx, hwf₀.eraseFrom]
       simp only [BCM_sha512_update.spec, cores, hlen, hcarry, ↓reduceIte, Bool.false_eq_true,
         restCores_counts, and_self]

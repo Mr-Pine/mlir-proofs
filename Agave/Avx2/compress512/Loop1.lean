@@ -122,8 +122,8 @@ theorem iter6 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (i : Nat) (
   -- for i in 64..80
   step_pure
   finish_block
-  · step_loop using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
-  · step_loop using
+  · run_from using hexit (eq_of_ofNat_eq hbr (by omega) (by decide))
+  · run_from using
       hback
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)
@@ -251,14 +251,14 @@ theorem iter5 (st Kp ms t2 ms2 : Pointer) (H : Vector (BitVec 64) 8) (i j k : Na
       uaddOverflow_ofNat32 (i := i) (k := 1) (by omega), ← BitVec.ofNat_add]
     step_pure
     finish_block
-    · step_loop using hdone (by omega) (eq_of_ofNat32_eq hbr (by omega) (by decide))
+    · run_from using hdone (by omega) (eq_of_ofNat32_eq hbr (by omega) (by decide))
     · block_init
       finish_block
-      step_loop using
+      run_from using
         hgroup (by omega)
           (by
             have := mt (congrArg (BitVec.ofNat 32)) hbr; omega)
-  · step_loop using
+  · run_from using
       hnext
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)

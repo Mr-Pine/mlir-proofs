@@ -19,7 +19,7 @@ CARRY_BODY='''    replace hK := fun E' (h : E'.args = _) => hK E' (h.trans hArgs
       step_store
       rw [storeAt_byte hr_off hk'] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
     · rw [carry_clear hk' hbr] at hK
       block_init
       step_store
@@ -45,13 +45,13 @@ theorem carry{b}_loop (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 204
   | zero =>
     intro k v E hArgs hk hK
 {CARRY_BODY}      · rw [carry_done (by omega)] at hK
-        step_loop using hK
+        run_from using hK
       · exact absurd (by rw [show k + 1 = 256 by omega]) hbr
   | succ n ih =>
     intro k v E hArgs hk hK
 {CARRY_BODY}      · exact absurd hbr (ofNat64_ne (by omega) (by omega) (by omega))
-      · step_loop using ih (k + 1)
-        step_loop using hK
+      · run_from using ih (k + 1)
+        run_from using hK
 '''
 BOR=lambda b: f"(by decide : {b} = 1 ∨ {b} = 2 ∨ {b} = 3 ∨ {b} = 4 ∨ {b} = 5 ∨ {b} = 6)"
 def window(b):
@@ -81,7 +81,7 @@ theorem window{b} (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_stop (by have := cnt_eq hi hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + 2 < 256 := by have := cnt_ne hi hbr; omega''')
     else:
         L.append(f'''  -- i + b, i + b < 256
@@ -90,16 +90,16 @@ theorem window{b} (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
   step_pure
   finish_block
   · rw [window_stop (by have := guard_eq (b := {b}) (by decide) hbr; omega)] at hK
-    step_loop using hK
+    run_from using hK
   have hib : i + {b} < 256 := by have := guard_ne (b := {b}) (by decide) hi hbr; omega''')
     if b<=5:
         L.append(f'''  have W := window{b+1} r a Sb hr hr_off i {"hib" if b>=2 else "hi"} K
   have C := carry{b}_loop r a Sb hr hr_off i K (255 - (i + {b})) (i + {b})''')
-        nxt="  step_loop using W _\n  step_loop using hK"
+        nxt="  run_from using W _\n  run_from using hK"
         fin=""
     else:
         L.append(f'''  have C := carry{b}_loop r a Sb hr hr_off i K (255 - (i + {b})) (i + {b})''')
-        nxt="  step_loop using hK"
+        nxt="  run_from using hK"
         fin="\n  rw [window_stop (by omega)] at hK"
     L.append(f'''  -- if (r[i + b])
   {"block_init" + chr(10) + "  " if b>1 else ""}step_pure [Nat.mod_lt]
@@ -142,10 +142,10 @@ theorem window{b} (r a : Pointer) (Sb : GlobalState) (hr : Room Sb.mem r 2048)
     step_store
     rw [storeAt_byte hr_off hi0] at hS
     finish_block
-    step_loop using C
+    run_from using C
   {nxt.replace(chr(10),chr(10)+"  ")}
   rw [window_break (by decide) hib h0 h1 hbr] at hK
-  step_loop using hK
+  run_from using hK
 ''')
     return "\n".join(L)
 def all_text():

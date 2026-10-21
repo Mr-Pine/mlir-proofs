@@ -262,7 +262,7 @@ theorem unpack_loop (out sp e : Pointer) (x : BitVec 256) (g : Vals [] × Global
     block_init
     step_pure
     finish_block
-    step_loop using hK
+    run_from using hK
   | succ n ih =>
     intro i v E hArgs hR hn hK
     block_init
@@ -308,7 +308,7 @@ theorem unpack_loop (out sp e : Pointer) (x : BitVec 256) (g : Vals [] × Global
       step_pure [h6, h7, ← BitVec.ofNat_add]
       finish_block
       rw [unpackFrom_succ (by omega)] at hK
-      step_loop using ih (i + 1)
+      run_from using ih (i + 1)
 
 /-! ### The carry loop -/
 
@@ -414,7 +414,7 @@ theorem carry_loop (out sp e : Pointer) (x : BitVec 256) (g : Vals [] × GlobalS
     block_init
     step_pure
     finish_block
-    step_loop using hK
+    run_from using hK
   | succ n ih =>
     intro k E hArgs hR hn hK
     have hk : k < 63 := by omega
@@ -452,7 +452,7 @@ theorem carry_loop (out sp e : Pointer) (x : BitVec 256) (g : Vals [] × GlobalS
             simp [BitVec.saddOverflow, h]; omega,
         ← BitVec.ofNat_add]
       finish_block
-      step_loop using ih (k + 1)
+      run_from using ih (k + 1)
 
 /-! ### Unpacking: the nibbles -/
 
@@ -575,7 +575,7 @@ public theorem Edwards25519_slide.call_eq (out sp : Pointer) (s : GlobalState) (
   · block_init
     finish_block
     rw [← withED_fresh he_room.inBounds hz hzd]
-    step_loop using
+    run_from using
       Edwards25519_slide.unpack_loop out sp e x _ _ S hsp hso hxS he_room he_off hsp_ne_e 32 0
         (Vector.replicate 64 0#8)
     rw [← hS, ← he, Edwards25519_slide.unpackFrom_all]

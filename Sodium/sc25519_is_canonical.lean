@@ -176,7 +176,7 @@ theorem run_loop (p Lp : Pointer) (S : GlobalState) (g : Vals [.bv 32] × Global
   | zero =>
     intro i cn E hi hArgs hc hK
     iter
-    · step_loop using hK
+    · run_from using hK
       rw [mod_mul8 (j := i - 1) (by omega), mod_mul8 (j := i - 2) (by omega), iter_c,
         loop_two _ _ (by omega), show i - 2 = 0 by omega]
       rfl
@@ -188,7 +188,7 @@ theorem run_loop (p Lp : Pointer) (S : GlobalState) (g : Vals [.bv 32] × Global
     · obtain ⟨cn', hcn'⟩ :
         ∃ cn', step (S.mem.readAt p 256) (step (S.mem.readAt p 256) cn (i - 1)) (i - 2) = cn' :=
         ⟨_, rfl⟩
-      step_loop using ih (i - 2) cn'
+      run_from using ih (i - 2) cn'
       · rw [mod_mul8 (j := i - 1) (by omega), mod_mul8 (j := i - 2) (by omega), iter_c, ← hcn']
         rfl
       · rw [mod_mul8 (j := i - 1) (by omega), mod_mul8 (j := i - 2) (by omega), iter_n, ← hcn']
@@ -216,7 +216,7 @@ public theorem sc25519_is_canonical.call_eq (p : Pointer) (s : GlobalState) (hwf
   iterate 4 step_pure
   finish_block
   -- do { … } while (i != 0);
-  step_loop using
+  run_from using
     sc25519_is_canonical.run_loop p Lp S _ _ hp hp_off hLp_fits hLp_off hread_Lp 15 32 (0#32, 1#32)
   -- return (c != 0);
   intro ⟨h0, hc⟩

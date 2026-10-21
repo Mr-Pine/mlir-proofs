@@ -349,7 +349,7 @@ theorem load2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
     simp only [pairMem2, tMem, pairsMem]
     simp
   finish_block
-  step_loop using hK'
+  run_from using hK'
 
 -- three loop lemmas, sixteen sums and their states' facts
 set_option maxHeartbeats 1000000 in
@@ -449,12 +449,12 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
       (bsched (X.extractLsb' 1024 1024)) H g K hmo hto hKo hne1 hne2 hne3 (sched_bsched _)
       (sched_bsched _) 31 0
   simp only [Nat.mul_zero, Nat.zero_add, rounds_zero, Nat.zero_div, Nat.zero_mod] at L
-  step_loop using L
+  run_from using L
   · exact Writable.tMem (Writable.pairsMem hms2.writable)
   intro hL
   clear L
   -- rounds_64_79(&mut current_state, &ms);
-  step_loop using
+  run_from using
     loop13 st Kp ms t2 ms2 H i (r + 1) (bsched (X.extractLsb' 0 1024)) H S g K hmo hF
       (by
         rw [hS]; exact hR6)
@@ -482,7 +482,7 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
         rw [hS]; exact hT)
       79 0
   simp only [Nat.zero_add, rounds_zero] at L
-  step_loop using L
+  run_from using L
   intro hL hA
   clear L
   -- accumulate_state(state, &current_state);
@@ -507,8 +507,8 @@ theorem rest2 (st blocks Kp ms t2 ms2 : Pointer) (n : BitVec 64) (H : Vector (Bi
   step_pure [ofNat_add_neg_one]
   step_pure
   finish_block
-  · step_loop using hdone (eq_of_ofNat_eq hbr (by omega) (by decide))
-  · step_loop using
+  · run_from using hdone (eq_of_ofNat_eq hbr (by omega) (by decide))
+  · run_from using
       hnext
         (by
           have := mt (congrArg (BitVec.ofNat 64)) hbr; omega)

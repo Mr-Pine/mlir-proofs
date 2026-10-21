@@ -116,7 +116,7 @@ theorem loop (t0 t1 t2 : Pointer) (g : Vals [] × GlobalState → PoisonOr β) (
       Firedancer.uaddOverflow_one32 (i := i) (by omega)]
     step_pure
     finish_block
-    · step_loop using hK
+    · run_from using hK
     · simp [BitVec.toNat_eq] at hbr
       omega
   | succ n ih =>
@@ -129,10 +129,10 @@ theorem loop (t0 t1 t2 : Pointer) (g : Vals [] × GlobalState → PoisonOr β) (
     finish_block
     · simp [BitVec.toNat_eq] at hbr
       omega
-    · step_loop using ih (i + 1) _ _ hwf ht htw (by omega)
+    · run_from using ih (i + 1) _ _ hwf ht htw (by omega)
       · exact (BitVec.ofNat_add i 1).symm
       · rw [hS, MemoryState.storeLimbs_storeLimbs_self]
-        step_loop using hK
+        run_from using hK
 
 end fe25519_pow22523
 
@@ -181,7 +181,7 @@ public theorem fe25519_pow22523.call_eq (out z : Pointer) (s : GlobalState) (hwf
   sqr l22
   finish_block
   -- `^bb1`: 99 squarings of `t2`
-  step_loop using loop t0 t1 t2 _ _ 98 1
+  run_from using loop t0 t1 t2 _ _ 98 1
   name_limbs l23
   -- `^bb2`
   block_init

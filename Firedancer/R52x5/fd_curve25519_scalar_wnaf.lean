@@ -106,7 +106,7 @@ local macro "found_or_next " j:term " with " hK:ident : tactic =>
     pick_goal 2
     · have h : t[$j] ≠ 0 := fun h0 => hbr ((ofInt_eq_zero_iff (ht $j (by omega))).2 h0)
       rw [firstNonzero_of_ne_zero (i := $j) (by omega) h] at hK12
-      step_loop using hK12
+      run_from using hK12
     have h : t[$j] = 0 := (ofInt_eq_zero_iff (ht $j (by omega))).1 hbr
     rw [firstNonzero_of_eq_zero (i := $j) (by omega) h] at hK12 $hK
     clear hbr h))
@@ -464,7 +464,7 @@ theorem fd_curve25519_scalar_wnaf.nonzero_head (slides scalar : Pointer) (w mx :
   found_or_next (i + 2) with hK7
   probe 3
   found_or_next (i + 3) with hK7
-  step_loop using hK7
+  run_from using hK7
 
 /-- `^bb7` … `^bb10`, the second half: on to `^bb12` at a non-zero `_t[i+4 … i+7]`, else to
 `^bb11`. -/
@@ -501,7 +501,7 @@ theorem fd_curve25519_scalar_wnaf.nonzero_tail (slides scalar : Pointer) (w mx :
   found_or_next (i + 6) with hK11
   probe 7
   found_or_next (i + 7) with hK11
-  step_loop using hK11
+  run_from using hK11
 
 /-- `^bb3`, "find first non-zero t", unrolled by 8, from `i` with `n` iterations left: on to
 `^bb12` at the first non-zero, or to `^bb27` if there is none. -/
@@ -537,14 +537,14 @@ theorem fd_curve25519_scalar_wnaf.nonzero_loop (slides scalar : Pointer) (w mx :
     replace hK12 := fun E' (h : E'.args = _) => hK12 E' (h.trans hArgs.symm)
     replace hK27 := fun E' (h : E'.args = _) => hK27 E' (h.trans hArgs.symm)
     rw [show 8 * (n + 1) = 8 * n + 4 + 4 by omega] at hK12 hK27
-    step_loop using head (8 * n + 4) i
+    run_from using head (8 * n + 4) i
     · intro hlt
-      step_loop using hK12
+      run_from using hK12
     · intro heq
       rw [heq] at hK12 hK27
-      step_loop using tail (8 * n) i
+      run_from using tail (8 * n) i
       · intro hlt
-        step_loop using hK12
+        run_from using hK12
       · intro heq
         rw [heq] at hK12 hK27
         -- `i += 8`, `i<256`
@@ -555,13 +555,13 @@ theorem fd_curve25519_scalar_wnaf.nonzero_loop (slides scalar : Pointer) (w mx :
         finish_block
         · obtain rfl : n = 0 := by
             have := eq_of_ofNat64_eq (by omega) (by omega) hbr; omega
-          step_loop using hK27
+          run_from using hK27
           simp only [firstNonzero]
-        · step_loop using ih (i + 8) _ _ (by omega) (lt_of_ofNat64_ne (by omega) hbr) (by omega)
+        · run_from using ih (i + 8) _ _ (by omega) (lt_of_ofNat64_ne (by omega) hbr) (by omega)
           · intro hlt
-            step_loop using hK12
+            run_from using hK12
           · intro heq
-            step_loop using hK27
+            run_from using hK27
 
 /-! ### The carry loop -/
 
@@ -701,15 +701,15 @@ theorem fd_curve25519_scalar_wnaf.carry_loop (slides scalar : Pointer) (w : BitV
       rw [storeAt_shorts hso hk1 (v := 1) (by decide)] at hS
       finish_block
       rw [carryT_of_eq_zero hk1 (by rwa [Vector.getElem_set_ne _ _ (by omega)])] at hK
-      step_loop using hK
+      run_from using hK
     · have h1 : t[k + 1] ≠ 0 := fun h0 =>
         hbr ((ofInt_eq_zero_iff (hbits (k + 1) hk1 (by omega))).2 h0)
       rw [storeAt_shorts hso hk' (v := 0) (by decide)] at hS
       rw [carryT_of_ne_zero hk1 (by rwa [Vector.getElem_set_ne _ _ (by omega)])] at hK
-      step_loop using
+      run_from using
         ih (k + 1) (t.set k 0) _ (lt_255_of_ne_zero h255 hk1 h1) _ (by omega) (set_255 h255 hk)
           (hbits.set (by omega) (by omega))
-      step_loop using hK
+      run_from using hK
 
 /-! ### The absorb loop -/
 
@@ -873,7 +873,7 @@ theorem fd_curve25519_scalar_wnaf.sub_branch (slides scalar : Pointer) (w : BitV
   · -- neither: `break`
     rw [absorbT_of_stuck hk1 hne hfar hsub (Int.not_le.2 (of_decide_eq_true hbr))] at hK26
     dsimp only at hK26
-    step_loop using hK26
+    run_from using hK26
   · -- `ti = tim; _t[j] = 0;`, then the carry
     have hm : -max ≤ ti - 2 ^ min (k + 1 - i) 14 :=
       Int.not_lt.1 (of_decide_eq_false (Bool.of_not_eq_true hbr))
@@ -905,7 +905,7 @@ theorem fd_curve25519_scalar_wnaf.sub_branch (slides scalar : Pointer) (w : BitV
       step_store
       rw [storeAt_shorts hso hk2 (v := 1) (by decide)] at hS
       finish_block
-      step_loop using hK26
+      run_from using hK26
     · -- `_t[j] = 0;` and on through the carry loop
       have h1 : t[k + 2] ≠ 0 := by
         intro h0
@@ -921,11 +921,11 @@ theorem fd_curve25519_scalar_wnaf.sub_branch (slides scalar : Pointer) (w : BitV
             (set_255 h255' hk2')
             ((hbits.set (b := k + 3) (j := k + 1) (by omega) (by omega)).set (by omega)
               (by omega))).2.1
-      step_loop using
+      run_from using
         fd_curve25519_scalar_wnaf.carry_loop slides scalar w max hso _ hfits i
           (ti - 2 ^ min (k + 1 - i) 14) K 255 (k + 2) (t.set (k + 1) 0) _ hk2' _ (by omega) h255'
           (hbits.set (by omega) (by omega))
-      step_loop using hK26
+      run_from using hK26
 
 /-- `^bb16`, the absorb loop, after `j = k` with fuel `n`: on to `^bb26` with the `ti` and `j` it
 stops at, or to `^bb25` at the end of `_t`. -/
@@ -990,14 +990,14 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
           omega
         rw [h256, absorbT_end] at hK25
         dsimp only at hK25
-        step_loop using hK25
-      · step_loop using
+        run_from using hK25
+      · run_from using
           ih (k + 1) ti t _ _ (by omega) (lt_of_ne_255 hk1 hbr) (by omega) hti h255
             (hbits.mono (by omega))
         · intro hlt
-          step_loop using hK26
+          run_from using hK26
         · intro heq
-          step_loop using hK25
+          run_from using hK25
     · have hne : t[k + 1] ≠ 0 := fun h0 =>
         hbr ((ofInt_eq_zero_iff (hbits (k + 1) hk1 (by omega))).2 h0)
       have hd := delta_bounds (d := k + 1 - i) (by omega)
@@ -1012,7 +1012,7 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
       finish_block
       · rw [absorbT_of_far hk1 hne (of_decide_eq_true hbr)] at hK26
         dsimp only at hK26
-        step_loop using hK26
+        run_from using hK26
       · -- `short tip = (short)(ti + delta); if( tip<=max )`
         have hfar := of_decide_eq_false (Bool.of_not_eq_true hbr)
         clear hbr
@@ -1026,10 +1026,10 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
         · -- `short tim = (short)(ti - delta); if( tim>=-max )`
           have hsub : ¬ti + 2 ^ min (k + 1 - i) 14 ≤ max := Int.not_le.2 (of_decide_eq_true hbr)
           clear hbr
-          step_loop using
+          run_from using
             fd_curve25519_scalar_wnaf.sub_branch slides scalar w max hmax hso _ hfits i K n k ti t
           intro hlt
-          step_loop using hK26
+          run_from using hK26
         · -- `ti = tip; _t[j] = 0; continue;`
           have hadd : ti + 2 ^ min (k + 1 - i) 14 ≤ max :=
             Int.not_lt.1 (of_decide_eq_false (Bool.of_not_eq_true hbr))
@@ -1045,13 +1045,13 @@ theorem fd_curve25519_scalar_wnaf.absorb_loop (slides scalar : Pointer) (w : Bit
             exact absurd (lt_255_of_ne_zero h255 hk1 hne) (by omega)
           · have hk1' := lt_of_ne_255 hk1 hbr
             rw [absorbT_of_add hk1 hne hfar hadd] at hK26 hK25
-            step_loop using
+            run_from using
               ih (k + 1) (ti + 2 ^ min (k + 1 - i) 14) (t.set (k + 1) 0) _ _ (by omega) hk1'
                 (by omega) ⟨by omega, hadd⟩ (set_255 h255 hk1') (hbits.set (by omega) (by omega))
             · intro hlt
-              step_loop using hK26
+              run_from using hK26
             · intro heq
-              step_loop using hK25
+              run_from using hK25
 
 /-! ### The outer loop -/
 
@@ -1168,7 +1168,7 @@ theorem fd_curve25519_scalar_wnaf.outer_loop (slides scalar : Pointer) (w : BitV
       block_init
       step_pure [signExtend_ofNat32 (show i < 2 ^ 31 by omega)]
       finish_block
-      step_loop using
+      run_from using
         fd_curve25519_scalar_wnaf.absorb_loop slides scalar w max hmax hso _ hwf hfits i K 256 i 1 t
           _ _ (Nat.le_refl i) hi' (by omega) ⟨by omega, by omega⟩ (h255 hi') hbits
       · -- `_t[i] = ti; i = j;`
@@ -1184,10 +1184,10 @@ theorem fd_curve25519_scalar_wnaf.outer_loop (slides scalar : Pointer) (w : BitV
         rw [storeAt_shorts hso hi (v := ti') rfl] at hS
         step_pure [slt_ofNat32 (a := j') (b := 256) (by omega) (by omega)]
         finish_block
-        · step_loop using
+        · run_from using
             ih j' (t'.set i ti') _ _ hlt (by omega) (hinv.2.2.1.set (by omega) (by omega))
               (fun h => set_255 (hinv.2.2.2 h) hi')
-          step_loop using hK
+          run_from using hK
         · exact absurd (of_decide_eq_false (Bool.of_not_eq_true hbr)) (by omega)
       · -- `_t[i] = ti;` at the end
         intro heq
@@ -1202,7 +1202,7 @@ theorem fd_curve25519_scalar_wnaf.outer_loop (slides scalar : Pointer) (w : BitV
         step_store
         rw [storeAt_shorts hso hi (v := ti') rfl] at hS
         finish_block
-        step_loop using hK
+        run_from using hK
     · -- `i = 255`: `_t[255] = 1`
       have hi255 : i = 255 := by
         have := of_decide_eq_false (Bool.of_not_eq_true hbr); omega
@@ -1216,7 +1216,7 @@ theorem fd_curve25519_scalar_wnaf.outer_loop (slides scalar : Pointer) (w : BitV
       step_store
       rw [storeAt_shorts hso (j := 255) (by decide) (y := 1#16) (v := 1) (by decide)] at hS
       finish_block
-      step_loop using hK
+      run_from using hK
 
 /-! ### Unpack -/
 
@@ -1456,9 +1456,9 @@ theorem fd_curve25519_scalar_wnaf.unpack_loop (slides scalar : Pointer) (w : Bit
     finish_block
     · obtain rfl : n = 0 := by
         have := eq_of_ofNat64_eq (by omega) (by omega) hbr; omega
-      step_loop using hK
-    · step_loop using ih (i + 5) _ _ _ _ (lt_of_ofNat64_ne (by omega) hbr) (by omega)
-      step_loop using hK
+      run_from using hK
+    · run_from using ih (i + 5) _ _ _ _ (lt_of_ofNat64_ne (by omega) hbr) (by omega)
+      run_from using hK
 
 /-- The unpack loop's digits, read back. -/
 theorem unpackFrom_get {x : BitVec 256} {t : Vector Int 256} (h : i + n ≤ 256) (hk : k < 256) :
@@ -1602,7 +1602,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   finish_block
   -- "unpack s bits into _t"
   rw [← withTD_tOf hslides.inBounds]
-  step_loop using
+  run_from using
     fd_curve25519_scalar_wnaf.unpack_loop slides scalar bits hso hco hsep _ hslides hscalar _ hx _
       51 0 (tOf S.mem slides) (S.mem.definedAt slides (16 * 256))
   -- `short max = (short)((1 << bits) - 1);` as `~(-1 << bits)`
@@ -1616,7 +1616,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
     unpackFrom_set_255, defFrom_255, MemoryState.overlay_allOnes] at hS
   finish_block
   -- "find first non-zero t"
-  step_loop using nonzero _ 32 0
+  run_from using nonzero _ 32 0
   · -- `while( i<256 )` from the first non-zero `i`
     intro hlt
     clear_reads
@@ -1634,7 +1634,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
       step_pure [extractLsb'_shiftLeft_16, max_twice (b := bits.toNat) (by omega)]
       step_pure [max_neg_ssubOverflow (b := bits.toNat) (by omega), max_neg]
       finish_block
-      step_loop using
+      run_from using
         outer _ 257 i (unpackT (S₀.mem.readAt scalar 256)) _ _ hlt (by omega)
           (fun k hk _ => unpackT_bit _ k hk) (fun _ => unpackT_255 _)
       block_init

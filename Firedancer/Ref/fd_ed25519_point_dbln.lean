@@ -83,7 +83,7 @@ theorem loop (r a tp : Pointer) (n : BitVec 32) (g : Vals [.ptr] × GlobalState 
         simp [BitVec.toNat_setWidth]
         omega
       simp [this, BitVec.ult] at hbr
-    · step_loop using hK
+    · run_from using hK
       rfl
   | succ m ih =>
     intro k t S E hArgs hR hk hk1 hn hwf hr hrw htp htw hsep ht hK

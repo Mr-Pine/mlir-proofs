@@ -172,14 +172,14 @@ theorem trip (r a : Pointer) (n : BitVec 32) (z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 : Po
   step_pure
   step_pure
   finish_block
-  · step_loop using hback
+  · run_from using hback
     · exact (BitVec.ofNat_add _ _).symm
     · rw [← hS]
       exact
         ⟨hwf, hr, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, w0, w1, w2, w3, w4, w5, w6, w7, w8, w9⟩
     · rw [MemoryState.eraseFrom_callTmp5_of_le hb5 hb6 hb7 hb8 hb9,
         MemoryState.eraseFrom_callTmp5_of_le hb0 hb1 hb2 hb3 hb4]
-  · step_loop using hexit
+  · run_from using hexit
     rw [MemoryState.eraseFrom_callTmp5_of_le hb5 hb6 hb7 hb8 hb9,
       MemoryState.eraseFrom_callTmp5_of_le hb0 hb1 hb2 hb3 hb4]
 
@@ -321,7 +321,7 @@ public theorem fd_ed25519_point_dbln.call_eq (r a : Pointer) (n : BitVec 32) (s 
         hv27_bounds, hv28_bounds, hv29_bounds, hv30_bounds, hv31_bounds, by mem_fact, by mem_fact,
         by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact, by mem_fact,
         by mem_fact⟩
-    step_loop using
+    run_from using
       fd_ed25519_point_dbln.loop r a n _ _ _ _ _ _ _ _ _ _ S₀.alloc.nextFreeBlock _ _ hZ hrb
         (n.toNat - 2) 1
     · -- `^bb1` stores the registers at `r`, `^bb2` returns

@@ -152,7 +152,7 @@ theorem loop (dst src : Pointer) (len : BitVec 64) (m₀ : MemoryState) (a : All
     finish_block
     · have := (ofNat64_add_one_eq_iff (by omega)).1 hbr
       omega
-    · step_loop using ih (i + 1)
+    · run_from using ih (i + 1)
       all_goals
         first
         | rfl
@@ -181,7 +181,7 @@ public theorem be64enc_vect.call_eq (dst src : Pointer) (len : BitVec 64) (s : G
   block_init
   iterate 4 step_pure
   finish_block
-  step_loop using be64enc_vect.loop dst src len S₀.mem S₀.alloc ((len >>> 3).toNat - 1) 0
+  run_from using be64enc_vect.loop dst src len S₀.mem S₀.alloc ((len >>> 3).toNat - 1) 0
   all_goals rfl
 
 end Proof
