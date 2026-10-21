@@ -735,12 +735,6 @@ public theorem InBounds.tMem {mem : MemoryState} (h : InBounds mem q w) :
   | zero => exact h
   | succ n ih => exact ih h.storeAt
 
-public theorem InBounds.tMem_iff {mem : MemoryState} :
-    InBounds (compress512.tMem X W p n mem) q w ↔ InBounds mem q w := by
-  induction n generalizing p mem with
-  | zero => rfl
-  | succ n ih => rw [tMem_succ, ih, InBounds.storeAt_iff]
-
 @[mlir_transport]
 public theorem MemoryState.Sha512Fit.tMem {mem : MemoryState} (h : mem.Sha512Fit q) :
     (tMem X W p n mem).Sha512Fit q := by

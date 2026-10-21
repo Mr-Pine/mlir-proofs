@@ -219,11 +219,6 @@ namespace Agave
 
 open Fe2625x4
 
-/-- A field element as its registers. -/
-theorem Fe2625x4.regs_eta (v : Fe2625x4) : ![v 0, v 1, v 2, v 3, v 4] = v := by
-  funext i
-  fin_cases i <;> rfl
-
 /-- Register `i` of `x.blend(x.diff_sum(), Lanes::AB)` as the lifted code computes it, `p`, `q` its
 `2p` limbs. -/
 def Fe2625x4.dsReg (a : Vector (BitVec 32) 8) (p q : BitVec 32) : Vector (BitVec 32) 8 :=
@@ -602,12 +597,6 @@ theorem fe4xBits_ofBits (c : BitVec 1280) : fe4xBits (Fe2625x4.ofBits c) = c := 
   simp
   bv_decide
 
-/-- A read below two `alloca`s. -/
-theorem MemoryState.readAt_alloca_alloca {s : GlobalState} (hwf : s.WF) (h : InBounds s.mem q w) :
-    ((s.alloca n d).alloca n' d').mem.readAt q w = s.mem.readAt q w := by
-  rw [MemoryState.readAt_alloca_of_fits hwf.alloca (h.alloca hwf),
-    MemoryState.readAt_alloca_of_fits hwf h]
-
 /-- Register `k` of five registers' bits. -/
 @[simp]
 theorem fe4xBits_extract_0 (v : Fe2625x4) :
@@ -704,32 +693,6 @@ theorem MemoryState.Naf5Fit.entry {m : MemoryState} {p : Pointer} (h : m.Naf5Fit
     MemoryState.Fe4xFit.of_fits (h.fits_entry j)
       (by
         rw [Naf5.entry_offset h.1]; omega)
-
-/-- A stored table read back. -/
-theorem MemoryState.readNaf5_storeNaf5 {m : MemoryState} {p : Pointer} {T : Fin 8 → Fe2625x4}
-    (h : Room m p 10240) (ho : p.offset.toNat + 1280 ≤ 2 ^ 64) :
-    (m.storeNaf5 p T).readNaf5 p = T := by
-  funext j
-  have := j.isLt
-  have hf : Fits (m.storeNaf5 p T) p 10240 := Fits.storeAt_self h
-  have hov : ¬p.offset.uaddOverflow (BitVec.ofNat 64 (160 * j)) := by
-    simp only [BitVec.uaddOverflow, decide_eq_true_eq, Nat.not_le, BitVec.toNat_ofNat]
-    rw [Nat.mod_eq_of_lt (by omega)]; omega
-  have hk : (BitVec.ofNat 64 (160 * j)).toNat = 160 * j := by
-    simp only [BitVec.toNat_ofNat]; rw [Nat.mod_eq_of_lt (by omega)]
-  refine
-    MemoryState.readFe4x_of_readAt (Fits.add_of_le hov (by omega) hf).inBounds
-      (by
-        rw [Naf5.entry_offset ho]; omega)
-      ?_
-  rw [MemoryState.readAt_add_of_readAt hf.inBounds hov (by omega)
-      (MemoryState.readAt_storeAt_self h _),
-    hk]
-  obtain ⟨e0, e1, e2, e3, e4, e5, e6, e7⟩ :=
-    extract_append8 (fe4xBits (T 0)) (fe4xBits (T 1)) (fe4xBits (T 2)) (fe4xBits (T 3))
-      (fe4xBits (T 4)) (fe4xBits (T 5)) (fe4xBits (T 6)) (fe4xBits (T 7))
-  fin_cases j
-  exacts [e0, e1, e2, e3, e4, e5, e6, e7]
 
 end
 

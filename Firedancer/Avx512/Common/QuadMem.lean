@@ -42,12 +42,6 @@ theorem MemoryState.storeQuad_readQuad_self {m : MemoryState} (h : m.QuadFit p) 
 theorem MemoryState.storeQuad_readQuad_self' {m : MemoryState} (h : m.QuadFit p)
     (hP : m.readQuad p = P) : m.storeQuad p P = m := by rw [← hP, storeQuad_readQuad_self h]
 
-/-- Room for a point before a point store if there is after it. -/
-theorem MemoryState.QuadRoom.of_storeQuad {m : MemoryState} (h : (m.storeQuad p P).QuadRoom q) :
-    m.QuadRoom q := by
-  simpa only [MemoryState.QuadRoom, MemoryState.storeQuad, MemoryState.storeVec,
-    Room.storeAt_iff] using h
-
 /-- A point stored twice at the same place: the second. -/
 theorem MemoryState.storeQuad_storeQuad_self {m : MemoryState} {p : Pointer}
     (hp : p.offset.toNat + 192 ≤ 2 ^ 64) : (m.storeQuad p P).storeQuad p Q = m.storeQuad p Q :=

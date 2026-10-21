@@ -95,14 +95,6 @@ public theorem _root_.MLIR.MemoryState.readLimbs_copy_of {m : MemoryState} {p q 
   subst hx
   exact MemoryState.readLimbs_copy hp hq ha d
 
-/-- A copy of the bits `x` read at `q`: `q`'s point. -/
-public theorem _root_.MLIR.MemoryState.readPt_copy_of {m : MemoryState} {p q : Pointer}
-    {P : Nat → Option Pointer}
-    {x : BitVec 1344} (hp : m.PtRoom p) (hq : m.PtLive q) (hx : m.readAt q 1344 = x)
-    (d : BitVec 1344) : (m.storeCopy p x d P).readPt p = m.readPt q := by
-  subst hx
-  exact MemoryState.readPt_copy hp hq d
-
 /-! ### Definedness below a frame -/
 
 /-- Definedness below an `alloca`: as before it. -/
@@ -408,11 +400,6 @@ public theorem _root_.MLIR.MemoryState.readBase_storePtCopy_self {m : MemoryStat
 public theorem _root_.MLIR.MemoryState.PtFit.storePtCopy_self {m : MemoryState} {p : Pointer}
     (h : m.PtRoom p) : (m.storePtCopy p P b).PtFit p :=
   .of_fits h.2.1.storeDef (Fits.storeDef_of_mask_self h.2 (by omega) (ZPt.overDef_low 0)) h.1
-
-/-- A copy out of a slot holding a point as a fresh slot does. -/
-public theorem _root_.MLIR.MemoryState.storeDef_copy_eq {m m' : MemoryState} {p q : Pointer}
-    (hr : m'.readAt q 1344 = P.raw b) (hd : m'.definedAt q 1344 = ZPt.rawDef) :
-    m.storeDef p (m'.readAt q 1344) (m'.definedAt q 1344) = m.storePtCopy p P b := by rw [hr, hd]
 
 /-! ### Known bits from definedness -/
 

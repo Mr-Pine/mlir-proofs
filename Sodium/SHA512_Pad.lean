@@ -66,15 +66,6 @@ theorem and127 (n : Nat) : n &&& 127 = n % 128 := by
 
 /-! The buffered byte count `r`, as the steps compute it. -/
 
-theorem r64_eq (x : BitVec 64) :
-    BitVec.setWidth 64 (BitVec.setWidth 32 x) >>> 3 &&& 127#64 =
-      BitVec.ofNat 64 (x.toNat / 8 % 128) := by
-  apply BitVec.eq_of_toNat_eq
-  simp only [BitVec.toNat_and, BitVec.toNat_ushiftRight, BitVec.toNat_setWidth, BitVec.toNat_ofNat,
-    Nat.shiftRight_eq_div_pow]
-  rw [show (127 : Nat) % 2 ^ 64 = 127 from rfl, and127]
-  omega
-
 theorem rNat_eq (x : BitVec 64) :
     (x.toNat % 4294967296 % 18446744073709551616) >>> 3 &&& 127 = x.toNat / 8 % 128 := by
   rw [Nat.shiftRight_eq_div_pow, and127]

@@ -25,10 +25,6 @@ section Proof
 
 namespace be64enc_vect
 
-theorem shl3_toNat (i : Nat) (hi : 8 * i < 2 ^ 64) : (BitVec.ofNat 64 i <<< 3).toNat = 8 * i := by
-  rw [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, Nat.shiftLeft_eq]
-  omega
-
 theorem shl3_eq (i : Nat) : BitVec.ofNat 64 i <<< 3 = BitVec.ofNat 64 (8 * i) := by
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.shiftLeft_eq]

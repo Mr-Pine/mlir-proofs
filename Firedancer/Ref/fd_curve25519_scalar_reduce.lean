@@ -291,16 +291,6 @@ end
 
 /-! ## Staged for Common -/
 
-/-- A splice above a splice of `x`, right where `x` ends: one splice of both. -/
-public theorem spliceBits_spliceBits_append {n a b : Nat} (bytes : BitVec n) (off : Nat)
-    (x : BitVec a) (y : BitVec b) :
-    Memory.spliceBits (Memory.spliceBits bytes off x) (off + a) y =
-      Memory.spliceBits bytes off (y ++ x) := by
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [Memory.getLsbD_spliceBits, BitVec.getLsbD_append]
-  grind
-
 /-- `x`, as a signed integer, lies in `[lo, hi]`. -/
 @[expose]
 public def Bnd (x : BitVec 64) (lo hi : Int) : Prop :=

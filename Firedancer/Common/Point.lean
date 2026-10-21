@@ -287,10 +287,6 @@ theorem MemoryState.PointRoom.limbsRoom_80 {m : MemoryState} (h : m.PointRoom p)
     m.LimbsRoom (p.add 80#64) :=
   h.2.2.2.1
 
-theorem MemoryState.PointRoom.limbsRoom_120 {m : MemoryState} (h : m.PointRoom p) :
-    m.LimbsRoom (p.add 120#64) :=
-  h.2.2.2.2
-
 @[mlir_read]
 theorem MemoryState.readLimbs_storePoint_of_id_ne {m : MemoryState} {p q : Pointer}
     (h : p.id ≠ q.id) : (m.storePoint p P).readLimbs q = m.readLimbs q := by
@@ -645,23 +641,6 @@ theorem MemoryState.eraseFrom_storePoint {m : MemoryState} :
 theorem MemoryState.storePoint_eraseFrom_of_le {m : MemoryState} (h : n ≤ p.id.id) :
     (m.eraseFrom n).storePoint p P = m.eraseFrom n := by
   simp [MemoryState.storePoint, MemoryState.storeLimbs_eraseFrom_of_le, Pointer.add, h]
-
-/-- A point store that rewrites `Y` and `Z` with what they hold: the `X` and `T` stores. -/
-theorem MemoryState.storePoint_of_Y_Z {m : MemoryState} {p : Pointer} (h : m.PointFit p) :
-    m.storePoint p ⟨X, m.readLimbs (p.add 40#64), T, m.readLimbs (p.add 120#64)⟩ =
-      (m.storeLimbs p X).storeLimbs (p.add 80#64) T := by
-  have hp : p.offset.toNat + 32 < 2 ^ 64 := by omega
-  have hY : (m.storeLimbs p X).readLimbs (p.add 40#64) = m.readLimbs (p.add 40#64) :=
-    readLimbs_storeLimbs_of_disjoint
-      (Range.disjoint_coords_base' (a := 40) h.1 (by omega) (by omega)) hp
-      (Pointer.coord_offset (a := 40) h.1 (by omega))
-  have hZ : (m.storeLimbs p X).readLimbs (p.add 120#64) = m.readLimbs (p.add 120#64) :=
-    readLimbs_storeLimbs_of_disjoint
-      (Range.disjoint_coords_base' (a := 120) h.1 (by omega) (by omega)) hp
-      (Pointer.coord_offset (a := 120) h.1 (by omega))
-  simp only [MemoryState.storePoint]
-  rw [← hY, storeLimbs_readLimbs_self h.2.2.1.storeLimbs, ← hZ,
-    storeLimbs_readLimbs_self h.2.2.2.2.storeLimbs]
 
 /-- A point store that keeps `T`: the `X`, `Y` and `Z` stores. -/
 theorem MemoryState.storePoint_of_T {m : MemoryState} {p : Pointer} (h : m.PointFit p) :

@@ -719,46 +719,6 @@ variable {m : MemoryState} {P Q : Quad}
 
 include hids
 
-theorem readAt_storeOut_a03 (hf : Room m a03 512) :
-    (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a03 512 = BitVec.packLanes P.P03 := by
-  obtain ⟨⟨h01, h02, h03, h04, h05⟩, -⟩ := ids_ne hids
-  simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h05),
-    readAt_storeAt_ne (Ne.symm h04), readAt_storeAt_ne (Ne.symm h03),
-    readAt_storeAt_ne (Ne.symm h02), readAt_storeAt_ne (Ne.symm h01),
-    MemoryState.readAt_storeAt_self hf]
-
-theorem readAt_storeOut_a14 (hf : Room m a14 512) :
-    (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a14 512 = BitVec.packLanes P.P14 := by
-  obtain ⟨-, ⟨h12, h13, h14, h15⟩, -⟩ := ids_ne hids
-  simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h15),
-    readAt_storeAt_ne (Ne.symm h14), readAt_storeAt_ne (Ne.symm h13),
-    readAt_storeAt_ne (Ne.symm h12), MemoryState.readAt_storeAt_self hf.storeAt]
-
-theorem readAt_storeOut_a25 (hf : Room m a25 512) :
-    (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt a25 512 = BitVec.packLanes P.P25 := by
-  obtain ⟨-, -, ⟨h23, h24, h25⟩, -⟩ := ids_ne hids
-  simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h25),
-    readAt_storeAt_ne (Ne.symm h24), readAt_storeAt_ne (Ne.symm h23),
-    MemoryState.readAt_storeAt_self hf.storeAt.storeAt]
-
-theorem readAt_storeOut_b03 (hf : Room m b03 512) :
-    (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b03 512 = BitVec.packLanes Q.P03 := by
-  obtain ⟨-, -, -, ⟨h34, h35⟩, -⟩ := ids_ne hids
-  simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h35),
-    readAt_storeAt_ne (Ne.symm h34), MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt]
-
-theorem readAt_storeOut_b14 (hf : Room m b14 512) :
-    (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b14 512 = BitVec.packLanes Q.P14 := by
-  obtain ⟨-, -, -, -, h45⟩ := ids_ne hids
-  simp only [storeOut, MemoryState.storeVec, readAt_storeAt_ne (Ne.symm h45),
-    MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt.storeAt]
-
-omit hids in
-theorem readAt_storeOut_b25 (hf : Room m b25 512) :
-    (storeOut a03 a14 a25 b03 b14 b25 m P Q).readAt b25 512 = BitVec.packLanes Q.P25 := by
-  simp only [storeOut, MemoryState.storeVec,
-    MemoryState.readAt_storeAt_self hf.storeAt.storeAt.storeAt.storeAt.storeAt]
-
 end ReadOut
 
 /-- Twelve stores to six distinct blocks, the second six overwriting the first: the second six. -/

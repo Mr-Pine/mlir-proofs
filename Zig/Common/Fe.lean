@@ -83,17 +83,6 @@ public theorem storeLimbs_of_eq {m : MemoryState} {p : Pointer} {x : Fin 5 → B
   subst h0 h1 h2 h3 h4
   rfl
 
-/-- Five limb stores at `p`, read back. -/
-public theorem _root_.MLIR.MemoryState.readLimbs_stores {m : MemoryState} {p : Pointer}
-    (h : m.LimbsRoom p) (x : Fin 5 → BitVec 64) :
-    (((((m.storeAt p (x 0)).storeAt (p.add 8#64) (x 1)).storeAt (p.add 16#64) (x 2)).storeAt
-                (p.add 24#64) (x 3)).storeAt
-            (p.add 32#64) (x 4)).readLimbs
-        p =
-      x := by
-  rw [← storeLimbs_of_eq rfl rfl rfl rfl rfl]
-  exact MemoryState.readLimbs_storeLimbs_self h
-
 /-! ### Limbs read past stores -/
 
 attribute [mlir_read] MemoryState.readLimbs_storeAt_of_id_ne

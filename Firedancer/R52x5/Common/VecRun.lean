@@ -89,15 +89,6 @@ theorem vpmadd52h_wl (a b c : ⟦.vec 4 64⟧ᵣ) :
   ext i hi
   simp [Ty.wrap_vec, wl_madd52hi, madd52hi, Operation.vpmadd52h]
 
-/-- An `extractelement` at a literal lane. -/
-theorem extractelement_wl (v : ⟦.vec 4 64⟧ᵣ) (hk : k < 4) :
-    Operation.extractelement (Ty.wrap (t := .vec 4 64) v)
-        (.value (BitVec.ofNat 64 k) : PoisonOr (BitVec 64)) =
-      .value (v[k]'hk) := by
-  have hk' : (BitVec.ofNat 64 k).toNat = k := by
-    simp; omega
-  simp [Operation.extractelement, hk', hk, Ty.wrap_vec]
-
 /-! ### `FD_R52X5_QUAD_REDUCE`'s flagged adds -/
 
 /-- Low 51 bits plus a carry above bit 51: no overflow either way. -/

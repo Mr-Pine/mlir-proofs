@@ -216,12 +216,6 @@ theorem MemoryState.Quad5Room.addBlock {s : GlobalState} {x : BitVec v} (hwf : s
   ⟨h.1, h.2.1.addBlock hwf, h.2.2.1.addBlock hwf, h.2.2.2.1.addBlock hwf, h.2.2.2.2.1.addBlock hwf,
     h.2.2.2.2.2.addBlock hwf⟩
 
-/-- Room for a point before a store if there is room after it. -/
-theorem MemoryState.Quad5Room.of_storeQuad5 {m : MemoryState} (h : (m.storeQuad5 p P).Quad5Room q) :
-    m.Quad5Room q := by
-  simpa only [MemoryState.Quad5Room, MemoryState.storeQuad5, MemoryState.storeTmp5,
-    MemoryState.storeWv, Room.storeAt_iff] using h
-
 /-- A point stored where there is room is known. -/
 @[mlir_fresh, mlir_mem]
 theorem MemoryState.Quad5Fit.storeQuad5_self {m : MemoryState} {p : Pointer} (h : m.Quad5Room p) :
@@ -653,11 +647,6 @@ theorem MemoryState.readQuad5_add_of_readAt {m : MemoryState} {p : Pointer} {x :
 
 /-! ### Stores -/
 
-/-- Lanes stored twice at the same place: the second. -/
-theorem MemoryState.storeWv_storeWv_self {m : MemoryState} :
-    (m.storeWv p v).storeWv p v' = m.storeWv p v' :=
-  storeAt_storeAt_self
-
 /-- Four lanes read, packed: the bits read. -/
 theorem MemoryState.packLanes_readWv {m : MemoryState} :
     BitVec.packLanes (m.readWv p) = m.readAt p 256 := by
@@ -685,22 +674,6 @@ theorem MemoryState.storeQuad5_readQuad5_self {m : MemoryState} (h : m.Quad5Fit 
 /-- `storeQuad5_readQuad5_self` with the point named. -/
 theorem MemoryState.storeQuad5_readQuad5_self' {m : MemoryState} (h : m.Quad5Fit p)
     (hP : m.readQuad5 p = P) : m.storeQuad5 p P = m := by rw [← hP, storeQuad5_readQuad5_self h]
-
-/-- A callee's five stores twice, out-pointers in five blocks: the second. -/
-theorem MemoryState.storeTmp5_storeTmp5_self {m : MemoryState} (h01 : t0.id ≠ t1.id)
-    (h02 : t0.id ≠ t2.id) (h03 : t0.id ≠ t3.id) (h04 : t0.id ≠ t4.id) (h12 : t1.id ≠ t2.id)
-    (h13 : t1.id ≠ t3.id) (h14 : t1.id ≠ t4.id) (h23 : t2.id ≠ t3.id) (h24 : t2.id ≠ t4.id)
-    (h34 : t3.id ≠ t4.id) :
-    (m.storeTmp5 t0 t1 t2 t3 t4 P).storeTmp5 t0 t1 t2 t3 t4 Q = m.storeTmp5 t0 t1 t2 t3 t4 Q := by
-  have d {a b : Pointer} (h : a.id ≠ b.id) : (Range.of a 256).Disjoint (Range.of b 256) :=
-    Or.inl (by simpa [Range.of] using h)
-  simp only [storeTmp5, storeWv]
-  -- each second store moved down to the first, which it replaces
-  rw [storeAt_comm (d h04.symm), storeAt_comm (d h03.symm), storeAt_comm (d h02.symm),
-    storeAt_comm (d h01.symm), storeAt_storeAt_self, storeAt_comm (d h14.symm),
-    storeAt_comm (d h13.symm), storeAt_comm (d h12.symm), storeAt_storeAt_self,
-    storeAt_comm (d h24.symm), storeAt_comm (d h23.symm), storeAt_storeAt_self,
-    storeAt_comm (d h34.symm), storeAt_storeAt_self, storeAt_storeAt_self]
 
 /-- A point stored twice at the same place: the second. -/
 theorem MemoryState.storeQuad5_storeQuad5_self {m : MemoryState} {p : Pointer}

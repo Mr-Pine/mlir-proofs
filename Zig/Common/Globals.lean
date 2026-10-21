@@ -116,22 +116,6 @@ public theorem Edwards25519_identityElement.value_eq (s : GlobalState) :
     Edwards25519_identityElement.value s = .value (Edwards25519.identity.val 0, s) :=
   GlobalInitializer.compute_value _ _ ⟨_, by with_unfolding_all rfl⟩
 
-/-- The identity global's block (`step_addressof`'s facts): the identity, `is_base` false. -/
-public theorem _root_.MLIR.MemoryState.identity_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Live m p 1344) (hf : Fits m p 1281) (ho : p.offset = 0)
-    (h : m.readAt p 1344 = Edwards25519.identityBits) :
-    m.PtFit p ∧ m.readPt p = Edwards25519.identity ∧ m.readBase p = 0 := by
-  have ho' : p.offset.toNat + 168 ≤ 2 ^ 64 := by simp [ho]
-  refine
-    ⟨.of_fits hr hf ho', MemoryState.readPt_of_readAt (InBounds.mono (by omega) hr.inBounds) ho' ?_,
-      ?_⟩
-  · rw [MemoryState.readAt_of_readAt_le (by omega) h]
-    decide +kernel
-  · rw [MemoryState.readBase,
-      MemoryState.readAt_add_of_readAt hr.inBounds (p.not_uaddOverflow_of_pt ho' (by decide))
-        (by decide) h]
-    decide +kernel
-
 /-! ### Error unions -/
 
 @[expose] public section
@@ -168,24 +152,6 @@ public def Edwards25519_mulDoubleBasePublic_weak.bits : BitVec 1408 :=
   (Ty.flattenDef Edwards25519_mulDoubleBasePublic_weak.t
         (ZPt.undef, .value 4, Vector.replicate 6 .poison)).1.cast
     (by decide)
-
-/-- `error.InvalidEncoding`'s block (`step_addressof`'s facts): its code at byte 168. -/
-public theorem _root_.MLIR.MemoryState.invalid_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Live m p 1408) (ho : p.offset = 0)
-    (h : m.readAt p 1408 = Edwards25519_fromBytes_invalid.bits) :
-    m.readAt (p.add 168#64) 16 = 2#16 := by
-  rw [MemoryState.readAt_add_of_readAt hr.inBounds (by simp [BitVec.uaddOverflow, ho]) (by decide)
-      h]
-  decide +kernel
-
-/-- `error.WeakPublicKey`'s block (`step_addressof`'s facts): its code at byte 168. -/
-public theorem _root_.MLIR.MemoryState.weak_of_readAt {m : MemoryState} {p : Pointer}
-    (hr : Live m p 1408) (ho : p.offset = 0)
-    (h : m.readAt p 1408 = Edwards25519_mulDoubleBasePublic_weak.bits) :
-    m.readAt (p.add 168#64) 16 = 4#16 := by
-  rw [MemoryState.readAt_add_of_readAt hr.inBounds (by simp [BitVec.uaddOverflow, ho]) (by decide)
-      h]
-  decide +kernel
 
 /-! ### `Sha512.iv` -/
 

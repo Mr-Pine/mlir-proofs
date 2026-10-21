@@ -271,12 +271,6 @@ theorem readPoint_add_of_readAt {m : MemoryState} {p : Pointer} {x : BitVec v} (
     readLimbs_add_of_readAt (o := o + 120) hf h (by omega) (by omega)]
   congr 1
 
-/-- The point with the given field elements. -/
-theorem MemoryState.readPoint_of_limbs {m : MemoryState} {p : Pointer} {P : PointLimbs}
-    (hX : m.readLimbs p = P.X) (hY : m.readLimbs (p.add 40#64) = P.Y)
-    (hT : m.readLimbs (p.add 80#64) = P.T) (hZ : m.readLimbs (p.add 120#64) = P.Z) :
-    m.readPoint p = P := by simp only [MemoryState.readPoint, hX, hY, hT, hZ]
-
 end Staged
 
 /-! ## Proof -/

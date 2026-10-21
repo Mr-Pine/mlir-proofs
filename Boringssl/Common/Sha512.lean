@@ -270,10 +270,6 @@ theorem MemoryState.readShaCtx_mdLen (hm : InBounds m c 1664) (hc : ¬c.offset.u
     (m.readShaCtx c).mdLen = m.readAt (c.add 66#64) 16 :=
   MemoryState.readShaCtx_field hm hc (off := 66#64) (by decide)
 
-theorem MemoryState.readShaCtx_hi (hm : InBounds m c 1664) (hc : ¬c.offset.uaddOverflow 208#64) :
-    (m.readShaCtx c).hi = m.readAt (c.add 68#64) 32 :=
-  MemoryState.readShaCtx_field hm hc (off := 68#64) (by decide)
-
 theorem MemoryState.readShaCtx_lo (hm : InBounds m c 1664) (hc : ¬c.offset.uaddOverflow 208#64) :
     (m.readShaCtx c).lo = m.readAt (c.add 72#64) 64 :=
   MemoryState.readShaCtx_field hm hc (off := 72#64) (by decide)

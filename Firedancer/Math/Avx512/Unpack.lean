@@ -175,14 +175,6 @@ theorem unpack_pack (u : Wv) : pack320w (fd_r43x6_unpack.spec u) = wv320 u := by
   generalize u[0] = u0, u[1] = u1, u[2] = u2, u[3] = u3
   bv_decide
 
-public theorem wvNat_lt (u : Wv) : wvNat u < 2 ^ 256 := by
-  have := u[0].isLt
-  have := u[1].isLt
-  have := u[2].isLt
-  have := u[3].isLt
-  unfold wvNat
-  omega
-
 /-- `fd_r43x6_unpack` cuts a `wv_t`'s 256-bit integer into unpacked limbs, with lanes 6 and 7
 zero: nearly reduced if the integer is below `2p`, reduced if below `p`. -/
 public theorem fd_r43x6_unpack_spec (u : Wv) :

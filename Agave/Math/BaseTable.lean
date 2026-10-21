@@ -492,11 +492,6 @@ public theorem serial_getElem {k : ℕ} (hk : k < 7680) :
       BitVec.ofNat 8 (serialNat >>> (8 * k)) := by
   rw [serial_lit, Vector.getElem_ofFn]
 
-/-- Byte `k` of `BASEPOINT_ODD_LOOKUP_TABLE`. -/
-public theorem avx2_getElem {k : ℕ} (hk : k < 10240) :
-    Avx2.BASEPOINT_ODD_LOOKUP_TABLE.lit[k] = BitVec.ofNat 8 (avx2Nat >>> (8 * k)) := by
-  rw [avx2_lit, Vector.getElem_ofFn]
-
 /-! ## Checks
 
 Natural number checks, mod `p`, that the kernel decides. -/

@@ -36,9 +36,6 @@ def MemoryState.storeWords (m : MemoryState) (p : Pointer) (f : Nat → BitVec 6
   | 0 => m
   | n + 1 => (m.storeWords p f n).storeAt (p.add (BitVec.ofNat 64 (8 * n))) (f n)
 
-theorem MemoryState.storeWords_zero {m : MemoryState} : m.storeWords p f 0 = m :=
-  rfl
-
 theorem MemoryState.storeWords_succ {m : MemoryState} :
     m.storeWords p f (n + 1) =
       (m.storeWords p f n).storeAt (p.add (BitVec.ofNat 64 (8 * n))) (f n) :=

@@ -415,10 +415,6 @@ theorem negateD_lane3 {x : Vector (BitVec 64) 4} {c : ℕ} {e : Fin 4} (he : e =
   refine ⟨by omega, ?_⟩
   rw [hsub, Nat.cast_sub (by omega)]
 
-/-- A lane through `ZMod p`. -/
-theorem ValLe.toZ {x : BitVec 64} (hx : ValLe x n M) : x.toNat ≤ M ∧ (x.toNat : ZMod p) = n :=
-  ⟨hx.1 ▸ hx.2, by rw [hx.1]⟩
-
 -- the lane rules unify by heads, without unfolding a bound into its bits
 attribute [local irreducible] ValLe evenLane oddLane zx zx2
 
