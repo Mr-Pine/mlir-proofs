@@ -143,12 +143,6 @@ theorem eq_of_ofNat64_eq {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
   have := congrArg BitVec.toNat h
   rwa [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at this
 
-/-- A small `int` sign-extends to the same `long`. -/
-theorem signExtend_ofNat32 {a : Nat} (h : a < 2 ^ 31) :
-    (BitVec.ofNat 32 a).signExtend 64 = BitVec.ofNat 64 a := by
-  rw [BitVec.signExtend_eq_setWidth_of_msb_false (msb_ofNat32 h)]
-  exact setWidth_ofNat32 (by omega)
-
 /-- A small `int` read back. -/
 theorem toInt_ofInt32 {a : Int} (h : -2 ^ 31 ≤ a ∧ a < 2 ^ 31) : (BitVec.ofInt 32 a).toInt = a :=
   BitVec.toInt_ofInt_eq_self (by decide) h.1 h.2

@@ -152,6 +152,15 @@ theorem MemoryState.Quad5Fit.storeTmp5 {m : MemoryState} (h : m.Quad5Fit q) :
     (m.storeTmp5 t0 t1 t2 t3 t4 Q).Quad5Fit q :=
   h.storeWv.storeWv.storeWv.storeWv.storeWv
 
+/-- A point stored by its five `<4 x i64>` stores, as the steps leave them. -/
+theorem MemoryState.storeQuad5_mk {m : MemoryState} {P : Pointer} {x0 x1 x2 x3 x4 : Wl} :
+    ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
+              (P.add 64#64) (BitVec.packLanes x2)).storeAt
+          (P.add 96#64) (BitVec.packLanes x3)).storeAt
+        (P.add 128#64) (BitVec.packLanes x4) =
+      m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ :=
+  rfl
+
 @[mlir_mem, mlir_transport]
 theorem MemoryState.Quad5Fit.storeQuad5 {m : MemoryState} (h : m.Quad5Fit q) :
     (m.storeQuad5 p Q).Quad5Fit q :=

@@ -52,16 +52,6 @@ theorem ofFn_extractVecElem_bytes {m : MemoryState} :
   simp only [Vector.getElem_ofFn, Ty.extractVecElem_eq, wlBytes]
   exact extractLsb'_packLanes_byte _ hk
 
-/-- A point stored by its five `<4 x i64>` stores, as the steps leave them. -/
-theorem _root_.MLIR.MemoryState.storeQuad5_mk {m : MemoryState} {P : Pointer}
-    {x0 x1 x2 x3 x4 : Wl} :
-    ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
-              (P.add 64#64) (BitVec.packLanes x2)).storeAt
-          (P.add 96#64) (BitVec.packLanes x3)).storeAt
-        (P.add 128#64) (BitVec.packLanes x4) =
-      m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ :=
-  rfl
-
 /-! ### Single instructions -/
 
 section Patterns

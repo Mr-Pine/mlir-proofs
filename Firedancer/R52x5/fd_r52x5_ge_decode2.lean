@@ -41,7 +41,7 @@ end
 
 section Proof
 
-attribute [local mlir_env 1100] fd_r52x5_ge_decode2.read_write_same
+attribute [local mlir_env 1100] read_write_same
 
 open fd_r52x5_ge_decode2 in
 -- the composition of the blocks' lemmas: each `chain_reads` searches the chain of envs back to

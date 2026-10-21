@@ -20,20 +20,6 @@ attribute [-mlir_operation] zipWith_eq_ofFn Operation.vpmadd52l Operation.vpmadd
 attribute [local mlir_operation] vpmadd52l_wl zipWith_and_wl zipWith_lshr_wl
   zipWith_add_nsw_nuw_reduce
 
-/-- The counter's test at `N`, back in `ℕ`. -/
-theorem counter_eq {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
-    (h : BitVec.ofNat 32 i + 1#32 = BitVec.ofNat 32 N) : i + 1 = N := by
-  have := congrArg BitVec.toNat h
-  simp [BitVec.toNat_add] at this
-  omega
-
-theorem counter_ne {i N : Nat} (hN : N < 2 ^ 31) (hi : i + 1 ≤ N)
-    (h : ¬BitVec.ofNat 32 i + 1#32 = BitVec.ofNat 32 N) : i + 1 < N := by
-  rcases Nat.lt_or_eq_of_le hi with h' | h'
-  · exact h'
-  · subst h'
-    exact absurd (by rw [BitVec.ofNat_add]) h
-
 section Loops
 
 variable {β : Type} (k exit : Fin 14) (N lo hi : Nat) (hdr : ⟪Γ⟫ → Quad5 → Nat → ⟪Γ⟫)
