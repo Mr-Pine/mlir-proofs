@@ -72,7 +72,7 @@ local macro "lanes " h:ident : tactic =>
     (rw [$h:ident]; ext i hi : 1;
       rcases i with _ | _ | _ | _ | _ | _ | _ | _ | i <;>
         simp [wwl_pack_halves, wwl_pack_h0_h1, wwl_madd52lo, wwl_madd52hi, madd52lo, madd52hi,
-          wwl_add, wwl_shl, mul24_eq_shl] <;>
+          wwl_add, wwl_shl, wwl_slide, mul24_eq_shl] <;>
         first
         | omega
         | ac_rfl))
@@ -179,10 +179,10 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
   have e_x23 : x23 = wwl_pack_h0_h1 x25 x03 := by lanes hx23
   have e_x52 : x52 = wwl_pack_halves x25 1 x25 0 := by lanes hx52
   have e_x4z : x4z = wwl_pack_halves x14 1 wwl_zero 0 := by lanes hx4z
-  have e_two_x03 : two_x03 = wwl_shl x03 1 := by lanes htwo_x03
-  have e_two_x14 : two_x14 = wwl_shl x14 1 := by lanes htwo_x14
-  have e_two_x05 : two_x05 = wwl_shl x05 1 := by lanes htwo_x05
-  have e_two_x12 : two_x12 = wwl_shl x12 1 := by lanes htwo_x12
+  have e_two_x03 : two_x03 = wwl_shl x03 1 := htwo_x03
+  have e_two_x14 : two_x14 = wwl_shl x14 1 := htwo_x14
+  have e_two_x05 : two_x05 = wwl_shl x05 1 := htwo_x05
+  have e_two_x12 : two_x12 = wwl_shl x12 1 := htwo_x12
   have e_p0a : p0a = wwl_madd52lo wwl_zero x05 x05 := by lanes hp0a
   have e_p19 : p19 = wwl_madd52lo wwl_zero two_x05 x14 := by lanes hp19
   have e_a47 : a47 = wwl_madd52lo wwl_zero x14 x14 := by lanes ha47
@@ -195,22 +195,22 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
   have e_a54 : a54 = wwl_madd52lo wwl_zero two_x03 x52 := by lanes ha54
   have e_p55 : p55 = wwl_madd52lo a54 two_x14 x4z := by lanes hp55
   have e_h56 : h56 = wwl_madd52hi wwl_zero x05 x05 := by lanes hh56
-  have e_q1b : q1b = wwl_shl h56 9 := by lanes hq1b
+  have e_q1b : q1b = wwl_shl h56 9 := hq1b
   have e_h58 : h58 = wwl_madd52hi wwl_zero two_x05 x14 := by lanes hh58
-  have e_q2a : q2a = wwl_shl h58 9 := by lanes hq2a
+  have e_q2a : q2a = wwl_shl h58 9 := hq2a
   have e_h60 : h60 = wwl_madd52hi wwl_zero x14 x14 := by lanes hh60
   have e_h61 : h61 = wwl_madd52hi h60 two_x03 x25 := by lanes hh61
-  have e_q39 : q39 = wwl_shl h61 9 := by lanes hq39
+  have e_q39 : q39 = wwl_shl h61 9 := hq39
   have e_h63 : h63 = wwl_madd52hi wwl_zero two_x03 x34 := by lanes hh63
   have e_h64 : h64 = wwl_madd52hi h63 two_x12 x25 := by lanes hh64
-  have e_q48 : q48 = wwl_shl h64 9 := by lanes hq48
+  have e_q48 : q48 = wwl_shl h64 9 := hq48
   have e_h66 : h66 = wwl_madd52hi wwl_zero x23 x23 := by lanes hh66
   have e_h67 : h67 = wwl_madd52hi h66 two_x05 x41 := by lanes hh67
   have e_h68 : h68 = wwl_madd52hi h67 two_x12 x34 := by lanes hh68
-  have e_q57 : q57 = wwl_shl h68 9 := by lanes hq57
+  have e_q57 : q57 = wwl_shl h68 9 := hq57
   have e_h70 : h70 = wwl_madd52hi wwl_zero two_x03 x52 := by lanes hh70
   have e_h71 : h71 = wwl_madd52hi h70 two_x14 x4z := by lanes hh71
-  have e_q66 : q66 = wwl_shl h71 9 := by lanes hq66
+  have e_q66 : q66 = wwl_shl h71 9 := hq66
   have e_l73 : l73 = wwl_pack_halves p0a 0 p37 0 := by lanes hl73
   have e_l74 : l74 = wwl_pack_halves wwl_zero 0 q39 0 := by lanes hl74
   have e_za03 : za03 = wwl_add l73 l74 := by lanes hza03
@@ -224,7 +224,7 @@ public theorem fd_r43x6_quad_sqr_fast.call_eq (_z03 _z14 _z25 : Pointer) (x03 x1
   have e_l83 : l83 = wwl_pack_halves q66 1 q39 1 := by lanes hl83
   have e_l84 : l84 = wwl_add l82 l83 := by lanes hl84
   have e_l85 : l85 = wwl_pack_h0_h1 q66 wwl_zero := by lanes hl85
-  have e_zb03 : zb03 = wwl_add l84 l85 := by lanes hzb03
+  have e_zb03 : zb03 = wwl_add l84 l85 := hzb03
   have e_l87 : l87 = wwl_pack_halves p37 1 p0a 1 := by lanes hl87
   have e_l88 : l88 = wwl_pack_halves q57 1 q2a 1 := by lanes hl88
   have e_zb14 : zb14 = wwl_add l87 l88 := by lanes hzb14

@@ -544,7 +544,7 @@ theorem insert4_eq (a b c d : BitVec 64) (h0 h1 h2 h3) :
       (Ty.wrap (wl a b c d) : ⟦Ty.vec 4 64⟧) := by
   ext i hi
   obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
-  all_goals simp [Ty.wrap_vec, wl]
+  all_goals simp [wl]
 
 /-- The env after `^bb0`'s entry: its constants over `E₀`, the globals `gsq gone gd`, the
 slots. -/

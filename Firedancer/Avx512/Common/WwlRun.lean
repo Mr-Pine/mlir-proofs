@@ -42,12 +42,19 @@ local macro "slide_lanes" : tactic =>
 
 /-! ### The intrinsics from their lanes, as the steps give them -/
 
+@[mlir_operation]
 theorem wwl_add_ofFn (a b : Vector (BitVec 64) 8) :
     (Vector.ofFn fun i => a[i.1] + b[i.1]) = wwl_add a b := by simp [wwl_add]
 
+@[mlir_operation]
+theorem wwl_sub_ofFn (a b : Vector (BitVec 64) 8) :
+    (Vector.ofFn fun i => a[i.1] - b[i.1]) = wwl_sub a b := by simp [wwl_sub]
+
+@[mlir_operation]
 theorem wwl_and_ofFn (a b : Vector (BitVec 64) 8) :
     (Vector.ofFn fun i => a[i.1] &&& b[i.1]) = wwl_and a b := by simp [wwl_and]
 
+@[mlir_operation]
 theorem wwl_shl_ofFn (a : Vector (BitVec 64) 8) (n : Nat) :
     (Vector.ofFn fun i => a[i.1] <<< n) = wwl_shl a n := by simp [wwl_shl]
 
@@ -88,6 +95,7 @@ theorem ofFn_and_lanesBelow (p m : Vector (BitVec 64) 8) :
   ext i hi : 1; simp [lanesBelow, wwl_and]
 
 /-- An add of two vectors defined on lanes `0 … k-1`. -/
+@[mlir_operation]
 theorem ofFn_add_lanesBelow (x y : Vector (BitVec 64) 8) :
     (Vector.ofFn fun i => do
         let a ← (lanesBelow k x)[i.1]
@@ -98,23 +106,29 @@ theorem ofFn_add_lanesBelow (x y : Vector (BitVec 64) 8) :
 
 /-! ### Slides as the shuffles give them, lane by lane -/
 
+@[mlir_operation]
 theorem wwl_slide_zero_7 (v : Vector (BitVec 64) 8) :
-    wwl_slide wwl_zero v 7 = #v[0#64, v[0], v[1], v[2], v[3], v[4], v[5], v[6]] := by slide_lanes
+    #v[0#64, v[0], v[1], v[2], v[3], v[4], v[5], v[6]] = wwl_slide wwl_zero v 7 := by slide_lanes
 
+@[mlir_operation]
 theorem wwl_slide_zero_6 (v : Vector (BitVec 64) 8) :
-    wwl_slide wwl_zero v 6 = #v[0#64, 0#64, v[0], v[1], v[2], v[3], v[4], v[5]] := by slide_lanes
+    #v[0#64, 0#64, v[0], v[1], v[2], v[3], v[4], v[5]] = wwl_slide wwl_zero v 6 := by slide_lanes
 
+@[mlir_operation]
 theorem wwl_slide_zero_5 (v : Vector (BitVec 64) 8) :
-    wwl_slide wwl_zero v 5 = #v[0#64, 0#64, 0#64, v[0], v[1], v[2], v[3], v[4]] := by slide_lanes
+    #v[0#64, 0#64, 0#64, v[0], v[1], v[2], v[3], v[4]] = wwl_slide wwl_zero v 5 := by slide_lanes
 
+@[mlir_operation]
 theorem wwl_slide_zero_4 (v : Vector (BitVec 64) 8) :
-    wwl_slide wwl_zero v 4 = #v[0#64, 0#64, 0#64, 0#64, v[0], v[1], v[2], v[3]] := by slide_lanes
+    #v[0#64, 0#64, 0#64, 0#64, v[0], v[1], v[2], v[3]] = wwl_slide wwl_zero v 4 := by slide_lanes
 
+@[mlir_operation]
 theorem wwl_slide_zero_3 (v : Vector (BitVec 64) 8) :
-    wwl_slide wwl_zero v 3 = #v[0#64, 0#64, 0#64, 0#64, 0#64, v[0], v[1], v[2]] := by slide_lanes
+    #v[0#64, 0#64, 0#64, 0#64, 0#64, v[0], v[1], v[2]] = wwl_slide wwl_zero v 3 := by slide_lanes
 
+@[mlir_operation]
 theorem wwl_slide_zero_2 (v : Vector (BitVec 64) 8) :
-    wwl_slide wwl_zero v 2 = #v[0#64, 0#64, 0#64, 0#64, 0#64, 0#64, v[0], v[1]] := by slide_lanes
+    #v[0#64, 0#64, 0#64, 0#64, 0#64, 0#64, v[0], v[1]] = wwl_slide wwl_zero v 2 := by slide_lanes
 
 theorem low6_wwl_slide_zero_7 (v : Vector (BitVec 64) 8) :
     low6 (wwl_slide wwl_zero v 7) =

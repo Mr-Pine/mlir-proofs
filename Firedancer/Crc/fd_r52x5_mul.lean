@@ -83,22 +83,27 @@ end
 
 namespace fd_r52x5_mul
 
+@[mlir_operation]
 theorem permute_bcast_0 (v : Wwl) :
     #v[v[0], v[0], v[0], v[0], v[0], v[0], v[0], v[0]] = wwl_permute (wwl_bcast 0) v := by
   vec_lanes
 
+@[mlir_operation]
 theorem permute_bcast_1 (v : Wwl) :
     #v[v[1], v[1], v[1], v[1], v[1], v[1], v[1], v[1]] = wwl_permute (wwl_bcast 1) v := by
   vec_lanes
 
+@[mlir_operation]
 theorem permute_bcast_2 (v : Wwl) :
     #v[v[2], v[2], v[2], v[2], v[2], v[2], v[2], v[2]] = wwl_permute (wwl_bcast 2) v := by
   vec_lanes
 
+@[mlir_operation]
 theorem permute_bcast_3 (v : Wwl) :
     #v[v[3], v[3], v[3], v[3], v[3], v[3], v[3], v[3]] = wwl_permute (wwl_bcast 3) v := by
   vec_lanes
 
+@[mlir_operation]
 theorem permute_bcast_4 (v : Wwl) :
     #v[v[4], v[4], v[4], v[4], v[4], v[4], v[4], v[4]] = wwl_permute (wwl_bcast 4) v := by
   vec_lanes
@@ -172,61 +177,35 @@ public theorem fd_r52x5_mul.call_eq (a b : Wwl) (s : GlobalState) (hwf : s.WF) :
   -- the constants and the `insertelement` chains of the slides' `wwl_zero()` operands
   iterate 74 step_pure
   step_pure with t2
-  rw [permute_bcast_3] at ht2
   step_pure with t3
-  rw [ofFn_madd52hi] at ht3
   step_pure with t5
-  rw [wwl_shl_ofFn] at ht5
   step_pure with t6
-  rw [permute_bcast_4] at ht6
   step_pure with t7
-  rw [ofFn_madd52lo] at ht7
   step_pure with t8
-  rw [← wwl_slide_zero_4] at ht8
   step_pure with t9
-  rw [ofFn_madd52hi] at ht9
   step_pure with t10
-  rw [wwl_shl_ofFn] at ht10
   step_pure with t11
-  rw [← wwl_slide_zero_3] at ht11
   step_pure with t13
-  rw [permute_bcast_0] at ht13
   step_pure with t14
-  rw [ofFn_madd52hi] at ht14
   step_pure with t15
-  rw [wwl_shl_ofFn] at ht15
   step_pure with t16
-  rw [permute_bcast_1] at ht16
   step_pure with t17
-  rw [ofFn_madd52lo] at ht17
   step_pure with t18
-  rw [← wwl_slide_zero_7] at ht18
   step_pure with t19
-  rw [ofFn_madd52lo] at ht19
   step_pure with t20
-  rw [ofFn_madd52hi] at ht20
   step_pure with t21
-  rw [wwl_shl_ofFn] at ht21
   step_pure with t22
-  rw [permute_bcast_2] at ht22
   step_pure with t23
-  rw [ofFn_madd52lo] at ht23
   step_pure with t24
-  rw [← wwl_slide_zero_6] at ht24
   step_pure with t25
-  rw [ofFn_madd52hi] at ht25
   step_pure with t26
-  rw [wwl_shl_ofFn] at ht26
   step_pure with t27
-  rw [ofFn_madd52lo] at ht27
   step_pure with t28
-  rw [← wwl_slide_zero_5] at ht28
   -- `t31`, the low column sums, in the compiled order
   step_pure with t12
   step_pure with s1
   step_pure with s2
   step_pure with t31
-  rw [wwl_add_ofFn] at ht12 hs1 hs2 ht31
   step_pure with t32
   rw [if_lanes5] at ht32
   -- `t37`, the high column sums, with lanes `5 … 7` poison
@@ -246,7 +225,6 @@ public theorem fd_r52x5_mul.call_eq (a b : Wwl) (s : GlobalState) (hwf : s.WF) :
   step_pure with t39
   step_pure with t42
   step_pure with t43
-  rw [wwl_add_ofFn] at ht39 ht43
   rw [ofFn_mul18] at ht42
   -- the fold
   step_pure with t44
@@ -260,7 +238,7 @@ public theorem fd_r52x5_mul.call_eq (a b : Wwl) (s : GlobalState) (hwf : s.WF) :
   finish_block
   rw [hS]
   suffices e : t43 = fd_r52x5_mul.z a b by rw [ht48, ht46, ht45, ht44, e, crcFold]; rfl
-  simp only [fd_r52x5_mul.z]
+  simp only [fd_r52x5_mul.z, BitVec.ofNat_eq_ofNat]
   rw [← ht2, ← ht3, ← ht5, ← ht6, ← ht7, ← ht8, ← ht9, ← ht10, ← ht11, ← ht13, ← ht14, ← ht15,
     ← ht16, ← ht17, ← ht18, ← ht19, ← ht20, ← ht21, ← ht22, ← ht23, ← ht24, ← ht25, ← ht26, ← ht27,
     ← ht28]

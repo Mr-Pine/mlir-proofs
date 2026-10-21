@@ -81,6 +81,7 @@ theorem ofFn_extractVecElem_readAt_512 (m : MemoryState) (p : Pointer) :
   rfl
 
 /-- `wwl_madd52hi(wwl_zero(), x, y)` as a step gives it. -/
+@[mlir_operation]
 theorem ofFn_madd52hi (x y : Wwl) :
     (Vector.ofFn fun i : Fin 8 =>
         BitVec.setWidth 64
@@ -91,6 +92,7 @@ theorem ofFn_madd52hi (x y : Wwl) :
   ext i hi : 1; simp [wwl_madd52hi, madd52hi]
 
 /-- `wwl_madd52lo(a, x, y)` as a step gives it. -/
+@[mlir_operation]
 theorem ofFn_madd52lo (a x y : Wwl) :
     (Vector.ofFn fun i : Fin 8 =>
         a[i.1] +
@@ -105,6 +107,7 @@ theorem wwl_madd52lo_eq_add (a x y : Wwl) :
   ext i hi : 1; simp [wwl_add, wwl_madd52lo]; ac_rfl
 
 /-- `za`: lanes `0 … 4` of `zl`. -/
+@[mlir_operation]
 theorem ofFn_and_mask5 (x : Wwl) :
     (Vector.ofFn fun i : Fin 8 =>
         x[i.1] &&&
@@ -114,11 +117,12 @@ theorem ofFn_and_mask5 (x : Wwl) :
   apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_and, wwl]
 
 /-- `zb`: `zl`'s lanes `5 … 7`, then `zh`'s `0 … 4`. -/
+@[mlir_operation]
 theorem wrap_slide_5 (x y : Wwl) :
     #v[.value x[5], .value x[6], .value x[7], .value y[0], .value y[1], .value y[2], .value y[3],
         .value y[4]] =
       Ty.wrap (t := .vec 8 64) (wwl_slide x y 5) := by
-  apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_slide, Ty.wrap_vec]
+  apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_slide]
 
 /-- `(zb << 1) + (zb << 4)` as written is `18 zb` as compiled. -/
 theorem shl_1_add_shl_4 (x : BitVec 64) : x <<< 1 + x <<< 4 = x * 18 := by bv_decide
@@ -132,33 +136,40 @@ end
 
 namespace fd_f25519_mul
 
+@[mlir_operation]
 theorem permute_bcast_0 (v : Wwl) :
     #v[v[0], v[0], v[0], v[0], v[0], v[0], v[0], v[0]] = wwl_permute (wwl_bcast 0) v := by
   bcast_lanes
 
+@[mlir_operation]
 theorem permute_bcast_1 (v : Wwl) :
     #v[v[1], v[1], v[1], v[1], v[1], v[1], v[1], v[1]] = wwl_permute (wwl_bcast 1) v := by
   bcast_lanes
 
+@[mlir_operation]
 theorem permute_bcast_2 (v : Wwl) :
     #v[v[2], v[2], v[2], v[2], v[2], v[2], v[2], v[2]] = wwl_permute (wwl_bcast 2) v := by
   bcast_lanes
 
+@[mlir_operation]
 theorem permute_bcast_3 (v : Wwl) :
     #v[v[3], v[3], v[3], v[3], v[3], v[3], v[3], v[3]] = wwl_permute (wwl_bcast 3) v := by
   bcast_lanes
 
+@[mlir_operation]
 theorem permute_bcast_4 (v : Wwl) :
     #v[v[4], v[4], v[4], v[4], v[4], v[4], v[4], v[4]] = wwl_permute (wwl_bcast 4) v := by
   bcast_lanes
 
 /-- `q4j` with its lanes `5 … 7` poison. -/
+@[mlir_operation]
 theorem lanes5_slide_4_zero (v : Wwl) :
     #v[.value v[4], .value v[5], .value v[6], .value v[7], .value 0#64, .poison, .poison, .poison] =
       lanesBelow 5 (wwl_slide v wwl_zero 4) := by
   apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_slide, lanesBelow]
 
 /-- `q5j` with its lanes `5 … 7` poison. -/
+@[mlir_operation]
 theorem lanes5_slide_3_zero (v : Wwl) :
     #v[.value v[3], .value v[4], .value v[5], .value v[6], .value v[7], .poison, .poison, .poison] =
       lanesBelow 5 (wwl_slide v wwl_zero 3) := by
@@ -193,88 +204,44 @@ public theorem fd_f25519_mul.call_eq (r a b : Pointer) (s : GlobalState) (hwf : 
   rw [ofFn_extractVecElem_readAt_320] at hax
   subst hax
   step_pure with x0
-  rw [permute_bcast_0] at hx0
   step_pure with x1
-  rw [permute_bcast_1] at hx1
   step_pure with x2
-  rw [permute_bcast_2] at hx2
   step_pure with x3
-  rw [permute_bcast_3] at hx3
   step_pure with x4
-  rw [permute_bcast_4] at hx4
   step_load with y
   rw [ofFn_extractVecElem_readAt_512] at hy
   -- `t1 … t5`: row `k - 1`'s high half doubled, plus row `k`'s low half
-  step_pure with hi0
-  rw [ofFn_madd52hi] at hhi0
-  step_pure with c0
-  rw [wwl_shl_ofFn] at hc0
-  step_pure with t1
-  rw [ofFn_madd52lo] at ht1
-  step_pure with hi1
-  rw [ofFn_madd52hi] at hhi1
-  step_pure with c1
-  rw [wwl_shl_ofFn] at hc1
-  step_pure with t2
-  rw [ofFn_madd52lo] at ht2
-  step_pure with hi2
-  rw [ofFn_madd52hi] at hhi2
-  step_pure with c2
-  rw [wwl_shl_ofFn] at hc2
-  step_pure with t3
-  rw [ofFn_madd52lo] at ht3
-  step_pure with hi3
-  rw [ofFn_madd52hi] at hhi3
-  step_pure with c3
-  rw [wwl_shl_ofFn] at hc3
-  step_pure with t4
-  rw [ofFn_madd52lo] at ht4
-  step_pure with hi4
-  rw [ofFn_madd52hi] at hhi4
-  step_pure with t5
-  rw [wwl_shl_ofFn] at ht5
-  step_pure with p1j
-  rw [← wwl_slide_zero_7] at hp1j
+  iterate 15 step_pure
   step_pure with p2j
-  rw [← wwl_slide_zero_6] at hp2j
   step_pure with p3j
-  rw [← wwl_slide_zero_5] at hp3j
   step_pure with p4j
-  rw [← wwl_slide_zero_4] at hp4j
   step_pure with q4j
-  rw [lanes5_slide_4_zero] at hq4j
   step_pure with p5j
-  rw [← wwl_slide_zero_3] at hp5j
   step_pure with q5j
-  rw [lanes5_slide_3_zero] at hq5j
   -- `p0j + p1j` as `wwl_madd52lo(p1j, x0, y)`, then `zl`'s other terms
   step_pure with p01j
-  rw [ofFn_madd52lo] at hp01j
   step_pure with zl0
   step_pure with zl1
   step_pure with zl2
   step_pure with zl
-  rw [wwl_add_ofFn] at hzl0 hzl1 hzl2 hzl
   step_pure with zh
   subst hq4j hq5j
   rw [ofFn_add_lanesBelow] at hzh
   step_pure with za
-  rw [ofFn_and_mask5] at hza
   step_pure [hzh, lanesBelow_getElem, wrap_slide_5] with zb
   step_pure with zab
   step_pure with zb18
   step_pure with z
-  rw [wwl_add_ofFn] at hzab hz
   rw [ofFn_mul18] at hzb18
   step_call using fd_f25519_fold_unsigned.call_eq
   step_store
   finish_block
   rw [hS]
   suffices e : z = fd_f25519_mul.z (S₀.mem.readVec a) (S₀.mem.readVec b) by rw [e]
-  simp only [fd_f25519_mul.z]
-  rw [← hy, ← hx0, ← hx1, ← hx2, ← hx3, ← hx4, ← hhi0, ← hhi1, ← hhi2, ← hhi3, ← hhi4, ← hc0, ← hc1,
-    ← hc2, ← hc3, ← ht1, ← ht2, ← ht3, ← ht4, ← ht5, ← hp1j, ← hp2j, ← hp3j, ← hp4j, ← hp5j]
-  rw [hz, hzab, hzb18, hza, hzb, hzl, hzl2, hzl1, hzl0, hp01j, wwl_madd52lo_eq_add p1j]
+  simp only [fd_f25519_mul.z, BitVec.ofNat_eq_ofNat]
+  rw [← hy, ← hx0, ← hx1, ← hx2, ← hx3, ← hx4,
+    ← hp2j, ← hp3j, ← hp4j, ← hp5j]
+  rw [hz, hzab, hzb18, hza, hzb, hzl, hzl2, hzl1, hzl0, hp01j, wwl_madd52lo_eq_add]
   ac_rfl
 
 end Proof
