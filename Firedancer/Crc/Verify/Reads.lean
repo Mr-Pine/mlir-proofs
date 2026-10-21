@@ -1,7 +1,7 @@
 module
 
 public import MLIR.Run.Tactic
-public meta import MLIR.Run.Tactic.Loop
+public meta import MLIR.Run.Tactic.RunFrom
 public meta import MLIR.Run.Tactic.Env
 public meta import MLIR.Run.Tactic.Util
 public meta import MLIR.Run.Tactic.Step.Pattern
