@@ -96,7 +96,7 @@ local macro "sel_lane " i:ident : tactic =>
         simp only [Operation.shufflevector, Nat.reduceMul, selMask, selLane, Fin.ofNat_eq_cast,
           Fin.natCast_zero, Fin.isValue, Nat.reduceAdd, Fin.natCast_eq_last, Fin.reduceLast,
           List.size_toArray, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl, and_self,
-          Fin.getElem_fin, Vector.getElem_mk, List.getElem_toArray, Ty.wrap_vec, Vector.getElem_map,
+          Fin.getElem_fin, Vector.getElem_mk, List.getElem_toArray, Vector.getElem_map,
           selPoison, selV, Vector.getElem_zipWith, Operation.add, Operation.sub, true_and,
           Bool.false_eq_true, false_and, ↓reduceIte, PoisonOr.pure_def, PoisonOr.poison_bind,
           PoisonOr.value_bind, Vector.getElem_ofFn, List.getElem_cons_zero, Fin.val_ofNat_lit,
@@ -112,7 +112,7 @@ local macro "perm_lane " s:ident : tactic =>
   `(tactic|
     (rcases $s:ident with _ | _ <;>
         simp [Operation.shufflevector, permPoisonMask, permSelMask, selPoison, selV, wwl_perm4,
-          wwl_lane_sel, Ty.wrap_vec, Nat.mod_eq_of_lt, *]))
+          wwl_lane_sel, Nat.mod_eq_of_lt, *]))
 
 /-! ### Lanes -/
 
@@ -141,7 +141,7 @@ theorem shufflevector_permMask {i0 i1 i2 i3 : Nat} {m : Vector (Option (Fin (2 *
   all_goals
     first
     | omega
-    | simp [Operation.shufflevector, permMask, wwl_perm4, Ty.wrap_vec,
+    | simp [Operation.shufflevector, permMask, wwl_perm4,
         Nat.mod_eq_of_lt (show i0 < 16 by omega), Nat.mod_eq_of_lt (show i1 < 16 by omega),
         Nat.mod_eq_of_lt (show i2 < 16 by omega), Nat.mod_eq_of_lt (show i3 < 16 by omega),
         Nat.mod_eq_of_lt (show i0 + 4 < 16 by omega), Nat.mod_eq_of_lt (show i1 + 4 < 16 by omega),

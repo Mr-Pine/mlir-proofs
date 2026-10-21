@@ -210,38 +210,38 @@ public theorem fd_r43x6_quad_mul_fast.call_eq (_z03 _z14 _z25 : Pointer)
   have e_a26 : a26 = wwl_madd52lo wwl_zero x55 y14 := by lanes ha26
   have e_p6_q9 : p6_q9 = wwl_madd52lo a26 x44 y25 := by lanes hp6_q9
   have e_h29 : h29 = wwl_madd52hi wwl_zero x00 y03 := by lanes hh29
-  have e_s30 : s30 = wwl_shl h29 9 := by lanes hs30
+  have e_s30 : s30 = wwl_shl h29 9 := hs30
   have e_p1_q4' : p1_q4' = wwl_add p1_q4 s30 := by lanes hp1_q4'
   have e_h32 : h32 = wwl_madd52hi wwl_zero x11 y03 := by lanes hh32
   have e_h33 : h33 = wwl_madd52hi h32 x00 y14 := by lanes hh33
-  have e_s34 : s34 = wwl_shl h33 9 := by lanes hs34
+  have e_s34 : s34 = wwl_shl h33 9 := hs34
   have e_p2_q5' : p2_q5' = wwl_add p2_q5 s34 := by lanes hp2_q5'
   have e_h36 : h36 = wwl_madd52hi wwl_zero x22 y03 := by lanes hh36
   have e_h37 : h37 = wwl_madd52hi h36 x11 y14 := by lanes hh37
   have e_h38 : h38 = wwl_madd52hi h37 x00 y25 := by lanes hh38
-  have e_s39 : s39 = wwl_shl h38 9 := by lanes hs39
+  have e_s39 : s39 = wwl_shl h38 9 := hs39
   have e_p3_q6' : p3_q6' = wwl_add p3_q6 s39 := by lanes hp3_q6'
   have e_h41 : h41 = wwl_madd52hi wwl_zero x33 y03 := by lanes hh41
   have e_h42 : h42 = wwl_madd52hi h41 x22 y14 := by lanes hh42
   have e_h43 : h43 = wwl_madd52hi h42 x11 y25 := by lanes hh43
-  have e_s44 : s44 = wwl_shl h43 9 := by lanes hs44
+  have e_s44 : s44 = wwl_shl h43 9 := hs44
   have e_p4_q7' : p4_q7' = wwl_add p4_q7 s44 := by lanes hp4_q7'
   have e_h46 : h46 = wwl_madd52hi wwl_zero x44 y03 := by lanes hh46
   have e_h47 : h47 = wwl_madd52hi h46 x33 y14 := by lanes hh47
   have e_h48 : h48 = wwl_madd52hi h47 x22 y25 := by lanes hh48
-  have e_s49 : s49 = wwl_shl h48 9 := by lanes hs49
+  have e_s49 : s49 = wwl_shl h48 9 := hs49
   have e_p5_q8' : p5_q8' = wwl_add p5_q8 s49 := by lanes hp5_q8'
   have e_h51 : h51 = wwl_madd52hi wwl_zero x55 y03 := by lanes hh51
   have e_h52 : h52 = wwl_madd52hi h51 x44 y14 := by lanes hh52
   have e_h53 : h53 = wwl_madd52hi h52 x33 y25 := by lanes hh53
-  have e_s54 : s54 = wwl_shl h53 9 := by lanes hs54
+  have e_s54 : s54 = wwl_shl h53 9 := hs54
   have e_p6_q9' : p6_q9' = wwl_add p6_q9 s54 := by lanes hp6_q9'
   have e_h56 : h56 = wwl_madd52hi wwl_zero x55 y14 := by lanes hh56
   have e_h57 : h57 = wwl_madd52hi h56 x44 y25 := by lanes hh57
-  have e_s58 : s58 = wwl_shl h57 9 := by lanes hs58
+  have e_s58 : s58 = wwl_shl h57 9 := hs58
   have e_p7_qa' : p7_qa' = wwl_add (wwl_madd52lo wwl_zero x55 y25) s58 := by lanes hp7_qa'
   have e_h60 : h60 = wwl_madd52hi wwl_zero x55 y25 := by lanes hh60
-  have e_p8_qb : p8_qb = wwl_shl h60 9 := by lanes hp8_qb
+  have e_p8_qb : p8_qb = wwl_shl h60 9 := hp8_qb
   have e_q6_p3 : q6_p3 = wwl_pack_halves p3_q6' 1 p3_q6' 0 := by lanes hq6_p3
   have e_q7_p4 : q7_p4 = wwl_pack_halves p4_q7' 1 p4_q7' 0 := by lanes hq7_p4
   have e_q8_p5 : q8_p5 = wwl_pack_halves p5_q8' 1 p5_q8' 0 := by lanes hq8_p5

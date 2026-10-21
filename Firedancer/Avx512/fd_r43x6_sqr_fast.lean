@@ -371,9 +371,8 @@ theorem runBodyFrom_sqrSumsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
     rw [hvzll]; ext i hi : 1; simp [wwl_add, wwl_madd52lo, madd52lo, wwl_zero]
   subst ezll
   -- the steps' lanes as the intrinsics they are
-  simp only [← wwl_add_getElem, ← wwl_and_getElem, Vector.ofFn_getElem, lanesFrom_getElem,
-    Nat.le_refl, ↓reduceIte, Vector.getElem_replicate, BitVec.ofNat_eq_ofNat, pullWrap,
-    ← wwl_slide_zero_7] at hvl1 hvl2 hvls hvh1 hvh2 hvzlh0 hvzlh hvzlhs
+  simp only [lanesFrom_getElem, Nat.le_refl, ↓reduceIte, Vector.getElem_replicate,
+    BitVec.ofNat_eq_ofNat, pullWrap, wwl_slide_zero_7] at hvl1 hvl2 hvls hvh1 hvh2 hvzlh0 hvzlh hvzlhs
   subst hvl1 hvl2 hvls hvh1 hvh2 hvzlh0 hvzlh hvzlhs
   simp only [ofFn_and_lanesBelow] at hvk1 hvk2 hvj1 hvj2
   subst hvk1 hvk2 hvj1 hvj2

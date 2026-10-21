@@ -163,6 +163,13 @@ theorem and_mask1 (x : Wwl) :
   fin_cases i <;> simp [wwl_and, wwl]
   exact BitVec.and_comm _ _
 
+/-- `za`'s mask as compiled, lanes `0 … 4` set. -/
+theorem mask5 :
+    wwl 18446744073709551615#64 18446744073709551615#64 18446744073709551615#64
+        18446744073709551615#64 18446744073709551615#64 0#64 0#64 0#64 =
+      wwl (-1) (-1) (-1) (-1) (-1) 0 0 0 := by
+  decide
+
 /-- `mask1` for `zhl`, lanes `5 … 7` undefined. -/
 theorem set_lanesBelow_5 (c0 c1 c2 c3 c4 : BitVec 64) :
     ((((((((Vector.replicate 8 PoisonOr.poison).set 0 (PoisonOr.value c0)).set 1
@@ -240,13 +247,10 @@ public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   step_pure with p0l
   rw [ofFn_madd52lo_zero] at hp0l
   step_pure with p0h
-  rw [ofFn_madd52hi] at hp0h
   step_pure with p1l
   rw [ofFn_madd52lo_zero] at hp1l
   step_pure with p1h
-  rw [ofFn_madd52hi] at hp1h
   step_pure with p2h
-  rw [ofFn_madd52hi] at hp2h
   -- the shifts by vectors, lane by lane
   step_pure [expandOfFn] with p0l'
   rw [shl_p0l] at hp0l'
@@ -257,37 +261,29 @@ public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   step_pure [expandOfFn] with p1h'
   rw [shl_p1h] at hp1h'
   step_pure with p2h'
-  rw [wwl_shl_ofFn] at hp2h'
   -- `zll` and `zlh`, `p2l` as `wwl_madd52lo(_, x4, x4)`
   step_pure [expandOfFn] with n1l
   rw [andnot_mask1] at hn1l
   step_pure with zll0
-  rw [wwl_add_ofFn] at hzll0
   step_pure with zll
-  rw [ofFn_madd52lo] at hzll
   step_pure [expandOfFn] with n1h
   rw [andnot_mask1] at hn1h
   step_pure with zlh0
   step_pure with zlh
-  rw [wwl_add_ofFn] at hzlh0 hzlh
   -- `zhl`, `zhh` and `zh` on their defined lanes `0 … 4`
   step_pure [set_lanesBelow_5, ofFn_and_lanesBelow] with zhl
   step_pure [set_lanesBelow_4, ofFn_and_lanesBelow] with zhh
   step_pure with slh
-  rw [← wwl_slide_zero_7] at hslh
   step_pure with zl
-  rw [wwl_add_ofFn] at hzl
   step_pure [hzhh, lanesBelow_getElem, lanes5_slide_zero_7] with shh
   step_pure [lanes5_slide_7_zero] with slh'
   step_pure [hshh, hzhl, ofFn_add_lanesBelow] with zh0
   step_pure [hzh0, hslh', ofFn_add_lanesBelow] with zh
   step_pure with za
-  rw [ofFn_and_mask5] at hza
   step_pure [hzh, lanesBelow_getElem, wrap_slide_5] with zb
   step_pure with zba
   step_pure with zb18
   step_pure with z
-  rw [wwl_add_ofFn] at hzba hz
   rw [ofFn_mul18] at hzb18
   step_call using fd_f25519_fold_unsigned.call_eq
   step_store
@@ -297,7 +293,7 @@ public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   simp only [fd_f25519_sqr.z]
   rw [← hx0, ← hx1, ← hx2, ← hx3, ← hx4, ← hp0l, ← hp0h, ← hp1l, ← hp1h, ← hp2h, ← hp0l', ← hp0h', ←
     hp1l', ← hp1h', ← hp2h', ← hn1l, ← hn1h]
-  rw [hz, hzba, hzb18, hza, hzb, hzl, hslh, hzll, wwl_madd52lo_eq_add zll0, hzll0, hzlh, hzlh0,
+  rw [hz, hzba, hzb18, hza, mask5, hzb, hzl, hslh, hzll, wwl_madd52lo_eq_add zll0, hzll0, hzlh, hzlh0,
     and_mask1, and_mask1]
   ac_rfl
 
