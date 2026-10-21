@@ -84,6 +84,7 @@ theorem lanesFrom_getElem (v : Vector (BitVec 64) 8) (i : Nat) (h : i < 8) :
     (lanesFrom k v)[i] = if k ≤ i then .value v[i] else .poison := by simp [lanesFrom]
 
 /-- An `and` with a mask defined on lanes `0 … k-1`. -/
+@[mlir_operation]
 theorem ofFn_and_lanesBelow (p m : Vector (BitVec 64) 8) :
     (Vector.ofFn fun i => do
         let b ← (lanesBelow k m)[i.1]
