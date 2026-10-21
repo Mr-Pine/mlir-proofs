@@ -28,11 +28,11 @@ namespace fd_r52x5_ge_dbln
 
 /-- A point stored by its five `<4 x i64>` stores, as the steps leave them. -/
 theorem storeQuad5_mk {m : MemoryState} {P : Pointer} {x0 x1 x2 x3 x4 : Wl} :
-    m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ =
-      ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
-                (P.add 64#64) (BitVec.packLanes x2)).storeAt
-            (P.add 96#64) (BitVec.packLanes x3)).storeAt
-        (P.add 128#64) (BitVec.packLanes x4) :=
+    ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
+              (P.add 64#64) (BitVec.packLanes x2)).storeAt
+          (P.add 96#64) (BitVec.packLanes x3)).storeAt
+        (P.add 128#64) (BitVec.packLanes x4) =
+      m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ :=
   rfl
 
 /-- `j` more doublings of `P`, the loop's order. -/
@@ -247,7 +247,7 @@ public theorem fd_r52x5_ge_dbln.call_eq (r a : Pointer) (s : GlobalState) (hwf :
     finish_block
     subst hS
     dsimp only at hal ⊢
-    rw [← fd_r52x5_ge_dbln.storeQuad5_mk, MemoryState.eraseFrom_storeQuad5, hm, hal]
+    rw [fd_r52x5_ge_dbln.storeQuad5_mk, MemoryState.eraseFrom_storeQuad5, hm, hal]
     subst S
     erase_frame
     rw [← hres]

@@ -1519,7 +1519,7 @@ theorem shorts_tOf {m : MemoryState} {p : Pointer} : shorts (tOf m p) = m.readAt
 
 /-- `_t`'s old bytes, stored as `tOf` with their defined bits: the same state. -/
 theorem withTD_tOf {S : GlobalState} {slides : Pointer} (h : InBounds S.mem slides (8 * 512)) :
-    withTD slides (tOf S.mem slides) (S.mem.definedAt slides (16 * 256)) S = S := by
+    S = withTD slides (tOf S.mem slides) (S.mem.definedAt slides (16 * 256)) S := by
   rw [withTD, shorts_tOf, MemoryState.overlay_readAt_definedAt h]
 
 /-! ### `max` -/
@@ -1601,7 +1601,7 @@ public theorem fd_curve25519_scalar_wnaf.call_eq (slides scalar : Pointer) (bits
   iterate 24 step_pure
   finish_block
   -- "unpack s bits into _t"
-  rw [← withTD_tOf hslides.inBounds]
+  rw [withTD_tOf hslides.inBounds]
   run_from using
     fd_curve25519_scalar_wnaf.unpack_loop slides scalar bits hso hco hsep _ hslides hscalar _ hx _
       51 0 (tOf S.mem slides) (S.mem.definedAt slides (16 * 256))

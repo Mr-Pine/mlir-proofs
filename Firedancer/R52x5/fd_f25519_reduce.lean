@@ -25,7 +25,7 @@ public theorem fd_f25519_reduce.call_eq (out : Pointer) (x : Wwl) (s : GlobalSta
           { alloc := ⟨s.alloc.nextFreeBlock + 1⟩,
             mem := s.mem.storeLimbs out (limbs (fold x)) }) := by
   have hout256 : Room s.mem out 256 := hout.room320.mono (by omega)
-  rw [← MemoryState.storeLimbsV_eq hout]
+  rw [MemoryState.storeLimbsV_eq hout]
   func_init
   block_init
   step_pure

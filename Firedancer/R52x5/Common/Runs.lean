@@ -55,11 +55,11 @@ theorem ofFn_extractVecElem_bytes {m : MemoryState} :
 /-- A point stored by its five `<4 x i64>` stores, as the steps leave them. -/
 theorem _root_.MLIR.MemoryState.storeQuad5_mk {m : MemoryState} {P : Pointer}
     {x0 x1 x2 x3 x4 : Wl} :
-    m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ =
-      ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
-                (P.add 64#64) (BitVec.packLanes x2)).storeAt
-            (P.add 96#64) (BitVec.packLanes x3)).storeAt
-        (P.add 128#64) (BitVec.packLanes x4) :=
+    ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
+              (P.add 64#64) (BitVec.packLanes x2)).storeAt
+          (P.add 96#64) (BitVec.packLanes x3)).storeAt
+        (P.add 128#64) (BitVec.packLanes x4) =
+      m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ :=
   rfl
 
 /-! ### Single instructions -/
@@ -1415,7 +1415,7 @@ theorem runBodyFrom_reduceStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫}
   step_pure with transparent va4
   step_pure with e4
   step_store
-  rw [hE, hS, ← MemoryState.storeQuad5_mk,
+  rw [hE, hS, MemoryState.storeQuad5_mk,
     show (⟨e0, e1, e2, e3, e4⟩ : Quad5) = Q.reduce by
       rw [he0, he1, he2, he3, he4]; rfl]
   rw [he0, he1, he2, he3, he4]
@@ -1504,7 +1504,7 @@ theorem runBodyFrom_reduceCastStoreRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ
   step_pure with transparent va4
   step_pure with e4
   step_store
-  rw [hE, hS, ← MemoryState.storeQuad5_mk,
+  rw [hE, hS, MemoryState.storeQuad5_mk,
     show (⟨e0, e1, e2, e3, e4⟩ : Quad5) = Q.reduce by
       rw [he0, he1, he2, he3, he4]; rfl]
   rw [he0, he1, he2, he3, he4]

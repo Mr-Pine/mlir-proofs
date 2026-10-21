@@ -206,7 +206,7 @@ public theorem spec_val {tbl : ℕ → Quad5} {A : Quad5} {n1 n2 : BitVec 256} (
     And.right
   have s1 := fd_curve25519_scalar_wnaf.wnaf_sum n1 (bits := 4) (by decide) h1
   have s2 := fd_curve25519_scalar_wnaf.wnaf_sum n2 (bits := 8) (by decide) h2
-  rw [← low_256] at s1 s2
+  rw [low_256] at s1 s2
   rw [← natCast_zsmul, ← natCast_zsmul, ← s1, ← s2]
   unfold spec
   dsimp only

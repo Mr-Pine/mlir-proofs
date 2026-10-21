@@ -1222,11 +1222,11 @@ theorem Inv.room {B S : GlobalState} {M : MemoryState} (h : Inv B M c S) {p : Po
 /-! ### The exit block: store the result, end the lifetimes, return -/
 
 theorem storeQuad5_mk {m : MemoryState} {P : Pointer} {x0 x1 x2 x3 x4 : Wl} :
-    m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ =
-      ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
-                (P.add 64#64) (BitVec.packLanes x2)).storeAt
-            (P.add 96#64) (BitVec.packLanes x3)).storeAt
-        (P.add 128#64) (BitVec.packLanes x4) :=
+    ((((m.storeAt P (BitVec.packLanes x0)).storeAt (P.add 32#64) (BitVec.packLanes x1)).storeAt
+              (P.add 64#64) (BitVec.packLanes x2)).storeAt
+          (P.add 96#64) (BitVec.packLanes x3)).storeAt
+        (P.add 128#64) (BitVec.packLanes x4) =
+      m.storeQuad5 P ⟨x0, x1, x2, x3, x4⟩ :=
   rfl
 
 set_option maxHeartbeats 2000000 in
@@ -1253,7 +1253,7 @@ theorem exit_block (r kp a s tb : Pointer) (B : GlobalState) (M : MemoryState) (
   subst hS
   dsimp only
   rw [MemoryState.eraseFrom_lifetimeEnd_of_le (by simp), MemoryState.eraseFrom_lifetimeEnd_of_le (by simp),
-    MemoryState.eraseFrom_lifetimeEnd_of_le (by simp), ← storeQuad5_mk,
+    MemoryState.eraseFrom_lifetimeEnd_of_le (by simp), storeQuad5_mk,
     MemoryState.eraseFrom_storeQuad5, ← eraseFrom_eraseFrom (show B.alloc.nextFreeBlock ≤ B.alloc.nextFreeBlock + 3 by omega),
     herase]
   congr 3

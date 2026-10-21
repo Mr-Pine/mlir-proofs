@@ -799,8 +799,8 @@ theorem BitVec.getLsbD_packLanes_wl (v : Vector (BitVec 64) 4) (hi : i < 256) :
 /-- `FD_R52X5_GE_ZERO` stored as compiled: `Q0`, then `memset` of 128 zero bytes. -/
 theorem MemoryState.storeQuad5_quadZero {m : MemoryState} {p : Pointer}
     (hp : p.offset.toNat + 160 ≤ 2 ^ 64) :
-    (m.storeWv p (wl 0 1 1 0)).storeAt (p.add 32#64) ((0#8).replicate 128) =
-      m.storeQuad5 p quadZero := by
+    m.storeQuad5 p quadZero =
+      (m.storeWv p (wl 0 1 1 0)).storeAt (p.add 32#64) ((0#8).replicate 128) := by
   have hz : BitVec.packLanes (wl_zero : Wl) = 0#256 := by
     apply BitVec.eq_of_getLsbD_eq
     intro i hi

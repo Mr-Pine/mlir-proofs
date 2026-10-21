@@ -74,7 +74,7 @@ public theorem fd_r52x5_limbs_frombytes.call_eq (l b : Pointer) (s : GlobalState
   have e8' := MemoryState.readAt_add_of_readAt hb.inBounds (hov 8 (by omega)) (w := 128) (by decide) hB
   have e16 := MemoryState.readAt_add_of_readAt hb.inBounds (hov 16 (by omega)) (w := 128) (by decide) hB
   have e24 := MemoryState.readAt_add_of_readAt hb.inBounds (hov 24 (by omega)) (w := 64) (by decide) hB
-  rw [← MemoryState.storeLimbsV_eq hl, hB]
+  rw [MemoryState.storeLimbsV_eq hl, hB]
   func_init
   block_init
   iterate 9 step_pure

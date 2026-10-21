@@ -716,7 +716,7 @@ def entryEnv (E₀ : ⟪Γ⟫) (B : GlobalState) : ⟪Γ⟫ :=
     B 0 slotDsts
 
 /-- The constants of `^bb0` as its steps leave them, in the forms the blocks read. -/
-theorem yUndef_eq : (((Vector.replicate 4 PoisonOr.poison).set 2 (PoisonOr.value 0#64) (by decide)).set 3 (PoisonOr.value 0#64) (by decide) : ⟦Ty.vec 4 64⟧) = yUndef := by
+theorem yUndef_eq : yUndef = (((Vector.replicate 4 PoisonOr.poison).set 2 (PoisonOr.value 0#64) (by decide)).set 3 (PoisonOr.value 0#64) (by decide) : ⟦Ty.vec 4 64⟧) := by
   rfl
 
 theorem m8Undef_eq : (((((Vector.replicate 8 PoisonOr.poison).set 4 (PoisonOr.value 0#32) (by decide)).set 5 (PoisonOr.value 0#32) (by decide)).set 6 (PoisonOr.value 0#32) (by decide)).set 7 (PoisonOr.value 0#32) (by decide) : ⟦Ty.vec 8 32⟧) = m8Undef := by

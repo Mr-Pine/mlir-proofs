@@ -258,7 +258,7 @@ theorem spliceBits_limbsBits {n : Nat} (b : BitVec n) (o : Nat) (l : Fin 5 → B
     omega
 
 /-- All-ones limbs' bits are all ones. -/
-theorem limbsBits_allOnes : limbsBits (fun _ => BitVec.allOnes 64) = BitVec.allOnes 320 := by
+theorem limbsBits_allOnes : BitVec.allOnes 320 = limbsBits (fun _ => BitVec.allOnes 64) := by
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
   simp only [getLsbD_limbsBits, BitVec.getLsbD_allOnes]
@@ -278,7 +278,7 @@ theorem MemoryState.storeLimbs_eq_storeAt {m : MemoryState} {p : Pointer} {l : F
   simp only [Function.comp_apply, MemoryBlock.mk.injEq, true_and, and_true]
   rw [o 8 (by omega), o 16 (by omega), o 24 (by omega), o 32 (by omega)]
   refine ⟨heq_of_eq (spliceBits_limbsBits _ _ l), heq_of_eq ?_⟩
-  rw [← limbsBits_allOnes]
+  rw [limbsBits_allOnes]
   exact spliceBits_limbsBits _ _ (fun _ => BitVec.allOnes 64)
 
 /-- The 320 bits at limbs that fit: the limbs' bits. -/

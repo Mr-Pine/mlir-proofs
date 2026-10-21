@@ -387,7 +387,7 @@ theorem lane_root (e : BitVec 256) {x0 : ZMod p} {ex : ℕ} (hex : ex = (p - 5) 
   subst hex
   refine ⟨?_, fun h => ?_⟩
   · rw [ne_eq, Ed25519.decode_eq_none, not_forall_not, Ed25519.exists_decodes_iff,
-      Ed25519.exists_onCurve_iff, ← Ref.sqrt_ratio_iff (Ed25519.v_ne _) hx0]
+      Ed25519.exists_onCurve_iff, Ref.sqrt_ratio_iff (Ed25519.v_ne _) hx0]
   · rw [Ed25519.onCurve_iff]
     by_cases h1 : v * x0 ^ 2 = u
     · rw [decide_eq_false (by simp [h1]), Bool.cond_false]

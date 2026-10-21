@@ -30,7 +30,7 @@ public theorem fd_ed25519_point_set_zero.call_eq (r : Pointer) (s : GlobalState)
   step_memset consuming hr_1024
   finish_block
   subst hS
-  rw [← MemoryState.storeQuad5_quadZero hr.1, replicate_zero_128]
+  rw [MemoryState.storeQuad5_quadZero hr.1, replicate_zero_128]
   rfl
 
 end Proof

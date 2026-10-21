@@ -214,7 +214,7 @@ theorem BitVec.packLanes_four (a b c d : BitVec 64) :
 
 /-- The vector store of limbs is the five limb stores. -/
 theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsRoom p) :
-    m.storeLimbsV p l = m.storeLimbs p l := by
+    m.storeLimbs p l = m.storeLimbsV p l := by
   have hov (k : Nat) (hk : k ≤ 32) : ¬p.offset.uaddOverflow (BitVec.ofNat 64 k) := by
     have := h.1
     simp only [BitVec.uaddOverflow, BitVec.toNat_ofNat, decide_eq_true_eq]
@@ -231,7 +231,7 @@ theorem MemoryState.storeLimbsV_eq {m : MemoryState} (h : m.LimbsRoom p) :
 theorem MemoryState.readAt_storeLimbs_wv {m : MemoryState} {p : Pointer} (h : m.LimbsRoom p) :
     (m.storeLimbs p l).readAt p 256 = BitVec.packLanes #v[l 0, l 1, l 2, l 3] := by
   have hf : Room m p 256 := h.room320.mono (by omega)
-  rw [← MemoryState.storeLimbsV_eq h, MemoryState.storeLimbsV, MemoryState.readAt_storeAt_disjoint,
+  rw [MemoryState.storeLimbsV_eq h, MemoryState.storeLimbsV, MemoryState.readAt_storeAt_disjoint,
     MemoryState.readAt_storeWv_self hf]
   simp only [Range.Disjoint, Range.of]
   right; right

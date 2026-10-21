@@ -251,7 +251,7 @@ public theorem fd_r52x5_canon.call_eq (r a : Pointer) (s : GlobalState) (hwf : s
   have hf2 := ha.2.2.2.1
   have hf3 := ha.2.2.2.2.1
   have hf4 := ha.2.2.2.2.2
-  rw [← MemoryState.storeLimbsV_eq hr]
+  rw [MemoryState.storeLimbsV_eq hr]
   func_init
   block_init
   iterate 9 step_pure

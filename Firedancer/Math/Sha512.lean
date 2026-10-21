@@ -411,7 +411,7 @@ private theorem bytesBE_append (hi lo : BitVec 64) :
 
 /-- The digest's bytes: the state's words big-endian. -/
 private theorem bytesLE_bits_bswap (v : Vector (BitVec 64) 8) :
-    bytesLE (Words8.bits (v.map fd_ulong_bswap.spec)) = v.toList.flatMap Sha512.bytesBE := by
+    v.toList.flatMap Sha512.bytesBE = bytesLE (Words8.bits (v.map fd_ulong_bswap.spec)) := by
   obtain ⟨⟨l⟩, hl⟩ := v
   match l, hl with
   | [a, b, c, d, e, f, g, h], _ =>
@@ -432,7 +432,7 @@ public theorem _root_.MLIR.ShaState.Absorbed.fini {sha : ShaState} {m : List (Bi
   rw [Sha512.digest]
   suffices hs :
       (fd_sha512_fini.spec sha).1.state = Sha512.compressBlocks Sha512.IV (Sha512.pad m) by
-    rw [← hs, ← bytesLE_bits_bswap]
+    rw [← hs, bytesLE_bits_bswap]
     rfl
   have hu := h.bufUsed
   have hP := h.buf
