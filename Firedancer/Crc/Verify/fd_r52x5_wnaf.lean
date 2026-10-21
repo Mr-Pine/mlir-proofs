@@ -337,7 +337,7 @@ theorem blk13 (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (W : BitVec 256)
   case isTrue =>
     have hx : E ⊨ [%3141 := v, %3223 := BitVec.ofNat 32 (n + 1)] := by lemma_reads
     clear hE
-    step_loop using hexit
+    run_from using hexit
     · exact (lanes_zero _).1 hbr
   case isFalse =>
     have hx : E ⊨ [%3170 := BitVec.ofNat 32 (n + 1), %3171 := (W >>> 1).extractLsb' 0 64,
@@ -346,7 +346,7 @@ theorem blk13 (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (W : BitVec 256)
       lemma_reads
     have hL : LoopEnv E v B := by lemma_reads
     clear hE
-    step_loop using hback
+    run_from using hback
     exact fun h => hbr ((lanes_zero _).2 h)
 
 /-- A field of a field, as one field. -/
@@ -420,7 +420,7 @@ theorem blk12 (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (X : BitVec 192)
   step_load [lanes_hi X (w0 - di)]
   finish_block
   rw [← mid_eq X (w0 - di)] at hS
-  step_loop using blk13 d sp v bits B n (X ++ (w0 - di)) (di.setWidth 16) M Sb _ g K
+  run_from using blk13 d sp v bits B n (X ++ (w0 - di)) (di.setWidth 16) M Sb _ g K
     (hback := hback) (hexit := hexit)
   exact (low_eq X (w0 - di)).symm
 
@@ -586,17 +586,17 @@ theorem chain5 (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (w : BitVec 256
       step_store
       rw [st16 hv] at hS
       finish_block
-      step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+      run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
         (hback := hback) (hexit := hexit)
       exact sub_b3 w t ht0 hp hu hz1 hz2
     case isFalse =>
       have hz2 := hbr
-      step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+      run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
         (hback := hback) (hexit := hexit)
       exact sub_b2 w t ht0 hp hu hz1 hz2
   case isFalse =>
     have hz1 := hbr
-    step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+    run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
       (hback := hback) (hexit := hexit)
     exact sub_b1 w t ht0 hp hu hz1
 
@@ -644,17 +644,17 @@ theorem chain9 (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (w : BitVec 256
       step_store
       rw [st16 hv] at hS
       finish_block
-      step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+      run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
         (hback := hback) (hexit := hexit)
       exact sub_c3 w t ht0 hp hu hz1 hz2
     case isFalse =>
       have hz2 := hbr
-      step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+      run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
         (hback := hback) (hexit := hexit)
       exact sub_c2 w t ht0 hp hu hz1 hz2
   case isFalse =>
     have hz1 := hbr
-    step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+    run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
       (hback := hback) (hexit := hexit)
     exact sub_c1 w t ht0 hp hu hz1
 
@@ -691,7 +691,7 @@ theorem trip (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (w : BitVec 256) 
     have hnx : fd_r52x5_wnaf.next B w = w >>> 1 := by
       rw [fd_r52x5_wnaf.next, hdig]; simp
     rw [hnx, hdig] at hback hexit
-    step_loop using blk13 d sp v bits B n w ((0#64).setWidth 16) M Sb _ g K (hback := hback)
+    run_from using blk13 d sp v bits B n w ((0#64).setWidth 16) M Sb _ g K (hback := hback)
       (hexit := hexit)
   case isFalse =>
     have hodd := hbr
@@ -720,10 +720,10 @@ theorem trip (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (w : BitVec 256) 
       finish_block
       case isTrue =>
         have hu := hbr
-        step_loop using chain5 d sp v bits B n w t M Sb _ g K (hback := hback) (hexit := hexit)
+        run_from using chain5 d sp v bits B n w t M Sb _ g K (hback := hback) (hexit := hexit)
       case isFalse =>
         have hu := hbr
-        step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+        run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
           (hback := hback) (hexit := hexit)
         exact sub_nb w t ht0 hp hu
     case isFalse =>
@@ -732,12 +732,12 @@ theorem trip (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (w : BitVec 256) 
       finish_block
       case isTrue =>
         have hu := hbr
-        step_loop using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
+        run_from using blk12 d sp v bits B n _ (w.extractLsb' 0 64) t (w - t.signExtend 256) _ M Sb _ g K
           (hback := hback) (hexit := hexit)
         exact sub_nc w t ht0 hp hu
       case isFalse =>
         have hu := hbr
-        step_loop using chain9 d sp v bits B n w t M Sb _ g K (hback := hback) (hexit := hexit)
+        run_from using chain9 d sp v bits B n w t M Sb _ g K (hback := hback) (hexit := hexit)
 
 /-- `lo` and `sel` with `bits` as a `BitVec`, for `bv_decide`. -/
 def loB (b : BitVec 64) (w0 : BitVec 64) : BitVec 64 :=
@@ -985,7 +985,7 @@ theorem fd_r52x5_wnaf.bb1_run (d sp v : Pointer) (B : Nat) (hB : 3 ≤ B ∧ B �
   block_init
   iterate 10 step_pure
   finish_block
-  step_loop using fd_r52x5_wnaf.loop d sp v (BitVec.ofNat 32 B) B hB hv hdv hdo Sb g K 254 0 x M
+  run_from using fd_r52x5_wnaf.loop d sp v (BitVec.ofNat 32 B) B hB hv hdv hdo Sb g K 254 0 x M
   · rw [entry_lanes_hi]
   · rw [entry_lanes_lo]
   · intro h
@@ -1059,7 +1059,7 @@ public theorem fd_r52x5_wnaf.call_eq (d sp : Pointer) (bits : BitVec 32) (s : Gl
     rfl
   case isFalse =>
     have hx0 : x ≠ 0#256 := fun h => hbr ((entry_zero x).2 h)
-    step_loop using fd_r52x5_wnaf.bb1_run d sp v B hbits hv_off hd_ne_v hdo
+    run_from using fd_r52x5_wnaf.bb1_run d sp v B hbits hv_off hd_ne_v hdo
       { alloc := (S₀.alloca 24 true).alloc, mem := S₀.mem } ((S₀.alloca 24 true).mem.lifetimeStart v) x
     · intro ⟨h1, h2⟩
       block_init
