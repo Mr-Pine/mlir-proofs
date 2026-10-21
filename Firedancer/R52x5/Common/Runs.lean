@@ -90,6 +90,7 @@ theorem runBodyFrom_bytesRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos 
   exact hK
 
 /-- A `wl_t`'s bytes, concatenated back by lanes, as a `bitcast` step leaves them. -/
+@[mlir_operation]
 theorem wlBytes_concat (v : Wl) :
     #v[(wlBytes v)[7] ++ (wlBytes v)[6] ++ (wlBytes v)[5] ++ (wlBytes v)[4] ++ (wlBytes v)[3] ++
           (wlBytes v)[2] ++
@@ -140,9 +141,8 @@ theorem runBodyFrom_wlRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos : N
     (hbody : blk.body.drop pos = wlRun b x ++ rest) (hb : E ⊨ [b := wlBytes X])
     (hK : (blk.runBodyFrom E[x := Ty.wrap X] (pos + 1) S >>= g) = K) :
     (blk.runBodyFrom E pos S >>= g) = K := by
-  step_pure with xx
-  rw [wlBytes_concat] at hxx
-  rw [hE, hxx]
+  step_pure
+  rw [hE]
   exact hK
 
 /-- `wl_if( c, s, t )` on bytes: `pblendvb` of `t`'s and `s`'s bytes `tb`, `sb` by the mask's `mb`,

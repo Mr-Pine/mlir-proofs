@@ -130,40 +130,46 @@ theorem wwl_slide_zero_3 (v : Vector (BitVec 64) 8) :
 theorem wwl_slide_zero_2 (v : Vector (BitVec 64) 8) :
     #v[0#64, 0#64, 0#64, 0#64, 0#64, 0#64, v[0], v[1]] = wwl_slide wwl_zero v 2 := by slide_lanes
 
+@[mlir_operation]
 theorem low6_wwl_slide_zero_7 (v : Vector (BitVec 64) 8) :
-    low6 (wwl_slide wwl_zero v 7) =
-      #v[.value 0#64, .value v[0], .value v[1], .value v[2], .value v[3], .value v[4], .poison,
-        .poison] := by
+    #v[.value 0#64, .value v[0], .value v[1], .value v[2], .value v[3], .value v[4],
+        .poison, .poison] =
+      low6 (wwl_slide wwl_zero v 7) := by
   slide_lanes
 
+@[mlir_operation]
 theorem low6_wwl_slide_7_zero (v : Vector (BitVec 64) 8) :
-    low6 (wwl_slide v wwl_zero 7) =
-      #v[.value v[7], .value 0#64, .value 0#64, .value 0#64, .value 0#64, .value 0#64, .poison,
-        .poison] := by
+    #v[.value v[7], .value 0#64, .value 0#64, .value 0#64, .value 0#64, .value 0#64,
+        .poison, .poison] =
+      low6 (wwl_slide v wwl_zero 7) := by
   slide_lanes
 
+@[mlir_operation]
 theorem low6_wwl_slide_5_zero (v : Vector (BitVec 64) 8) :
-    low6 (wwl_slide v wwl_zero 5) =
-      #v[.value v[5], .value v[6], .value v[7], .value 0#64, .value 0#64, .value 0#64, .poison,
-        .poison] := by
+    #v[.value v[5], .value v[6], .value v[7], .value 0#64, .value 0#64, .value 0#64,
+        .poison, .poison] =
+      low6 (wwl_slide v wwl_zero 5) := by
   slide_lanes
 
+@[mlir_operation]
 theorem low6_wwl_slide_4_zero (v : Vector (BitVec 64) 8) :
-    low6 (wwl_slide v wwl_zero 4) =
-      #v[.value v[4], .value v[5], .value v[6], .value v[7], .value 0#64, .value 0#64, .poison,
-        .poison] := by
+    #v[.value v[4], .value v[5], .value v[6], .value v[7], .value 0#64, .value 0#64,
+        .poison, .poison] =
+      low6 (wwl_slide v wwl_zero 4) := by
   slide_lanes
 
+@[mlir_operation]
 theorem low6_wwl_slide_3_zero (v : Vector (BitVec 64) 8) :
-    low6 (wwl_slide v wwl_zero 3) =
-      #v[.value v[3], .value v[4], .value v[5], .value v[6], .value v[7], .value 0#64, .poison,
-        .poison] := by
+    #v[.value v[3], .value v[4], .value v[5], .value v[6], .value v[7], .value 0#64,
+        .poison, .poison] =
+      low6 (wwl_slide v wwl_zero 3) := by
   slide_lanes
 
+@[mlir_operation]
 theorem low6_wwl_slide_2_zero (v : Vector (BitVec 64) 8) :
-    low6 (wwl_slide v wwl_zero 2) =
-      #v[.value v[2], .value v[3], .value v[4], .value v[5], .value v[6], .value v[7], .poison,
-        .poison] := by
+    #v[.value v[2], .value v[3], .value v[4], .value v[5], .value v[6], .value v[7],
+        .poison, .poison] =
+      low6 (wwl_slide v wwl_zero 2) := by
   slide_lanes
 
 /-- `za + 152 zb` from the sums `zl` and `zh`: `za` is `zl`'s lanes `0 … 5`, `zb` lanes `6 …` of
