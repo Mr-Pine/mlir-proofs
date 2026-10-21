@@ -426,7 +426,7 @@ theorem call_eq (a ea b eb : Pointer) (s : GlobalState) (hwf : s.WF)
   have hsa_lt : ea.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hsa₀.mem
   have hsb_lt : eb.id.id < S₀.alloc.nextFreeBlock := hwf₀.lt hsb₀.mem
   have hy : Eent.read (rir_reg% hty 66) = yUndef := by
-    rw [← yUndef_eq]; chain_reads
+    rw [yUndef_eq]; chain_reads
   refine ys_run (S₀.mem.readAt ea 256) (S₀.mem.readAt eb 256) hArgsE (by chain_reads) hI
     (fits_allocas_of slotSizes S hwf hsa) (fits_allocas_of slotSizes S hwf hsb)
     ((hI.readAt hsa_lt).trans hsA) ((hI.readAt hsb_lt).trans hsB) hsa_off hsb_off hsa_lt hsb_lt

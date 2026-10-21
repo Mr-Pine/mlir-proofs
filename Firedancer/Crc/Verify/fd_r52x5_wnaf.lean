@@ -385,8 +385,8 @@ theorem lanes_hi (X : BitVec 192) (a : BitVec 64) :
     Nat.one_mul, h0, h1]
 
 /-- The slot's limbs and limb `0` of `X ++ a`. -/
-theorem mid_eq (X : BitVec 192) (a : BitVec 64) : (X ++ a).extractLsb' 64 192 = X :=
-  BitVec.extractLsb'_append_eq_left
+theorem mid_eq (X : BitVec 192) (a : BitVec 64) : X = (X ++ a).extractLsb' 64 192 :=
+  BitVec.extractLsb'_append_eq_left.symm
 
 theorem low_eq (X : BitVec 192) (a : BitVec 64) : (X ++ a).extractLsb' 0 64 = a :=
   BitVec.extractLsb'_append_eq_right
@@ -419,7 +419,7 @@ theorem blk12 (d sp v : Pointer) (bits : BitVec 32) (B n : Nat) (X : BitVec 192)
   step_load [lanes_lo X (w0 - di)]
   step_load [lanes_hi X (w0 - di)]
   finish_block
-  rw [← mid_eq X (w0 - di)] at hS
+  rw [mid_eq X (w0 - di)] at hS
   run_from using blk13 d sp v bits B n (X ++ (w0 - di)) (di.setWidth 16) M Sb _ g K
     (hback := hback) (hexit := hexit)
   exact (low_eq X (w0 - di)).symm
@@ -800,7 +800,7 @@ theorem shl_ge2 (k : BitVec 256) (hk1 : 1#256 ≤ k) (hk : k ≤ 255#256) : 2#25
     _ ≤ 2 ^ k.toNat := Nat.pow_le_pow_right (by decide) (by omega)
 
 theorem shl_shr (k : BitVec 256) (hk1 : 1#256 ≤ k) (hk : k ≤ 255#256) :
-    (1#256 <<< k) >>> 1 = 1#256 <<< (k - 1#256) := by
+    1#256 <<< (k - 1#256) = (1#256 <<< k) >>> 1 := by
   have hk' : k - 1#256 ≤ 255#256 := by
     rw [BitVec.le_def, BitVec.toNat_sub, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
     rw [BitVec.le_def, BitVec.toNat_ofNat] at hk1 hk
@@ -828,7 +828,7 @@ theorem next_le_bv (w k : BitVec 256) (b : BitVec 64) (hb : 3#64 ≤ b ∧ b ≤
     (w - (if w.extractLsb' 0 64 &&& 1#64 = 0#64 then 0#64
         else loB b (w.extractLsb' 0 64) - selB b (w.extractLsb' 0 64)).signExtend 256) >>> 1 ≤
       1#256 <<< (k - 1#256) := by
-  rw [← shl_shr k hk1 hk]
+  rw [shl_shr k hk1 hk]
   exact next_le_pow2 w _ b hb (shl_pow2 k hk) (shl_ge2 k hk1 hk) hw
 
 /-- `w ≤ 1` ends the loop. -/
@@ -843,8 +843,9 @@ theorem b_range (hB : 3 ≤ B ∧ B ≤ 8) : 3#64 ≤ BitVec.ofNat 64 B ∧ BitV
   omega
 
 theorem digit_eq (hB : B < 63) (w : BitVec 256) :
-    fd_r52x5_wnaf.digit B w = if w.extractLsb' 0 64 &&& 1#64 = 0#64 then 0#64
-      else loB (BitVec.ofNat 64 B) (w.extractLsb' 0 64) - selB (BitVec.ofNat 64 B) (w.extractLsb' 0 64) := by
+    (if w.extractLsb' 0 64 &&& 1#64 = 0#64 then 0#64
+      else loB (BitVec.ofNat 64 B) (w.extractLsb' 0 64) - selB (BitVec.ofNat 64 B) (w.extractLsb' 0 64)) =
+      fd_r52x5_wnaf.digit B w := by
   rw [fd_r52x5_wnaf.digit, lo_eq hB, sel_eq hB]
 
 /-- `1 << (253 - n)`, the bound on `w` at digit `n`. -/
@@ -859,12 +860,12 @@ theorem next_le (hB : 3 ≤ B ∧ B ≤ 8) (hn : n < 253) (hw : w ≤ bnd n) :
     apply BitVec.eq_of_toNat_eq
     simp only [BitVec.toNat_sub, BitVec.toNat_ofNat]
     omega
-  rw [hk, ← digit_eq (by omega)] at h
+  rw [hk, digit_eq (by omega)] at h
   exact h
 
 theorem next_last (hB : 3 ≤ B ∧ B ≤ 8) (hw : w ≤ bnd 253) : fd_r52x5_wnaf.next B w = 0#256 := by
   have h := next_one_bv w _ (b_range hB) (by simpa using hw)
-  rw [← digit_eq (by omega)] at h
+  rw [digit_eq (by omega)] at h
   exact h
 
 theorem facts (hB : 3 ≤ B ∧ B ≤ 8) (w : BitVec 256) :
