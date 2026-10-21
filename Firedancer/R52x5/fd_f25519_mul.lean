@@ -5,6 +5,7 @@ public import Firedancer.Avx512.Common.Vec
 public import Firedancer.Avx512.Common.WwlRun
 public import Firedancer.R52x5.fd_f25519_fold_unsigned
 public import Firedancer.R52x5.Mlir.fd_f25519_mul
+import Firedancer.R52x5.Common.FeLanes
 import Std.Tactic.BVDecide
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Basic
@@ -12,10 +13,6 @@ import Mathlib.Data.Fintype.Basic
 namespace MLIR.Firedancer.R52x5
 
 open Firedancer.Avx512
-
-/-- A broadcast lane by lane. -/
-local macro "bcast_lanes" : tactic =>
-  `(tactic| (apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_permute, wwl_bcast]))
 
 /-! ## Specification -/
 
@@ -128,54 +125,12 @@ theorem wrap_slide_5 (x y : Wwl) :
 theorem shl_1_add_shl_4 (x : BitVec 64) : x <<< 1 + x <<< 4 = x * 18 := by bv_decide
 
 /-- `18 zb` as compiled, by shifts as written. -/
+@[mlir_operation]
 theorem ofFn_mul18 (x : Wwl) :
     (Vector.ofFn fun i : Fin 8 => x[i.1] * 18#64) = wwl_add (wwl_shl x 1) (wwl_shl x 4) := by
   ext i hi : 1; simp [wwl_add, wwl_shl, shl_1_add_shl_4]
 
 end
-
-namespace fd_f25519_mul
-
-@[mlir_operation]
-theorem permute_bcast_0 (v : Wwl) :
-    #v[v[0], v[0], v[0], v[0], v[0], v[0], v[0], v[0]] = wwl_permute (wwl_bcast 0) v := by
-  bcast_lanes
-
-@[mlir_operation]
-theorem permute_bcast_1 (v : Wwl) :
-    #v[v[1], v[1], v[1], v[1], v[1], v[1], v[1], v[1]] = wwl_permute (wwl_bcast 1) v := by
-  bcast_lanes
-
-@[mlir_operation]
-theorem permute_bcast_2 (v : Wwl) :
-    #v[v[2], v[2], v[2], v[2], v[2], v[2], v[2], v[2]] = wwl_permute (wwl_bcast 2) v := by
-  bcast_lanes
-
-@[mlir_operation]
-theorem permute_bcast_3 (v : Wwl) :
-    #v[v[3], v[3], v[3], v[3], v[3], v[3], v[3], v[3]] = wwl_permute (wwl_bcast 3) v := by
-  bcast_lanes
-
-@[mlir_operation]
-theorem permute_bcast_4 (v : Wwl) :
-    #v[v[4], v[4], v[4], v[4], v[4], v[4], v[4], v[4]] = wwl_permute (wwl_bcast 4) v := by
-  bcast_lanes
-
-/-- `q4j` with its lanes `5 … 7` poison. -/
-@[mlir_operation]
-theorem lanes5_slide_4_zero (v : Wwl) :
-    #v[.value v[4], .value v[5], .value v[6], .value v[7], .value 0#64, .poison, .poison, .poison] =
-      lanesBelow 5 (wwl_slide v wwl_zero 4) := by
-  apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_slide, lanesBelow]
-
-/-- `q5j` with its lanes `5 … 7` poison. -/
-@[mlir_operation]
-theorem lanes5_slide_3_zero (v : Wwl) :
-    #v[.value v[3], .value v[4], .value v[5], .value v[6], .value v[7], .poison, .poison, .poison] =
-      lanesBelow 5 (wwl_slide v wwl_zero 3) := by
-  apply vec_ext_fin; intro i; fin_cases i <;> simp [wwl_slide, lanesBelow]
-
-end fd_f25519_mul
 
 /-! ## Proof -/
 
@@ -184,7 +139,6 @@ section Proof
 -- folded, so the steps' terms and the spec compare without unfolding the lanes
 attribute [local irreducible] wwl_add wwl_and wwl_shl wwl_slide wwl_madd52lo wwl_madd52hi
 
-open fd_f25519_mul in
 /-- `fd_f25519_mul( r, a, b )` stores `spec` of the elements at `a` and `b` at `r` and returns
 `r`; `r` may alias `a` or `b`. -/
 public theorem fd_f25519_mul.call_eq (r a b : Pointer) (s : GlobalState) (hwf : s.WF)
@@ -232,7 +186,6 @@ public theorem fd_f25519_mul.call_eq (r a b : Pointer) (s : GlobalState) (hwf : 
   step_pure with zab
   step_pure with zb18
   step_pure with z
-  rw [ofFn_mul18] at hzb18
   step_call using fd_f25519_fold_unsigned.call_eq
   step_store
   finish_block

@@ -284,7 +284,6 @@ public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   step_pure with zba
   step_pure with zb18
   step_pure with z
-  rw [ofFn_mul18] at hzb18
   step_call using fd_f25519_fold_unsigned.call_eq
   step_store
   finish_block

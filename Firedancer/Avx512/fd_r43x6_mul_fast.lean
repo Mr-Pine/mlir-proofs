@@ -264,8 +264,7 @@ theorem runBodyFrom_slidesRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {pos
   simp only [lanesFrom_getElem, lanesBelow_getElem, Nat.reduceLeDiff, Nat.reduceLT, ↓reduceIte,
     Vector.getElem_replicate, BitVec.ofNat_eq_ofNat, pullWrap, wwl_slide_zero_6,
     wwl_slide_zero_5, wwl_slide_zero_4, wwl_slide_zero_3, wwl_slide_zero_2,
-    ← low6_wwl_slide_5_zero, ← low6_wwl_slide_4_zero, ← low6_wwl_slide_3_zero,
-    ← low6_wwl_slide_2_zero,
+    low6_wwl_slide_5_zero, low6_wwl_slide_4_zero, low6_wwl_slide_3_zero,
     wwl_slide_zero_7] at hvp1 hvp2 hvp3 hvq3 hvp4 hvq4 hvp5 hvq5 hvp6 hvq6
   subst hvp1
   simp only [wrapGetElem, PoisonOr.value_bind, pullWrapOfFn] at hvs1

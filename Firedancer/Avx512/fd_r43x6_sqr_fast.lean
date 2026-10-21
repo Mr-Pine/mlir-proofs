@@ -379,8 +379,8 @@ theorem runBodyFrom_sqrSumsRun {blk : BasicBlock Γ tRets bp} {E : ⟪Γ⟫} {po
   simp only [ofFn_add_lanesBelow] at hvzhh hvzhl
   subst hvzhh hvzhl
   simp only [lanesFrom_getElem, lanesBelow_getElem, Nat.reduceLeDiff, Nat.reduceLT, ↓reduceIte,
-    Vector.getElem_replicate, BitVec.ofNat_eq_ofNat, ← low6_wwl_slide_zero_7,
-    ← low6_wwl_slide_7_zero] at hvzhhs hvzlht
+    Vector.getElem_replicate, BitVec.ofNat_eq_ofNat, low6_wwl_slide_zero_7,
+    low6_wwl_slide_7_zero] at hvzhhs hvzlht
   subst hvzhhs hvzlht
   simp only [ofFn_add_lanesBelow] at hvzh0
   subst hvzh0
