@@ -158,17 +158,10 @@ theorem andnot_mask1 (x : Wwl) :
 /-- `wwl_and(mask1, x)` as compiled, operands swapped. -/
 theorem and_mask1 (x : Wwl) :
     wwl_and x (wwl 18446744073709551615#64 0#64 0#64 0#64 0#64 0#64 0#64 0#64) =
-      wwl_and (wwl (-1) 0 0 0 0 0 0 0) x := by
-  apply vec_ext_fin; intro i
-  fin_cases i <;> simp [wwl_and, wwl]
+      wwl_and (wwl 18446744073709551615#64 0#64 0#64 0#64 0#64 0#64 0#64 0#64) x := by
+  ext i hi : 1
+  simp only [wwl_and, Vector.getElem_ofFn]
   exact BitVec.and_comm _ _
-
-/-- `za`'s mask as compiled, lanes `0 … 4` set. -/
-theorem mask5 :
-    wwl 18446744073709551615#64 18446744073709551615#64 18446744073709551615#64
-        18446744073709551615#64 18446744073709551615#64 0#64 0#64 0#64 =
-      wwl (-1) (-1) (-1) (-1) (-1) 0 0 0 := by
-  decide
 
 /-- `mask1` for `zhl`, lanes `5 … 7` undefined. -/
 theorem set_lanesBelow_5 (c0 c1 c2 c3 c4 : BitVec 64) :
@@ -217,6 +210,12 @@ section Proof
 -- folded, so the steps' terms and the spec compare without unfolding the lanes
 attribute [local irreducible] wwl_add wwl_and wwl_shl wwl_slide wwl_madd52lo wwl_madd52hi
 
+-- the steps' lanes as the intrinsics they are, for `step_pure` to fold
+attribute [local mlir_operation] fd_f25519_sqr.permute_x0 fd_f25519_sqr.permute_x1
+  fd_f25519_sqr.permute_x2 fd_f25519_sqr.permute_x3 fd_f25519_sqr.permute_x4
+  fd_f25519_sqr.ofFn_madd52lo_zero fd_f25519_sqr.shl_p0l fd_f25519_sqr.shl_p0h
+  fd_f25519_sqr.shl_p1l fd_f25519_sqr.shl_p1h fd_f25519_sqr.andnot_mask1
+
 open fd_f25519_sqr in
 /-- `fd_f25519_sqr( r, a )` stores `spec` of the element at `a` at `r` and returns `r`; `r` may
 alias `a`. -/
@@ -235,44 +234,31 @@ public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   rw [ofFn_extractVecElem_readAt_384] at haa
   subst haa
   step_pure with x0
-  rw [permute_x0] at hx0
   step_pure with x1
-  rw [permute_x1] at hx1
   step_pure with x2
-  rw [permute_x2] at hx2
   step_pure with x3
-  rw [permute_x3] at hx3
   step_pure with x4
-  rw [permute_x4] at hx4
   step_pure with p0l
-  rw [ofFn_madd52lo_zero] at hp0l
   step_pure with p0h
   step_pure with p1l
-  rw [ofFn_madd52lo_zero] at hp1l
   step_pure with p1h
   step_pure with p2h
   -- the shifts by vectors, lane by lane
   step_pure [expandOfFn] with p0l'
-  rw [shl_p0l] at hp0l'
   step_pure [expandOfFn] with p0h'
-  rw [shl_p0h] at hp0h'
   step_pure [expandOfFn] with p1l'
-  rw [shl_p1l] at hp1l'
   step_pure [expandOfFn] with p1h'
-  rw [shl_p1h] at hp1h'
   step_pure with p2h'
   -- `zll` and `zlh`, `p2l` as `wwl_madd52lo(_, x4, x4)`
   step_pure [expandOfFn] with n1l
-  rw [andnot_mask1] at hn1l
   step_pure with zll0
   step_pure with zll
   step_pure [expandOfFn] with n1h
-  rw [andnot_mask1] at hn1h
   step_pure with zlh0
   step_pure with zlh
   -- `zhl`, `zhh` and `zh` on their defined lanes `0 … 4`
-  step_pure [set_lanesBelow_5, ofFn_and_lanesBelow] with zhl
-  step_pure [set_lanesBelow_4, ofFn_and_lanesBelow] with zhh
+  step_pure [set_lanesBelow_5] with zhl
+  step_pure [set_lanesBelow_4] with zhh
   step_pure with slh
   step_pure with zl
   step_pure [hzhh, lanesBelow_getElem, lanes5_slide_zero_7] with shh
@@ -289,10 +275,10 @@ public theorem fd_f25519_sqr.call_eq (r a : Pointer) (s : GlobalState) (hwf : s.
   finish_block
   rw [hS]
   suffices e : z = fd_f25519_sqr.z (S₀.mem.readVec a) by rw [e]
-  simp only [fd_f25519_sqr.z]
+  simp only [fd_f25519_sqr.z, BitVec.ofNat_eq_ofNat, BitVec.reduceNeg]
   rw [← hx0, ← hx1, ← hx2, ← hx3, ← hx4, ← hp0l, ← hp0h, ← hp1l, ← hp1h, ← hp2h, ← hp0l', ← hp0h', ←
     hp1l', ← hp1h', ← hp2h', ← hn1l, ← hn1h]
-  rw [hz, hzba, hzb18, hza, mask5, hzb, hzl, hslh, hzll, wwl_madd52lo_eq_add zll0, hzll0, hzlh, hzlh0,
+  rw [hz, hzba, hzb18, hza, hzb, hzl, hslh, hzll, wwl_madd52lo_eq_add zll0, hzll0, hzlh, hzlh0,
     and_mask1, and_mask1]
   ac_rfl
 
