@@ -216,6 +216,37 @@ public theorem rfc8032_of_sodium {msg : List (BitVec 8)} {r S A : BitVec 256}
   simp only [sodium, dec, ↓reduceIte] at hA
   exact rfc8032_of_boringssl (by rw [hA, decode_of_decodeStrict hA]) hb
 
+/-- For an `A` of order `ℓ`, libsodium accepts what cofactorless RFC 8032 accepts, less the points
+of small order. -/
+public theorem sodium_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hℓ : ∀ A', decode A = some A' → ell • A' = 0) :
+    sodium.Accepts msg r S A ↔
+      (rfc8032 false).Accepts msg r S A ∧
+        ∀ R A', decode r = some R → decode A = some A' → ¬sodium.reject A' R := by
+  rw [sodium_iff_firedancer]
+  constructor
+  · rintro ⟨h, hr, hA⟩
+    exact (firedancer_iff_rfc8032 hA hr hℓ).1 h
+  · rintro h
+    obtain ⟨⟨-, R, A', hR, hA', -⟩, -⟩ := id h
+    simp only [rfc8032, dec, ↓reduceIte] at hR hA'
+    have hr := decodeStrict_canonical hR
+    have hA := decodeStrict_canonical hA'
+    exact ⟨(firedancer_iff_rfc8032 hA hr hℓ).2 h, hr, hA⟩
+
 end Variant
+
+namespace Sodium
+
+/-- For an `A` of order `ℓ`, `verify` accepts what cofactorless RFC 8032 accepts, less the points
+of small order. -/
+public theorem verify_eq_zero_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hℓ : ∀ A', decode A = some A' → ell • A' = 0) :
+    verify msg r S A = 0#32 ↔
+      (Variant.rfc8032 false).Accepts msg r S A ∧
+        ∀ R A', decode r = some R → decode A = some A' → ¬Variant.sodium.reject A' R := by
+  rw [verify_eq_zero_iff, Variant.sodium_iff_rfc8032 hℓ]
+
+end Sodium
 
 end Ed25519
