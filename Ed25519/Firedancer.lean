@@ -58,12 +58,11 @@ public theorem verify_eq_zero_iff (msg : List (BitVec 8)) (r S A : BitVec 256) :
     simp only [not_or] at hrej
     simp only [show ¬ell ≤ S.toNat by omega, hrej.1, hrej.2, heq, ↓reduceIte]
 
-/-- Given the group's order, for `A` and `R` with `y` below `p`, RFC 8032 (cofactored) accepts what
-`verify` accepts. -/
-public theorem rfc8032_of_verify (ho : CurveOrder) {msg : List (BitVec 8)} {r S A : BitVec 256}
+/-- For `A` and `R` with `y` below `p`, RFC 8032 (cofactored) accepts what `verify` accepts. -/
+public theorem rfc8032_of_verify {msg : List (BitVec 8)} {r S A : BitVec 256}
     (hA : A.toNat % 2 ^ 255 < p) (hr : r.toNat % 2 ^ 255 < p) (h : verify msg r S A = 0#32) :
     Variant.rfc8032.Accepts msg r S A :=
-  Variant.rfc8032_of_firedancer ho hA hr ((verify_eq_zero_iff msg r S A).1 h)
+  Variant.rfc8032_of_firedancer hA hr ((verify_eq_zero_iff msg r S A).1 h)
 
 /-- For `A` and `R` with `y` below `p` and `A` of order `ℓ`, `verify` accepts what cofactorless
 RFC 8032 accepts, less the points of small order. -/

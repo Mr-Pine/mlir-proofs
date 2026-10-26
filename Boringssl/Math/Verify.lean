@@ -102,9 +102,8 @@ public theorem firedancer_iff_boringssl {msg : List (BitVec 8)} {r S A : BitVec 
     have hR' := decode_of_decodeStrict hR
     exact ⟨hS, R, A', hR', hA, hrej R A' hR' hA, heq⟩
 
-/-- Given the group's order, for an `A` whose encoding is canonical, RFC 8032 (cofactored) accepts
-what BoringSSL accepts. -/
-public theorem rfc8032_of_boringssl (ho : CurveOrder) {msg : List (BitVec 8)} {r S A : BitVec 256}
+/-- For an `A` whose encoding is canonical, RFC 8032 (cofactored) accepts what BoringSSL accepts. -/
+public theorem rfc8032_of_boringssl {msg : List (BitVec 8)} {r S A : BitVec 256}
     (hA : decodeStrict A = decode A) (h : boringssl.Accepts msg r S A) :
     rfc8032.Accepts msg r S A := by
   obtain ⟨hS, R, A', hR, hA', -, heq⟩ := h
@@ -113,7 +112,7 @@ public theorem rfc8032_of_boringssl (ho : CurveOrder) {msg : List (BitVec 8)} {r
   · simp only [rfc8032, dec, ↓reduceIte]; exact hR
   · simp only [rfc8032, dec, ↓reduceIte]; rw [hA]; exact hA'
   · simp only [rfc8032, Bool.false_eq_true, ↓reduceIte]
-    rw [heq, smul_add, CurveOrder.eight_smul_mod ho]
+    rw [heq, smul_add, Point.eight_mod_ell_smul]
 
 /-- For an `A` of order `ℓ` whose encoding is canonical, cofactorless RFC 8032 accepts exactly what
 BoringSSL accepts: `[k]A = [k mod ℓ]A`. -/

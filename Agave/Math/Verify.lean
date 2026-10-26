@@ -143,13 +143,12 @@ public theorem verify_eq_firedancer (msg : List (BitVec 8)) (r S A : BitVec 256)
 
 /-! ## RFC 8032 -/
 
-/-- Given the group's order, for an `A` with `y` below `p`, RFC 8032 (cofactored) accepts what
-Agave's variant accepts. -/
-public theorem Variant.rfc8032_of_agave (ho : CurveOrder) {msg : List (BitVec 8)}
-    {r S A : BitVec 256} (hA : CanonicalY A) (h : Variant.agave.Accepts msg r S A) :
+/-- For an `A` with `y` below `p`, RFC 8032 (cofactored) accepts what Agave's variant accepts. -/
+public theorem Variant.rfc8032_of_agave {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hA : CanonicalY A) (h : Variant.agave.Accepts msg r S A) :
     Variant.rfc8032.Accepts msg r S A :=
   have ⟨h, hr⟩ := (Variant.agave_iff_firedancer msg r S A).1 h
-  Variant.rfc8032_of_firedancer ho hA hr h
+  Variant.rfc8032_of_firedancer hA hr h
 
 /-- For an `A` with `y` below `p` and of order `ℓ`, Agave's variant accepts what cofactorless
 RFC 8032 accepts, less the points of small order. -/
@@ -168,11 +167,10 @@ public theorem Variant.agave_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec
       exact decodeStrict_canonical hR
     exact ⟨(Variant.firedancer_iff_rfc8032 hA hr hℓ).2 h, hr⟩
 
-/-- Given the group's order, for an `A` with `y` below `p`, RFC 8032 (cofactored) accepts what
-`verify` accepts. -/
-public theorem rfc8032_of_verify (ho : CurveOrder) {msg : List (BitVec 8)} {r S A : BitVec 256}
+/-- For an `A` with `y` below `p`, RFC 8032 (cofactored) accepts what `verify` accepts. -/
+public theorem rfc8032_of_verify {msg : List (BitVec 8)} {r S A : BitVec 256}
     (hA : CanonicalY A) (h : verify msg r S A = true) : Variant.rfc8032.Accepts msg r S A :=
-  Variant.rfc8032_of_agave ho hA ((verify_eq_true_iff msg r S A).1 h)
+  Variant.rfc8032_of_agave hA ((verify_eq_true_iff msg r S A).1 h)
 
 /-- For an `A` with `y` below `p` and of order `ℓ`, `verify` accepts what cofactorless RFC 8032
 accepts, less the points of small order. -/

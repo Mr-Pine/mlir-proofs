@@ -2,7 +2,7 @@ module
 
 public import Ed25519.Decode
 public import Ed25519.BasePoint
-public import Ed25519.Order
+public import Ed25519.Count
 import Mathlib.Tactic.LinearCombination
 import Mathlib.Tactic.Ring
 
@@ -71,8 +71,7 @@ def firedancer : Variant :=
 
 end Variant
 
-/-- The group has order `8 ℓ`: `8 ℓ` kills every point. Point counting is not proved here; relating
-`k` mod `ℓ` to the RFC's whole `k` takes it as a hypothesis. -/
+/-- `8 ℓ` kills every point (`curveOrder`): it relates `k` mod `ℓ` to the RFC's whole `k`. -/
 def CurveOrder : Prop :=
   ∀ P : Point, (8 * ell) • P = 0
 
@@ -139,14 +138,17 @@ public theorem Point.two_nsmul_of_x_eq_zero {P : Point} (hx : P.x = 0) : 2 • P
 public theorem Point.eight_smul_of_x_eq_zero' {P : Point} (hx : P.x = 0) : 8 • P = 0 := by
   rw [show (8 : ℕ) = 4 * 2 from rfl, mul_nsmul', Point.two_nsmul_of_x_eq_zero hx, nsmul_zero]
 
-/-- Under the group order, `8 [k mod ℓ]A = 8 [k]A`. -/
-public theorem CurveOrder.eight_smul_mod (h : CurveOrder) (k : ℕ) (A : Point) :
+/-- `8 ℓ`, the group's order, kills every point. -/
+public theorem curveOrder : CurveOrder := fun _ => Point.card ▸ card_nsmul_eq_zero'
+
+/-- `8 [k mod ℓ]A = 8 [k]A`. -/
+public theorem Point.eight_mod_ell_smul (k : ℕ) (A : Point) :
     8 • ((k % ell) • A) = 8 • (k • A) := by
   conv_rhs => rw [← Nat.mod_add_div k ell]
   rw [add_nsmul, smul_add]
   have h0 : 8 • ((ell * (k / ell)) • A) = 0 := by
-    rw [smul_smul, show 8 * (ell * (k / ell)) = k / ell * (8 * ell) by ring, ← smul_smul, h,
-      smul_zero]
+    rw [smul_smul, show 8 * (ell * (k / ell)) = k / ell * (8 * ell) by ring, ← smul_smul,
+      curveOrder, smul_zero]
   rw [h0, add_zero]
 
 /-- For a point of order `ℓ`, `[k mod ℓ]A = [k]A`. -/
@@ -176,9 +178,9 @@ public theorem zig_of_firedancer {msg : List (BitVec 8)} {r S A : BitVec 256}
   · simp only [zig, ↓reduceIte]
     rw [heq, smul_add]
 
-/-- For an `A` with `y < p`, given the group's order, Zig accepts what RFC 8032 accepts, less the
-points it rejects besides. -/
-public theorem zig_iff_rfc8032 (ho : CurveOrder) {msg : List (BitVec 8)} {r S A : BitVec 256}
+/-- For an `A` with `y < p`, Zig accepts what RFC 8032 accepts, less the points it rejects
+besides. -/
+public theorem zig_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec 256}
     (hA : A.toNat % 2 ^ 255 < p) :
     zig.Accepts msg r S A ↔
       rfc8032.Accepts msg r S A ∧
@@ -192,7 +194,7 @@ public theorem zig_iff_rfc8032 (ho : CurveOrder) {msg : List (BitVec 8)} {r S A 
     · simp only [rfc8032, dec, ↓reduceIte]; exact decodeStrict_of_decode hA' hA hAx
     · simp [rfc8032]
     · simp only [rfc8032, Bool.false_eq_true, ↓reduceIte]
-      rw [← CurveOrder.eight_smul_mod ho (challenge msg r A) A']; exact heq
+      rw [← Point.eight_mod_ell_smul (challenge msg r A) A']; exact heq
     · intro R₂ A₂ hR₂ hA₂
       rw [decode_of_decodeStrict hR, Option.some.injEq] at hR₂
       rw [hA', Option.some.injEq] at hA₂
@@ -205,15 +207,13 @@ public theorem zig_iff_rfc8032 (ho : CurveOrder) {msg : List (BitVec 8)} {r S A 
     · simp only [zig, dec, ↓reduceIte]; exact hR
     · simp only [zig, dec, Bool.false_eq_true, ↓reduceIte]; exact hA''
     · simp only [zig, ↓reduceIte]
-      rw [CurveOrder.eight_smul_mod ho (challenge msg r A) A']; exact heq
+      rw [Point.eight_mod_ell_smul (challenge msg r A) A']; exact heq
 
-/-- Given the group's order, for `A` and `R` with `y` below `p`, RFC 8032 (cofactored) accepts what
-Firedancer accepts. -/
-public theorem rfc8032_of_firedancer (ho : CurveOrder)
-    {msg : List (BitVec 8)} {r S A : BitVec 256}
+/-- For `A` and `R` with `y` below `p`, RFC 8032 (cofactored) accepts what Firedancer accepts. -/
+public theorem rfc8032_of_firedancer {msg : List (BitVec 8)} {r S A : BitVec 256}
     (hA : A.toNat % 2 ^ 255 < p) (hr : r.toNat % 2 ^ 255 < p) (h : firedancer.Accepts msg r S A) :
     rfc8032.Accepts msg r S A :=
-  ((zig_iff_rfc8032 ho hA).1 (zig_of_firedancer h hr)).1
+  ((zig_iff_rfc8032 hA).1 (zig_of_firedancer h hr)).1
 
 /-- For `A` and `R` with `y` below `p` and `A` of order `ℓ`, Firedancer accepts what cofactorless
 RFC 8032 accepts, less the points of small order. -/

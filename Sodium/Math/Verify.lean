@@ -208,13 +208,13 @@ public theorem boringssl_of_sodium {msg : List (BitVec 8)} {r S A : BitVec 256}
   · simp only [boringssl, dec, ↓reduceIte]; exact hR
   · simp only [boringssl, dec, Bool.false_eq_true, ↓reduceIte]; exact decode_of_decodeStrict hA
 
-/-- Given the group's order, RFC 8032 (cofactored) accepts what libsodium accepts. -/
-public theorem rfc8032_of_sodium (ho : CurveOrder) {msg : List (BitVec 8)} {r S A : BitVec 256}
+/-- RFC 8032 (cofactored) accepts what libsodium accepts. -/
+public theorem rfc8032_of_sodium {msg : List (BitVec 8)} {r S A : BitVec 256}
     (h : sodium.Accepts msg r S A) : rfc8032.Accepts msg r S A := by
   have hb := boringssl_of_sodium h
   obtain ⟨-, -, A', -, hA, -⟩ := h
   simp only [sodium, dec, ↓reduceIte] at hA
-  exact rfc8032_of_boringssl ho (by rw [hA, decode_of_decodeStrict hA]) hb
+  exact rfc8032_of_boringssl (by rw [hA, decode_of_decodeStrict hA]) hb
 
 end Variant
 
