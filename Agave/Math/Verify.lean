@@ -6,7 +6,8 @@ import Mathlib.Tactic.Abel
 
 /-! Agave's signature check as mathematics: `Signature::verify` (solana-signature 3.6.0), that is
 solana-ed25519 0.2.4's `VerificationKey::try_from` and `verify_dalek`, in their order; the
-`Variant` it is; and Firedancer's `verify` accepting with `R`'s `y` below `p` is Agave accepting. -/
+`Variant` it is; Firedancer's `verify` accepting with `R`'s `y` below `p` is Agave accepting; and
+how Agave relates to RFC 8032. -/
 
 namespace MLIR.Agave
 
@@ -139,5 +140,47 @@ public theorem verify_eq_firedancer (msg : List (BitVec 8)) (r S A : BitVec 256)
     verify msg r S A = (Firedancer.verify msg r S A == 0#32 && decide (CanonicalY r)) := by
   rw [Bool.eq_iff_iff, verify_eq_true_iff_firedancer]
   simp
+
+/-! ## RFC 8032 -/
+
+/-- Given the group's order, for an `A` with `y` below `p`, RFC 8032 (cofactored) accepts what
+Agave's variant accepts. -/
+public theorem Variant.rfc8032_of_agave (ho : CurveOrder) {msg : List (BitVec 8)}
+    {r S A : BitVec 256} (hA : CanonicalY A) (h : Variant.agave.Accepts msg r S A) :
+    Variant.rfc8032.Accepts msg r S A :=
+  have ⟨h, hr⟩ := (Variant.agave_iff_firedancer msg r S A).1 h
+  Variant.rfc8032_of_firedancer ho hA hr h
+
+/-- For an `A` with `y` below `p` and of order `ℓ`, Agave's variant accepts what cofactorless
+RFC 8032 accepts, less the points of small order. -/
+public theorem Variant.agave_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hA : CanonicalY A) (hℓ : ∀ A', decode A = some A' → ell • A' = 0) :
+    Variant.agave.Accepts msg r S A ↔
+      (Variant.rfc8032 false).Accepts msg r S A ∧
+        ∀ R A', decode r = some R → decode A = some A' → ¬Variant.agave.reject A' R := by
+  rw [Variant.agave_iff_firedancer]
+  constructor
+  · rintro ⟨h, hr⟩
+    exact (Variant.firedancer_iff_rfc8032 hA hr hℓ).1 h
+  · rintro h
+    have hr : CanonicalY r := by
+      obtain ⟨⟨-, R, -, hR, -⟩, -⟩ := h
+      exact decodeStrict_canonical hR
+    exact ⟨(Variant.firedancer_iff_rfc8032 hA hr hℓ).2 h, hr⟩
+
+/-- Given the group's order, for an `A` with `y` below `p`, RFC 8032 (cofactored) accepts what
+`verify` accepts. -/
+public theorem rfc8032_of_verify (ho : CurveOrder) {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hA : CanonicalY A) (h : verify msg r S A = true) : Variant.rfc8032.Accepts msg r S A :=
+  Variant.rfc8032_of_agave ho hA ((verify_eq_true_iff msg r S A).1 h)
+
+/-- For an `A` with `y` below `p` and of order `ℓ`, `verify` accepts what cofactorless RFC 8032
+accepts, less the points of small order. -/
+public theorem verify_eq_true_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hA : CanonicalY A) (hℓ : ∀ A', decode A = some A' → ell • A' = 0) :
+    verify msg r S A = true ↔
+      (Variant.rfc8032 false).Accepts msg r S A ∧
+        ∀ R A', decode r = some R → decode A = some A' → ¬Variant.agave.reject A' R := by
+  rw [verify_eq_true_iff, Variant.agave_iff_rfc8032 hA hℓ]
 
 end MLIR.Agave

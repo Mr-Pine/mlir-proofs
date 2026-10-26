@@ -120,13 +120,11 @@ BoringSSL accepts: `[k]A = [k mod ℓ]A`. -/
 public theorem rfc8032_iff_boringssl {msg : List (BitVec 8)} {r S A : BitVec 256}
     (hA : decodeStrict A = decode A) (hℓ : ∀ A', decode A = some A' → ell • A' = 0) :
     (rfc8032 false).Accepts msg r S A ↔ boringssl.Accepts msg r S A := by
-  have hk (A' : Point) (h : ell • A' = 0) (k : ℕ) : (k % ell) • A' = k • A' := by
-    conv_rhs => rw [← Nat.mod_add_div k ell, add_nsmul, mul_nsmul, h, nsmul_zero, add_zero]
   simp only [Accepts, rfc8032, boringssl, dec, Bool.false_eq_true, ↓reduceIte, hA,
     not_false_eq_true, true_and]
   refine and_congr_right fun _ => exists_congr fun R => exists_congr fun A' => ?_
   refine and_congr_right fun _ => and_congr_right fun hA' => ?_
-  rw [hk A' (hℓ A' hA')]
+  rw [Point.mod_ell_smul (hℓ A' hA')]
 
 end Variant
 

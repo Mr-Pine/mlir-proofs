@@ -149,6 +149,11 @@ public theorem CurveOrder.eight_smul_mod (h : CurveOrder) (k : ℕ) (A : Point) 
       smul_zero]
   rw [h0, add_zero]
 
+/-- For a point of order `ℓ`, `[k mod ℓ]A = [k]A`. -/
+public theorem Point.mod_ell_smul {A : Point} (h : ell • A = 0) (k : ℕ) :
+    (k % ell) • A = k • A := by
+  conv_rhs => rw [← Nat.mod_add_div k ell, add_nsmul, mul_nsmul, h, nsmul_zero, add_zero]
+
 /-! ## The variants compared -/
 
 namespace Variant
@@ -201,6 +206,44 @@ public theorem zig_iff_rfc8032 (ho : CurveOrder) {msg : List (BitVec 8)} {r S A 
     · simp only [zig, dec, Bool.false_eq_true, ↓reduceIte]; exact hA''
     · simp only [zig, ↓reduceIte]
       rw [CurveOrder.eight_smul_mod ho (challenge msg r A) A']; exact heq
+
+/-- Given the group's order, for `A` and `R` with `y` below `p`, RFC 8032 (cofactored) accepts what
+Firedancer accepts. -/
+public theorem rfc8032_of_firedancer (ho : CurveOrder)
+    {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hA : A.toNat % 2 ^ 255 < p) (hr : r.toNat % 2 ^ 255 < p) (h : firedancer.Accepts msg r S A) :
+    rfc8032.Accepts msg r S A :=
+  ((zig_iff_rfc8032 ho hA).1 (zig_of_firedancer h hr)).1
+
+/-- For `A` and `R` with `y` below `p` and `A` of order `ℓ`, Firedancer accepts what cofactorless
+RFC 8032 accepts, less the points of small order. -/
+public theorem firedancer_iff_rfc8032 {msg : List (BitVec 8)} {r S A : BitVec 256}
+    (hA : A.toNat % 2 ^ 255 < p) (hr : r.toNat % 2 ^ 255 < p)
+    (hℓ : ∀ A', decode A = some A' → ell • A' = 0) :
+    firedancer.Accepts msg r S A ↔
+      (rfc8032 false).Accepts msg r S A ∧
+        ∀ R A', decode r = some R → decode A = some A' → ¬firedancer.reject A' R := by
+  constructor
+  · rintro ⟨hS, R, A', hR, hA', hrej, heq⟩
+    simp only [firedancer, dec, Bool.false_eq_true, ↓reduceIte] at hR hA' hrej heq
+    have hRx : R.x ≠ 0 := fun hx => hrej (.inr (Point.eight_smul_of_x_eq_zero' hx))
+    have hAx : A'.x ≠ 0 := fun hx => hrej (.inl (Point.eight_smul_of_x_eq_zero' hx))
+    refine ⟨⟨hS, R, A', ?_, ?_, fun h => h, ?_⟩, fun R₂ A₂ hR₂ hA₂ => ?_⟩
+    · simp only [rfc8032, dec, ↓reduceIte]; exact decodeStrict_of_decode hR hr hRx
+    · simp only [rfc8032, dec, ↓reduceIte]; exact decodeStrict_of_decode hA' hA hAx
+    · simp only [rfc8032, Bool.false_eq_true, ↓reduceIte]
+      rw [← Point.mod_ell_smul (hℓ A' hA')]; exact heq
+    · rw [hR, Option.some.injEq] at hR₂
+      rw [hA', Option.some.injEq] at hA₂
+      subst hR₂ hA₂
+      exact hrej
+  · rintro ⟨⟨hS, R, A', hR, hA', -, heq⟩, hrej⟩
+    simp only [rfc8032, dec, Bool.false_eq_true, ↓reduceIte] at hR hA' heq
+    have hR' := decode_of_decodeStrict hR
+    have hA'' := decode_of_decodeStrict hA'
+    refine ⟨hS, R, A', hR', hA'', hrej R A' hR' hA'', ?_⟩
+    simp only [firedancer, Bool.false_eq_true, ↓reduceIte]
+    rw [Point.mod_ell_smul (hℓ A' hA'')]; exact heq
 
 end Variant
 
